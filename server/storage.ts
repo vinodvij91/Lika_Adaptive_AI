@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, desc, sql, count, avg } from "drizzle-orm";
+import { eq, and, desc, sql, count, avg, sum } from "drizzle-orm";
 import {
   projects,
   targets,
@@ -17,6 +17,9 @@ import {
   computeNodes,
   userSshKeys,
   nodeKeyRegistrations,
+  usageMeters,
+  creditWallets,
+  creditTransactions,
   type Project,
   type InsertProject,
   type Target,
@@ -49,6 +52,12 @@ import {
   type InsertUserSshKey,
   type NodeKeyRegistration,
   type InsertNodeKeyRegistration,
+  type UsageMeter,
+  type InsertUsageMeter,
+  type CreditWallet,
+  type InsertCreditWallet,
+  type CreditTransaction,
+  type InsertCreditTransaction,
   type DiseaseArea,
 } from "@shared/schema";
 
@@ -141,6 +150,17 @@ export interface IStorage {
 
   getNodeKeyRegistrations(nodeId: string): Promise<(NodeKeyRegistration & { sshKey: UserSshKey | null })[]>;
   createNodeKeyRegistration(reg: InsertNodeKeyRegistration): Promise<NodeKeyRegistration>;
+
+  getUsageMeters(filters?: { userId?: string; projectId?: string; campaignId?: string }): Promise<UsageMeter[]>;
+  createUsageMeter(meter: InsertUsageMeter): Promise<UsageMeter>;
+  getUsageSummary(projectId: string): Promise<{ resourceType: string; totalAmount: number; unit: string }[]>;
+
+  getCreditWallet(ownerId: string, ownerType: "user" | "org"): Promise<CreditWallet | undefined>;
+  createCreditWallet(wallet: InsertCreditWallet): Promise<CreditWallet>;
+  updateCreditWallet(id: string, wallet: Partial<InsertCreditWallet>): Promise<CreditWallet | undefined>;
+
+  getCreditTransactions(walletId: string): Promise<CreditTransaction[]>;
+  createCreditTransaction(tx: InsertCreditTransaction): Promise<CreditTransaction>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -665,6 +685,73 @@ export class DatabaseStorage implements IStorage {
 
   async createNodeKeyRegistration(reg: InsertNodeKeyRegistration): Promise<NodeKeyRegistration> {
     const result = await db.insert(nodeKeyRegistrations).values(reg).returning();
+    return result[0];
+  }
+
+  async getUsageMeters(filters?: { userId?: string; projectId?: string; campaignId?: string }): Promise<UsageMeter[]> {
+    const conditions = [];
+    if (filters?.userId) conditions.push(eq(usageMeters.userId, filters.userId));
+    if (filters?.projectId) conditions.push(eq(usageMeters.projectId, filters.projectId));
+    if (filters?.campaignId) conditions.push(eq(usageMeters.campaignId, filters.campaignId));
+
+    if (conditions.length === 0) {
+      return db.select().from(usageMeters).orderBy(desc(usageMeters.createdAt)).limit(500);
+    }
+    return db.select().from(usageMeters).where(and(...conditions)).orderBy(desc(usageMeters.createdAt));
+  }
+
+  async createUsageMeter(meter: InsertUsageMeter): Promise<UsageMeter> {
+    const result = await db.insert(usageMeters).values(meter).returning();
+    return result[0];
+  }
+
+  async getUsageSummary(projectId: string): Promise<{ resourceType: string; totalAmount: number; unit: string }[]> {
+    const result = await db
+      .select({
+        resourceType: usageMeters.resourceType,
+        totalAmount: sum(usageMeters.amount),
+        unit: usageMeters.unit,
+      })
+      .from(usageMeters)
+      .where(eq(usageMeters.projectId, projectId))
+      .groupBy(usageMeters.resourceType, usageMeters.unit);
+
+    return result.map((row) => ({
+      resourceType: row.resourceType,
+      totalAmount: Number(row.totalAmount) || 0,
+      unit: row.unit,
+    }));
+  }
+
+  async getCreditWallet(ownerId: string, ownerType: "user" | "org"): Promise<CreditWallet | undefined> {
+    const result = await db
+      .select()
+      .from(creditWallets)
+      .where(and(eq(creditWallets.ownerId, ownerId), eq(creditWallets.ownerType, ownerType)))
+      .limit(1);
+    return result[0];
+  }
+
+  async createCreditWallet(wallet: InsertCreditWallet): Promise<CreditWallet> {
+    const result = await db.insert(creditWallets).values(wallet).returning();
+    return result[0];
+  }
+
+  async updateCreditWallet(id: string, wallet: Partial<InsertCreditWallet>): Promise<CreditWallet | undefined> {
+    const result = await db
+      .update(creditWallets)
+      .set({ ...wallet, updatedAt: new Date() })
+      .where(eq(creditWallets.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getCreditTransactions(walletId: string): Promise<CreditTransaction[]> {
+    return db.select().from(creditTransactions).where(eq(creditTransactions.walletId, walletId)).orderBy(desc(creditTransactions.createdAt));
+  }
+
+  async createCreditTransaction(tx: InsertCreditTransaction): Promise<CreditTransaction> {
+    const result = await db.insert(creditTransactions).values(tx).returning();
     return result[0];
   }
 }
