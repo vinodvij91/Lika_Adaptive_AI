@@ -31,6 +31,12 @@ import {
   organizations,
   orgMembers,
   sharedAssets,
+  materialEntities,
+  materialProperties,
+  materialsPrograms,
+  materialsCampaigns,
+  materialsOracleScores,
+  materialsLearningGraph,
   type Project,
   type InsertProject,
   type Target,
@@ -92,6 +98,18 @@ import {
   type InsertOrgMember,
   type SharedAsset,
   type InsertSharedAsset,
+  type MaterialEntity,
+  type InsertMaterialEntity,
+  type MaterialProperty,
+  type InsertMaterialProperty,
+  type MaterialsProgram,
+  type InsertMaterialsProgram,
+  type MaterialsCampaign,
+  type InsertMaterialsCampaign,
+  type MaterialsOracleScore,
+  type InsertMaterialsOracleScore,
+  type MaterialsLearningGraphEntry,
+  type InsertMaterialsLearningGraphEntry,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -204,7 +222,7 @@ export interface IStorage {
   getDiseaseContextSignals(targetId: string): Promise<DiseaseContextSignal[]>;
   createDiseaseContextSignal(signal: InsertDiseaseContextSignal): Promise<DiseaseContextSignal>;
 
-  getPrograms(projectId?: string): Promise<Program[]>;
+  getPrograms(ownerId?: string): Promise<Program[]>;
   getProgram(id: string): Promise<Program | undefined>;
   createProgram(program: InsertProgram): Promise<Program>;
   updateProgram(id: string, program: Partial<InsertProgram>): Promise<Program | undefined>;
@@ -244,6 +262,34 @@ export interface IStorage {
   getSharedAssets(sharedWithOrgId: string): Promise<SharedAsset[]>;
   createSharedAsset(asset: InsertSharedAsset): Promise<SharedAsset>;
   deleteSharedAsset(id: string): Promise<void>;
+
+  getMaterialEntities(type?: string): Promise<MaterialEntity[]>;
+  getMaterialEntity(id: string): Promise<MaterialEntity | undefined>;
+  createMaterialEntity(entity: InsertMaterialEntity): Promise<MaterialEntity>;
+  updateMaterialEntity(id: string, entity: Partial<InsertMaterialEntity>): Promise<MaterialEntity | undefined>;
+  deleteMaterialEntity(id: string): Promise<void>;
+
+  getMaterialProperties(materialId: string): Promise<MaterialProperty[]>;
+  createMaterialProperty(property: InsertMaterialProperty): Promise<MaterialProperty>;
+
+  getMaterialsPrograms(): Promise<MaterialsProgram[]>;
+  getMaterialsProgram(id: string): Promise<MaterialsProgram | undefined>;
+  createMaterialsProgram(program: InsertMaterialsProgram): Promise<MaterialsProgram>;
+  updateMaterialsProgram(id: string, program: Partial<InsertMaterialsProgram>): Promise<MaterialsProgram | undefined>;
+  deleteMaterialsProgram(id: string): Promise<void>;
+
+  getMaterialsCampaigns(programId?: string): Promise<MaterialsCampaign[]>;
+  getMaterialsCampaign(id: string): Promise<MaterialsCampaign | undefined>;
+  createMaterialsCampaign(campaign: InsertMaterialsCampaign): Promise<MaterialsCampaign>;
+  updateMaterialsCampaign(id: string, campaign: Partial<InsertMaterialsCampaign>): Promise<MaterialsCampaign | undefined>;
+  deleteMaterialsCampaign(id: string): Promise<void>;
+
+  getMaterialsOracleScores(campaignId: string): Promise<MaterialsOracleScore[]>;
+  createMaterialsOracleScore(score: InsertMaterialsOracleScore): Promise<MaterialsOracleScore>;
+
+  getMaterialsLearningGraph(campaignId?: string): Promise<MaterialsLearningGraphEntry[]>;
+  createMaterialsLearningGraphEntry(entry: InsertMaterialsLearningGraphEntry): Promise<MaterialsLearningGraphEntry>;
+  labelMaterialsLearningGraphEntry(id: string, label: string): Promise<MaterialsLearningGraphEntry | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -870,9 +916,9 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getPrograms(projectId?: string): Promise<Program[]> {
-    if (projectId) {
-      return db.select().from(programs).where(eq(programs.projectId, projectId)).orderBy(desc(programs.updatedAt));
+  async getPrograms(ownerId?: string): Promise<Program[]> {
+    if (ownerId) {
+      return db.select().from(programs).where(eq(programs.ownerId, ownerId)).orderBy(desc(programs.updatedAt));
     }
     return db.select().from(programs).orderBy(desc(programs.updatedAt));
   }
@@ -1035,6 +1081,116 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSharedAsset(id: string): Promise<void> {
     await db.delete(sharedAssets).where(eq(sharedAssets.id, id));
+  }
+
+  async getMaterialEntities(type?: string): Promise<MaterialEntity[]> {
+    if (type) {
+      return db.select().from(materialEntities).where(eq(materialEntities.type, type as any)).orderBy(desc(materialEntities.createdAt));
+    }
+    return db.select().from(materialEntities).orderBy(desc(materialEntities.createdAt)).limit(500);
+  }
+
+  async getMaterialEntity(id: string): Promise<MaterialEntity | undefined> {
+    const result = await db.select().from(materialEntities).where(eq(materialEntities.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createMaterialEntity(entity: InsertMaterialEntity): Promise<MaterialEntity> {
+    const result = await db.insert(materialEntities).values(entity).returning();
+    return result[0];
+  }
+
+  async updateMaterialEntity(id: string, entity: Partial<InsertMaterialEntity>): Promise<MaterialEntity | undefined> {
+    const result = await db.update(materialEntities).set(entity).where(eq(materialEntities.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteMaterialEntity(id: string): Promise<void> {
+    await db.delete(materialEntities).where(eq(materialEntities.id, id));
+  }
+
+  async getMaterialProperties(materialId: string): Promise<MaterialProperty[]> {
+    return db.select().from(materialProperties).where(eq(materialProperties.materialId, materialId)).orderBy(desc(materialProperties.createdAt));
+  }
+
+  async createMaterialProperty(property: InsertMaterialProperty): Promise<MaterialProperty> {
+    const result = await db.insert(materialProperties).values(property).returning();
+    return result[0];
+  }
+
+  async getMaterialsPrograms(): Promise<MaterialsProgram[]> {
+    return db.select().from(materialsPrograms).orderBy(desc(materialsPrograms.createdAt));
+  }
+
+  async getMaterialsProgram(id: string): Promise<MaterialsProgram | undefined> {
+    const result = await db.select().from(materialsPrograms).where(eq(materialsPrograms.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createMaterialsProgram(program: InsertMaterialsProgram): Promise<MaterialsProgram> {
+    const result = await db.insert(materialsPrograms).values(program).returning();
+    return result[0];
+  }
+
+  async updateMaterialsProgram(id: string, program: Partial<InsertMaterialsProgram>): Promise<MaterialsProgram | undefined> {
+    const result = await db.update(materialsPrograms).set({ ...program, updatedAt: new Date() }).where(eq(materialsPrograms.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteMaterialsProgram(id: string): Promise<void> {
+    await db.delete(materialsPrograms).where(eq(materialsPrograms.id, id));
+  }
+
+  async getMaterialsCampaigns(programId?: string): Promise<MaterialsCampaign[]> {
+    if (programId) {
+      return db.select().from(materialsCampaigns).where(eq(materialsCampaigns.programId, programId)).orderBy(desc(materialsCampaigns.updatedAt));
+    }
+    return db.select().from(materialsCampaigns).orderBy(desc(materialsCampaigns.updatedAt));
+  }
+
+  async getMaterialsCampaign(id: string): Promise<MaterialsCampaign | undefined> {
+    const result = await db.select().from(materialsCampaigns).where(eq(materialsCampaigns.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createMaterialsCampaign(campaign: InsertMaterialsCampaign): Promise<MaterialsCampaign> {
+    const result = await db.insert(materialsCampaigns).values(campaign).returning();
+    return result[0];
+  }
+
+  async updateMaterialsCampaign(id: string, campaign: Partial<InsertMaterialsCampaign>): Promise<MaterialsCampaign | undefined> {
+    const result = await db.update(materialsCampaigns).set({ ...campaign, updatedAt: new Date() }).where(eq(materialsCampaigns.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteMaterialsCampaign(id: string): Promise<void> {
+    await db.delete(materialsCampaigns).where(eq(materialsCampaigns.id, id));
+  }
+
+  async getMaterialsOracleScores(campaignId: string): Promise<MaterialsOracleScore[]> {
+    return db.select().from(materialsOracleScores).where(eq(materialsOracleScores.campaignId, campaignId)).orderBy(desc(materialsOracleScores.createdAt));
+  }
+
+  async createMaterialsOracleScore(score: InsertMaterialsOracleScore): Promise<MaterialsOracleScore> {
+    const result = await db.insert(materialsOracleScores).values(score).returning();
+    return result[0];
+  }
+
+  async getMaterialsLearningGraph(campaignId?: string): Promise<MaterialsLearningGraphEntry[]> {
+    if (campaignId) {
+      return db.select().from(materialsLearningGraph).where(eq(materialsLearningGraph.campaignId, campaignId)).orderBy(desc(materialsLearningGraph.createdAt));
+    }
+    return db.select().from(materialsLearningGraph).orderBy(desc(materialsLearningGraph.createdAt)).limit(500);
+  }
+
+  async createMaterialsLearningGraphEntry(entry: InsertMaterialsLearningGraphEntry): Promise<MaterialsLearningGraphEntry> {
+    const result = await db.insert(materialsLearningGraph).values(entry).returning();
+    return result[0];
+  }
+
+  async labelMaterialsLearningGraphEntry(id: string, label: string): Promise<MaterialsLearningGraphEntry | undefined> {
+    const result = await db.update(materialsLearningGraph).set({ label, labeledAt: new Date() }).where(eq(materialsLearningGraph.id, id)).returning();
+    return result[0];
   }
 }
 

@@ -1,0 +1,79 @@
+==================================================
+SUBTLE SCIENTIFIC BACKGROUND (DRUG + MATERIALS THEMES)
+==================================================
+
+Add a lightweight background visual system that reinforces the domain identity.
+
+GENERAL GUIDELINES:
+- Background visuals must be subtle, low-contrast, and NOT interfere with readability.
+- Use layered composition:
+  1) Base dark gradient
+  2) Domain-specific scientific motif overlay (very low opacity)
+- All visuals should feel modern, scientific, and minimal.
+
+==================================================
+DRUG DISCOVERY BACKGROUND STYLE
+==================================================
+Used when domain = "drug":
+
+Motifs:
+- DNA helix outlines
+- molecule / atom-bond graphs
+- soft protein ribbon curves
+- faint particle network
+
+Style:
+- organic curves, rounded shapes
+- accent hints: cyan / teal
+- opacity approx 5–12%
+- large-scale, soft, non-distracting
+- optional very slow movement (parallax drift)
+
+Placement suggestions:
+- top-right molecular cluster,
+- bottom-left DNA arc,
+- subtle curved ribbon behind header.
+
+==================================================
+MATERIALS SCIENCES BACKGROUND STYLE
+==================================================
+Used when domain = "materials":
+
+Motifs:
+- crystal lattice meshes
+- hexagonal grids
+- polymer chain paths
+- layered surface planes / engineering lines
+
+Style:
+- geometric, structured, slightly sharper than drug theme
+- accent hints: blue-steel / amber
+- opacity approx 5–10%
+- large, sparse, architectural forms
+- optional slow parallax drift
+
+Placement suggestions:
+- angled lattice plane in a corner,
+- faint hex grid under header,
+- diagonal polymer/mesh arc behind content areas.
+
+==================================================
+GRADIENT BASE LAYER (SHARED)
+==================================================
+- dark navy → charcoal gradient
+- subtle cyan/violet wash allowed
+- background should convey scientific depth without visual noise
+
+==================================================
+IMPLEMENTATION NOTES
+==================================================
+- Prefer CSS/SVG or lightweight canvas visuals.
+- Avoid heavy animation or distracting motion.
+- Ensure contrast accessibility and text readability.
+- Background should adapt per-domain automatically when entering that workspace.
+
+UX INTENT:
+Users should subconsciously feel:
+- "bio-molecular world" in Drug Discovery mode
+- "engineering-materials world" in Materials Sciences mode
+while still recognizing a single Lika Sciences identity.

@@ -11,7 +11,7 @@ export const structureSourceEnum = pgEnum("structure_source", ["uploaded", "bion
 export const campaignStatusEnum = pgEnum("campaign_status", ["pending", "running", "completed", "failed"]);
 export const jobTypeEnum = pgEnum("job_type", ["generation", "filtering", "docking", "scoring", "quantum_optimization", "quantum_scoring", "other"]);
 export const jobStatusEnum = pgEnum("job_status", ["pending", "running", "completed", "failed"]);
-export const providerTypeEnum = pgEnum("provider_type", ["bionemo", "ml", "docking", "quantum", "ip", "literature", "smiles_library", "agent"]);
+export const providerTypeEnum = pgEnum("provider_type", ["bionemo", "ml", "docking", "quantum", "ip", "literature", "smiles_library", "agent", "materials_library", "simulation", "oracle", "selection"]);
 export const outcomeEnum = pgEnum("outcome_label", ["promising", "dropped", "hit", "unknown"]);
 export const collaboratorRoleEnum = pgEnum("collaborator_role", ["owner", "editor", "viewer"]);
 export const libraryTypeEnum = pgEnum("library_type", ["internal", "uploaded", "generated"]);
@@ -26,6 +26,9 @@ export const assayOutcomeEnum = pgEnum("assay_outcome", ["active", "inactive", "
 export const orgRoleEnum = pgEnum("org_role", ["admin", "member", "viewer"]);
 export const assetTypeEnum = pgEnum("asset_type", ["smiles_library", "pipeline_template", "program"]);
 export const sharePermissionEnum = pgEnum("share_permission", ["read", "fork"]);
+export const discoveryDomainEnum = pgEnum("discovery_domain", ["drug", "materials"]);
+export const materialTypeEnum = pgEnum("material_type", ["polymer", "crystal", "composite", "surface", "membrane", "catalyst"]);
+export const materialPropertySourceEnum = pgEnum("material_property_source", ["ml", "simulation", "experiment"]);
 
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -641,6 +644,111 @@ export const insertCreditTransactionSchema = createInsertSchema(creditTransactio
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
 export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
 
+export const materialEntities = pgTable("material_entities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: materialTypeEnum("type").notNull(),
+  representation: jsonb("representation"),
+  metadata: jsonb("metadata"),
+  isCurated: boolean("is_curated").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMaterialEntitySchema = createInsertSchema(materialEntities).omit({ id: true, createdAt: true });
+export type MaterialEntity = typeof materialEntities.$inferSelect;
+export type InsertMaterialEntity = z.infer<typeof insertMaterialEntitySchema>;
+
+export const materialProperties = pgTable("material_properties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  materialId: varchar("material_id").notNull().references(() => materialEntities.id, { onDelete: "cascade" }),
+  propertyName: text("property_name").notNull(),
+  value: real("value"),
+  units: text("units"),
+  confidence: real("confidence"),
+  source: materialPropertySourceEnum("source").default("ml"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const materialPropertiesRelations = relations(materialProperties, ({ one }) => ({
+  material: one(materialEntities, { fields: [materialProperties.materialId], references: [materialEntities.id] }),
+}));
+
+export const insertMaterialPropertySchema = createInsertSchema(materialProperties).omit({ id: true, createdAt: true });
+export type MaterialProperty = typeof materialProperties.$inferSelect;
+export type InsertMaterialProperty = z.infer<typeof insertMaterialPropertySchema>;
+
+export const materialsPrograms = pgTable("materials_programs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  materialType: materialTypeEnum("material_type"),
+  ownerId: varchar("owner_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMaterialsProgramSchema = createInsertSchema(materialsPrograms).omit({ id: true, createdAt: true, updatedAt: true });
+export type MaterialsProgram = typeof materialsPrograms.$inferSelect;
+export type InsertMaterialsProgram = z.infer<typeof insertMaterialsProgramSchema>;
+
+export const materialsCampaigns = pgTable("materials_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  programId: varchar("program_id").references(() => materialsPrograms.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  domain: discoveryDomainEnum("domain").default("materials"),
+  modality: materialTypeEnum("modality"),
+  pipelineConfig: jsonb("pipeline_config"),
+  oracleVersionId: varchar("oracle_version_id").references(() => oracleVersions.id, { onDelete: "set null" }),
+  status: campaignStatusEnum("status").default("pending"),
+  ownerId: varchar("owner_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const materialsCampaignsRelations = relations(materialsCampaigns, ({ one }) => ({
+  program: one(materialsPrograms, { fields: [materialsCampaigns.programId], references: [materialsPrograms.id] }),
+  oracleVersion: one(oracleVersions, { fields: [materialsCampaigns.oracleVersionId], references: [oracleVersions.id] }),
+}));
+
+export const insertMaterialsCampaignSchema = createInsertSchema(materialsCampaigns).omit({ id: true, createdAt: true, updatedAt: true });
+export type MaterialsCampaign = typeof materialsCampaigns.$inferSelect;
+export type InsertMaterialsCampaign = z.infer<typeof insertMaterialsCampaignSchema>;
+
+export const materialsOracleScores = pgTable("materials_oracle_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  materialId: varchar("material_id").notNull().references(() => materialEntities.id, { onDelete: "cascade" }),
+  campaignId: varchar("campaign_id").notNull().references(() => materialsCampaigns.id, { onDelete: "cascade" }),
+  oracleScore: real("oracle_score"),
+  propertyBreakdown: jsonb("property_breakdown"),
+  synthesisFeasibility: real("synthesis_feasibility"),
+  manufacturingCostFactor: real("manufacturing_cost_factor"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const materialsOracleScoresRelations = relations(materialsOracleScores, ({ one }) => ({
+  material: one(materialEntities, { fields: [materialsOracleScores.materialId], references: [materialEntities.id] }),
+  campaign: one(materialsCampaigns, { fields: [materialsOracleScores.campaignId], references: [materialsCampaigns.id] }),
+}));
+
+export const insertMaterialsOracleScoreSchema = createInsertSchema(materialsOracleScores).omit({ id: true, createdAt: true });
+export type MaterialsOracleScore = typeof materialsOracleScores.$inferSelect;
+export type InsertMaterialsOracleScore = z.infer<typeof insertMaterialsOracleScoreSchema>;
+
+export const materialsLearningGraph = pgTable("materials_learning_graph", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").references(() => materialsCampaigns.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").references(() => materialEntities.id, { onDelete: "cascade" }),
+  stepName: text("step_name"),
+  inputPayload: jsonb("input_payload"),
+  outputPayload: jsonb("output_payload"),
+  label: text("label"),
+  labeledAt: timestamp("labeled_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMaterialsLearningGraphSchema = createInsertSchema(materialsLearningGraph).omit({ id: true, createdAt: true });
+export type MaterialsLearningGraphEntry = typeof materialsLearningGraph.$inferSelect;
+export type InsertMaterialsLearningGraphEntry = z.infer<typeof insertMaterialsLearningGraphSchema>;
+
 export type DiseaseArea = "CNS" | "Oncology" | "Rare" | "Infectious" | "Cardiometabolic" | "Autoimmune" | "Respiratory" | "Other";
 export type LibraryType = "internal" | "uploaded" | "generated";
 export type LibraryStatus = "draft" | "processing" | "curated" | "deprecated";
@@ -649,7 +757,10 @@ export type CampaignStatus = "pending" | "running" | "completed" | "failed";
 export type JobStatus = "pending" | "running" | "completed" | "failed";
 export type JobType = "generation" | "filtering" | "docking" | "scoring" | "quantum_optimization" | "quantum_scoring" | "other";
 export type OutcomeLabel = "promising" | "dropped" | "hit" | "unknown";
-export type ProviderType = "bionemo" | "ml" | "docking" | "quantum" | "ip" | "literature" | "smiles_library" | "agent";
+export type ProviderType = "bionemo" | "ml" | "docking" | "quantum" | "ip" | "literature" | "smiles_library" | "agent" | "materials_library" | "simulation" | "oracle" | "selection";
+export type DiscoveryDomain = "drug" | "materials";
+export type MaterialType = "polymer" | "crystal" | "composite" | "surface" | "membrane" | "catalyst";
+export type MaterialPropertySource = "ml" | "simulation" | "experiment";
 export type Modality = "small_molecule" | "fragment" | "protac" | "peptide" | "other";
 export type AssayType = "binding" | "functional" | "in_vivo" | "pk" | "admet" | "other";
 export type AssayOutcome = "active" | "inactive" | "toxic" | "no_effect" | "inconclusive";
@@ -727,4 +838,30 @@ export interface PipelineConfig {
     constraints?: Record<string, unknown>;
   };
   diseaseArea?: DiseaseArea;
+}
+
+export interface MaterialsPipelineStep {
+  name?: string;
+  provider: "materials_library" | "ml" | "simulation" | "quantum" | "oracle" | "selection";
+  operation: string;
+  params?: Record<string, unknown>;
+}
+
+export interface MaterialsPipelineConfig {
+  domain: "materials";
+  modality: MaterialType;
+  steps: MaterialsPipelineStep[];
+  targetProperties?: string[];
+  scoringWeights?: {
+    wPropertyMatch?: number;
+    wSynthesisFeasibility?: number;
+    wManufacturingCost?: number;
+    wStability?: number;
+  };
+  enableQuantumOptimization?: boolean;
+  quantumParams?: {
+    objective?: string;
+    maxMaterials?: number;
+    constraints?: Record<string, unknown>;
+  };
 }

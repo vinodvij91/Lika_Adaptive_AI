@@ -27,6 +27,12 @@ import {
   insertOrganizationSchema,
   insertOrgMemberSchema,
   insertSharedAssetSchema,
+  insertMaterialEntitySchema,
+  insertMaterialPropertySchema,
+  insertMaterialsProgramSchema,
+  insertMaterialsCampaignSchema,
+  insertMaterialsOracleScoreSchema,
+  insertMaterialsLearningGraphSchema,
   moleculeScores,
 } from "@shared/schema";
 
@@ -1723,6 +1729,272 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error rejecting recommendation:", error);
       res.status(500).json({ error: "Failed to reject recommendation" });
+    }
+  });
+
+  // ============================================
+  // MATERIALS DISCOVERY ENDPOINTS
+  // ============================================
+
+  app.get("/api/materials", requireAuth, async (req, res) => {
+    try {
+      const type = req.query.type as string | undefined;
+      const materials = await storage.getMaterialEntities(type);
+      res.json(materials);
+    } catch (error) {
+      console.error("Error fetching materials:", error);
+      res.status(500).json({ error: "Failed to fetch materials" });
+    }
+  });
+
+  app.get("/api/materials/:id", requireAuth, async (req, res) => {
+    try {
+      const material = await storage.getMaterialEntity(req.params.id);
+      if (!material) {
+        return res.status(404).json({ error: "Material not found" });
+      }
+      const properties = await storage.getMaterialProperties(material.id);
+      res.json({ ...material, properties });
+    } catch (error) {
+      console.error("Error fetching material:", error);
+      res.status(500).json({ error: "Failed to fetch material" });
+    }
+  });
+
+  app.post("/api/materials", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertMaterialEntitySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const material = await storage.createMaterialEntity(parsed.data);
+      res.status(201).json(material);
+    } catch (error) {
+      console.error("Error creating material:", error);
+      res.status(500).json({ error: "Failed to create material" });
+    }
+  });
+
+  app.patch("/api/materials/:id", requireAuth, async (req, res) => {
+    try {
+      const material = await storage.updateMaterialEntity(req.params.id, req.body);
+      if (!material) {
+        return res.status(404).json({ error: "Material not found" });
+      }
+      res.json(material);
+    } catch (error) {
+      console.error("Error updating material:", error);
+      res.status(500).json({ error: "Failed to update material" });
+    }
+  });
+
+  app.delete("/api/materials/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteMaterialEntity(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting material:", error);
+      res.status(500).json({ error: "Failed to delete material" });
+    }
+  });
+
+  app.post("/api/materials/:id/properties", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertMaterialPropertySchema.safeParse({ ...req.body, materialId: req.params.id });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const property = await storage.createMaterialProperty(parsed.data);
+      res.status(201).json(property);
+    } catch (error) {
+      console.error("Error creating material property:", error);
+      res.status(500).json({ error: "Failed to create material property" });
+    }
+  });
+
+  app.get("/api/materials-programs", requireAuth, async (req, res) => {
+    try {
+      const programs = await storage.getMaterialsPrograms();
+      res.json(programs);
+    } catch (error) {
+      console.error("Error fetching materials programs:", error);
+      res.status(500).json({ error: "Failed to fetch materials programs" });
+    }
+  });
+
+  app.get("/api/materials-programs/:id", requireAuth, async (req, res) => {
+    try {
+      const program = await storage.getMaterialsProgram(req.params.id);
+      if (!program) {
+        return res.status(404).json({ error: "Materials program not found" });
+      }
+      res.json(program);
+    } catch (error) {
+      console.error("Error fetching materials program:", error);
+      res.status(500).json({ error: "Failed to fetch materials program" });
+    }
+  });
+
+  app.post("/api/materials-programs", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "";
+      const parsed = insertMaterialsProgramSchema.safeParse({ ...req.body, ownerId: userId });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const program = await storage.createMaterialsProgram(parsed.data);
+      res.status(201).json(program);
+    } catch (error) {
+      console.error("Error creating materials program:", error);
+      res.status(500).json({ error: "Failed to create materials program" });
+    }
+  });
+
+  app.patch("/api/materials-programs/:id", requireAuth, async (req, res) => {
+    try {
+      const program = await storage.updateMaterialsProgram(req.params.id, req.body);
+      if (!program) {
+        return res.status(404).json({ error: "Materials program not found" });
+      }
+      res.json(program);
+    } catch (error) {
+      console.error("Error updating materials program:", error);
+      res.status(500).json({ error: "Failed to update materials program" });
+    }
+  });
+
+  app.delete("/api/materials-programs/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteMaterialsProgram(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting materials program:", error);
+      res.status(500).json({ error: "Failed to delete materials program" });
+    }
+  });
+
+  app.get("/api/materials-campaigns", requireAuth, async (req, res) => {
+    try {
+      const programId = req.query.programId as string | undefined;
+      const campaigns = await storage.getMaterialsCampaigns(programId);
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Error fetching materials campaigns:", error);
+      res.status(500).json({ error: "Failed to fetch materials campaigns" });
+    }
+  });
+
+  app.get("/api/materials-campaigns/:id", requireAuth, async (req, res) => {
+    try {
+      const campaign = await storage.getMaterialsCampaign(req.params.id);
+      if (!campaign) {
+        return res.status(404).json({ error: "Materials campaign not found" });
+      }
+      const scores = await storage.getMaterialsOracleScores(campaign.id);
+      res.json({ ...campaign, scores });
+    } catch (error) {
+      console.error("Error fetching materials campaign:", error);
+      res.status(500).json({ error: "Failed to fetch materials campaign" });
+    }
+  });
+
+  app.post("/api/materials-campaigns", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "";
+      const parsed = insertMaterialsCampaignSchema.safeParse({ ...req.body, ownerId: userId });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const campaign = await storage.createMaterialsCampaign(parsed.data);
+      res.status(201).json(campaign);
+    } catch (error) {
+      console.error("Error creating materials campaign:", error);
+      res.status(500).json({ error: "Failed to create materials campaign" });
+    }
+  });
+
+  app.patch("/api/materials-campaigns/:id", requireAuth, async (req, res) => {
+    try {
+      const campaign = await storage.updateMaterialsCampaign(req.params.id, req.body);
+      if (!campaign) {
+        return res.status(404).json({ error: "Materials campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error) {
+      console.error("Error updating materials campaign:", error);
+      res.status(500).json({ error: "Failed to update materials campaign" });
+    }
+  });
+
+  app.delete("/api/materials-campaigns/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteMaterialsCampaign(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting materials campaign:", error);
+      res.status(500).json({ error: "Failed to delete materials campaign" });
+    }
+  });
+
+  app.post("/api/materials-campaigns/:id/scores", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertMaterialsOracleScoreSchema.safeParse({ ...req.body, campaignId: req.params.id });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const score = await storage.createMaterialsOracleScore(parsed.data);
+      res.status(201).json(score);
+    } catch (error) {
+      console.error("Error creating materials oracle score:", error);
+      res.status(500).json({ error: "Failed to create materials oracle score" });
+    }
+  });
+
+  // Agent endpoints for materials discovery
+  app.get("/api/agent/materials", async (req, res) => {
+    try {
+      const type = req.query.type as string | undefined;
+      const materials = await storage.getMaterialEntities(type);
+      res.json(materials.map(m => ({ id: m.id, type: m.type, isCurated: m.isCurated })));
+    } catch (error) {
+      console.error("Error fetching materials for agent:", error);
+      res.status(500).json({ error: "Failed to fetch materials" });
+    }
+  });
+
+  app.get("/api/agent/materials-programs", async (req, res) => {
+    try {
+      const programs = await storage.getMaterialsPrograms();
+      res.json(programs.map(p => ({ id: p.id, name: p.name, materialType: p.materialType })));
+    } catch (error) {
+      console.error("Error fetching materials programs for agent:", error);
+      res.status(500).json({ error: "Failed to fetch materials programs" });
+    }
+  });
+
+  app.get("/api/agent/materials-campaigns", async (req, res) => {
+    try {
+      const campaigns = await storage.getMaterialsCampaigns();
+      res.json(campaigns.map(c => ({ id: c.id, name: c.name, status: c.status, modality: c.modality })));
+    } catch (error) {
+      console.error("Error fetching materials campaigns for agent:", error);
+      res.status(500).json({ error: "Failed to fetch materials campaigns" });
+    }
+  });
+
+  app.get("/api/agent/materials-campaigns/:id/scores", async (req, res) => {
+    try {
+      const scores = await storage.getMaterialsOracleScores(req.params.id);
+      res.json(scores.map(s => ({
+        id: s.id,
+        materialId: s.materialId,
+        oracleScore: s.oracleScore,
+        synthesisFeasibility: s.synthesisFeasibility,
+        manufacturingCostFactor: s.manufacturingCostFactor,
+      })));
+    } catch (error) {
+      console.error("Error fetching materials scores for agent:", error);
+      res.status(500).json({ error: "Failed to fetch materials scores" });
     }
   });
 

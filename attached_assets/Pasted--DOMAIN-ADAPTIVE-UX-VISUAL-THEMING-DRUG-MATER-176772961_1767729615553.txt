@@ -1,0 +1,107 @@
+==================================================
+DOMAIN-ADAPTIVE UX & VISUAL THEMING (DRUG + MATERIAL SCIENCES)
+==================================================
+
+The UI must support TWO domain personalities:
+1) Drug Discovery (molecular / bio / medicinal chemistry aesthetic)
+2) Materials Sciences (engineering / structure / physics aesthetic)
+
+Both share the same Lika Sciences core visual system, but each domain has its own
+motifs, shapes, accents, and 3D background feel.
+
+GLOBAL THEME BASE (APPLIES TO BOTH):
+- Dark scientific console base
+- Depth via layered panels and soft shadows
+- Accent colors: cyan/teal + violet for highlights
+- Subtle motion (particles, gridlines, flowing data paths)
+- 3D-inspired shapes using CSS transforms / WebGL / SVG where appropriate
+
+==================================================
+DRUG DISCOVERY THEME
+==================================================
+Use this theme whenever the active context is:
+- domain = "drug"
+- drug program / campaign / pipeline / molecule view
+
+Visual language:
+- Organic curves and molecular graph patterns
+- Atom + bond motifs, protein ribbon-like shapes
+- Ligand pocket silhouettes, curved flow lines
+
+Color emphasis:
+- Cyan / teal / bio-green accents
+- Soft glow and rounded edges
+
+3D / Background elements:
+- Rotating molecule clusters
+- Protein surface wireframe
+- Organic particle networks
+
+Pipeline node style:
+- Rounded pill-shaped tiles
+- Soft glow on hover
+- Icons: molecule, protein, brain/ML, flask/assay
+
+==================================================
+MATERIAL SCIENCES THEME
+==================================================
+Use this theme whenever the active context is:
+- domain = "materials" (materials sciences platform)
+- materials program / campaign / pipeline / material entity view
+
+Visual language:
+- Structural geometry, lattices, meshes, planes
+- Polymer chains, hexagonal grids, layered composites
+- Engineering lines, stress arcs, structural diagrams
+
+Color emphasis:
+- Blue-steel, tungsten gray, amber/orange highlights
+
+3D / Background elements:
+- Crystal lattice visualizations
+- Mesh networks or layered plate structures
+- Slow-rotating polymer chains or surface grids
+
+Pipeline node style:
+- Harder edges / beveled tiles
+- Subtle metallic or structural shading
+- Icons: lattice, polymer chain, crystal, surface, physics/simulation chip
+
+==================================================
+DOMAIN CONTEXT BEHAVIOR
+==================================================
+The app must switch theme based on active workspace:
+
+- When viewing a Drug Program / Campaign:
+  - apply drug discovery visuals
+  - molecular icons, organic curves, cyan-teal emphasis
+
+- When viewing a Materials Sciences Program / Campaign:
+  - apply materials sciences visuals
+  - structural geometry, lattice icons, blue-steel + amber accents
+
+Navigation, layout, typography remain consistent across themes.
+
+==================================================
+TERMINOLOGY NOTE
+==================================================
+Use the wording:
+- "Materials Sciences Platform"
+NOT "Materials Discovery Platform"
+
+Examples:
+- "Lika Sciences — Drug Discovery & Materials Sciences Platform"
+- "Materials Sciences Program"
+- "Materials Sciences Campaign"
+- "Materials Sciences Pipeline"
+
+==================================================
+UX INTENT
+==================================================
+The experience should feel like:
+- ONE unified scientific operating system
+- with TWO specialized worlds:
+  - molecular / biological (drug discovery)
+  - structural / engineering (materials sciences)
+
+Domain context should be visually recognizable within 1–2 seconds without reading text.

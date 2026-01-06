@@ -89,6 +89,28 @@ attached_assets/ # Specification documents
 - **Organization Members**: Role-based access (admin, member, viewer)
 - **Shared Assets**: Share SMILES libraries, pipeline templates, or programs between organizations with read/fork permissions
 
+### Materials Discovery (v1)
+- **Material Entities**: Support for polymers, crystals, composites, surfaces, membranes, and catalysts
+- **Material Properties**: Track property predictions with values, units, confidence, and source (ML, simulation, experiment)
+- **Materials Programs**: Organize materials discovery efforts by material type
+- **Materials Campaigns**: Parallel to drug campaigns, with materials-specific pipeline configs
+- **Materials Oracle Scores**: Property breakdown, synthesis feasibility, manufacturing cost factor
+- **Materials Learning Graph**: Self-improving knowledge from materials discovery outcomes
+- **Pipeline Templates**: Polymer discovery, coatings/surface materials, energy materials pipelines
+
+### Materials Discovery Endpoints
+- `GET /api/materials` - List material entities (filterable by type)
+- `GET /api/materials/:id` - Get material with properties
+- `POST /api/materials` - Create material entity
+- `GET /api/materials-programs` - List materials programs
+- `POST /api/materials-programs` - Create materials program
+- `GET /api/materials-campaigns` - List materials campaigns
+- `POST /api/materials-campaigns` - Create materials campaign
+- `GET /api/agent/materials` - Agent endpoint for materials list
+- `GET /api/agent/materials-programs` - Agent endpoint for programs
+- `GET /api/agent/materials-campaigns` - Agent endpoint for campaigns
+- `GET /api/agent/materials-campaigns/:id/scores` - Agent endpoint for oracle scores
+
 ### API Design Pattern
 RESTful endpoints under `/api/` prefix. Example endpoint structure:
 - `POST /api/molecules/import-smiles` - Batch SMILES import with validation
