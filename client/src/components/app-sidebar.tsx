@@ -20,6 +20,8 @@ import {
   BarChart3,
   Brain,
   LogOut,
+  Library,
+  Server,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,6 +37,11 @@ const navigationItems = [
     title: "Projects",
     url: "/projects",
     icon: FolderKanban,
+  },
+  {
+    title: "Libraries",
+    url: "/libraries",
+    icon: Library,
   },
   {
     title: "Targets",
@@ -63,6 +70,14 @@ const workflowItems = [
     title: "Learning Graph",
     url: "/learning-graph",
     icon: Brain,
+  },
+];
+
+const infrastructureItems = [
+  {
+    title: "Compute Nodes",
+    url: "/compute-nodes",
+    icon: Server,
   },
 ];
 
@@ -128,6 +143,27 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {workflowItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === item.url || location.startsWith(item.url + "/")}
+                  >
+                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(" ", "-")}`}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Infrastructure</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {infrastructureItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild

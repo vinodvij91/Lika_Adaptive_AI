@@ -56,6 +56,9 @@ attached_assets/ # Specification documents
 - **Project Organization**: Molecules linked to projects via junction tables
 - **Campaign Configurator**: Workflow for research campaign setup
 - **SMILES Import**: Batch import with duplicate detection and validation
+- **Curated Libraries**: Domain-aware SMILES libraries with scaffolds, cleaning workflows, and agent validation
+- **Compute Nodes**: Infrastructure management for ML, docking, quantum, and agent workloads (Hetzner, Vast.ai)
+- **SSH Key Management**: User SSH key registration for compute node access
 
 ### API Design Pattern
 RESTful endpoints under `/api/` prefix. Example endpoint structure:
@@ -69,6 +72,18 @@ Designed for AI agents and bots to interact with the platform:
 - `GET /api/agent/learning-graph/unlabeled` - Returns entries needing labeling
 - `POST /api/agent/learning-graph/label` - Labels a learning graph entry
 - `POST /api/agent/quantum-recommendation` - Recommends whether quantum optimization should be used
+- `GET /api/agent/libraries/curated` - Returns curated libraries available for campaigns
+- `GET /api/agent/libraries/:id/status` - Returns library validation progress and readiness
+- `POST /api/agent/libraries/:id/validate` - Validates or invalidates library molecules
+- `POST /api/agent/libraries/:id/classify` - Classifies molecules with domain annotations
+
+### Compute Infrastructure Endpoints
+- `GET /api/compute-nodes` - List all compute nodes
+- `GET /api/compute-nodes/:id` - Get node details with SSH key registrations
+- `POST /api/compute-nodes` - Register a new compute node
+- `POST /api/compute-nodes/:id/register-key` - Request SSH key registration (mock, future automation)
+- `GET /api/ssh-keys` - List user's SSH public keys
+- `POST /api/ssh-keys` - Upload a new SSH public key
 
 ### Service Account Roles
 The platform supports service accounts for agents with defined roles:

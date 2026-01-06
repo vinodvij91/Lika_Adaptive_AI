@@ -27,8 +27,9 @@ import {
   Play,
   Save,
   CheckCircle,
+  Library,
 } from "lucide-react";
-import type { Project, Target as TargetType, DiseaseArea, PipelineConfig } from "@shared/schema";
+import type { Project, Target as TargetType, DiseaseArea, PipelineConfig, CuratedLibrary } from "@shared/schema";
 
 const diseaseAreas: DiseaseArea[] = ["CNS", "Oncology", "Rare", "Infectious", "Cardiometabolic", "Autoimmune", "Respiratory", "Other"];
 
@@ -58,7 +59,8 @@ export default function CampaignNewPage() {
   const [projectId, setProjectId] = useState(projectIdFromUrl || "");
   const [domainType, setDomainType] = useState<DiseaseArea>("CNS");
   const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
-  const [generator, setGenerator] = useState<"bionemo_molmim" | "upload_library">("bionemo_molmim");
+  const [generator, setGenerator] = useState<"bionemo_molmim" | "upload_library" | "curated_library">("bionemo_molmim");
+  const [selectedLibraryId, setSelectedLibraryId] = useState<string>("");
   const [selectedFilters, setSelectedFilters] = useState<string[]>(["lipinski"]);
   const [dockingMethod, setDockingMethod] = useState<"bionemo_diffdock" | "external_docking">("bionemo_diffdock");
   const [wDocking, setWDocking] = useState(0.4);
@@ -75,6 +77,13 @@ export default function CampaignNewPage() {
   const { data: targets } = useQuery<TargetType[]>({
     queryKey: ["/api/targets"],
   });
+
+  const { data: libraries } = useQuery<CuratedLibrary[]>({
+    queryKey: ["/api/libraries"],
+  });
+
+  const curatedLibraries = libraries?.filter(lib => lib.status === "curated" && lib.domainType === domainType) || [];
+  const selectedLibrary = libraries?.find(lib => lib.id === selectedLibraryId);
 
   const createMutation = useMutation({
     mutationFn: async (data: { name: string; projectId: string; domainType: DiseaseArea; pipelineConfig: PipelineConfig }) => {
@@ -102,7 +111,7 @@ export default function CampaignNewPage() {
 
   const handleSubmit = () => {
     const pipelineConfig: PipelineConfig = {
-      generator,
+      generator: generator === "curated_library" ? "upload_library" : generator,
       filteringRules: selectedFilters,
       dockingMethod,
       scoringWeights: { wDocking, wAdmet, wQsar },
@@ -112,6 +121,14 @@ export default function CampaignNewPage() {
         objective: quantumObjective,
         maxMolecules: quantumMaxMolecules,
       } : undefined,
+      seedSource: generator === "curated_library" && selectedLibraryId ? {
+        type: "curated_library",
+        libraryId: selectedLibraryId,
+      } : generator === "upload_library" ? {
+        type: "uploaded_set",
+      } : {
+        type: "generated",
+      },
     };
 
     createMutation.mutate({
@@ -312,7 +329,7 @@ export default function CampaignNewPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <button
                         onClick={() => setGenerator("bionemo_molmim")}
                         className={`p-6 rounded-lg border-2 text-left transition-colors ${
@@ -326,6 +343,21 @@ export default function CampaignNewPage() {
                         <h3 className="font-semibold mb-1">BioNeMo MolMIM</h3>
                         <p className="text-sm text-muted-foreground">
                           Generate novel molecules using BioNeMo AI
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => setGenerator("curated_library")}
+                        className={`p-6 rounded-lg border-2 text-left transition-colors ${
+                          generator === "curated_library"
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover-elevate"
+                        }`}
+                        data-testid="option-curated-library"
+                      >
+                        <Library className="h-8 w-8 text-chart-3 mb-3" />
+                        <h3 className="font-semibold mb-1">Curated Library</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Use a domain-specific curated library
                         </p>
                       </button>
                       <button
@@ -344,6 +376,51 @@ export default function CampaignNewPage() {
                         </p>
                       </button>
                     </div>
+
+                    {generator === "curated_library" && (
+                      <div className="mt-6 pt-6 border-t">
+                        <h4 className="font-medium mb-4">Select Curated Library</h4>
+                        {curatedLibraries.length > 0 ? (
+                          <div className="space-y-2">
+                            {curatedLibraries.map((lib) => (
+                              <div
+                                key={lib.id}
+                                onClick={() => setSelectedLibraryId(lib.id)}
+                                className={`flex items-center gap-3 p-3 rounded-md cursor-pointer transition-colors ${
+                                  selectedLibraryId === lib.id
+                                    ? "bg-primary/10 border border-primary/30"
+                                    : "hover-elevate"
+                                }`}
+                                data-testid={`library-option-${lib.id}`}
+                              >
+                                <div className="w-9 h-9 rounded-md bg-chart-3/10 flex items-center justify-center">
+                                  <Library className="h-4 w-4 text-chart-3" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium">{lib.name}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {lib.moleculeCount || 0} molecules, {lib.scaffoldCount || 0} scaffolds
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground text-center py-4">
+                            No curated libraries match your selected domain ({domainType}).{" "}
+                            <a href="/libraries" className="text-primary underline">Create one</a>
+                          </p>
+                        )}
+                        {selectedLibrary && (
+                          <div className="mt-4 p-4 bg-muted rounded-md">
+                            <p className="font-medium">{selectedLibrary.name}</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {selectedLibrary.description || "No description"}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}

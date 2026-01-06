@@ -40,12 +40,28 @@ export class JobOrchestrator {
 
       let moleculeIds: string[] = [];
 
-      if (config?.generator === "bionemo_molmim") {
+      if (config?.seedSource?.type === "curated_library" && config.seedSource.libraryId) {
+        const libraryMolecules = await storage.getLibraryMolecules(config.seedSource.libraryId);
+        let filteredLibMols = libraryMolecules;
+        
+        if (config.seedSource.filters?.cleaningStatus) {
+          filteredLibMols = filteredLibMols.filter(lm => lm.cleaningStatus === config.seedSource?.filters?.cleaningStatus);
+        }
+        if (config.seedSource.filters?.scaffoldIds?.length) {
+          filteredLibMols = filteredLibMols.filter(lm => lm.scaffoldId && config.seedSource?.filters?.scaffoldIds?.includes(lm.scaffoldId));
+        }
+        
+        moleculeIds = filteredLibMols.map(lm => lm.moleculeId);
+        console.log(`[Orchestrator] Loaded ${moleculeIds.length} molecules from curated library ${config.seedSource.libraryId}`);
+      } else if (config?.generator === "bionemo_molmim") {
         const generated = await bionemoClient.generateMolecules(config.generatorParams?.seedSmiles, config.generatorParams?.n || 50);
         const newMolecules = await storage.bulkCreateMolecules(
           generated.map((g) => ({ smiles: g.smiles, source: "generated" as const }))
         );
         moleculeIds = newMolecules.map((m) => m.id);
+      } else if (config?.generator === "curated_library" && config.seedSource?.libraryId) {
+        const libraryMolecules = await storage.getLibraryMolecules(config.seedSource.libraryId);
+        moleculeIds = libraryMolecules.map(lm => lm.moleculeId);
       } else {
         const existingMolecules = await storage.getMolecules();
         moleculeIds = existingMolecules.slice(0, 50).map((m) => m.id);

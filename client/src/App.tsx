@@ -13,6 +13,8 @@ import LandingPage from "@/pages/landing";
 import DashboardPage from "@/pages/dashboard";
 import ProjectsPage from "@/pages/projects";
 import ProjectDetailPage from "@/pages/project-detail";
+import LibrariesPage from "@/pages/libraries";
+import LibraryDetailPage from "@/pages/library-detail";
 import TargetsPage from "@/pages/targets";
 import MoleculesPage from "@/pages/molecules";
 import CampaignsPage from "@/pages/campaigns";
@@ -20,6 +22,8 @@ import CampaignNewPage from "@/pages/campaign-new";
 import CampaignDetailPage from "@/pages/campaign-detail";
 import ReportsPage from "@/pages/reports";
 import LearningGraphPage from "@/pages/learning-graph";
+import ComputeNodesPage from "@/pages/compute-nodes";
+import ComputeNodeDetailPage from "@/pages/compute-node-detail";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -47,6 +51,8 @@ function AuthenticatedRoutes() {
         <Route path="/dashboard" component={DashboardPage} />
         <Route path="/projects" component={ProjectsPage} />
         <Route path="/projects/:id" component={ProjectDetailPage} />
+        <Route path="/libraries" component={LibrariesPage} />
+        <Route path="/libraries/:id" component={LibraryDetailPage} />
         <Route path="/targets" component={TargetsPage} />
         <Route path="/molecules" component={MoleculesPage} />
         <Route path="/campaigns" component={CampaignsPage} />
@@ -54,6 +60,8 @@ function AuthenticatedRoutes() {
         <Route path="/campaigns/:id" component={CampaignDetailPage} />
         <Route path="/reports" component={ReportsPage} />
         <Route path="/learning-graph" component={LearningGraphPage} />
+        <Route path="/compute-nodes" component={ComputeNodesPage} />
+        <Route path="/compute-nodes/:id" component={ComputeNodeDetailPage} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>

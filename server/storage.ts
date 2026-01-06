@@ -10,6 +10,13 @@ import {
   moleculeScores,
   learningGraphEntries,
   comments,
+  curatedLibraries,
+  libraryMolecules,
+  scaffolds,
+  libraryAnnotations,
+  computeNodes,
+  userSshKeys,
+  nodeKeyRegistrations,
   type Project,
   type InsertProject,
   type Target,
@@ -28,6 +35,20 @@ import {
   type InsertLearningGraphEntry,
   type Comment,
   type InsertComment,
+  type CuratedLibrary,
+  type InsertCuratedLibrary,
+  type LibraryMolecule,
+  type InsertLibraryMolecule,
+  type Scaffold,
+  type InsertScaffold,
+  type LibraryAnnotation,
+  type InsertLibraryAnnotation,
+  type ComputeNode,
+  type InsertComputeNode,
+  type UserSshKey,
+  type InsertUserSshKey,
+  type NodeKeyRegistration,
+  type InsertNodeKeyRegistration,
   type DiseaseArea,
 } from "@shared/schema";
 
@@ -88,6 +109,38 @@ export interface IStorage {
     domainBreakdown: Record<DiseaseArea, number>;
     recentCampaigns: { name: string; molecules: number; avgScore: number }[];
   }>;
+
+  getCuratedLibraries(filters?: { domainType?: DiseaseArea; status?: string; isPublic?: boolean }): Promise<CuratedLibrary[]>;
+  getCuratedLibrary(id: string): Promise<CuratedLibrary | undefined>;
+  createCuratedLibrary(library: InsertCuratedLibrary): Promise<CuratedLibrary>;
+  updateCuratedLibrary(id: string, library: Partial<InsertCuratedLibrary>): Promise<CuratedLibrary | undefined>;
+  deleteCuratedLibrary(id: string): Promise<void>;
+
+  getLibraryMolecules(libraryId: string): Promise<(LibraryMolecule & { molecule: Molecule | null })[]>;
+  addLibraryMolecule(entry: InsertLibraryMolecule): Promise<LibraryMolecule>;
+  bulkAddLibraryMolecules(entries: InsertLibraryMolecule[]): Promise<LibraryMolecule[]>;
+  updateLibraryMolecule(id: string, entry: Partial<InsertLibraryMolecule>): Promise<LibraryMolecule | undefined>;
+
+  getScaffolds(libraryId: string): Promise<Scaffold[]>;
+  createScaffold(scaffold: InsertScaffold): Promise<Scaffold>;
+  updateScaffold(id: string, scaffold: Partial<InsertScaffold>): Promise<Scaffold | undefined>;
+
+  getLibraryAnnotations(libraryId: string): Promise<LibraryAnnotation[]>;
+  createLibraryAnnotation(annotation: InsertLibraryAnnotation): Promise<LibraryAnnotation>;
+
+  getComputeNodes(): Promise<ComputeNode[]>;
+  getComputeNode(id: string): Promise<ComputeNode | undefined>;
+  createComputeNode(node: InsertComputeNode): Promise<ComputeNode>;
+  updateComputeNode(id: string, node: Partial<InsertComputeNode>): Promise<ComputeNode | undefined>;
+  deleteComputeNode(id: string): Promise<void>;
+
+  getUserSshKeys(userId: string): Promise<UserSshKey[]>;
+  getUserSshKey(id: string): Promise<UserSshKey | undefined>;
+  createUserSshKey(key: InsertUserSshKey): Promise<UserSshKey>;
+  deleteUserSshKey(id: string): Promise<void>;
+
+  getNodeKeyRegistrations(nodeId: string): Promise<(NodeKeyRegistration & { sshKey: UserSshKey | null })[]>;
+  createNodeKeyRegistration(reg: InsertNodeKeyRegistration): Promise<NodeKeyRegistration>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -459,6 +512,159 @@ export class DatabaseStorage implements IStorage {
       .set({ outcomeLabel })
       .where(eq(learningGraphEntries.id, id))
       .returning();
+    return result[0];
+  }
+
+  async getCuratedLibraries(filters?: { domainType?: DiseaseArea; status?: string; isPublic?: boolean }): Promise<CuratedLibrary[]> {
+    let query = db.select().from(curatedLibraries).orderBy(desc(curatedLibraries.updatedAt));
+    
+    if (filters?.domainType) {
+      query = query.where(eq(curatedLibraries.domainType, filters.domainType)) as typeof query;
+    }
+    if (filters?.status) {
+      query = query.where(eq(curatedLibraries.status, filters.status as "draft" | "processing" | "curated" | "deprecated")) as typeof query;
+    }
+    if (filters?.isPublic !== undefined) {
+      query = query.where(eq(curatedLibraries.isPublic, filters.isPublic)) as typeof query;
+    }
+    
+    return query;
+  }
+
+  async getCuratedLibrary(id: string): Promise<CuratedLibrary | undefined> {
+    const result = await db.select().from(curatedLibraries).where(eq(curatedLibraries.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createCuratedLibrary(library: InsertCuratedLibrary): Promise<CuratedLibrary> {
+    const result = await db.insert(curatedLibraries).values(library).returning();
+    return result[0];
+  }
+
+  async updateCuratedLibrary(id: string, library: Partial<InsertCuratedLibrary>): Promise<CuratedLibrary | undefined> {
+    const result = await db.update(curatedLibraries).set({ ...library, updatedAt: new Date() }).where(eq(curatedLibraries.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteCuratedLibrary(id: string): Promise<void> {
+    await db.delete(curatedLibraries).where(eq(curatedLibraries.id, id));
+  }
+
+  async getLibraryMolecules(libraryId: string): Promise<(LibraryMolecule & { molecule: Molecule | null })[]> {
+    const results = await db
+      .select({
+        libraryMolecule: libraryMolecules,
+        molecule: molecules,
+      })
+      .from(libraryMolecules)
+      .leftJoin(molecules, eq(libraryMolecules.moleculeId, molecules.id))
+      .where(eq(libraryMolecules.libraryId, libraryId))
+      .orderBy(desc(libraryMolecules.createdAt));
+
+    return results.map((row) => ({
+      ...row.libraryMolecule,
+      molecule: row.molecule,
+    }));
+  }
+
+  async addLibraryMolecule(entry: InsertLibraryMolecule): Promise<LibraryMolecule> {
+    const result = await db.insert(libraryMolecules).values(entry).returning();
+    return result[0];
+  }
+
+  async bulkAddLibraryMolecules(entries: InsertLibraryMolecule[]): Promise<LibraryMolecule[]> {
+    if (entries.length === 0) return [];
+    return db.insert(libraryMolecules).values(entries).returning();
+  }
+
+  async updateLibraryMolecule(id: string, entry: Partial<InsertLibraryMolecule>): Promise<LibraryMolecule | undefined> {
+    const result = await db.update(libraryMolecules).set(entry).where(eq(libraryMolecules.id, id)).returning();
+    return result[0];
+  }
+
+  async getScaffolds(libraryId: string): Promise<Scaffold[]> {
+    return db.select().from(scaffolds).where(eq(scaffolds.libraryId, libraryId)).orderBy(desc(scaffolds.memberCount));
+  }
+
+  async createScaffold(scaffold: InsertScaffold): Promise<Scaffold> {
+    const result = await db.insert(scaffolds).values(scaffold).returning();
+    return result[0];
+  }
+
+  async updateScaffold(id: string, scaffold: Partial<InsertScaffold>): Promise<Scaffold | undefined> {
+    const result = await db.update(scaffolds).set(scaffold).where(eq(scaffolds.id, id)).returning();
+    return result[0];
+  }
+
+  async getLibraryAnnotations(libraryId: string): Promise<LibraryAnnotation[]> {
+    return db.select().from(libraryAnnotations).where(eq(libraryAnnotations.libraryId, libraryId)).orderBy(desc(libraryAnnotations.createdAt));
+  }
+
+  async createLibraryAnnotation(annotation: InsertLibraryAnnotation): Promise<LibraryAnnotation> {
+    const result = await db.insert(libraryAnnotations).values(annotation).returning();
+    return result[0];
+  }
+
+  async getComputeNodes(): Promise<ComputeNode[]> {
+    return db.select().from(computeNodes).orderBy(desc(computeNodes.createdAt));
+  }
+
+  async getComputeNode(id: string): Promise<ComputeNode | undefined> {
+    const result = await db.select().from(computeNodes).where(eq(computeNodes.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createComputeNode(node: InsertComputeNode): Promise<ComputeNode> {
+    const result = await db.insert(computeNodes).values(node).returning();
+    return result[0];
+  }
+
+  async updateComputeNode(id: string, node: Partial<InsertComputeNode>): Promise<ComputeNode | undefined> {
+    const result = await db.update(computeNodes).set({ ...node, updatedAt: new Date() }).where(eq(computeNodes.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteComputeNode(id: string): Promise<void> {
+    await db.delete(computeNodes).where(eq(computeNodes.id, id));
+  }
+
+  async getUserSshKeys(userId: string): Promise<UserSshKey[]> {
+    return db.select().from(userSshKeys).where(eq(userSshKeys.userId, userId)).orderBy(desc(userSshKeys.createdAt));
+  }
+
+  async getUserSshKey(id: string): Promise<UserSshKey | undefined> {
+    const result = await db.select().from(userSshKeys).where(eq(userSshKeys.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createUserSshKey(key: InsertUserSshKey): Promise<UserSshKey> {
+    const result = await db.insert(userSshKeys).values(key).returning();
+    return result[0];
+  }
+
+  async deleteUserSshKey(id: string): Promise<void> {
+    await db.delete(userSshKeys).where(eq(userSshKeys.id, id));
+  }
+
+  async getNodeKeyRegistrations(nodeId: string): Promise<(NodeKeyRegistration & { sshKey: UserSshKey | null })[]> {
+    const results = await db
+      .select({
+        registration: nodeKeyRegistrations,
+        sshKey: userSshKeys,
+      })
+      .from(nodeKeyRegistrations)
+      .leftJoin(userSshKeys, eq(nodeKeyRegistrations.sshKeyId, userSshKeys.id))
+      .where(eq(nodeKeyRegistrations.nodeId, nodeId))
+      .orderBy(desc(nodeKeyRegistrations.registeredAt));
+
+    return results.map((row) => ({
+      ...row.registration,
+      sshKey: row.sshKey,
+    }));
+  }
+
+  async createNodeKeyRegistration(reg: InsertNodeKeyRegistration): Promise<NodeKeyRegistration> {
+    const result = await db.insert(nodeKeyRegistrations).values(reg).returning();
     return result[0];
   }
 }

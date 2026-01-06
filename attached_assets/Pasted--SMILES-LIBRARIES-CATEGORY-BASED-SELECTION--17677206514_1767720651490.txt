@@ -1,0 +1,155 @@
+==================================================
+SMILES LIBRARIES & CATEGORY-BASED SELECTION
+==================================================
+
+We want users to:
+
+1. Maintain **named SMILES libraries** (curated or uploaded) as first-class objects.
+2. Tag libraries and/or molecules with **categories** (e.g., "anti-inflammatory", "CNS", "oncology", "anti-infective").
+3. In the Campaign Configurator, easily pick:
+   - which SMILES library to draw from, and
+   - which categories within that library (e.g., only anti-inflammatory compounds)
+   - and add that slice into the pipeline as the starting pool.
+
+DATA MODEL EXTENSIONS:
+
+Add two new tables:
+
+- `smiles_libraries`
+  - id
+  - name (e.g., "Inflammation_Set_A")
+  - description
+  - owner_id (FK to users or nullable for global/shared)
+  - domain_hint (optional: CNS / Oncology / Anti-infective / Inflammation / Rare / Mixed)
+  - created_at, updated_at
+
+- `smiles_library_molecules`
+  - id
+  - library_id (FK to smiles_libraries)
+  - molecule_id (FK to molecules)
+  - categories (TEXT[] or JSONB array, e.g. ["anti-inflammatory","immune-modulator"])
+  - created_at
+
+Notes:
+- A single molecule can be in multiple libraries.
+- A molecule can have different categories per library (contextual tagging).
+
+When importing SMILES (via the SMILES Upload feature):
+
+- If the user imports into a specific library:
+  - Create/ensure a `smiles_libraries` row.
+  - For each new or existing molecule, create a `smiles_library_molecules` row linked to that library.
+- Provide a way to assign categories at import time:
+  - e.g., a simple text/checkbox input: "Categories for this upload: [x] anti-inflammatory, [ ] CNS, [ ] oncology"
+  - All uploaded molecules in that batch get those initial categories.
+- The user should later be able to edit categories for a library or molecule.
+
+BACK-END ENDPOINTS:
+
+Implement endpoints for:
+
+- `GET /api/smiles-libraries`
+  - Returns list of available libraries (id, name, description, domain_hint).
+
+- `GET /api/smiles-libraries/:id`
+  - Returns details + simple stats (e.g., count of molecules, distinct categories).
+
+- `GET /api/smiles-libraries/:id/categories`
+  - Returns distinct categories used in that library, e.g. ["anti-inflammatory","CNS","mixed"].
+
+- `POST /api/smiles-libraries`
+  - Create a new named library.
+
+- `POST /api/smiles-libraries/:id/add-molecules`
+  - Add existing `molecule_id`s to a library with optional categories.
+
+- `GET /api/smiles-libraries/:id/molecules`
+  - Query parameters:
+    - `categories[]` (optional array)
+    - `limit` (optional)
+  - Returns molecules in that library filtered by categories if supplied.
+
+CAMPAIGN CONFIGURATOR – LIBRARY & CATEGORY SELECTION:
+
+In the Campaign Configurator (Pipeline Builder), for the **input/generation step**:
+
+- Add a mode: **“Use SMILES Library”** (in addition to "BioNeMo MolMIM" and "Upload file").
+- When user selects "Use SMILES Library":
+  1. Show a dropdown of available `smiles_libraries` (fetched from `GET /api/smiles-libraries`).
+  2. After library selection, fetch categories via `GET /api/smiles-libraries/:id/categories`.
+  3. Display a multi-select of categories (e.g., anti-inflammatory, CNS, etc.).
+  4. Show an optional numeric input for `maxMolecules` to pull from that slice.
+- When saving the campaign, include this in `pipeline_config` JSONB. For example:
+
+  {
+    "steps": [
+      {
+        "name": "Input Library",
+        "provider": "smiles_library",
+        "operation": "select_from_library",
+        "params": {
+          "libraryId": "<uuid>",
+          "categories": ["anti-inflammatory"],
+          "maxMolecules": 5000
+        }
+      },
+      {
+        "name": "Filtering",
+        "provider": "ml",
+        "operation": "admet_filter",
+        "params": { ... }
+      },
+      ...
+    ]
+  }
+
+- The back-end orchestrator, when executing this step, should:
+  - Call `GET /api/smiles-libraries/:id/molecules?categories[]=anti-inflammatory&limit=maxMolecules`
+  - Use those `molecule_id`s as the starting pool for subsequent steps (filtering, docking, etc.).
+  - Record this in `model_runs` as a step with `provider_type = "smiles_library"` or similar.
+
+AGENT / BOT HELP FOR CATEGORY-BASED SELECTION:
+
+Prepare endpoints to make this "anti-inflammatory" selection easy and smart:
+
+- `POST /api/agent/library-categories`
+  - Input: `{ libraryId: string }`
+  - Output (mock for now):
+
+    {
+      "libraryId": "...",
+      "categories": [
+        { "name": "anti-inflammatory", "approxCount": 1200 },
+        { "name": "CNS", "approxCount": 800 },
+        { "name": "anti-infective", "approxCount": 450 }
+      ]
+    }
+
+  - For v0, this can simply read distinct categories from `smiles_library_molecules` and count them.
+
+- `POST /api/agent/suggest-library-slice`
+  - Input: `{ libraryId: string, desiredDomain?: string }`
+  - Output (mock):
+
+    {
+      "recommendedCategories": ["anti-inflammatory"],
+      "reasoning": "This library contains many molecules tagged anti-inflammatory, which aligns with your domain 'Inflammation'.",
+      "expectedCount": 1000
+    }
+
+The UI can then:
+- Show a “Suggested slice: Anti-inflammatory (≈1000 molecules)” prompt.
+- Provide a one-click **“Use this slice in pipeline”** button that:
+  - Sets the input step’s libraryId and categories accordingly.
+
+USAGE EXAMPLE (ANTI-INFLAMMATORY):
+
+- User has imported a big library "My_Master_Library".
+- During import, they tagged a subset as "anti-inflammatory".
+- In the Campaign Configurator, they choose:
+  - Library: "My_Master_Library"
+  - Category: "anti-inflammatory"
+- The pipeline input step is automatically configured to use only anti-inflammatory compounds from that library, up to `maxMolecules`.
+- Agents can:
+  - Confirm that anti-inflammatory is a good choice.
+  - Suggest additional categories if relevant (e.g., "immune-modulator").

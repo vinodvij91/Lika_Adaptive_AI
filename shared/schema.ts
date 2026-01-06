@@ -14,6 +14,12 @@ export const jobStatusEnum = pgEnum("job_status", ["pending", "running", "comple
 export const providerTypeEnum = pgEnum("provider_type", ["bionemo", "ml", "docking", "quantum"]);
 export const outcomeEnum = pgEnum("outcome_label", ["promising", "dropped", "hit", "unknown"]);
 export const collaboratorRoleEnum = pgEnum("collaborator_role", ["owner", "editor", "viewer"]);
+export const libraryTypeEnum = pgEnum("library_type", ["internal", "uploaded", "generated"]);
+export const libraryStatusEnum = pgEnum("library_status", ["draft", "processing", "curated", "deprecated"]);
+export const cleaningStatusEnum = pgEnum("cleaning_status", ["pending", "cleaning", "validated", "failed"]);
+export const computeProviderEnum = pgEnum("compute_provider", ["hetzner", "vastai", "other"]);
+export const computePurposeEnum = pgEnum("compute_purpose", ["ml", "bionemo", "docking", "quantum", "agents", "general"]);
+export const computeStatusEnum = pgEnum("compute_status", ["active", "offline", "degraded"]);
 
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -184,6 +190,103 @@ export const commentsRelations = relations(comments, ({ one }) => ({
   campaign: one(campaigns, { fields: [comments.campaignId], references: [campaigns.id] }),
 }));
 
+export const curatedLibraries = pgTable("curated_libraries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  domainType: diseaseAreaEnum("domain_type").default("Other"),
+  libraryType: libraryTypeEnum("library_type").default("uploaded"),
+  status: libraryStatusEnum("status").default("draft"),
+  ownerId: varchar("owner_id").notNull(),
+  isPublic: boolean("is_public").default(false),
+  moleculeCount: real("molecule_count").default(0),
+  scaffoldCount: real("scaffold_count").default(0),
+  version: real("version").default(1),
+  tags: text("tags").array(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_curated_libraries_domain").on(table.domainType),
+  index("idx_curated_libraries_status").on(table.status),
+]);
+
+export const curatedLibrariesRelations = relations(curatedLibraries, ({ many }) => ({
+  molecules: many(libraryMolecules),
+  scaffolds: many(scaffolds),
+  annotations: many(libraryAnnotations),
+  collaborators: many(libraryCollaborators),
+}));
+
+export const libraryMolecules = pgTable("library_molecules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  libraryId: varchar("library_id").notNull().references(() => curatedLibraries.id, { onDelete: "cascade" }),
+  moleculeId: varchar("molecule_id").notNull().references(() => molecules.id, { onDelete: "cascade" }),
+  canonicalSmiles: text("canonical_smiles"),
+  canonicalHash: text("canonical_hash"),
+  cleaningStatus: cleaningStatusEnum("cleaning_status").default("pending"),
+  scaffoldId: varchar("scaffold_id"),
+  tags: text("tags").array(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_library_molecules_library").on(table.libraryId),
+  index("idx_library_molecules_scaffold").on(table.scaffoldId),
+  index("idx_library_molecules_hash").on(table.canonicalHash),
+]);
+
+export const libraryMoleculesRelations = relations(libraryMolecules, ({ one }) => ({
+  library: one(curatedLibraries, { fields: [libraryMolecules.libraryId], references: [curatedLibraries.id] }),
+  molecule: one(molecules, { fields: [libraryMolecules.moleculeId], references: [molecules.id] }),
+}));
+
+export const scaffolds = pgTable("scaffolds", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  libraryId: varchar("library_id").notNull().references(() => curatedLibraries.id, { onDelete: "cascade" }),
+  name: text("name"),
+  coreSmiles: text("core_smiles").notNull(),
+  scaffoldType: text("scaffold_type").default("murcko"),
+  memberCount: real("member_count").default(0),
+  properties: jsonb("properties"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_scaffolds_library").on(table.libraryId),
+]);
+
+export const scaffoldsRelations = relations(scaffolds, ({ one, many }) => ({
+  library: one(curatedLibraries, { fields: [scaffolds.libraryId], references: [curatedLibraries.id] }),
+  members: many(libraryMolecules),
+}));
+
+export const libraryAnnotations = pgTable("library_annotations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  libraryId: varchar("library_id").notNull().references(() => curatedLibraries.id, { onDelete: "cascade" }),
+  moleculeId: varchar("molecule_id").references(() => molecules.id, { onDelete: "cascade" }),
+  annotationType: text("annotation_type").notNull(),
+  annotationValue: text("annotation_value"),
+  confidence: real("confidence"),
+  source: text("source").default("user"),
+  userId: varchar("user_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const libraryAnnotationsRelations = relations(libraryAnnotations, ({ one }) => ({
+  library: one(curatedLibraries, { fields: [libraryAnnotations.libraryId], references: [curatedLibraries.id] }),
+  molecule: one(molecules, { fields: [libraryAnnotations.moleculeId], references: [molecules.id] }),
+}));
+
+export const libraryCollaborators = pgTable("library_collaborators", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  libraryId: varchar("library_id").notNull().references(() => curatedLibraries.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull(),
+  role: collaboratorRoleEnum("role").default("viewer"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const libraryCollaboratorsRelations = relations(libraryCollaborators, ({ one }) => ({
+  library: one(curatedLibraries, { fields: [libraryCollaborators.libraryId], references: [curatedLibraries.id] }),
+}));
+
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTargetSchema = createInsertSchema(targets).omit({ id: true, createdAt: true });
 export const insertMoleculeSchema = createInsertSchema(molecules).omit({ id: true, createdAt: true });
@@ -193,6 +296,10 @@ export const insertModelRunSchema = createInsertSchema(modelRuns).omit({ id: tru
 export const insertMoleculeScoreSchema = createInsertSchema(moleculeScores).omit({ id: true, createdAt: true });
 export const insertLearningGraphEntrySchema = createInsertSchema(learningGraphEntries).omit({ id: true, createdAt: true });
 export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
+export const insertCuratedLibrarySchema = createInsertSchema(curatedLibraries).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertLibraryMoleculeSchema = createInsertSchema(libraryMolecules).omit({ id: true, createdAt: true });
+export const insertScaffoldSchema = createInsertSchema(scaffolds).omit({ id: true, createdAt: true });
+export const insertLibraryAnnotationSchema = createInsertSchema(libraryAnnotations).omit({ id: true, createdAt: true });
 
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
@@ -212,13 +319,69 @@ export type LearningGraphEntry = typeof learningGraphEntries.$inferSelect;
 export type InsertLearningGraphEntry = z.infer<typeof insertLearningGraphEntrySchema>;
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type CuratedLibrary = typeof curatedLibraries.$inferSelect;
+export type InsertCuratedLibrary = z.infer<typeof insertCuratedLibrarySchema>;
+export type LibraryMolecule = typeof libraryMolecules.$inferSelect;
+export type InsertLibraryMolecule = z.infer<typeof insertLibraryMoleculeSchema>;
+export type Scaffold = typeof scaffolds.$inferSelect;
+export type InsertScaffold = z.infer<typeof insertScaffoldSchema>;
+export type LibraryAnnotation = typeof libraryAnnotations.$inferSelect;
+export type InsertLibraryAnnotation = z.infer<typeof insertLibraryAnnotationSchema>;
+
+export const computeNodes = pgTable("compute_nodes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  provider: computeProviderEnum("provider").default("other"),
+  purpose: computePurposeEnum("purpose").default("general"),
+  ipAddress: text("ip_address"),
+  region: text("region"),
+  status: computeStatusEnum("status").default("active"),
+  specs: jsonb("specs"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertComputeNodeSchema = createInsertSchema(computeNodes).omit({ id: true, createdAt: true, updatedAt: true });
+export type ComputeNode = typeof computeNodes.$inferSelect;
+export type InsertComputeNode = z.infer<typeof insertComputeNodeSchema>;
+
+export const userSshKeys = pgTable("user_ssh_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  publicKey: text("public_key").notNull(),
+  label: text("label"),
+  fingerprint: text("fingerprint"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUserSshKeySchema = createInsertSchema(userSshKeys).omit({ id: true, createdAt: true });
+export type UserSshKey = typeof userSshKeys.$inferSelect;
+export type InsertUserSshKey = z.infer<typeof insertUserSshKeySchema>;
+
+export const nodeKeyRegistrations = pgTable("node_key_registrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nodeId: varchar("node_id").notNull().references(() => computeNodes.id, { onDelete: "cascade" }),
+  sshKeyId: varchar("ssh_key_id").notNull().references(() => userSshKeys.id, { onDelete: "cascade" }),
+  status: text("status").default("pending"),
+  registeredAt: timestamp("registered_at").defaultNow(),
+});
+
+export const insertNodeKeyRegistrationSchema = createInsertSchema(nodeKeyRegistrations).omit({ id: true, registeredAt: true });
+export type NodeKeyRegistration = typeof nodeKeyRegistrations.$inferSelect;
+export type InsertNodeKeyRegistration = z.infer<typeof insertNodeKeyRegistrationSchema>;
 
 export type DiseaseArea = "CNS" | "Oncology" | "Rare" | "Infectious" | "Cardiometabolic" | "Autoimmune" | "Respiratory" | "Other";
+export type LibraryType = "internal" | "uploaded" | "generated";
+export type LibraryStatus = "draft" | "processing" | "curated" | "deprecated";
+export type CleaningStatus = "pending" | "cleaning" | "validated" | "failed";
 export type CampaignStatus = "pending" | "running" | "completed" | "failed";
 export type JobStatus = "pending" | "running" | "completed" | "failed";
 export type JobType = "generation" | "filtering" | "docking" | "scoring" | "quantum_optimization" | "quantum_scoring" | "other";
 export type OutcomeLabel = "promising" | "dropped" | "hit" | "unknown";
 export type ProviderType = "bionemo" | "ml" | "docking" | "quantum";
+export type ComputeProvider = "hetzner" | "vastai" | "other";
+export type ComputePurpose = "ml" | "bionemo" | "docking" | "quantum" | "agents" | "general";
+export type ComputeStatus = "active" | "offline" | "degraded";
 
 export type ServiceAccountRole = "agent_pipeline_copilot" | "agent_operator" | "agent_readonly";
 
@@ -238,12 +401,27 @@ export interface PipelineStep {
   params?: Record<string, unknown>;
 }
 
+export type SeedSourceType = "curated_library" | "uploaded_set" | "generated";
+
+export interface SeedSource {
+  type: SeedSourceType;
+  libraryId?: string;
+  libraryVersion?: number;
+  filters?: {
+    domainType?: DiseaseArea;
+    scaffoldIds?: string[];
+    cleaningStatus?: CleaningStatus;
+    tags?: string[];
+  };
+}
+
 export interface PipelineConfig {
-  generator: "bionemo_molmim" | "upload_library";
+  generator: "bionemo_molmim" | "upload_library" | "curated_library";
   generatorParams?: {
     seedSmiles?: string[];
     n?: number;
   };
+  seedSource?: SeedSource;
   filteringRules?: string[];
   dockingMethod: "bionemo_diffdock" | "external_docking";
   scoringWeights: {
