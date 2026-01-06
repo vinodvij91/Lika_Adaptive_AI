@@ -2,6 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DualDomainBackground } from "@/components/scientific-background";
+import { AnimatedGrid, FloatingParticles, GlowingOrbs } from "@/components/animated-grid";
+import { MetricsStrip } from "@/components/metrics-strip";
+import { IntegrationLogos, TrustSignals } from "@/components/integration-logos";
 import {
   Beaker,
   Sparkles,
@@ -19,16 +22,17 @@ import {
   Shield,
   Hexagon,
   Cpu,
+  Play,
 } from "lucide-react";
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-sm">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-md bg-primary flex items-center justify-center">
-              <FlaskConical className="h-5 w-5 text-primary-foreground" />
+            <div className="w-9 h-9 rounded-md bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+              <FlaskConical className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-semibold">Lika Sciences</span>
           </div>
@@ -42,13 +46,15 @@ export default function LandingPage() {
       </header>
 
       <main>
-        <section className="relative pt-32 pb-24 overflow-hidden">
+        <section className="relative pt-32 pb-28 overflow-hidden min-h-[90vh] flex items-center">
           <DualDomainBackground />
+          <AnimatedGrid />
+          <FloatingParticles />
           
-          <div className="relative max-w-7xl mx-auto px-6">
+          <div className="relative max-w-7xl mx-auto px-6 w-full">
             <div className="max-w-4xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 text-cyan-400 text-sm font-medium mb-6 border border-cyan-500/20">
-                <Sparkles className="h-4 w-4" />
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 text-cyan-400 text-sm font-medium mb-6 border border-cyan-500/20 backdrop-blur-sm">
+                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                 Adaptive AI Discovery Platform
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-white">
@@ -57,81 +63,152 @@ export default function LandingPage() {
                   Drug Discovery + Materials Sciences
                 </span>
               </h1>
-              <p className="text-lg md:text-xl text-slate-300 mb-8 max-w-3xl mx-auto">
+              <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed">
                 Generative design, simulation-in-the-loop, BioNeMo + Molecular ML + Quantum pipelines
                 across pharmaceuticals, polymers, catalysts, energy materials, coatings, membranes,
                 and next-generation engineered materials.
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-4">
+              
+              <div className="flex flex-wrap items-center justify-center gap-4 mb-12">
                 <a href="/api/login">
-                  <Button size="lg" className="gap-2 bg-cyan-600 hover:bg-cyan-700 border-cyan-500" data-testid="button-explore-drug">
+                  <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-explore-drug">
                     <FlaskConical className="h-4 w-4" />
                     Explore Drug Discovery
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
                 <a href="/api/login">
-                  <Button size="lg" variant="outline" className="gap-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/10" data-testid="button-explore-materials">
+                  <Button size="lg" variant="outline" className="gap-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/10 backdrop-blur-sm" data-testid="button-explore-materials">
                     <Hexagon className="h-4 w-4" />
                     Explore Materials Sciences
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
               </div>
+
+              <div className="relative max-w-2xl mx-auto">
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-transparent to-amber-500/20 rounded-xl blur-xl" />
+                <div className="relative grid grid-cols-3 gap-4 p-6 rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">2.4M+</div>
+                    <div className="text-xs text-slate-400">Compounds Scored</div>
+                  </div>
+                  <div className="text-center border-x border-white/10">
+                    <div className="text-2xl font-bold text-white">847K</div>
+                    <div className="text-xs text-slate-400">Daily Predictions</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">156</div>
+                    <div className="text-xs text-slate-400">Active Campaigns</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+            <div className="w-6 h-10 rounded-full border-2 border-white/30 flex items-start justify-center pt-2">
+              <div className="w-1.5 h-3 rounded-full bg-white/50" />
             </div>
           </div>
         </section>
 
-        <section className="py-16 border-t bg-muted/20">
-          <div className="max-w-7xl mx-auto px-6">
+        <MetricsStrip />
+
+        <section className="py-20 border-t relative overflow-hidden">
+          <GlowingOrbs />
+          <div className="relative max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <Card className="overflow-hidden border-cyan-500/20 bg-gradient-to-br from-cyan-950/30 to-transparent">
-                <CardContent className="p-8">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-md bg-cyan-500/10 flex items-center justify-center border border-cyan-500/30">
-                      <FlaskConical className="h-6 w-6 text-cyan-400" />
+              <Card className="overflow-hidden border-cyan-500/20 bg-gradient-to-br from-cyan-950/40 to-slate-950/40 backdrop-blur-sm group">
+                <CardContent className="p-8 relative">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-colors" />
+                  <div className="relative">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
+                        <FlaskConical className="h-6 w-6 text-cyan-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold">Drug Discovery</h3>
+                        <p className="text-xs text-cyan-400">Small Molecules, PROTACs, Peptides</p>
+                      </div>
                     </div>
-                    <h3 className="text-2xl font-bold">Drug Discovery</h3>
+                    <p className="text-muted-foreground mb-4">
+                      End-to-end AI discovery with ADMET, docking, variant-aware scoring, 
+                      multi-modality pipelines, and simulation-driven iteration.
+                    </p>
+                    <ul className="space-y-3 text-sm">
+                      <li className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-md bg-cyan-500/10 flex items-center justify-center">
+                          <Target className="h-3.5 w-3.5 text-cyan-400" />
+                        </div>
+                        <span className="text-muted-foreground">BioNeMo Integration</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-md bg-cyan-500/10 flex items-center justify-center">
+                          <Brain className="h-3.5 w-3.5 text-cyan-400" />
+                        </div>
+                        <span className="text-muted-foreground">ML-Guided Docking</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-md bg-cyan-500/10 flex items-center justify-center">
+                          <BarChart3 className="h-3.5 w-3.5 text-cyan-400" />
+                        </div>
+                        <span className="text-muted-foreground">ADMET Predictions</span>
+                      </li>
+                    </ul>
                   </div>
-                  <p className="text-muted-foreground">
-                    End-to-end AI discovery for small molecules, PROTACs, peptides, ADMET, docking,
-                    variant-aware scoring, multi-modality pipelines, and simulation-driven iteration.
-                  </p>
-                  <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2"><Target className="h-4 w-4 text-cyan-400" /> BioNeMo Integration</li>
-                    <li className="flex items-center gap-2"><Brain className="h-4 w-4 text-cyan-400" /> ML-Guided Docking</li>
-                    <li className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-cyan-400" /> ADMET Predictions</li>
-                  </ul>
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden border-amber-500/20 bg-gradient-to-br from-amber-950/30 to-transparent">
-                <CardContent className="p-8">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-md bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
-                      <Hexagon className="h-6 w-6 text-amber-400" />
+              <Card className="overflow-hidden border-amber-500/20 bg-gradient-to-br from-amber-950/40 to-slate-950/40 backdrop-blur-sm group">
+                <CardContent className="p-8 relative">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-colors" />
+                  <div className="relative">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center border border-amber-500/30 shadow-lg shadow-amber-500/10">
+                        <Hexagon className="h-6 w-6 text-amber-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold">Materials Sciences</h3>
+                        <p className="text-xs text-amber-400">Polymers, Crystals, Composites</p>
+                      </div>
                     </div>
-                    <h3 className="text-2xl font-bold">Materials Sciences</h3>
+                    <p className="text-muted-foreground mb-4">
+                      AI-guided materials design for coatings, membranes, catalysts, 
+                      and functional materials with property-first pipelines.
+                    </p>
+                    <ul className="space-y-3 text-sm">
+                      <li className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center">
+                          <Layers className="h-3.5 w-3.5 text-amber-400" />
+                        </div>
+                        <span className="text-muted-foreground">Multi-Scale Representations</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center">
+                          <Atom className="h-3.5 w-3.5 text-amber-400" />
+                        </div>
+                        <span className="text-muted-foreground">Property Prediction</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center">
+                          <Settings className="h-3.5 w-3.5 text-amber-400" />
+                        </div>
+                        <span className="text-muted-foreground">Manufacturability Scoring</span>
+                      </li>
+                    </ul>
                   </div>
-                  <p className="text-muted-foreground">
-                    AI-guided materials design for polymers, crystals, composites, coatings, membranes,
-                    catalysts, and functional materials driven by property-first pipelines and physics-aware simulation.
-                  </p>
-                  <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2"><Layers className="h-4 w-4 text-amber-400" /> Multi-Scale Representations</li>
-                    <li className="flex items-center gap-2"><Atom className="h-4 w-4 text-amber-400" /> Property Prediction</li>
-                    <li className="flex items-center gap-2"><Settings className="h-4 w-4 text-amber-400" /> Manufacturability Scoring</li>
-                  </ul>
                 </CardContent>
               </Card>
             </div>
           </div>
         </section>
 
-        <section className="py-20 border-t">
+        <section className="py-20 border-t bg-gradient-to-b from-muted/10 to-background">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">Platform Capabilities</h2>
+              <p className="text-sm font-medium text-cyan-500 uppercase tracking-wider mb-2">Capabilities</p>
+              <h2 className="text-3xl font-bold mb-4">Platform Features</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Unified infrastructure for both drug discovery and materials sciences workflows
               </p>
@@ -171,8 +248,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="py-20 bg-gradient-to-br from-cyan-950/20 via-muted/30 to-transparent border-t">
-          <div className="max-w-7xl mx-auto px-6">
+        <IntegrationLogos />
+
+        <section className="py-20 bg-gradient-to-br from-cyan-950/20 via-background to-background border-t relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
+          <div className="relative max-w-7xl mx-auto px-6">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-500 text-xs font-medium mb-4 border border-cyan-500/20">
                 <FlaskConical className="h-3 w-3" />
@@ -224,8 +304,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="py-20 bg-gradient-to-br from-amber-950/20 via-transparent to-transparent border-t">
-          <div className="max-w-7xl mx-auto px-6">
+        <section className="py-20 bg-gradient-to-br from-amber-950/20 via-background to-background border-t relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
+          <div className="relative max-w-7xl mx-auto px-6">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 text-xs font-medium mb-4 border border-amber-500/20">
                 <Hexagon className="h-3 w-3" />
@@ -277,30 +358,37 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="py-20 border-t">
-          <div className="max-w-7xl mx-auto px-6 text-center">
-            <h2 className="text-3xl font-bold mb-4">Ready to Transform Discovery?</h2>
-            <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+        <TrustSignals />
+
+        <section className="py-24 border-t relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-amber-500/5" />
+          <div className="relative max-w-7xl mx-auto px-6 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Discovery?</h2>
+            <p className="text-muted-foreground mb-10 max-w-xl mx-auto text-lg">
               Get started with Lika Sciences today and accelerate your drug discovery and materials sciences programs.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <a href="/api/login">
-                <Button size="lg" className="gap-2" data-testid="button-get-started">
-                  Get Started
+                <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-get-started">
+                  Get Started Free
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
+              <Button size="lg" variant="outline" className="gap-2" data-testid="button-watch-demo">
+                <Play className="h-4 w-4" />
+                Watch Demo
+              </Button>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t py-8">
+      <footer className="border-t py-8 bg-muted/20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-                <FlaskConical className="h-4 w-4 text-primary-foreground" />
+              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <FlaskConical className="h-4 w-4 text-white" />
               </div>
               <span className="font-semibold">Lika Sciences</span>
             </div>
@@ -324,9 +412,10 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <Card className="hover-elevate">
-      <CardContent className="p-6">
-        <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center mb-4">
+    <Card className="hover-elevate group relative overflow-visible">
+      <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <CardContent className="p-6 relative">
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-4 border border-primary/20">
           <Icon className="h-5 w-5 text-primary" />
         </div>
         <h3 className="font-semibold mb-2">{title}</h3>
@@ -349,23 +438,26 @@ function USPCard({
 }) {
   const colorClasses = {
     cyan: {
-      bg: "bg-cyan-500/10",
+      bg: "from-cyan-500/20 to-teal-500/5",
       border: "border-cyan-500/30",
       icon: "text-cyan-400",
+      glow: "bg-cyan-500/10",
     },
     amber: {
-      bg: "bg-amber-500/10",
+      bg: "from-amber-500/20 to-orange-500/5",
       border: "border-amber-500/30",
       icon: "text-amber-400",
+      glow: "bg-amber-500/10",
     },
   };
 
   const colors = colorClasses[accentColor];
 
   return (
-    <Card className="hover-elevate">
-      <CardContent className="p-6 flex gap-4">
-        <div className={`w-12 h-12 rounded-md ${colors.bg} flex items-center justify-center flex-shrink-0 border ${colors.border}`}>
+    <Card className="hover-elevate group relative overflow-visible">
+      <div className={`absolute top-4 left-4 w-20 h-20 ${colors.glow} rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity`} />
+      <CardContent className="p-6 flex gap-4 relative">
+        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colors.bg} flex items-center justify-center flex-shrink-0 border ${colors.border}`}>
           <Icon className={`h-6 w-6 ${colors.icon}`} />
         </div>
         <div>
