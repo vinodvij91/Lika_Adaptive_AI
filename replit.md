@@ -89,16 +89,16 @@ attached_assets/ # Specification documents
 - **Organization Members**: Role-based access (admin, member, viewer)
 - **Shared Assets**: Share SMILES libraries, pipeline templates, or programs between organizations with read/fork permissions
 
-### Materials Discovery (v1)
+### Materials Sciences (v1)
 - **Material Entities**: Support for polymers, crystals, composites, surfaces, membranes, and catalysts
 - **Material Properties**: Track property predictions with values, units, confidence, and source (ML, simulation, experiment)
-- **Materials Programs**: Organize materials discovery efforts by material type
+- **Materials Programs**: Organize materials sciences efforts by material type
 - **Materials Campaigns**: Parallel to drug campaigns, with materials-specific pipeline configs
 - **Materials Oracle Scores**: Property breakdown, synthesis feasibility, manufacturing cost factor
-- **Materials Learning Graph**: Self-improving knowledge from materials discovery outcomes
+- **Materials Learning Graph**: Self-improving knowledge from materials sciences outcomes
 - **Pipeline Templates**: Polymer discovery, coatings/surface materials, energy materials pipelines
 
-### Materials Discovery Endpoints
+### Materials Sciences Endpoints
 - `GET /api/materials` - List material entities (filterable by type)
 - `GET /api/materials/:id` - Get material with properties
 - `POST /api/materials` - Create material entity
