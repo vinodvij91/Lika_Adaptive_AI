@@ -22,6 +22,7 @@ import {
   LogOut,
   Library,
   Server,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -78,6 +79,11 @@ const infrastructureItems = [
     title: "Compute Nodes",
     url: "/compute-nodes",
     icon: Server,
+  },
+  {
+    title: "Usage",
+    url: "/usage",
+    icon: Activity,
   },
 ];
 

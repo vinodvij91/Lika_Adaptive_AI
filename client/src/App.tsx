@@ -24,6 +24,7 @@ import ReportsPage from "@/pages/reports";
 import LearningGraphPage from "@/pages/learning-graph";
 import ComputeNodesPage from "@/pages/compute-nodes";
 import ComputeNodeDetailPage from "@/pages/compute-node-detail";
+import UsagePage from "@/pages/usage";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -62,6 +63,7 @@ function AuthenticatedRoutes() {
         <Route path="/learning-graph" component={LearningGraphPage} />
         <Route path="/compute-nodes" component={ComputeNodesPage} />
         <Route path="/compute-nodes/:id" component={ComputeNodeDetailPage} />
+        <Route path="/usage" component={UsagePage} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>
