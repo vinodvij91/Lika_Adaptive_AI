@@ -1,0 +1,117 @@
+==================================================
+SMILES UPLOAD & AGENT HELPERS
+==================================================
+
+Add a dedicated SMILES upload UX that is compatible with future Python/RDKit + agent integrations.
+
+SMILES Upload UX:
+
+- In the Molecule Registry view AND in the Campaign Configurator (when choosing “Upload library” as a generator source), add a panel called **“SMILES Upload”** with:
+  - A drag-and-drop zone for files (`.txt`, `.csv`).
+  - A large textarea to paste SMILES directly (one per line, optionally “SMILES,Name”).
+
+- When the user uploads/pastes and clicks “Import”:
+  - Call backend `POST /api/molecules/import-smiles` with:
+    - `projectId` (if context is a project)
+    - `campaignId` (if context is a campaign)
+    - `rawText` (all lines from pasted area or file)
+  - Do NOT implement heavy chemistry inside the Node backend. Instead:
+    - Assume there is (or will be) a separate Python/RDKit microservice that the backend can call later.
+    - For v0, stub the call and just:
+      - Split lines
+      - Trim whitespace
+      - Treat non-empty strings as “valid enough”
+      - Flag duplicates based on exact SMILES string matches in the `molecules` table.
+
+- The API `POST /api/molecules/import-smiles` should:
+  - Parse incoming lines.
+  - Check existing `molecules` table for exact `smiles` matches.
+  - Insert new rows for novel SMILES.
+  - Create entries in `project_molecules` if `projectId` is provided.
+  - Return a structured response like:
+
+    {
+      "totalLines": number,
+      "newMolecules": [
+        { "id": string, "smiles": string }
+      ],
+      "duplicateMolecules": [
+        { "id": string, "smiles": string }
+      ],
+      "invalidLines": [
+        { "lineNumber": number, "raw": string, "error": string }
+      ]
+    }
+
+- The front-end should show a **summary card**:
+  - “Total lines: X, New molecules: Y, Duplicates: Z, Invalid: W”
+  - With separate sections listing new and duplicate SMILES.
+
+Agent/Bot Preparation – Library Intake Assistant:
+
+- Prepare a backend endpoint for an **agent-like summary** of a molecule library, even if we mock it now:
+
+  - `POST /api/agent/library-summary`
+    - Input: `{ projectId?: string; moleculeIds?: string[] }`
+    - Output (for v0 – mock):
+
+      {
+        "totalMolecules": number,
+        "estimatedDomain": "CNS" | "Oncology" | "Anti-infective" | "Mixed" | "Unknown",
+        "approxPropertyProfile": {
+          "meanLogP": number,
+          "meanMolecularWeight": number,
+          "fractionDrugLike": number
+        },
+        "summaryText": string
+      }
+
+- For now, implement `library-summary` using simple DB stats and mock values (e.g., random or fixed).
+- The important part is the **API shape**, so later a Python/LLM/RDKit agent on Hetzner can:
+  - Fetch the library,
+  - Compute real descriptors,
+  - Infer domain,
+  - Return a richer summary.
+
+- In the UI, after a successful SMILES import, call `/api/agent/library-summary` and show:
+  - A summary card:
+    - “This library appears to be mostly CNS-like / oncology-like / mixed.”
+    - “Approximate profile: mean MW, mean logP, % drug-like (mocked for now).”
+  - A text block with `summaryText` (ready for AI-generated explanations later).
+
+Deduplication Helper:
+
+- In the SMILES import summary panel, explicitly show:
+  - Which SMILES were **duplicates**, with a link to existing molecule detail.
+- Backend must expose an endpoint:
+  - `GET /api/molecules/by-smiles?smiles=...` to fetch existing molecules by canonical SMILES.
+- For now, use simple string equality; later, a Python service can canonicalize.
+
+Pipeline Hint Agent (prep only):
+
+- Add a backend endpoint:
+
+  - `POST /api/agent/pipeline-hint`
+    - Input: `{ projectId: string }`
+    - Output (mock):
+
+      {
+        "suggestedDomain": "CNS" | "Oncology" | "Rare" | "Anti-infective" | "Mixed",
+        "suggestedPipelineTemplateId": string | null,
+        "reasoning": string
+      }
+
+- The front-end, after SMILES import and library summary, should show:
+  - “Suggested pipeline: CNS (because your library looks CNS-like).”
+  - A button: **“Apply suggested pipeline”** which:
+    - Pre-fills the Campaign Configurator with an appropriate `pipeline_config`.
+- For v0, stub the agent logic with simple heuristics or mock values.
+- The key is to have the endpoint and UI hooks ready so later a real agent can drive it.
+
+Architecture Requirements for Agents/Bots:
+
+- Ensure all SMILES import and library summary features are accessible via REST APIs so future AI agents (running on Hetzner, in Python or other languages) can:
+  - Upload SMILES via API (not only UI).
+  - Request library summaries.
+  - Trigger pipeline hints and default campaign creation.
+- Do NOT couple agents to front-end state; they must work using the same backend APIs that the UI uses.

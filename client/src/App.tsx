@@ -3,15 +3,95 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
+
+import LandingPage from "@/pages/landing";
+import DashboardPage from "@/pages/dashboard";
+import ProjectsPage from "@/pages/projects";
+import ProjectDetailPage from "@/pages/project-detail";
+import TargetsPage from "@/pages/targets";
+import MoleculesPage from "@/pages/molecules";
+import CampaignsPage from "@/pages/campaigns";
+import CampaignNewPage from "@/pages/campaign-new";
+import CampaignDetailPage from "@/pages/campaign-detail";
+import ReportsPage from "@/pages/reports";
+import LearningGraphPage from "@/pages/learning-graph";
 import NotFound from "@/pages/not-found";
 
+function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  const style = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-icon": "3rem",
+  };
+
+  return (
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {children}
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+function AuthenticatedRoutes() {
+  return (
+    <AuthenticatedLayout>
+      <Switch>
+        <Route path="/dashboard" component={DashboardPage} />
+        <Route path="/projects" component={ProjectsPage} />
+        <Route path="/projects/:id" component={ProjectDetailPage} />
+        <Route path="/targets" component={TargetsPage} />
+        <Route path="/molecules" component={MoleculesPage} />
+        <Route path="/campaigns" component={CampaignsPage} />
+        <Route path="/campaigns/new" component={CampaignNewPage} />
+        <Route path="/campaigns/:id" component={CampaignDetailPage} />
+        <Route path="/reports" component={ReportsPage} />
+        <Route path="/learning-graph" component={LearningGraphPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </AuthenticatedLayout>
+  );
+}
+
 function Router() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Switch>
+        <Route path="/" component={LandingPage} />
+        <Route>
+          <LandingPage />
+        </Route>
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
-      <Route component={NotFound} />
+      <Route path="/">
+        <AuthenticatedLayout>
+          <DashboardPage />
+        </AuthenticatedLayout>
+      </Route>
+      <Route>
+        <AuthenticatedRoutes />
+      </Route>
     </Switch>
   );
 }
@@ -19,10 +99,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
