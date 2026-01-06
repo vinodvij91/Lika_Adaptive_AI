@@ -981,5 +981,91 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // USAGE METERS ENDPOINTS
+  // ============================================
+
+  app.get("/api/usage", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "";
+      const { projectId, campaignId } = req.query;
+      const meters = await storage.getUsageMeters({
+        userId,
+        projectId: projectId as string | undefined,
+        campaignId: campaignId as string | undefined,
+      });
+      res.json(meters);
+    } catch (error) {
+      console.error("Error fetching usage meters:", error);
+      res.status(500).json({ error: "Failed to fetch usage" });
+    }
+  });
+
+  app.get("/api/usage/summary/:projectId", requireAuth, async (req, res) => {
+    try {
+      const summary = await storage.getUsageSummary(req.params.projectId);
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching usage summary:", error);
+      res.status(500).json({ error: "Failed to fetch usage summary" });
+    }
+  });
+
+  // ============================================
+  // CREDITS ENDPOINTS (STUB FOR FUTURE BILLING)
+  // ============================================
+
+  app.get("/api/credits/wallet", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "";
+      let wallet = await storage.getCreditWallet(userId, "user");
+      
+      if (!wallet) {
+        wallet = await storage.createCreditWallet({
+          ownerType: "user",
+          ownerId: userId,
+          balance: 0,
+          currency: "CREDITS",
+        });
+      }
+      
+      res.json(wallet);
+    } catch (error) {
+      console.error("Error fetching credit wallet:", error);
+      res.status(500).json({ error: "Failed to fetch wallet" });
+    }
+  });
+
+  app.get("/api/credits/transactions", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "";
+      const wallet = await storage.getCreditWallet(userId, "user");
+      
+      if (!wallet) {
+        return res.json([]);
+      }
+      
+      const transactions = await storage.getCreditTransactions(wallet.id);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching credit transactions:", error);
+      res.status(500).json({ error: "Failed to fetch transactions" });
+    }
+  });
+
+  app.post("/api/credits/purchase", requireAuth, async (req, res) => {
+    res.status(501).json({
+      error: "Not implemented",
+      message: "Credit purchase is not available in v0. This endpoint is a placeholder for future billing integration.",
+    });
+  });
+
+  app.post("/api/credits/apply", requireAuth, async (req, res) => {
+    res.status(501).json({
+      error: "Not implemented",
+      message: "Credit application is not available in v0. This endpoint is a placeholder for future billing integration.",
+    });
+  });
+
   return httpServer;
 }
