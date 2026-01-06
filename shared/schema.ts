@@ -370,6 +370,55 @@ export const insertNodeKeyRegistrationSchema = createInsertSchema(nodeKeyRegistr
 export type NodeKeyRegistration = typeof nodeKeyRegistrations.$inferSelect;
 export type InsertNodeKeyRegistration = z.infer<typeof insertNodeKeyRegistrationSchema>;
 
+export const resourceTypeEnum = pgEnum("resource_type", ["cpu_time", "gpu_time", "storage_gb"]);
+export const usageUnitEnum = pgEnum("usage_unit", ["seconds", "hours", "gb"]);
+export const usageSourceEnum = pgEnum("usage_source", ["hetzner", "vastai", "internal"]);
+export const ownerTypeEnum = pgEnum("owner_type", ["user", "org"]);
+export const currencyTypeEnum = pgEnum("currency_type", ["USD", "EUR", "CREDITS"]);
+
+export const usageMeters = pgTable("usage_meters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "set null" }),
+  campaignId: varchar("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+  resourceType: resourceTypeEnum("resource_type").notNull(),
+  amount: real("amount").notNull(),
+  unit: usageUnitEnum("unit").notNull(),
+  source: usageSourceEnum("source").default("internal"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUsageMeterSchema = createInsertSchema(usageMeters).omit({ id: true, createdAt: true });
+export type UsageMeter = typeof usageMeters.$inferSelect;
+export type InsertUsageMeter = z.infer<typeof insertUsageMeterSchema>;
+
+export const creditWallets = pgTable("credit_wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ownerType: ownerTypeEnum("owner_type").notNull(),
+  ownerId: varchar("owner_id").notNull(),
+  balance: real("balance").default(0).notNull(),
+  currency: currencyTypeEnum("currency").default("CREDITS"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCreditWalletSchema = createInsertSchema(creditWallets).omit({ id: true, createdAt: true, updatedAt: true });
+export type CreditWallet = typeof creditWallets.$inferSelect;
+export type InsertCreditWallet = z.infer<typeof insertCreditWalletSchema>;
+
+export const creditTransactions = pgTable("credit_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletId: varchar("wallet_id").notNull().references(() => creditWallets.id, { onDelete: "cascade" }),
+  delta: real("delta").notNull(),
+  reason: text("reason"),
+  usageMeterId: varchar("usage_meter_id").references(() => usageMeters.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCreditTransactionSchema = createInsertSchema(creditTransactions).omit({ id: true, createdAt: true });
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
+
 export type DiseaseArea = "CNS" | "Oncology" | "Rare" | "Infectious" | "Cardiometabolic" | "Autoimmune" | "Respiratory" | "Other";
 export type LibraryType = "internal" | "uploaded" | "generated";
 export type LibraryStatus = "draft" | "processing" | "curated" | "deprecated";
@@ -382,6 +431,11 @@ export type ProviderType = "bionemo" | "ml" | "docking" | "quantum";
 export type ComputeProvider = "hetzner" | "vastai" | "other";
 export type ComputePurpose = "ml" | "bionemo" | "docking" | "quantum" | "agents" | "general";
 export type ComputeStatus = "active" | "offline" | "degraded";
+export type ResourceType = "cpu_time" | "gpu_time" | "storage_gb";
+export type UsageUnit = "seconds" | "hours" | "gb";
+export type UsageSource = "hetzner" | "vastai" | "internal";
+export type OwnerType = "user" | "org";
+export type CurrencyType = "USD" | "EUR" | "CREDITS";
 
 export type ServiceAccountRole = "agent_pipeline_copilot" | "agent_operator" | "agent_readonly";
 
