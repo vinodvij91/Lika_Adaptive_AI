@@ -5,6 +5,7 @@ import { DualDomainBackground } from "@/components/scientific-background";
 import { AnimatedGrid, FloatingParticles, GlowingOrbs } from "@/components/animated-grid";
 import { MetricsStrip } from "@/components/metrics-strip";
 import { IntegrationLogos, TrustSignals } from "@/components/integration-logos";
+import { LikaLogo, LikaLogoIcon } from "@/components/lika-logo";
 import {
   Beaker,
   Sparkles,
@@ -30,12 +31,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-md bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <FlaskConical className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-semibold">Lika Sciences</span>
-          </div>
+          <LikaLogo size="default" />
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <a href="/api/login">
@@ -57,10 +53,10 @@ export default function LandingPage() {
                 <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                 Adaptive AI Discovery Platform
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-white">
-                Lika Sciences
-                <span className="block bg-gradient-to-r from-cyan-400 via-teal-400 to-amber-400 bg-clip-text text-transparent mt-2">
-                  Drug Discovery + Materials Sciences
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight mb-6 text-white">
+                <span className="tracking-[0.15em] uppercase">Lika Sciences</span>
+                <span className="block bg-gradient-to-r from-cyan-400 via-teal-400 to-amber-400 bg-clip-text text-transparent mt-2 font-semibold tracking-normal normal-case">
+                  Drug Discovery + Materials Science
                 </span>
               </h1>
               <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed">
@@ -80,7 +76,7 @@ export default function LandingPage() {
                 <a href="/api/login">
                   <Button size="lg" variant="outline" className="gap-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/10 backdrop-blur-sm" data-testid="button-explore-materials">
                     <Hexagon className="h-4 w-4" />
-                    Explore Materials Sciences
+                    Explore Materials Science
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
@@ -169,7 +165,7 @@ export default function LandingPage() {
                         <Hexagon className="h-6 w-6 text-amber-400" />
                       </div>
                       <div>
-                        <h3 className="text-2xl font-bold">Materials Sciences</h3>
+                        <h3 className="text-2xl font-bold">Materials Science</h3>
                         <p className="text-xs text-amber-400">Polymers, Crystals, Composites</p>
                       </div>
                     </div>
@@ -210,7 +206,7 @@ export default function LandingPage() {
               <p className="text-sm font-medium text-cyan-500 uppercase tracking-wider mb-2">Capabilities</p>
               <h2 className="text-3xl font-bold mb-4">Platform Features</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Unified infrastructure for both drug discovery and materials sciences workflows
+                Unified infrastructure for both drug discovery and materials science workflows
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -310,9 +306,9 @@ export default function LandingPage() {
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 text-xs font-medium mb-4 border border-amber-500/20">
                 <Hexagon className="h-3 w-3" />
-                Materials Sciences
+                Materials Science
               </div>
-              <h2 className="text-3xl font-bold mb-4">Materials Sciences Advantages</h2>
+              <h2 className="text-3xl font-bold mb-4">Materials Science Advantages</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Purpose-built capabilities for advanced materials research
               </p>
@@ -351,7 +347,7 @@ export default function LandingPage() {
               <USPCard
                 icon={Brain}
                 title="Cross-Domain Intelligence"
-                description="Shared insights and reusable scientific knowledge between drug discovery and materials sciences."
+                description="Shared insights and reusable scientific knowledge between drug discovery and materials science."
                 accentColor="amber"
               />
             </div>
@@ -365,7 +361,7 @@ export default function LandingPage() {
           <div className="relative max-w-7xl mx-auto px-6 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Discovery?</h2>
             <p className="text-muted-foreground mb-10 max-w-xl mx-auto text-lg">
-              Get started with Lika Sciences today and accelerate your drug discovery and materials sciences programs.
+              Get started with Lika Sciences today and accelerate your drug discovery and materials science programs.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <a href="/api/login">
@@ -386,14 +382,9 @@ export default function LandingPage() {
       <footer className="border-t py-8 bg-muted/20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                <FlaskConical className="h-4 w-4 text-white" />
-              </div>
-              <span className="font-semibold">Lika Sciences</span>
-            </div>
+            <LikaLogo size="sm" />
             <p className="text-sm text-muted-foreground">
-              Adaptive AI Discovery Platform for Drug Discovery and Materials Sciences
+              Adaptive AI Discovery Platform for Drug Discovery and Materials Science
             </p>
           </div>
         </div>
