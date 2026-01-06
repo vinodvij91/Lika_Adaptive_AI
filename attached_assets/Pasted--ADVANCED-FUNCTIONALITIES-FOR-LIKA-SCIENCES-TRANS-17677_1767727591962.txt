@@ -1,0 +1,537 @@
+==================================================
+ADVANCED FUNCTIONALITIES FOR LIKA SCIENCES
+(TRANSLATIONAL, MODALITY, EXPERIMENTS, GOVERNANCE, IP/LITERATURE, MULTI-ORG)
+==================================================
+
+The platform must be architected to support the following forward-looking capabilities:
+
+1) Translational & variant-aware scoring (1A, 1B)  
+2) Modality-aware & synthesis-aware design (2A, 2B)  
+3) Experiment recommendation & wet-lab feedback (3A, 3B)  
+4) Uncertainty & model governance (4A, 4B)  
+5) IP / prior-art & literature-aware context (5A, 5B)  
+6) Basic multi-organization collaboration & asset sharing (8 partial)
+
+These should be implemented at the level of:
+- database schema extensions,
+- pipeline / oracle configuration,
+- REST API endpoints,
+- and basic front-end hooks (UI and agent integration).
+
+Where real ML / IP / literature / quantum logic would be needed, you may stub or mock, but the data structures and API shapes must be realistic and extendable.
+
+==================================================
+1) TRANSLATIONAL & VARIANT-AWARE DISCOVERY
+==================================================
+
+1A. Translational / Disease-Context Scoring
+------------------------------------------
+
+DATA MODEL:
+
+- Extend `molecule_scores` to include translational fields:
+
+  - `translational_score FLOAT`          -- numeric score (e.g. 0–1 or -1–1)
+  - `translational_confidence FLOAT`     -- how confident the model/agent is
+  - (optional) `translational_metadata JSONB` -- store raw signals
+
+- Create a table to store disease-context signals for future use:
+
+  - `disease_context_signals`
+    - id
+    - target_id (FK targets)
+    - disease_area (TEXT)
+    - evidence_source (TEXT)          -- e.g. "literature", "KG", "manual"
+    - evidence_strength FLOAT
+    - metadata JSONB
+    - created_at
+
+PIPELINE CONFIG:
+
+- Support a pipeline step of type “translational scoring”:
+
+  Example snippet in `campaigns.pipeline_config` JSONB:
+
+  {
+    "steps": [
+      ...
+      {
+        "name": "Translational Context Scoring",
+        "provider": "ml",
+        "operation": "disease_context_score",
+        "params": {
+          "diseaseArea": "CNS"
+        }
+      }
+    ]
+  }
+
+ORACLE:
+
+- The oracle meta-score should support a translational weight. For example:
+
+  `oracle_score = w_docking*docking_score + w_admet*admet_score + w_qsar*qsar_score + w_translational*translational_score + ...`
+
+- Store the chosen weights inside `pipeline_config` so that campaigns are reproducible.
+
+API:
+
+- Add a stubbed endpoint for translational scoring:
+
+  - `POST /api/ml/translational-score`
+    - Input: `{ campaignId: string, moleculeIds: string[], diseaseArea?: string }`
+    - Output (mock for now): translational scores & confidences for each molecule.
+
+UI:
+
+- Show a “Translational Score” column in campaign results and molecule detail views.
+- Display a toggle/slider for `w_translational` alongside other oracle weights.
+- Provide tooltips explaining “Translational: alignment of mechanism with disease biology (mocked).”
+
+Agent Hook:
+
+- Add an endpoint `GET /api/agent/campaigns/:id/translational-summary` that returns compact JSON for an agent to explain which molecules are most translationally promising and why (mock for now).
+
+------------------------------------------
+1B. Variant / Mutation-Aware Scoring
+------------------------------------------
+
+DATA MODEL:
+
+- Add `target_variants` table:
+
+  - `target_variants`
+    - id
+    - target_id (FK targets)
+    - variant_name (TEXT)        -- e.g. "WT", "EGFR_T790M"
+    - sequence (TEXT)            -- protein sequence
+    - metadata JSONB
+    - created_at
+
+- Extend `molecule_scores` for variant-specific results:
+
+  - `variant_scores JSONB`       -- e.g. { "WT": -9.2, "T790M": -7.5 }
+  - `variant_robustness_score FLOAT`  -- single metric summarizing robustness to variants
+
+PIPELINE CONFIG:
+
+- Support a variant-aware docking/scoring step:
+
+  {
+    "name": "Variant-Aware Docking",
+    "provider": "bionemo",
+    "operation": "dock_multiple_variants",
+    "params": {
+      "variantIds": ["...", "..."],       // references to target_variants
+      "scoringStrategy": "min_score"     // or "average", etc.
+    }
+  }
+
+ORACLE:
+
+- Add a weight for variant robustness (e.g. `w_variant_robustness`) and include in oracle computation.
+- Store variant IDs and strategies in `pipeline_config`.
+
+API:
+
+- Add endpoints for variant management:
+
+  - `GET /api/targets/:id/variants`
+  - `POST /api/targets/:id/variants`
+  - `DELETE /api/target-variants/:id`
+
+UI:
+
+- On Target pages, show a “Variants” tab where users can see, add, or edit variants.
+- In Campaign Configurator, allow selecting one or more variants for variant-aware docking.
+- Show a “Variant Robustness” column in results.
+
+Agent Hook:
+
+- Add `GET /api/agent/targets/:id/variant-suggestions` (mock) so an agent can recommend clinically relevant variants to include for a given disease area.
+
+==================================================
+2) MODALITY-AWARE & SYNTHESIS-AWARE DESIGN
+==================================================
+
+2A. Multi-Modality Pipelines (Small-Mol / Fragment / PROTAC / Peptide)
+----------------------------------------------------------------------
+
+DATA MODEL:
+
+- Add `programs` (high-level discovery programs):
+
+  - `programs`
+    - id
+    - name
+    - target_id
+    - disease_area
+    - description
+    - created_at, updated_at
+
+- Extend `campaigns`:
+
+  - Add `program_id` (nullable FK to programs)
+  - Add `modality` ENUM("small_molecule","fragment","protac","peptide","other")
+
+PIPELINE CONFIG:
+
+- Each campaign’s `pipeline_config` must include `modality` in params or metadata (or rely on `campaigns.modality`).
+
+- Example:
+
+  {
+    "modality": "protac",
+    "steps": [
+      { "name": "Select warheads", "provider": "smiles_library", "operation": "select_warheads", "params": { ... } },
+      { "name": "Select E3 ligase binders", "provider": "smiles_library", "operation": "select_e3_ligands", "params": { ... } },
+      { "name": "Linker design", "provider": "ml", "operation": "linker_feasibility", "params": { ... } },
+      ...
+    ]
+  }
+
+UI:
+
+- Add a Program view where a user can create a Program (e.g. “nSMase2 – AD Program”), choose target & disease area.
+- Under a Program, show multiple Campaigns grouped by modality: tabs or badges (Small Molecule, PROTAC, Peptide, etc.).
+- In Campaign creation, require selection of `modality` and show modality-specific preset pipeline templates.
+
+Agent Hook:
+
+- `POST /api/agent/programs/:id/modality-suggestions` (mock) returns suggestions: “Consider a PROTAC branch due to this target’s characteristics.”
+
+------------------------------------------
+2B. Synthesis-Aware Design
+------------------------------------------
+
+DATA MODEL:
+
+- Extend `molecule_scores`:
+
+  - `synthesis_score FLOAT`               -- higher = easier/cheaper to synthesize
+  - `synthesis_complexity FLOAT`          -- proxy: higher = more complex
+  - `synthesis_metadata JSONB`            -- e.g. retrosynthesis summary, #steps
+
+PIPELINE CONFIG:
+
+- Add a step:
+
+  {
+    "name": "Synthesis Feasibility Scoring",
+    "provider": "ml",
+    "operation": "retrosynthesis_score",
+    "params": {
+      "strategy": "fast_proxy",       // placeholder for future strategies
+      "maxRouteDepth": 6
+    }
+  }
+
+ORACLE:
+
+- Include synthesis in oracle weights (e.g. `w_synthesis`) and compute:
+
+  `oracle_score += w_synthesis * synthesis_score`
+
+API:
+
+- Stub endpoint:
+
+  - `POST /api/ml/synthesis-score`
+    - Input: `{ moleculeIds: string[] }`
+    - Output: `synthesis_score`, `synthesis_complexity` per molecule (mock).
+
+UI:
+
+- Show “Synthesis Score” and an icon indicating difficulty.
+- Add filter: “Only show molecules with synthesis_score above threshold.”
+
+Agent Hook:
+
+- `GET /api/agent/campaigns/:id/synthesis-summary` so an agent can explain which hits are most synthesis-friendly and suggest which set to send to CRO.
+
+==================================================
+3) EXPERIMENT RECOMMENDER & WET-LAB FEEDBACK
+==================================================
+
+3A. Experiment Recommender
+--------------------------
+
+DATA MODEL:
+
+- `assays`
+  - id
+  - name
+  - target_id (nullable, FK targets)
+  - type (TEXT)         -- e.g. "binding", "functional", "in vivo", "PK", etc.
+  - estimated_cost FLOAT
+  - estimated_duration_days INT
+  - metadata JSONB
+  - created_at
+
+- `experiment_recommendations`
+  - id
+  - campaign_id
+  - assay_id
+  - molecule_ids JSONB     -- array of molecule IDs to test
+  - priority_score FLOAT
+  - estimated_cost FLOAT
+  - rationale TEXT
+  - created_at
+
+API:
+
+- `POST /api/agent/campaigns/:id/experiment-recommendations`
+  - Input: optionally budget, #molecules, etc.
+  - Output: a list of recommended experiments (mock for now).
+- `GET /api/campaigns/:id/experiment-recommendations`
+
+UI:
+
+- On Campaign detail page, show a “Recommended Experiments” section:
+  - List recommended assays with molecules, cost, and rationale.
+  - Provide a way to mark recommendations as “accepted” or “rejected” (future extension).
+
+3B. Wet-Lab Feedback & Assay Results
+------------------------------------
+
+DATA MODEL:
+
+- `assay_results`
+  - id
+  - assay_id
+  - campaign_id
+  - molecule_id
+  - value FLOAT
+  - units TEXT
+  - outcome_label TEXT      -- e.g. "active","inactive","toxic","no_effect"
+  - metadata JSONB          -- raw assay conditions, etc.
+  - created_at
+
+- When assay results are ingested, automatically write corresponding entries to `learning_graph_entries` so the learning graph captures real-world feedback.
+
+API:
+
+- `POST /api/assay-results/import` (support CSV/JSON later, stub now).
+- `GET /api/molecules/:id/assay-history`
+- `GET /api/campaigns/:id/assay-results`
+
+UI:
+
+- On molecule detail:
+  - Show predicted vs experimental values where available.
+- On campaign detail:
+  - Show summary of assay outcomes (e.g. how many hits, false positives).
+
+Agent Hook:
+
+- `GET /api/agent/campaigns/:id/feedback-summary`:
+  - Agent can highlight surprising results and recommend changes to pipelines or models.
+
+==================================================
+4) UNCERTAINTY, TRUST & MODEL GOVERNANCE
+==================================================
+
+4A. Per-Molecule Uncertainty & Applicability
+--------------------------------------------
+
+DATA MODEL:
+
+- Extend `molecule_scores` with uncertainty + applicability fields:
+
+  - `docking_uncertainty FLOAT`
+  - `admet_uncertainty FLOAT`
+  - `qsar_uncertainty FLOAT`
+  - `translational_uncertainty FLOAT`
+  - `applicability_domain_flag BOOLEAN`   -- true if inside model’s domain
+
+API:
+
+- For each ML-related endpoint (e.g., ADMET, QSAR, translational), include `uncertainty` and `applicability` in responses (mock for now).
+
+UI:
+
+- Show confidence indicators (e.g., bars or icons).
+- Filters:
+  - “High confidence only”
+  - “Show high-score / low-confidence (risky region)”
+
+Agent Hook:
+
+- `GET /api/agent/campaigns/:id/uncertainty-map`:
+  - Summarize where the campaign is exploring high-uncertainty regions.
+
+--------------------------------------------
+4B. Oracle & Model Versioning / Reproducibility
+--------------------------------------------
+
+DATA MODEL:
+
+- `oracle_versions`
+  - id
+  - name
+  - description
+  - component_versions JSONB     -- { "admet_model": "v2.1", "qsar_model": "v3.0", ... }
+  - created_at
+
+- Extend `campaigns`:
+  - `oracle_version_id` (FK oracle_versions)
+
+- Extend `model_runs`:
+  - `model_version TEXT`   -- version string of the specific model used
+
+PIPELINE CONFIG:
+
+- Store a reference to `oracle_version` or embed relevant version identifiers in `pipeline_config`.
+
+API:
+
+- `GET /api/oracle-versions`
+- `POST /api/oracle-versions`
+- `GET /api/campaigns/:id/oracle-version`
+
+UI:
+
+- On campaign detail, show:
+  - Oracle version
+  - Model component versions
+- Add a “Reproduce campaign” button that creates a new campaign with the same pipeline_config and oracle_version (mock, does not re-run automatically yet).
+
+Agent Hook:
+
+- `GET /api/agent/campaigns/:id/version-diff?otherCampaignId=...`
+  - For an agent to explain why two campaigns differ (data structure only; mock logic).
+
+==================================================
+5) IP / PRIOR-ART & LITERATURE-AWARE CONTEXT
+==================================================
+
+5A. IP / Prior-Art Risk Scoring
+-------------------------------
+
+DATA MODEL:
+
+- Extend `molecule_scores`:
+
+  - `ip_similarity_score FLOAT`     -- e.g. 0–1 similarity to known IP space
+  - `ip_risk_flag BOOLEAN`          -- true if high risk
+  - `ip_metadata JSONB`             -- references, families, etc.
+
+PIPELINE CONFIG:
+
+- Support an IP screening step:
+
+  {
+    "name": "IP / Prior-Art Screening",
+    "provider": "ml",
+    "operation": "ip_similarity_score",
+    "params": {
+      "threshold": 0.85
+    }
+  }
+
+API:
+
+- `POST /api/ml/ip-screening` (stub)
+  - Input: molecule IDs
+  - Output: similarity scores and risk flags (mock).
+
+UI:
+
+- Show an “IP Risk” badge on molecules where `ip_risk_flag = true`.
+- Add filter: hide high IP risk compounds (or show them separately).
+
+Agent Hook:
+
+- `GET /api/agent/campaigns/:id/ip-summary`:
+  - Summarize IP risk landscape and suggest diversification.
+
+-------------------------------------
+5B. Literature-Aware Mechanism Context
+-------------------------------------
+
+DATA MODEL:
+
+- `literature_annotations`
+  - id
+  - target_id (nullable)
+  - molecule_id (nullable)
+  - source (TEXT)              -- e.g. "PubMed", "Patents"
+  - relevance_score FLOAT
+  - confidence FLOAT
+  - summary TEXT
+  - url TEXT
+  - created_at
+
+API:
+
+- `GET /api/molecules/:id/literature`
+- `GET /api/targets/:id/literature`
+- These can return mock annotations.
+
+UI:
+
+- On target and molecule detail pages, show a “Literature” panel:
+  - Summaries, links, and relevance indicators.
+
+Agent Hook:
+
+- `GET /api/agent/molecules/:id/mechanism-summary`:
+  - For an agent to compose a human-readable scientific mechanism summary using the annotations.
+
+==================================================
+6) MULTI-ORG COLLABORATION & SHARING (BASIC)
+==================================================
+
+DATA MODEL:
+
+- `organizations`
+  - id
+  - name
+  - metadata JSONB
+  - created_at
+
+- `org_members`
+  - id
+  - user_id
+  - organization_id
+  - role ("admin","member","viewer")
+
+- `shared_assets`
+  - id
+  - asset_type ("smiles_library" | "pipeline_template" | "program")
+  - asset_id
+  - shared_by_org_id
+  - shared_with_org_id
+  - permissions ("read" | "fork")
+  - created_at
+
+API:
+
+- `GET /api/organizations`
+- `GET /api/organizations/:id/members`
+- `POST /api/shared-assets`
+  - To share a SMILES library or pipeline template with another org (stub).
+
+UI:
+
+- In SMILES Library view:
+  - Option to “Share with other organization” (shows mock list).
+- In Pipeline Template / Program view:
+  - “Share template” button:
+    - Creates a `shared_assets` record.
+
+Agent Hook:
+
+- `GET /api/agent/org/:id/sharing-opportunities`
+  - Agent can (in future) suggest which libraries or templates would be valuable to share with partners.
+
+==================================================
+GENERAL NOTES
+==================================================
+
+- You may stub or mock the advanced ML/IP/literature/agent logic, but:
+  - **Data model, pipeline_config shape, and API contracts must be implemented**.
+  - Front-end must expose basic UI elements (columns, filters, sections) for the new fields.
+- All advanced features must fit into the existing architecture:
+  - `campaigns`, `pipeline_config`, `jobs`, `model_runs`, `molecule_scores`, `learning_graph_entries`.
+- Keep provider types generic where possible: "bionemo", "ml", "docking", "quantum", "smiles_library", "agent", "ip", "literature", etc., so we can plug in future services without refactoring.

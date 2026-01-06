@@ -11,7 +11,7 @@ export const structureSourceEnum = pgEnum("structure_source", ["uploaded", "bion
 export const campaignStatusEnum = pgEnum("campaign_status", ["pending", "running", "completed", "failed"]);
 export const jobTypeEnum = pgEnum("job_type", ["generation", "filtering", "docking", "scoring", "quantum_optimization", "quantum_scoring", "other"]);
 export const jobStatusEnum = pgEnum("job_status", ["pending", "running", "completed", "failed"]);
-export const providerTypeEnum = pgEnum("provider_type", ["bionemo", "ml", "docking", "quantum"]);
+export const providerTypeEnum = pgEnum("provider_type", ["bionemo", "ml", "docking", "quantum", "ip", "literature", "smiles_library", "agent"]);
 export const outcomeEnum = pgEnum("outcome_label", ["promising", "dropped", "hit", "unknown"]);
 export const collaboratorRoleEnum = pgEnum("collaborator_role", ["owner", "editor", "viewer"]);
 export const libraryTypeEnum = pgEnum("library_type", ["internal", "uploaded", "generated"]);
@@ -20,6 +20,12 @@ export const cleaningStatusEnum = pgEnum("cleaning_status", ["pending", "cleanin
 export const computeProviderEnum = pgEnum("compute_provider", ["hetzner", "vastai", "other"]);
 export const computePurposeEnum = pgEnum("compute_purpose", ["ml", "bionemo", "docking", "quantum", "agents", "general"]);
 export const computeStatusEnum = pgEnum("compute_status", ["active", "offline", "degraded"]);
+export const modalityEnum = pgEnum("modality", ["small_molecule", "fragment", "protac", "peptide", "other"]);
+export const assayTypeEnum = pgEnum("assay_type", ["binding", "functional", "in_vivo", "pk", "admet", "other"]);
+export const assayOutcomeEnum = pgEnum("assay_outcome", ["active", "inactive", "toxic", "no_effect", "inconclusive"]);
+export const orgRoleEnum = pgEnum("org_role", ["admin", "member", "viewer"]);
+export const assetTypeEnum = pgEnum("asset_type", ["smiles_library", "pipeline_template", "program"]);
+export const sharePermissionEnum = pgEnum("share_permission", ["read", "fork"]);
 
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -61,6 +67,57 @@ export const targets = pgTable("targets", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const targetVariants = pgTable("target_variants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  targetId: varchar("target_id").notNull().references(() => targets.id, { onDelete: "cascade" }),
+  variantName: text("variant_name").notNull(),
+  sequence: text("sequence"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const targetVariantsRelations = relations(targetVariants, ({ one }) => ({
+  target: one(targets, { fields: [targetVariants.targetId], references: [targets.id] }),
+}));
+
+export const diseaseContextSignals = pgTable("disease_context_signals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  targetId: varchar("target_id").references(() => targets.id, { onDelete: "cascade" }),
+  diseaseArea: diseaseAreaEnum("disease_area"),
+  evidenceSource: text("evidence_source"),
+  evidenceStrength: real("evidence_strength"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const diseaseContextSignalsRelations = relations(diseaseContextSignals, ({ one }) => ({
+  target: one(targets, { fields: [diseaseContextSignals.targetId], references: [targets.id] }),
+}));
+
+export const programs = pgTable("programs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  targetId: varchar("target_id").references(() => targets.id, { onDelete: "set null" }),
+  diseaseArea: diseaseAreaEnum("disease_area"),
+  description: text("description"),
+  ownerId: varchar("owner_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const programsRelations = relations(programs, ({ one, many }) => ({
+  target: one(targets, { fields: [programs.targetId], references: [targets.id] }),
+  campaigns: many(campaigns),
+}));
+
+export const oracleVersions = pgTable("oracle_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  componentVersions: jsonb("component_versions"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const projectTargets = pgTable("project_targets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
@@ -93,8 +150,11 @@ export const projectMoleculesRelations = relations(projectMolecules, ({ one }) =
 export const campaigns = pgTable("campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  programId: varchar("program_id").references(() => programs.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   domainType: diseaseAreaEnum("domain_type").default("Other"),
+  modality: modalityEnum("modality").default("small_molecule"),
+  oracleVersionId: varchar("oracle_version_id").references(() => oracleVersions.id, { onDelete: "set null" }),
   pipelineConfig: jsonb("pipeline_config"),
   status: campaignStatusEnum("status").default("pending"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -103,10 +163,14 @@ export const campaigns = pgTable("campaigns", {
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   project: one(projects, { fields: [campaigns.projectId], references: [projects.id] }),
+  program: one(programs, { fields: [campaigns.programId], references: [programs.id] }),
+  oracleVersion: one(oracleVersions, { fields: [campaigns.oracleVersionId], references: [oracleVersions.id] }),
   jobs: many(jobs),
   modelRuns: many(modelRuns),
   moleculeScores: many(moleculeScores),
   learningGraphEntries: many(learningGraphEntries),
+  experimentRecommendations: many(experimentRecommendations),
+  assayResults: many(assayResults),
   comments: many(comments),
 }));
 
@@ -130,6 +194,7 @@ export const modelRuns = pgTable("model_runs", {
   campaignId: varchar("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
   stepName: text("step_name").notNull(),
   providerType: providerTypeEnum("provider_type").notNull(),
+  modelVersion: text("model_version"),
   status: jobStatusEnum("status").default("pending"),
   startedAt: timestamp("started_at"),
   finishedAt: timestamp("finished_at"),
@@ -149,6 +214,22 @@ export const moleculeScores = pgTable("molecule_scores", {
   admetScore: real("admet_score"),
   qsarScore: real("qsar_score"),
   oracleScore: real("oracle_score"),
+  translationalScore: real("translational_score"),
+  translationalConfidence: real("translational_confidence"),
+  translationalMetadata: jsonb("translational_metadata"),
+  variantScores: jsonb("variant_scores"),
+  variantRobustnessScore: real("variant_robustness_score"),
+  synthesisScore: real("synthesis_score"),
+  synthesisComplexity: real("synthesis_complexity"),
+  synthesisMetadata: jsonb("synthesis_metadata"),
+  dockingUncertainty: real("docking_uncertainty"),
+  admetUncertainty: real("admet_uncertainty"),
+  qsarUncertainty: real("qsar_uncertainty"),
+  translationalUncertainty: real("translational_uncertainty"),
+  applicabilityDomainFlag: boolean("applicability_domain_flag"),
+  ipSimilarityScore: real("ip_similarity_score"),
+  ipRiskFlag: boolean("ip_risk_flag"),
+  ipMetadata: jsonb("ip_metadata"),
   rawScores: jsonb("raw_scores"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
@@ -287,6 +368,114 @@ export const libraryCollaboratorsRelations = relations(libraryCollaborators, ({ 
   library: one(curatedLibraries, { fields: [libraryCollaborators.libraryId], references: [curatedLibraries.id] }),
 }));
 
+export const assays = pgTable("assays", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  targetId: varchar("target_id").references(() => targets.id, { onDelete: "set null" }),
+  type: assayTypeEnum("type").default("binding"),
+  estimatedCost: real("estimated_cost"),
+  estimatedDurationDays: real("estimated_duration_days"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const assaysRelations = relations(assays, ({ one, many }) => ({
+  target: one(targets, { fields: [assays.targetId], references: [targets.id] }),
+  results: many(assayResults),
+  recommendations: many(experimentRecommendations),
+}));
+
+export const experimentRecommendations = pgTable("experiment_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+  assayId: varchar("assay_id").references(() => assays.id, { onDelete: "set null" }),
+  moleculeIds: jsonb("molecule_ids"),
+  priorityScore: real("priority_score"),
+  estimatedCost: real("estimated_cost"),
+  rationale: text("rationale"),
+  status: text("status").default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const experimentRecommendationsRelations = relations(experimentRecommendations, ({ one }) => ({
+  campaign: one(campaigns, { fields: [experimentRecommendations.campaignId], references: [campaigns.id] }),
+  assay: one(assays, { fields: [experimentRecommendations.assayId], references: [assays.id] }),
+}));
+
+export const assayResults = pgTable("assay_results", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assayId: varchar("assay_id").notNull().references(() => assays.id, { onDelete: "cascade" }),
+  campaignId: varchar("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+  moleculeId: varchar("molecule_id").notNull().references(() => molecules.id, { onDelete: "cascade" }),
+  value: real("value"),
+  units: text("units"),
+  outcomeLabel: assayOutcomeEnum("outcome_label"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const assayResultsRelations = relations(assayResults, ({ one }) => ({
+  assay: one(assays, { fields: [assayResults.assayId], references: [assays.id] }),
+  campaign: one(campaigns, { fields: [assayResults.campaignId], references: [campaigns.id] }),
+  molecule: one(molecules, { fields: [assayResults.moleculeId], references: [molecules.id] }),
+}));
+
+export const literatureAnnotations = pgTable("literature_annotations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  targetId: varchar("target_id").references(() => targets.id, { onDelete: "cascade" }),
+  moleculeId: varchar("molecule_id").references(() => molecules.id, { onDelete: "cascade" }),
+  source: text("source"),
+  relevanceScore: real("relevance_score"),
+  confidence: real("confidence"),
+  summary: text("summary"),
+  url: text("url"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const literatureAnnotationsRelations = relations(literatureAnnotations, ({ one }) => ({
+  target: one(targets, { fields: [literatureAnnotations.targetId], references: [targets.id] }),
+  molecule: one(molecules, { fields: [literatureAnnotations.moleculeId], references: [molecules.id] }),
+}));
+
+export const organizations = pgTable("organizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const organizationsRelations = relations(organizations, ({ many }) => ({
+  members: many(orgMembers),
+  sharedByAssets: many(sharedAssets),
+}));
+
+export const orgMembers = pgTable("org_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  role: orgRoleEnum("role").default("member"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const orgMembersRelations = relations(orgMembers, ({ one }) => ({
+  organization: one(organizations, { fields: [orgMembers.organizationId], references: [organizations.id] }),
+}));
+
+export const sharedAssets = pgTable("shared_assets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assetType: assetTypeEnum("asset_type").notNull(),
+  assetId: varchar("asset_id").notNull(),
+  sharedByOrgId: varchar("shared_by_org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  sharedWithOrgId: varchar("shared_with_org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  permissions: sharePermissionEnum("permissions").default("read"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const sharedAssetsRelations = relations(sharedAssets, ({ one }) => ({
+  sharedByOrg: one(organizations, { fields: [sharedAssets.sharedByOrgId], references: [organizations.id] }),
+  sharedWithOrg: one(organizations, { fields: [sharedAssets.sharedWithOrgId], references: [organizations.id] }),
+}));
+
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTargetSchema = createInsertSchema(targets).omit({ id: true, createdAt: true });
 export const insertMoleculeSchema = createInsertSchema(molecules).omit({ id: true, createdAt: true });
@@ -300,6 +489,17 @@ export const insertCuratedLibrarySchema = createInsertSchema(curatedLibraries).o
 export const insertLibraryMoleculeSchema = createInsertSchema(libraryMolecules).omit({ id: true, createdAt: true });
 export const insertScaffoldSchema = createInsertSchema(scaffolds).omit({ id: true, createdAt: true });
 export const insertLibraryAnnotationSchema = createInsertSchema(libraryAnnotations).omit({ id: true, createdAt: true });
+export const insertTargetVariantSchema = createInsertSchema(targetVariants).omit({ id: true, createdAt: true });
+export const insertDiseaseContextSignalSchema = createInsertSchema(diseaseContextSignals).omit({ id: true, createdAt: true });
+export const insertProgramSchema = createInsertSchema(programs).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertOracleVersionSchema = createInsertSchema(oracleVersions).omit({ id: true, createdAt: true });
+export const insertAssaySchema = createInsertSchema(assays).omit({ id: true, createdAt: true });
+export const insertExperimentRecommendationSchema = createInsertSchema(experimentRecommendations).omit({ id: true, createdAt: true });
+export const insertAssayResultSchema = createInsertSchema(assayResults).omit({ id: true, createdAt: true });
+export const insertLiteratureAnnotationSchema = createInsertSchema(literatureAnnotations).omit({ id: true, createdAt: true });
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true });
+export const insertOrgMemberSchema = createInsertSchema(orgMembers).omit({ id: true, createdAt: true });
+export const insertSharedAssetSchema = createInsertSchema(sharedAssets).omit({ id: true, createdAt: true });
 
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
@@ -327,6 +527,28 @@ export type Scaffold = typeof scaffolds.$inferSelect;
 export type InsertScaffold = z.infer<typeof insertScaffoldSchema>;
 export type LibraryAnnotation = typeof libraryAnnotations.$inferSelect;
 export type InsertLibraryAnnotation = z.infer<typeof insertLibraryAnnotationSchema>;
+export type TargetVariant = typeof targetVariants.$inferSelect;
+export type InsertTargetVariant = z.infer<typeof insertTargetVariantSchema>;
+export type DiseaseContextSignal = typeof diseaseContextSignals.$inferSelect;
+export type InsertDiseaseContextSignal = z.infer<typeof insertDiseaseContextSignalSchema>;
+export type Program = typeof programs.$inferSelect;
+export type InsertProgram = z.infer<typeof insertProgramSchema>;
+export type OracleVersion = typeof oracleVersions.$inferSelect;
+export type InsertOracleVersion = z.infer<typeof insertOracleVersionSchema>;
+export type Assay = typeof assays.$inferSelect;
+export type InsertAssay = z.infer<typeof insertAssaySchema>;
+export type ExperimentRecommendation = typeof experimentRecommendations.$inferSelect;
+export type InsertExperimentRecommendation = z.infer<typeof insertExperimentRecommendationSchema>;
+export type AssayResult = typeof assayResults.$inferSelect;
+export type InsertAssayResult = z.infer<typeof insertAssayResultSchema>;
+export type LiteratureAnnotation = typeof literatureAnnotations.$inferSelect;
+export type InsertLiteratureAnnotation = z.infer<typeof insertLiteratureAnnotationSchema>;
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type OrgMember = typeof orgMembers.$inferSelect;
+export type InsertOrgMember = z.infer<typeof insertOrgMemberSchema>;
+export type SharedAsset = typeof sharedAssets.$inferSelect;
+export type InsertSharedAsset = z.infer<typeof insertSharedAssetSchema>;
 
 export const computeNodes = pgTable("compute_nodes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -427,7 +649,13 @@ export type CampaignStatus = "pending" | "running" | "completed" | "failed";
 export type JobStatus = "pending" | "running" | "completed" | "failed";
 export type JobType = "generation" | "filtering" | "docking" | "scoring" | "quantum_optimization" | "quantum_scoring" | "other";
 export type OutcomeLabel = "promising" | "dropped" | "hit" | "unknown";
-export type ProviderType = "bionemo" | "ml" | "docking" | "quantum";
+export type ProviderType = "bionemo" | "ml" | "docking" | "quantum" | "ip" | "literature" | "smiles_library" | "agent";
+export type Modality = "small_molecule" | "fragment" | "protac" | "peptide" | "other";
+export type AssayType = "binding" | "functional" | "in_vivo" | "pk" | "admet" | "other";
+export type AssayOutcome = "active" | "inactive" | "toxic" | "no_effect" | "inconclusive";
+export type OrgRole = "admin" | "member" | "viewer";
+export type AssetType = "smiles_library" | "pipeline_template" | "program";
+export type SharePermission = "read" | "fork";
 export type ComputeProvider = "hetzner" | "vastai" | "other";
 export type ComputePurpose = "ml" | "bionemo" | "docking" | "quantum" | "agents" | "general";
 export type ComputeStatus = "active" | "offline" | "degraded";
@@ -475,6 +703,7 @@ export interface PipelineConfig {
     seedSmiles?: string[];
     n?: number;
   };
+  modality?: Modality;
   seedSource?: SeedSource;
   filteringRules?: string[];
   dockingMethod: "bionemo_diffdock" | "external_docking";
@@ -482,8 +711,14 @@ export interface PipelineConfig {
     wDocking: number;
     wAdmet: number;
     wQsar: number;
+    wTranslational?: number;
+    wSynthesis?: number;
+    wVariantRobustness?: number;
+    wIpRisk?: number;
   };
   targetIds: string[];
+  variantIds?: string[];
+  variantScoringStrategy?: "min_score" | "average" | "max_penalty";
   steps?: PipelineStep[];
   enableQuantumOptimization?: boolean;
   quantumParams?: {
@@ -491,4 +726,5 @@ export interface PipelineConfig {
     maxMolecules?: number;
     constraints?: Record<string, unknown>;
   };
+  diseaseArea?: DiseaseArea;
 }
