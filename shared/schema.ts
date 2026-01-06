@@ -9,9 +9,9 @@ export const diseaseAreaEnum = pgEnum("disease_area", ["CNS", "Oncology", "Rare"
 export const moleculeSourceEnum = pgEnum("molecule_source", ["generated", "uploaded", "screened"]);
 export const structureSourceEnum = pgEnum("structure_source", ["uploaded", "bionemo_predicted", "other"]);
 export const campaignStatusEnum = pgEnum("campaign_status", ["pending", "running", "completed", "failed"]);
-export const jobTypeEnum = pgEnum("job_type", ["generation", "filtering", "docking", "scoring", "other"]);
+export const jobTypeEnum = pgEnum("job_type", ["generation", "filtering", "docking", "scoring", "quantum_optimization", "quantum_scoring", "other"]);
 export const jobStatusEnum = pgEnum("job_status", ["pending", "running", "completed", "failed"]);
-export const providerTypeEnum = pgEnum("provider_type", ["bionemo", "ml", "docking"]);
+export const providerTypeEnum = pgEnum("provider_type", ["bionemo", "ml", "docking", "quantum"]);
 export const outcomeEnum = pgEnum("outcome_label", ["promising", "dropped", "hit", "unknown"]);
 export const collaboratorRoleEnum = pgEnum("collaborator_role", ["owner", "editor", "viewer"]);
 
@@ -216,8 +216,27 @@ export type InsertComment = z.infer<typeof insertCommentSchema>;
 export type DiseaseArea = "CNS" | "Oncology" | "Rare" | "Infectious" | "Cardiometabolic" | "Autoimmune" | "Respiratory" | "Other";
 export type CampaignStatus = "pending" | "running" | "completed" | "failed";
 export type JobStatus = "pending" | "running" | "completed" | "failed";
-export type JobType = "generation" | "filtering" | "docking" | "scoring" | "other";
+export type JobType = "generation" | "filtering" | "docking" | "scoring" | "quantum_optimization" | "quantum_scoring" | "other";
 export type OutcomeLabel = "promising" | "dropped" | "hit" | "unknown";
+export type ProviderType = "bionemo" | "ml" | "docking" | "quantum";
+
+export type ServiceAccountRole = "agent_pipeline_copilot" | "agent_operator" | "agent_readonly";
+
+export interface ServiceAccount {
+  id: string;
+  name: string;
+  role: ServiceAccountRole;
+  allowedActions: string[];
+  apiKey?: string;
+  createdAt?: Date;
+}
+
+export interface PipelineStep {
+  name: string;
+  provider: ProviderType;
+  operation: string;
+  params?: Record<string, unknown>;
+}
 
 export interface PipelineConfig {
   generator: "bionemo_molmim" | "upload_library";
@@ -233,4 +252,11 @@ export interface PipelineConfig {
     wQsar: number;
   };
   targetIds: string[];
+  steps?: PipelineStep[];
+  enableQuantumOptimization?: boolean;
+  quantumParams?: {
+    objective?: string;
+    maxMolecules?: number;
+    constraints?: Record<string, unknown>;
+  };
 }

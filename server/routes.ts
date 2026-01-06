@@ -2,11 +2,15 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { orchestrator } from "./orchestrator";
+import { db } from "./db";
+import { eq, count } from "drizzle-orm";
+import { z } from "zod";
 import {
   insertProjectSchema,
   insertTargetSchema,
   insertCampaignSchema,
   insertCommentSchema,
+  moleculeScores,
 } from "@shared/schema";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -307,6 +311,150 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching learning graph:", error);
       res.status(500).json({ error: "Failed to fetch learning graph" });
+    }
+  });
+
+  // ============================================
+  // AGENT-FRIENDLY API ENDPOINTS
+  // These endpoints are designed for AI agents and bots
+  // They share the same business logic as UI endpoints
+  // ============================================
+
+  app.get("/api/agent/campaigns/pending", requireAuth, async (req, res) => {
+    try {
+      const pendingCampaigns = await storage.getPendingCampaigns();
+      res.json({
+        campaigns: pendingCampaigns.map((c) => ({
+          id: c.id,
+          name: c.name,
+          projectId: c.projectId,
+          domainType: c.domainType,
+          status: c.status,
+          createdAt: c.createdAt,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching pending campaigns for agent:", error);
+      res.status(500).json({ error: "Failed to fetch pending campaigns" });
+    }
+  });
+
+  app.get("/api/agent/campaigns/:id/analytics", requireAuth, async (req, res) => {
+    try {
+      const analytics = await storage.getCampaignAnalytics(req.params.id);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching campaign analytics for agent:", error);
+      res.status(500).json({ error: "Failed to fetch campaign analytics" });
+    }
+  });
+
+  app.post("/api/agent/campaigns/:id/start", requireAuth, async (req, res) => {
+    try {
+      const campaign = await storage.getCampaign(req.params.id);
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+
+      if (campaign.status !== "pending") {
+        return res.status(400).json({ error: "Campaign is not in pending status" });
+      }
+
+      await orchestrator.startCampaign(campaign.id);
+      
+      const updatedCampaign = await storage.getCampaign(campaign.id);
+      res.json({
+        campaignId: updatedCampaign?.id,
+        status: updatedCampaign?.status,
+        message: "Campaign started successfully",
+      });
+    } catch (error) {
+      console.error("Error starting campaign for agent:", error);
+      res.status(500).json({ error: "Failed to start campaign" });
+    }
+  });
+
+  app.get("/api/agent/learning-graph/unlabeled", requireAuth, async (req, res) => {
+    try {
+      const entries = await storage.getUnlabeledLearningGraphEntries();
+      res.json({
+        entries: entries.map((e) => ({
+          id: e.id,
+          moleculeId: e.moleculeId,
+          smiles: e.molecule?.smiles,
+          campaignId: e.campaignId,
+          oracleScore: e.oracleScore,
+          domainType: e.domainType,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching unlabeled entries for agent:", error);
+      res.status(500).json({ error: "Failed to fetch unlabeled entries" });
+    }
+  });
+
+  const agentLabelSchema = z.object({
+    entryId: z.string().min(1, "entryId is required"),
+    label: z.enum(["promising", "dropped", "hit", "unknown"]),
+  });
+
+  app.post("/api/agent/learning-graph/label", requireAuth, async (req, res) => {
+    try {
+      const parsed = agentLabelSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+
+      const { entryId, label } = parsed.data;
+
+      const updated = await storage.updateLearningGraphLabel(entryId, label);
+      if (!updated) {
+        return res.status(404).json({ error: "Learning graph entry not found" });
+      }
+
+      res.json({
+        entryId: updated.id,
+        moleculeId: updated.moleculeId,
+        newLabel: updated.outcomeLabel,
+        message: "Label updated successfully",
+      });
+    } catch (error) {
+      console.error("Error labeling learning graph entry for agent:", error);
+      res.status(500).json({ error: "Failed to update label" });
+    }
+  });
+
+  app.post("/api/agent/quantum-recommendation", requireAuth, async (req, res) => {
+    try {
+      const { campaignId } = req.body;
+      
+      if (!campaignId) {
+        return res.status(400).json({ error: "campaignId is required" });
+      }
+
+      const campaign = await storage.getCampaign(campaignId);
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+
+      const [moleculeCount] = await db.select({ count: count() }).from(moleculeScores).where(eq(moleculeScores.campaignId, campaignId));
+      const totalMolecules = Number(moleculeCount?.count || 0);
+
+      const shouldUseQuantum = totalMolecules > 100;
+      const reasoning = shouldUseQuantum
+        ? `Campaign has ${totalMolecules} molecules, which is large enough to benefit from quantum optimization for combinatorial selection.`
+        : `Campaign has only ${totalMolecules} molecules. Quantum optimization is typically beneficial for larger candidate pools (>100).`;
+
+      res.json({
+        shouldUseQuantum,
+        suggestedOperation: shouldUseQuantum ? "qaoa_selection" : null,
+        reasoning,
+        campaignId,
+        moleculeCount: totalMolecules,
+      });
+    } catch (error) {
+      console.error("Error generating quantum recommendation:", error);
+      res.status(500).json({ error: "Failed to generate quantum recommendation" });
     }
   });
 

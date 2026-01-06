@@ -1,0 +1,160 @@
+==================================================
+QUANTUM COMPUTE INTEGRATION (IONQ / IBM QUANTUM READY)
+==================================================
+
+We want the control plane to be READY for quantum computation, without implementing real quantum algorithms yet.
+
+Concept:
+- Quantum backends (IonQ, IBM Quantum Cloud, or our own Python/Qiskit services) are treated as EXTERNAL SERVICES, just like BioNeMo and molecular ML.
+- The control plane should support:
+  - Quantum steps in the pipeline configuration.
+  - Quantum jobs in the job/ModelRun tables.
+  - A `QuantumClient` wrapper so we can easily plug in IonQ/IBM later.
+
+ENVIRONMENT VARIABLES:
+- Add to `.env.example`:
+  - `QUANTUM_API_BASE_URL`     # our own quantum-orchestrator service (Python) endpoint
+  - `QUANTUM_API_KEY`
+  - Optionally placeholders for future direct integrations:
+    - `IONQ_API_KEY`
+    - `IBM_QUANTUM_API_KEY`
+    - `IBM_QUANTUM_INSTANCE`   # e.g., hub/group/project
+
+These DO NOT need to be used in v0, but must be declared for future use.
+
+DATA MODEL EXTENSIONS (QUANTUM-AWARE):
+
+- In `jobs.type`, allow values like:
+  - 'quantum_optimization'
+  - 'quantum_scoring'
+
+- In `model_runs.provider_type`, allow 'quantum' in addition to 'bionemo', 'ml', 'docking'.
+
+- In `pipeline_config` (JSONB on `campaigns`), support a generic step schema such as:
+
+  {
+    "steps": [
+      {
+        "name": "Generation",
+        "provider": "bionemo",
+        "operation": "molmim_generate",
+        "params": { ... }
+      },
+      {
+        "name": "ADMET Filtering",
+        "provider": "ml",
+        "operation": "admet_filter",
+        "params": { ... }
+      },
+      {
+        "name": "Docking",
+        "provider": "bionemo",
+        "operation": "diffdock_dock",
+        "params": { ... }
+      },
+      {
+        "name": "Quantum Optimization",              // QUANTUM STEP
+        "provider": "quantum",
+        "operation": "qaoa_selection",
+        "params": {
+          "objective": "maximize_oracle_score",
+          "maxMolecules": 200
+        }
+      }
+    ]
+  }
+
+This ensures that quantum steps are first-class citizens in the pipeline.
+
+BACK-END: QUANTUM CLIENT (STUB)
+
+- Implement a `QuantumClient` in Node.js/TypeScript, similar to `BioNemoClient` and `MolecularMLClient`, configured via `QUANTUM_API_BASE_URL` and `QUANTUM_API_KEY`.
+
+- Define at least these methods (interfaces only; mock responses for now):
+
+  - `submitOptimizationJob(params: {
+      campaignId: string;
+      moleculeIds: string[];
+      objective: string;              // e.g., "maximize_oracle_score"
+      constraints?: Record<string, any>;
+    }): Promise<{ quantumJobId: string; }>`
+
+  - `getJobStatus(params: { quantumJobId: string; }): Promise<{ status: "queued" | "running" | "completed" | "failed"; }>`
+
+  - `getJobResult(params: { quantumJobId: string; }): Promise<{
+      selectedMoleculeIds: string[];
+      metadata?: Record<string, any>;
+    }>`
+
+- For v0:
+  - `submitOptimizationJob` returns a fake `quantumJobId`.
+  - `getJobStatus` immediately returns `completed`.
+  - `getJobResult` returns a subset of `moleculeIds` (e.g., top N by oracle_score from DB or random choice).
+
+- IMPORTANT: keep the interface generic so that later a Python/Qiskit or IonQ-based orchestrator can implement the same HTTP contract and internally call IonQ or IBM Quantum APIs.
+
+WORKFLOW ORCHESTRATION:
+
+- Extend the campaign orchestrator so that:
+  - When it encounters a pipeline step with `"provider": "quantum"`, `"operation": "qaoa_selection"` (or similar), it:
+    - Creates a `job` with `type = "quantum_optimization"` and `status = "running"`.
+    - Calls `QuantumClient.submitOptimizationJob` with:
+      - the current candidate `moleculeIds` for this campaign
+      - the `objective` and `constraints` from `params`.
+    - For v0, immediately simulates completion:
+      - calls `QuantumClient.getJobResult`
+      - filters molecules to `selectedMoleculeIds`
+      - writes a `model_runs` entry with `provider_type = "quantum"` and response payload.
+      - updates `jobs` and continues to the next pipeline step.
+
+- Store quantum outputs in:
+  - `model_runs.response_payload` (include `selectedMoleculeIds` and any quantum-specific metadata).
+  - Optionally create a flag or tag in `molecule_scores` or a new table (e.g., `selected_by_quantum` boolean).
+
+FRONT-END: QUANTUM-AWARE PIPELINE BUILDER & UI
+
+- In the Campaign Configurator (Pipeline Builder):
+
+  - Allow adding a **“Quantum Optimization”** step as part of the pipeline:
+    - Provider: `quantum`
+    - Operation: `qaoa_selection` (or similar string)
+    - Parameters:
+      - `maxMolecules` (int, how many molecules to keep after quantum optimization)
+      - `objective` (simple string field)
+    - This step should be optional but visible, e.g., under an “Advanced” section.
+
+  - For domain templates (CNS / Oncology / Rare), you may:
+    - Default to NO quantum step,
+    - But allow users to toggle “Add quantum optimization step” to insert it into the pipeline.
+
+- In the Campaign Detail page:
+
+  - Show quantum steps in the pipeline graph with a distinct icon (e.g., a qubit symbol).
+  - In the job/model run list, clearly label runs where `provider_type = "quantum"`:
+    - “Quantum optimization – completed (selected 120 molecules).”
+
+AGENT & BOT PREP (QUANTUM-AWARE):
+
+- Ensure agents can see quantum steps via the same APIs:
+
+  - `GET /api/campaigns/:id` returns full `pipeline_config`, including quantum steps.
+  - `GET /api/campaigns/:id/analytics` includes any quantum-related metrics (e.g., how many molecules survived quantum selection).
+
+- Add an optional agent-only endpoint stub:
+
+  - `POST /api/agent/quantum-recommendation`
+    - Input: `{ campaignId: string }`
+    - Output (mock):
+
+      {
+        "shouldUseQuantum": boolean,
+        "suggestedOperation": "qaoa_selection" | null,
+        "reasoning": string
+      }
+
+- The front-end might (in future) call this to suggest to the user:
+  - “Your campaign is large and combinatorial; quantum optimization might help. Do you want to add a Quantum Optimization step?”
+
+All quantum integrations MUST remain:
+- Language-agnostic (we only define HTTP contracts).
+- Compatible with future Python services running Qiskit (IBM Quantum) or IonQ SDK, which will expose those HTTP endpoints to the control plane.

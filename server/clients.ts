@@ -123,6 +123,67 @@ export class DockingClient {
   }
 }
 
+export interface QuantumOptimizationParams {
+  campaignId: string;
+  moleculeIds: string[];
+  objective: string;
+  constraints?: Record<string, unknown>;
+}
+
+export interface QuantumJobResult {
+  selectedMoleculeIds: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export class QuantumClient {
+  private baseUrl: string;
+  private apiKey: string;
+
+  constructor() {
+    this.baseUrl = process.env.QUANTUM_API_BASE_URL || "http://localhost:8000";
+    this.apiKey = process.env.QUANTUM_API_KEY || "";
+  }
+
+  async submitOptimizationJob(params: QuantumOptimizationParams): Promise<{ quantumJobId: string }> {
+    await this.simulateDelay(200, 500);
+    
+    const quantumJobId = `qjob_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    console.log(`[QuantumClient] Submitted optimization job ${quantumJobId} for campaign ${params.campaignId}`);
+    
+    return { quantumJobId };
+  }
+
+  async getJobStatus(params: { quantumJobId: string }): Promise<{ status: "queued" | "running" | "completed" | "failed" }> {
+    await this.simulateDelay(50, 150);
+    
+    return { status: "completed" };
+  }
+
+  async getJobResult(params: { quantumJobId: string; moleculeIds: string[] }): Promise<QuantumJobResult> {
+    await this.simulateDelay(300, 800);
+    
+    const selectedCount = Math.max(1, Math.floor(params.moleculeIds.length * 0.6));
+    const shuffled = [...params.moleculeIds].sort(() => Math.random() - 0.5);
+    const selectedMoleculeIds = shuffled.slice(0, selectedCount);
+    
+    return {
+      selectedMoleculeIds,
+      metadata: {
+        algorithm: "qaoa_mock",
+        iterations: 100,
+        circuitDepth: 3,
+        optimizationValue: Math.random() * 0.5 + 0.5,
+      },
+    };
+  }
+
+  private simulateDelay(min: number, max: number): Promise<void> {
+    const delay = Math.floor(Math.random() * (max - min) + min);
+    return new Promise((resolve) => setTimeout(resolve, delay));
+  }
+}
+
 export const bionemoClient = new BioNemoClient();
 export const molecularMLClient = new MolecularMLClient();
 export const dockingClient = new DockingClient();
+export const quantumClient = new QuantumClient();

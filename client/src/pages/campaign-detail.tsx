@@ -31,6 +31,7 @@ import {
   Sparkles,
   Target,
   Beaker,
+  Atom,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Campaign, Job, MoleculeScore, PipelineConfig } from "@shared/schema";
@@ -45,6 +46,8 @@ const jobTypeLabels: Record<string, string> = {
   filtering: "ADMET Filtering",
   docking: "Docking",
   scoring: "Oracle Scoring",
+  quantum_optimization: "Quantum Optimization",
+  quantum_scoring: "Quantum Scoring",
 };
 
 const jobTypeIcons: Record<string, typeof Sparkles> = {
@@ -52,6 +55,8 @@ const jobTypeIcons: Record<string, typeof Sparkles> = {
   filtering: Beaker,
   docking: Target,
   scoring: FlaskConical,
+  quantum_optimization: Atom,
+  quantum_scoring: Atom,
 };
 
 export default function CampaignDetailPage() {

@@ -64,6 +64,9 @@ export default function CampaignNewPage() {
   const [wDocking, setWDocking] = useState(0.4);
   const [wAdmet, setWAdmet] = useState(0.3);
   const [wQsar, setWQsar] = useState(0.3);
+  const [enableQuantum, setEnableQuantum] = useState(false);
+  const [quantumObjective, setQuantumObjective] = useState("maximize_oracle_score");
+  const [quantumMaxMolecules, setQuantumMaxMolecules] = useState(200);
 
   const { data: projects } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -104,6 +107,11 @@ export default function CampaignNewPage() {
       dockingMethod,
       scoringWeights: { wDocking, wAdmet, wQsar },
       targetIds: selectedTargets,
+      enableQuantumOptimization: enableQuantum,
+      quantumParams: enableQuantum ? {
+        objective: quantumObjective,
+        maxMolecules: quantumMaxMolecules,
+      } : undefined,
     };
 
     createMutation.mutate({
@@ -470,6 +478,58 @@ export default function CampaignNewPage() {
                           </span>
                         )}
                       </p>
+                    </div>
+
+                    <div className="pt-6 border-t">
+                      <div className="flex items-center gap-3 mb-4">
+                        <Checkbox
+                          id="enable-quantum"
+                          checked={enableQuantum}
+                          onCheckedChange={(checked) => setEnableQuantum(checked === true)}
+                          data-testid="checkbox-enable-quantum"
+                        />
+                        <div>
+                          <Label htmlFor="enable-quantum" className="text-base font-semibold cursor-pointer">
+                            Enable Quantum Optimization
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Use quantum computing for combinatorial molecule selection (Advanced)
+                          </p>
+                        </div>
+                      </div>
+
+                      {enableQuantum && (
+                        <div className="ml-6 space-y-4 p-4 border rounded-md bg-muted/30">
+                          <div className="space-y-2">
+                            <Label htmlFor="quantum-objective">Optimization Objective</Label>
+                            <Select value={quantumObjective} onValueChange={setQuantumObjective}>
+                              <SelectTrigger data-testid="select-quantum-objective">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="maximize_oracle_score">Maximize Oracle Score</SelectItem>
+                                <SelectItem value="maximize_diversity">Maximize Diversity</SelectItem>
+                                <SelectItem value="balanced">Balanced Selection</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="quantum-max">Max Molecules to Select</Label>
+                            <Input
+                              id="quantum-max"
+                              type="number"
+                              value={quantumMaxMolecules}
+                              onChange={(e) => setQuantumMaxMolecules(parseInt(e.target.value) || 200)}
+                              min={10}
+                              max={1000}
+                              data-testid="input-quantum-max"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Quantum optimization is most effective for large candidate pools ({">"}100 molecules)
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

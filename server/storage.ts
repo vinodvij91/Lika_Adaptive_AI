@@ -393,6 +393,74 @@ export class DatabaseStorage implements IStorage {
       recentCampaigns,
     };
   }
+
+  async getPendingCampaigns(): Promise<Campaign[]> {
+    return db.select().from(campaigns).where(eq(campaigns.status, "pending")).orderBy(desc(campaigns.createdAt));
+  }
+
+  async getCampaignAnalytics(campaignId: string): Promise<{
+    campaignId: string;
+    status: string;
+    totalMolecules: number;
+    avgOracleScore: number;
+    topScorers: { moleculeId: string; oracleScore: number }[];
+    quantumStepCompleted: boolean;
+    jobsSummary: { type: string; status: string }[];
+  }> {
+    const campaign = await this.getCampaign(campaignId);
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    const [stats] = await db
+      .select({ count: count(), avg: avg(moleculeScores.oracleScore) })
+      .from(moleculeScores)
+      .where(eq(moleculeScores.campaignId, campaignId));
+
+    const topMolecules = await db
+      .select({ moleculeId: moleculeScores.moleculeId, oracleScore: moleculeScores.oracleScore })
+      .from(moleculeScores)
+      .where(eq(moleculeScores.campaignId, campaignId))
+      .orderBy(desc(moleculeScores.oracleScore))
+      .limit(10);
+
+    const jobsList = await db.select({ type: jobs.type, status: jobs.status }).from(jobs).where(eq(jobs.campaignId, campaignId));
+
+    const quantumJob = jobsList.find((j) => j.type === "quantum_optimization" || j.type === "quantum_scoring");
+
+    return {
+      campaignId,
+      status: campaign.status || "unknown",
+      totalMolecules: Number(stats.count),
+      avgOracleScore: Number(stats.avg) || 0,
+      topScorers: topMolecules.map((m) => ({ moleculeId: m.moleculeId, oracleScore: m.oracleScore || 0 })),
+      quantumStepCompleted: quantumJob?.status === "completed",
+      jobsSummary: jobsList.map((j) => ({ type: j.type, status: j.status || "unknown" })),
+    };
+  }
+
+  async getUnlabeledLearningGraphEntries(): Promise<(LearningGraphEntry & { molecule: Molecule | null })[]> {
+    const entries = await db
+      .select()
+      .from(learningGraphEntries)
+      .leftJoin(molecules, eq(learningGraphEntries.moleculeId, molecules.id))
+      .where(eq(learningGraphEntries.outcomeLabel, "unknown"))
+      .orderBy(desc(learningGraphEntries.createdAt));
+
+    return entries.map((row) => ({
+      ...row.learning_graph_entries,
+      molecule: row.molecules,
+    }));
+  }
+
+  async updateLearningGraphLabel(id: string, outcomeLabel: "promising" | "dropped" | "hit" | "unknown"): Promise<LearningGraphEntry | undefined> {
+    const result = await db
+      .update(learningGraphEntries)
+      .set({ outcomeLabel })
+      .where(eq(learningGraphEntries.id, id))
+      .returning();
+    return result[0];
+  }
 }
 
 export const storage = new DatabaseStorage();

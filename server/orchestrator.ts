@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import { bionemoClient, molecularMLClient, dockingClient } from "./clients";
+import { bionemoClient, molecularMLClient, dockingClient, quantumClient } from "./clients";
 import type { Campaign, PipelineConfig, JobType, InsertMoleculeScore, InsertLearningGraphEntry } from "@shared/schema";
 
 export class JobOrchestrator {
@@ -147,6 +147,61 @@ export class JobOrchestrator {
       }
 
       await storage.updateJob(scoringJob.id, { status: "completed", finishedAt: new Date() });
+
+      if (config?.enableQuantumOptimization && filteredMoleculeIds.length > 0) {
+        const quantumJob = await storage.createJob({
+          campaignId,
+          type: "quantum_optimization",
+          status: "running",
+        });
+        await storage.updateJob(quantumJob.id, { startedAt: new Date() });
+
+        try {
+          const { quantumJobId } = await quantumClient.submitOptimizationJob({
+            campaignId,
+            moleculeIds: filteredMoleculeIds,
+            objective: config.quantumParams?.objective || "maximize_oracle_score",
+            constraints: config.quantumParams?.constraints,
+          });
+
+          const status = await quantumClient.getJobStatus({ quantumJobId });
+          
+          if (status.status === "completed") {
+            const result = await quantumClient.getJobResult({
+              quantumJobId,
+              moleculeIds: filteredMoleculeIds,
+            });
+
+            await storage.createModelRun({
+              campaignId,
+              stepName: "quantum_optimization",
+              providerType: "quantum",
+              status: "completed",
+              startedAt: new Date(),
+              finishedAt: new Date(),
+              requestPayload: {
+                moleculeIds: filteredMoleculeIds,
+                objective: config.quantumParams?.objective,
+              },
+              responsePayload: {
+                selectedMoleculeIds: result.selectedMoleculeIds,
+                metadata: result.metadata,
+              },
+            });
+
+            console.log(`[Orchestrator] Quantum optimization selected ${result.selectedMoleculeIds.length} molecules from ${filteredMoleculeIds.length}`);
+          }
+
+          await storage.updateJob(quantumJob.id, { 
+            status: "completed", 
+            finishedAt: new Date(),
+            externalJobId: quantumJobId,
+          });
+        } catch (quantumError) {
+          console.error(`[Orchestrator] Quantum step failed:`, quantumError);
+          await storage.updateJob(quantumJob.id, { status: "failed", finishedAt: new Date() });
+        }
+      }
 
       await storage.updateCampaign(campaignId, { status: "completed" });
       this.runningCampaigns.delete(campaignId);
