@@ -20,6 +20,17 @@ import {
   usageMeters,
   creditWallets,
   creditTransactions,
+  targetVariants,
+  diseaseContextSignals,
+  programs,
+  oracleVersions,
+  assays,
+  experimentRecommendations,
+  assayResults,
+  literatureAnnotations,
+  organizations,
+  orgMembers,
+  sharedAssets,
   type Project,
   type InsertProject,
   type Target,
@@ -59,6 +70,28 @@ import {
   type CreditTransaction,
   type InsertCreditTransaction,
   type DiseaseArea,
+  type TargetVariant,
+  type InsertTargetVariant,
+  type DiseaseContextSignal,
+  type InsertDiseaseContextSignal,
+  type Program,
+  type InsertProgram,
+  type OracleVersion,
+  type InsertOracleVersion,
+  type Assay,
+  type InsertAssay,
+  type ExperimentRecommendation,
+  type InsertExperimentRecommendation,
+  type AssayResult,
+  type InsertAssayResult,
+  type LiteratureAnnotation,
+  type InsertLiteratureAnnotation,
+  type Organization,
+  type InsertOrganization,
+  type OrgMember,
+  type InsertOrgMember,
+  type SharedAsset,
+  type InsertSharedAsset,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -161,6 +194,56 @@ export interface IStorage {
 
   getCreditTransactions(walletId: string): Promise<CreditTransaction[]>;
   createCreditTransaction(tx: InsertCreditTransaction): Promise<CreditTransaction>;
+
+  getTargetVariants(targetId: string): Promise<TargetVariant[]>;
+  getTargetVariant(id: string): Promise<TargetVariant | undefined>;
+  createTargetVariant(variant: InsertTargetVariant): Promise<TargetVariant>;
+  updateTargetVariant(id: string, variant: Partial<InsertTargetVariant>): Promise<TargetVariant | undefined>;
+  deleteTargetVariant(id: string): Promise<void>;
+
+  getDiseaseContextSignals(targetId: string): Promise<DiseaseContextSignal[]>;
+  createDiseaseContextSignal(signal: InsertDiseaseContextSignal): Promise<DiseaseContextSignal>;
+
+  getPrograms(projectId?: string): Promise<Program[]>;
+  getProgram(id: string): Promise<Program | undefined>;
+  createProgram(program: InsertProgram): Promise<Program>;
+  updateProgram(id: string, program: Partial<InsertProgram>): Promise<Program | undefined>;
+  deleteProgram(id: string): Promise<void>;
+
+  getOracleVersions(): Promise<OracleVersion[]>;
+  getOracleVersion(id: string): Promise<OracleVersion | undefined>;
+  createOracleVersion(version: InsertOracleVersion): Promise<OracleVersion>;
+
+  getAssays(targetId?: string): Promise<Assay[]>;
+  getAssay(id: string): Promise<Assay | undefined>;
+  createAssay(assay: InsertAssay): Promise<Assay>;
+  updateAssay(id: string, assay: Partial<InsertAssay>): Promise<Assay | undefined>;
+
+  getExperimentRecommendations(campaignId: string): Promise<ExperimentRecommendation[]>;
+  createExperimentRecommendation(rec: InsertExperimentRecommendation): Promise<ExperimentRecommendation>;
+  updateExperimentRecommendation(id: string, rec: Partial<InsertExperimentRecommendation>): Promise<ExperimentRecommendation | undefined>;
+
+  getAssayResults(assayId?: string, campaignId?: string): Promise<AssayResult[]>;
+  createAssayResult(result: InsertAssayResult): Promise<AssayResult>;
+  bulkCreateAssayResults(results: InsertAssayResult[]): Promise<AssayResult[]>;
+
+  getLiteratureAnnotations(targetId?: string, moleculeId?: string): Promise<LiteratureAnnotation[]>;
+  createLiteratureAnnotation(annotation: InsertLiteratureAnnotation): Promise<LiteratureAnnotation>;
+
+  getOrganizations(): Promise<Organization[]>;
+  getOrganization(id: string): Promise<Organization | undefined>;
+  createOrganization(org: InsertOrganization): Promise<Organization>;
+  updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization | undefined>;
+
+  getOrgMembers(organizationId: string): Promise<OrgMember[]>;
+  getOrgMembersByUser(userId: string): Promise<OrgMember[]>;
+  createOrgMember(member: InsertOrgMember): Promise<OrgMember>;
+  updateOrgMember(id: string, member: Partial<InsertOrgMember>): Promise<OrgMember | undefined>;
+  deleteOrgMember(id: string): Promise<void>;
+
+  getSharedAssets(sharedWithOrgId: string): Promise<SharedAsset[]>;
+  createSharedAsset(asset: InsertSharedAsset): Promise<SharedAsset>;
+  deleteSharedAsset(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -753,6 +836,205 @@ export class DatabaseStorage implements IStorage {
   async createCreditTransaction(tx: InsertCreditTransaction): Promise<CreditTransaction> {
     const result = await db.insert(creditTransactions).values(tx).returning();
     return result[0];
+  }
+
+  async getTargetVariants(targetId: string): Promise<TargetVariant[]> {
+    return db.select().from(targetVariants).where(eq(targetVariants.targetId, targetId)).orderBy(desc(targetVariants.createdAt));
+  }
+
+  async getTargetVariant(id: string): Promise<TargetVariant | undefined> {
+    const result = await db.select().from(targetVariants).where(eq(targetVariants.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createTargetVariant(variant: InsertTargetVariant): Promise<TargetVariant> {
+    const result = await db.insert(targetVariants).values(variant).returning();
+    return result[0];
+  }
+
+  async updateTargetVariant(id: string, variant: Partial<InsertTargetVariant>): Promise<TargetVariant | undefined> {
+    const result = await db.update(targetVariants).set(variant).where(eq(targetVariants.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteTargetVariant(id: string): Promise<void> {
+    await db.delete(targetVariants).where(eq(targetVariants.id, id));
+  }
+
+  async getDiseaseContextSignals(targetId: string): Promise<DiseaseContextSignal[]> {
+    return db.select().from(diseaseContextSignals).where(eq(diseaseContextSignals.targetId, targetId)).orderBy(desc(diseaseContextSignals.createdAt));
+  }
+
+  async createDiseaseContextSignal(signal: InsertDiseaseContextSignal): Promise<DiseaseContextSignal> {
+    const result = await db.insert(diseaseContextSignals).values(signal).returning();
+    return result[0];
+  }
+
+  async getPrograms(projectId?: string): Promise<Program[]> {
+    if (projectId) {
+      return db.select().from(programs).where(eq(programs.projectId, projectId)).orderBy(desc(programs.updatedAt));
+    }
+    return db.select().from(programs).orderBy(desc(programs.updatedAt));
+  }
+
+  async getProgram(id: string): Promise<Program | undefined> {
+    const result = await db.select().from(programs).where(eq(programs.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createProgram(program: InsertProgram): Promise<Program> {
+    const result = await db.insert(programs).values(program).returning();
+    return result[0];
+  }
+
+  async updateProgram(id: string, program: Partial<InsertProgram>): Promise<Program | undefined> {
+    const result = await db.update(programs).set({ ...program, updatedAt: new Date() }).where(eq(programs.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteProgram(id: string): Promise<void> {
+    await db.delete(programs).where(eq(programs.id, id));
+  }
+
+  async getOracleVersions(): Promise<OracleVersion[]> {
+    return db.select().from(oracleVersions).orderBy(desc(oracleVersions.createdAt));
+  }
+
+  async getOracleVersion(id: string): Promise<OracleVersion | undefined> {
+    const result = await db.select().from(oracleVersions).where(eq(oracleVersions.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createOracleVersion(version: InsertOracleVersion): Promise<OracleVersion> {
+    const result = await db.insert(oracleVersions).values(version).returning();
+    return result[0];
+  }
+
+  async getAssays(targetId?: string): Promise<Assay[]> {
+    if (targetId) {
+      return db.select().from(assays).where(eq(assays.targetId, targetId)).orderBy(desc(assays.createdAt));
+    }
+    return db.select().from(assays).orderBy(desc(assays.createdAt));
+  }
+
+  async getAssay(id: string): Promise<Assay | undefined> {
+    const result = await db.select().from(assays).where(eq(assays.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createAssay(assay: InsertAssay): Promise<Assay> {
+    const result = await db.insert(assays).values(assay).returning();
+    return result[0];
+  }
+
+  async updateAssay(id: string, assay: Partial<InsertAssay>): Promise<Assay | undefined> {
+    const result = await db.update(assays).set(assay).where(eq(assays.id, id)).returning();
+    return result[0];
+  }
+
+  async getExperimentRecommendations(campaignId: string): Promise<ExperimentRecommendation[]> {
+    return db.select().from(experimentRecommendations).where(eq(experimentRecommendations.campaignId, campaignId)).orderBy(desc(experimentRecommendations.createdAt));
+  }
+
+  async createExperimentRecommendation(rec: InsertExperimentRecommendation): Promise<ExperimentRecommendation> {
+    const result = await db.insert(experimentRecommendations).values(rec).returning();
+    return result[0];
+  }
+
+  async updateExperimentRecommendation(id: string, rec: Partial<InsertExperimentRecommendation>): Promise<ExperimentRecommendation | undefined> {
+    const result = await db.update(experimentRecommendations).set(rec).where(eq(experimentRecommendations.id, id)).returning();
+    return result[0];
+  }
+
+  async getAssayResults(assayId?: string, campaignId?: string): Promise<AssayResult[]> {
+    const conditions = [];
+    if (assayId) conditions.push(eq(assayResults.assayId, assayId));
+    if (campaignId) conditions.push(eq(assayResults.campaignId, campaignId));
+
+    if (conditions.length === 0) {
+      return db.select().from(assayResults).orderBy(desc(assayResults.createdAt)).limit(500);
+    }
+    return db.select().from(assayResults).where(and(...conditions)).orderBy(desc(assayResults.createdAt));
+  }
+
+  async createAssayResult(result: InsertAssayResult): Promise<AssayResult> {
+    const res = await db.insert(assayResults).values(result).returning();
+    return res[0];
+  }
+
+  async bulkCreateAssayResults(results: InsertAssayResult[]): Promise<AssayResult[]> {
+    if (results.length === 0) return [];
+    return db.insert(assayResults).values(results).returning();
+  }
+
+  async getLiteratureAnnotations(targetId?: string, moleculeId?: string): Promise<LiteratureAnnotation[]> {
+    const conditions = [];
+    if (targetId) conditions.push(eq(literatureAnnotations.targetId, targetId));
+    if (moleculeId) conditions.push(eq(literatureAnnotations.moleculeId, moleculeId));
+
+    if (conditions.length === 0) {
+      return db.select().from(literatureAnnotations).orderBy(desc(literatureAnnotations.createdAt)).limit(500);
+    }
+    return db.select().from(literatureAnnotations).where(and(...conditions)).orderBy(desc(literatureAnnotations.createdAt));
+  }
+
+  async createLiteratureAnnotation(annotation: InsertLiteratureAnnotation): Promise<LiteratureAnnotation> {
+    const result = await db.insert(literatureAnnotations).values(annotation).returning();
+    return result[0];
+  }
+
+  async getOrganizations(): Promise<Organization[]> {
+    return db.select().from(organizations).orderBy(desc(organizations.createdAt));
+  }
+
+  async getOrganization(id: string): Promise<Organization | undefined> {
+    const result = await db.select().from(organizations).where(eq(organizations.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createOrganization(org: InsertOrganization): Promise<Organization> {
+    const result = await db.insert(organizations).values(org).returning();
+    return result[0];
+  }
+
+  async updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization | undefined> {
+    const result = await db.update(organizations).set(org).where(eq(organizations.id, id)).returning();
+    return result[0];
+  }
+
+  async getOrgMembers(organizationId: string): Promise<OrgMember[]> {
+    return db.select().from(orgMembers).where(eq(orgMembers.organizationId, organizationId)).orderBy(desc(orgMembers.createdAt));
+  }
+
+  async getOrgMembersByUser(userId: string): Promise<OrgMember[]> {
+    return db.select().from(orgMembers).where(eq(orgMembers.userId, userId)).orderBy(desc(orgMembers.createdAt));
+  }
+
+  async createOrgMember(member: InsertOrgMember): Promise<OrgMember> {
+    const result = await db.insert(orgMembers).values(member).returning();
+    return result[0];
+  }
+
+  async updateOrgMember(id: string, member: Partial<InsertOrgMember>): Promise<OrgMember | undefined> {
+    const result = await db.update(orgMembers).set(member).where(eq(orgMembers.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteOrgMember(id: string): Promise<void> {
+    await db.delete(orgMembers).where(eq(orgMembers.id, id));
+  }
+
+  async getSharedAssets(sharedWithOrgId: string): Promise<SharedAsset[]> {
+    return db.select().from(sharedAssets).where(eq(sharedAssets.sharedWithOrgId, sharedWithOrgId)).orderBy(desc(sharedAssets.createdAt));
+  }
+
+  async createSharedAsset(asset: InsertSharedAsset): Promise<SharedAsset> {
+    const result = await db.insert(sharedAssets).values(asset).returning();
+    return result[0];
+  }
+
+  async deleteSharedAsset(id: string): Promise<void> {
+    await db.delete(sharedAssets).where(eq(sharedAssets.id, id));
   }
 }
 

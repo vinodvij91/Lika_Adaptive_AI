@@ -16,6 +16,17 @@ import {
   insertLibraryAnnotationSchema,
   insertComputeNodeSchema,
   insertUserSshKeySchema,
+  insertTargetVariantSchema,
+  insertDiseaseContextSignalSchema,
+  insertProgramSchema,
+  insertOracleVersionSchema,
+  insertAssaySchema,
+  insertExperimentRecommendationSchema,
+  insertAssayResultSchema,
+  insertLiteratureAnnotationSchema,
+  insertOrganizationSchema,
+  insertOrgMemberSchema,
+  insertSharedAssetSchema,
   moleculeScores,
 } from "@shared/schema";
 
@@ -1084,6 +1095,635 @@ export async function registerRoutes(
       error: "Not implemented",
       message: "Credit application is not available in v0. This endpoint is a placeholder for future billing integration.",
     });
+  });
+
+  // ============================================
+  // TARGET VARIANTS ENDPOINTS
+  // ============================================
+
+  app.get("/api/targets/:targetId/variants", requireAuth, async (req, res) => {
+    try {
+      const variants = await storage.getTargetVariants(req.params.targetId);
+      res.json(variants);
+    } catch (error) {
+      console.error("Error fetching target variants:", error);
+      res.status(500).json({ error: "Failed to fetch variants" });
+    }
+  });
+
+  app.post("/api/targets/:targetId/variants", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertTargetVariantSchema.safeParse({ ...req.body, targetId: req.params.targetId });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const variant = await storage.createTargetVariant(parsed.data);
+      res.status(201).json(variant);
+    } catch (error) {
+      console.error("Error creating target variant:", error);
+      res.status(500).json({ error: "Failed to create variant" });
+    }
+  });
+
+  app.patch("/api/variants/:id", requireAuth, async (req, res) => {
+    try {
+      const variant = await storage.updateTargetVariant(req.params.id, req.body);
+      if (!variant) {
+        return res.status(404).json({ error: "Variant not found" });
+      }
+      res.json(variant);
+    } catch (error) {
+      console.error("Error updating variant:", error);
+      res.status(500).json({ error: "Failed to update variant" });
+    }
+  });
+
+  app.delete("/api/variants/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteTargetVariant(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting variant:", error);
+      res.status(500).json({ error: "Failed to delete variant" });
+    }
+  });
+
+  // ============================================
+  // DISEASE CONTEXT SIGNALS ENDPOINTS
+  // ============================================
+
+  app.get("/api/targets/:targetId/signals", requireAuth, async (req, res) => {
+    try {
+      const signals = await storage.getDiseaseContextSignals(req.params.targetId);
+      res.json(signals);
+    } catch (error) {
+      console.error("Error fetching disease context signals:", error);
+      res.status(500).json({ error: "Failed to fetch signals" });
+    }
+  });
+
+  app.post("/api/targets/:targetId/signals", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertDiseaseContextSignalSchema.safeParse({ ...req.body, targetId: req.params.targetId });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const signal = await storage.createDiseaseContextSignal(parsed.data);
+      res.status(201).json(signal);
+    } catch (error) {
+      console.error("Error creating disease context signal:", error);
+      res.status(500).json({ error: "Failed to create signal" });
+    }
+  });
+
+  // ============================================
+  // PROGRAMS ENDPOINTS
+  // ============================================
+
+  app.get("/api/programs", requireAuth, async (req, res) => {
+    try {
+      const { projectId } = req.query;
+      const programs = await storage.getPrograms(projectId as string | undefined);
+      res.json(programs);
+    } catch (error) {
+      console.error("Error fetching programs:", error);
+      res.status(500).json({ error: "Failed to fetch programs" });
+    }
+  });
+
+  app.get("/api/programs/:id", requireAuth, async (req, res) => {
+    try {
+      const program = await storage.getProgram(req.params.id);
+      if (!program) {
+        return res.status(404).json({ error: "Program not found" });
+      }
+      res.json(program);
+    } catch (error) {
+      console.error("Error fetching program:", error);
+      res.status(500).json({ error: "Failed to fetch program" });
+    }
+  });
+
+  app.post("/api/programs", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertProgramSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const program = await storage.createProgram(parsed.data);
+      res.status(201).json(program);
+    } catch (error) {
+      console.error("Error creating program:", error);
+      res.status(500).json({ error: "Failed to create program" });
+    }
+  });
+
+  app.patch("/api/programs/:id", requireAuth, async (req, res) => {
+    try {
+      const program = await storage.updateProgram(req.params.id, req.body);
+      if (!program) {
+        return res.status(404).json({ error: "Program not found" });
+      }
+      res.json(program);
+    } catch (error) {
+      console.error("Error updating program:", error);
+      res.status(500).json({ error: "Failed to update program" });
+    }
+  });
+
+  app.delete("/api/programs/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteProgram(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting program:", error);
+      res.status(500).json({ error: "Failed to delete program" });
+    }
+  });
+
+  // ============================================
+  // ORACLE VERSIONS ENDPOINTS
+  // ============================================
+
+  app.get("/api/oracle-versions", requireAuth, async (req, res) => {
+    try {
+      const versions = await storage.getOracleVersions();
+      res.json(versions);
+    } catch (error) {
+      console.error("Error fetching oracle versions:", error);
+      res.status(500).json({ error: "Failed to fetch oracle versions" });
+    }
+  });
+
+  app.get("/api/oracle-versions/:id", requireAuth, async (req, res) => {
+    try {
+      const version = await storage.getOracleVersion(req.params.id);
+      if (!version) {
+        return res.status(404).json({ error: "Oracle version not found" });
+      }
+      res.json(version);
+    } catch (error) {
+      console.error("Error fetching oracle version:", error);
+      res.status(500).json({ error: "Failed to fetch oracle version" });
+    }
+  });
+
+  app.post("/api/oracle-versions", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertOracleVersionSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const version = await storage.createOracleVersion(parsed.data);
+      res.status(201).json(version);
+    } catch (error) {
+      console.error("Error creating oracle version:", error);
+      res.status(500).json({ error: "Failed to create oracle version" });
+    }
+  });
+
+  // ============================================
+  // ASSAYS ENDPOINTS
+  // ============================================
+
+  app.get("/api/assays", requireAuth, async (req, res) => {
+    try {
+      const { targetId } = req.query;
+      const assays = await storage.getAssays(targetId as string | undefined);
+      res.json(assays);
+    } catch (error) {
+      console.error("Error fetching assays:", error);
+      res.status(500).json({ error: "Failed to fetch assays" });
+    }
+  });
+
+  app.get("/api/assays/:id", requireAuth, async (req, res) => {
+    try {
+      const assay = await storage.getAssay(req.params.id);
+      if (!assay) {
+        return res.status(404).json({ error: "Assay not found" });
+      }
+      res.json(assay);
+    } catch (error) {
+      console.error("Error fetching assay:", error);
+      res.status(500).json({ error: "Failed to fetch assay" });
+    }
+  });
+
+  app.post("/api/assays", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertAssaySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const assay = await storage.createAssay(parsed.data);
+      res.status(201).json(assay);
+    } catch (error) {
+      console.error("Error creating assay:", error);
+      res.status(500).json({ error: "Failed to create assay" });
+    }
+  });
+
+  app.patch("/api/assays/:id", requireAuth, async (req, res) => {
+    try {
+      const assay = await storage.updateAssay(req.params.id, req.body);
+      if (!assay) {
+        return res.status(404).json({ error: "Assay not found" });
+      }
+      res.json(assay);
+    } catch (error) {
+      console.error("Error updating assay:", error);
+      res.status(500).json({ error: "Failed to update assay" });
+    }
+  });
+
+  // ============================================
+  // EXPERIMENT RECOMMENDATIONS ENDPOINTS
+  // ============================================
+
+  app.get("/api/campaigns/:campaignId/recommendations", requireAuth, async (req, res) => {
+    try {
+      const recommendations = await storage.getExperimentRecommendations(req.params.campaignId);
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Error fetching experiment recommendations:", error);
+      res.status(500).json({ error: "Failed to fetch recommendations" });
+    }
+  });
+
+  app.post("/api/campaigns/:campaignId/recommendations", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertExperimentRecommendationSchema.safeParse({ ...req.body, campaignId: req.params.campaignId });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const rec = await storage.createExperimentRecommendation(parsed.data);
+      res.status(201).json(rec);
+    } catch (error) {
+      console.error("Error creating experiment recommendation:", error);
+      res.status(500).json({ error: "Failed to create recommendation" });
+    }
+  });
+
+  app.patch("/api/recommendations/:id", requireAuth, async (req, res) => {
+    try {
+      const rec = await storage.updateExperimentRecommendation(req.params.id, req.body);
+      if (!rec) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+      res.json(rec);
+    } catch (error) {
+      console.error("Error updating recommendation:", error);
+      res.status(500).json({ error: "Failed to update recommendation" });
+    }
+  });
+
+  // ============================================
+  // ASSAY RESULTS ENDPOINTS
+  // ============================================
+
+  app.get("/api/assay-results", requireAuth, async (req, res) => {
+    try {
+      const { assayId, campaignId } = req.query;
+      const results = await storage.getAssayResults(assayId as string | undefined, campaignId as string | undefined);
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching assay results:", error);
+      res.status(500).json({ error: "Failed to fetch assay results" });
+    }
+  });
+
+  app.post("/api/assay-results", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertAssayResultSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const result = await storage.createAssayResult(parsed.data);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error creating assay result:", error);
+      res.status(500).json({ error: "Failed to create assay result" });
+    }
+  });
+
+  app.post("/api/assay-results/bulk", requireAuth, async (req, res) => {
+    try {
+      const { results } = req.body;
+      if (!Array.isArray(results)) {
+        return res.status(400).json({ error: "Results must be an array" });
+      }
+      const created = await storage.bulkCreateAssayResults(results);
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error bulk creating assay results:", error);
+      res.status(500).json({ error: "Failed to create assay results" });
+    }
+  });
+
+  // ============================================
+  // LITERATURE ANNOTATIONS ENDPOINTS
+  // ============================================
+
+  app.get("/api/literature-annotations", requireAuth, async (req, res) => {
+    try {
+      const { targetId, moleculeId } = req.query;
+      const annotations = await storage.getLiteratureAnnotations(targetId as string | undefined, moleculeId as string | undefined);
+      res.json(annotations);
+    } catch (error) {
+      console.error("Error fetching literature annotations:", error);
+      res.status(500).json({ error: "Failed to fetch literature annotations" });
+    }
+  });
+
+  app.post("/api/literature-annotations", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertLiteratureAnnotationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const annotation = await storage.createLiteratureAnnotation(parsed.data);
+      res.status(201).json(annotation);
+    } catch (error) {
+      console.error("Error creating literature annotation:", error);
+      res.status(500).json({ error: "Failed to create literature annotation" });
+    }
+  });
+
+  // ============================================
+  // ORGANIZATIONS ENDPOINTS
+  // ============================================
+
+  app.get("/api/organizations", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "";
+      const memberships = await storage.getOrgMembersByUser(userId);
+      const orgIds = memberships.map(m => m.organizationId);
+      const orgs = await storage.getOrganizations();
+      const userOrgs = orgs.filter(o => orgIds.includes(o.id));
+      res.json(userOrgs);
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+      res.status(500).json({ error: "Failed to fetch organizations" });
+    }
+  });
+
+  app.get("/api/organizations/:id", requireAuth, async (req, res) => {
+    try {
+      const org = await storage.getOrganization(req.params.id);
+      if (!org) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+      const members = await storage.getOrgMembers(org.id);
+      res.json({ ...org, members });
+    } catch (error) {
+      console.error("Error fetching organization:", error);
+      res.status(500).json({ error: "Failed to fetch organization" });
+    }
+  });
+
+  app.post("/api/organizations", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "";
+      const parsed = insertOrganizationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const org = await storage.createOrganization(parsed.data);
+      await storage.createOrgMember({ userId, organizationId: org.id, role: "admin" });
+      res.status(201).json(org);
+    } catch (error) {
+      console.error("Error creating organization:", error);
+      res.status(500).json({ error: "Failed to create organization" });
+    }
+  });
+
+  app.patch("/api/organizations/:id", requireAuth, async (req, res) => {
+    try {
+      const org = await storage.updateOrganization(req.params.id, req.body);
+      if (!org) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+      res.json(org);
+    } catch (error) {
+      console.error("Error updating organization:", error);
+      res.status(500).json({ error: "Failed to update organization" });
+    }
+  });
+
+  // ============================================
+  // ORGANIZATION MEMBERS ENDPOINTS
+  // ============================================
+
+  app.post("/api/organizations/:orgId/members", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertOrgMemberSchema.safeParse({ ...req.body, organizationId: req.params.orgId });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const member = await storage.createOrgMember(parsed.data);
+      res.status(201).json(member);
+    } catch (error) {
+      console.error("Error adding org member:", error);
+      res.status(500).json({ error: "Failed to add member" });
+    }
+  });
+
+  app.patch("/api/org-members/:id", requireAuth, async (req, res) => {
+    try {
+      const member = await storage.updateOrgMember(req.params.id, req.body);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      console.error("Error updating org member:", error);
+      res.status(500).json({ error: "Failed to update member" });
+    }
+  });
+
+  app.delete("/api/org-members/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteOrgMember(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing org member:", error);
+      res.status(500).json({ error: "Failed to remove member" });
+    }
+  });
+
+  // ============================================
+  // SHARED ASSETS ENDPOINTS
+  // ============================================
+
+  app.get("/api/shared-assets", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "";
+      const memberships = await storage.getOrgMembersByUser(userId);
+      const allAssets = [];
+      for (const m of memberships) {
+        const assets = await storage.getSharedAssets(m.organizationId);
+        allAssets.push(...assets);
+      }
+      res.json(allAssets);
+    } catch (error) {
+      console.error("Error fetching shared assets:", error);
+      res.status(500).json({ error: "Failed to fetch shared assets" });
+    }
+  });
+
+  app.post("/api/shared-assets", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertSharedAssetSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const asset = await storage.createSharedAsset(parsed.data);
+      res.status(201).json(asset);
+    } catch (error) {
+      console.error("Error sharing asset:", error);
+      res.status(500).json({ error: "Failed to share asset" });
+    }
+  });
+
+  app.delete("/api/shared-assets/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteSharedAsset(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing shared asset:", error);
+      res.status(500).json({ error: "Failed to remove shared asset" });
+    }
+  });
+
+  // ============================================
+  // AGENT ENDPOINTS FOR ADVANCED FEATURES
+  // ============================================
+
+  app.get("/api/agent/variants/:targetId", async (req, res) => {
+    try {
+      const variants = await storage.getTargetVariants(req.params.targetId);
+      res.json(variants.map(v => ({ id: v.id, name: v.name, clinicalSignificance: v.clinicalSignificance })));
+    } catch (error) {
+      console.error("Error fetching variants for agent:", error);
+      res.status(500).json({ error: "Failed to fetch variants" });
+    }
+  });
+
+  app.get("/api/agent/programs", async (req, res) => {
+    try {
+      const programs = await storage.getPrograms();
+      res.json(programs.map(p => ({ id: p.id, name: p.name, stage: p.stage, status: p.status })));
+    } catch (error) {
+      console.error("Error fetching programs for agent:", error);
+      res.status(500).json({ error: "Failed to fetch programs" });
+    }
+  });
+
+  app.get("/api/agent/oracle-versions", async (req, res) => {
+    try {
+      const versions = await storage.getOracleVersions();
+      res.json(versions.map(v => ({ id: v.id, name: v.name, isActive: v.isActive })));
+    } catch (error) {
+      console.error("Error fetching oracle versions for agent:", error);
+      res.status(500).json({ error: "Failed to fetch oracle versions" });
+    }
+  });
+
+  app.get("/api/agent/assays", async (req, res) => {
+    try {
+      const assays = await storage.getAssays();
+      res.json(assays.map(a => ({ id: a.id, name: a.name, type: a.type, estimatedCost: a.estimatedCost })));
+    } catch (error) {
+      console.error("Error fetching assays for agent:", error);
+      res.status(500).json({ error: "Failed to fetch assays" });
+    }
+  });
+
+  app.get("/api/agent/campaigns/:campaignId/recommendations", async (req, res) => {
+    try {
+      const recommendations = await storage.getExperimentRecommendations(req.params.campaignId);
+      res.json(recommendations.map(r => ({
+        id: r.id,
+        assayId: r.assayId,
+        priorityScore: r.priorityScore,
+        estimatedCost: r.estimatedCost,
+        status: r.status,
+      })));
+    } catch (error) {
+      console.error("Error fetching recommendations for agent:", error);
+      res.status(500).json({ error: "Failed to fetch recommendations" });
+    }
+  });
+
+  app.post("/api/agent/assay-results", async (req, res) => {
+    try {
+      const { results } = req.body;
+      if (!Array.isArray(results)) {
+        return res.status(400).json({ error: "Results must be an array" });
+      }
+      const created = await storage.bulkCreateAssayResults(results);
+      res.status(201).json({ count: created.length });
+    } catch (error) {
+      console.error("Error creating assay results from agent:", error);
+      res.status(500).json({ error: "Failed to create assay results" });
+    }
+  });
+
+  app.get("/api/agent/literature/:targetId", async (req, res) => {
+    try {
+      const annotations = await storage.getLiteratureAnnotations(req.params.targetId);
+      res.json(annotations.map(a => ({
+        id: a.id,
+        source: a.source,
+        relevanceScore: a.relevanceScore,
+        summary: a.summary,
+        url: a.url,
+      })));
+    } catch (error) {
+      console.error("Error fetching literature for agent:", error);
+      res.status(500).json({ error: "Failed to fetch literature" });
+    }
+  });
+
+  app.post("/api/agent/literature", async (req, res) => {
+    try {
+      const parsed = insertLiteratureAnnotationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const annotation = await storage.createLiteratureAnnotation(parsed.data);
+      res.status(201).json({ id: annotation.id });
+    } catch (error) {
+      console.error("Error creating literature annotation from agent:", error);
+      res.status(500).json({ error: "Failed to create literature annotation" });
+    }
+  });
+
+  app.post("/api/agent/recommendations/:id/approve", async (req, res) => {
+    try {
+      const rec = await storage.updateExperimentRecommendation(req.params.id, { status: "approved" });
+      if (!rec) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+      res.json({ status: "approved" });
+    } catch (error) {
+      console.error("Error approving recommendation:", error);
+      res.status(500).json({ error: "Failed to approve recommendation" });
+    }
+  });
+
+  app.post("/api/agent/recommendations/:id/reject", async (req, res) => {
+    try {
+      const rec = await storage.updateExperimentRecommendation(req.params.id, { status: "rejected" });
+      if (!rec) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+      res.json({ status: "rejected" });
+    } catch (error) {
+      console.error("Error rejecting recommendation:", error);
+      res.status(500).json({ error: "Failed to reject recommendation" });
+    }
   });
 
   return httpServer;
