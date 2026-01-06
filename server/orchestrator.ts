@@ -222,6 +222,8 @@ export class JobOrchestrator {
       await storage.updateCampaign(campaignId, { status: "completed" });
       this.runningCampaigns.delete(campaignId);
 
+      await this.recordCampaignUsage(campaign, moleculeIds.length, filteredMoleculeIds.length, config?.enableQuantumOptimization || false);
+
     } catch (error) {
       console.error(`Pipeline execution failed for campaign ${campaignId}:`, error);
       await storage.updateCampaign(campaignId, { status: "failed" });
@@ -232,6 +234,62 @@ export class JobOrchestrator {
 
   isRunning(campaignId: string): boolean {
     return this.runningCampaigns.has(campaignId);
+  }
+
+  private async recordCampaignUsage(
+    campaign: Campaign,
+    initialMolecules: number,
+    processedMolecules: number,
+    usedQuantum: boolean
+  ): Promise<void> {
+    try {
+      const baseCpuHours = 0.5 + (processedMolecules * 0.02);
+      const baseGpuHours = 0.1 + (processedMolecules * 0.05);
+      const storageGb = 0.01 + (initialMolecules * 0.001);
+
+      await storage.createUsageMeter({
+        projectId: campaign.projectId,
+        campaignId: campaign.id,
+        resourceType: "cpu_time",
+        amount: parseFloat(baseCpuHours.toFixed(3)),
+        unit: "hours",
+        source: "internal",
+      });
+
+      await storage.createUsageMeter({
+        projectId: campaign.projectId,
+        campaignId: campaign.id,
+        resourceType: "gpu_time",
+        amount: parseFloat(baseGpuHours.toFixed(3)),
+        unit: "hours",
+        source: "vastai",
+      });
+
+      await storage.createUsageMeter({
+        projectId: campaign.projectId,
+        campaignId: campaign.id,
+        resourceType: "storage_gb",
+        amount: parseFloat(storageGb.toFixed(3)),
+        unit: "gb",
+        source: "hetzner",
+      });
+
+      if (usedQuantum) {
+        const quantumUnits = Math.max(1, Math.ceil(processedMolecules / 10));
+        await storage.createUsageMeter({
+          projectId: campaign.projectId,
+          campaignId: campaign.id,
+          resourceType: "cpu_time",
+          amount: parseFloat((quantumUnits * 0.5).toFixed(3)),
+          unit: "hours",
+          source: "internal",
+        });
+      }
+
+      console.log(`[Orchestrator] Recorded usage for campaign ${campaign.id}: CPU=${baseCpuHours.toFixed(2)}h, GPU=${baseGpuHours.toFixed(2)}h, Storage=${storageGb.toFixed(2)}GB`);
+    } catch (usageError) {
+      console.error(`[Orchestrator] Failed to record usage for campaign ${campaign.id}:`, usageError);
+    }
   }
 }
 
