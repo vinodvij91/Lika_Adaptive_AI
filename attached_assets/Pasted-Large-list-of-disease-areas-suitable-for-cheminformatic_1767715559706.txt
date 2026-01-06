@@ -1,0 +1,347 @@
+Large list of disease areas suitable for cheminformatics-driven discovery
+
+Now, your “wide and deep” list. These are areas where small molecules, fragments, or PROTAC-like modalities can play a role and where cheminformatics is highly relevant.
+
+I’ll group them by domain; each bullet is something Lika could eventually target with specialized pipelines and oracles.
+
+🧠 CNS & Neurology
+
+Alzheimer’s disease
+
+Parkinson’s disease
+
+Huntington’s disease
+
+Amyotrophic lateral sclerosis (ALS)
+
+Multiple sclerosis (MS)
+
+Epilepsy (various subtypes)
+
+Migraine (incl. CGRP-targeted therapies)
+
+Neuropathic pain (diabetic neuropathy, postherpetic neuralgia)
+
+Depression (major depressive disorder)
+
+Bipolar disorder
+
+Schizophrenia and related psychoses
+
+Anxiety disorders (GAD, panic)
+
+Insomnia and sleep disorders
+
+ADHD
+
+Autism spectrum–related symptom modulation (not cure but symptom targets)
+
+Spinal muscular atrophy (small-molecule splicing modulators / pathway modulators)
+
+Myasthenia gravis (symptomatic and immune-targeting small molecules)
+
+Rare channelopathies (e.g., Dravet syndrome, other sodium/calcium channel diseases)
+
+🦠 Infectious Diseases – Viral
+
+HIV/AIDS (entry inhibitors, integrase inhibitors, maturation inhibitors)
+
+Hepatitis B
+
+Hepatitis C (NS3/4A, NS5A, NS5B already classic—still space for new analogs)
+
+Influenza (neuraminidase, polymerase, host-target modulators)
+
+SARS-CoV-2 and other coronaviruses (protease, polymerase, host proteases)
+
+Respiratory syncytial virus (RSV)
+
+Cytomegalovirus (CMV)
+
+Herpes simplex virus (HSV-1, HSV-2)
+
+Varicella zoster virus
+
+Human papillomavirus (HPV; pathway modulators, not direct virus block)
+
+Emerging viral threats (Dengue, Zika, Chikungunya) – host or viral target small molecules
+
+🧫 Infectious Diseases – Bacterial (including AMR focus)
+
+Tuberculosis (TB) – multiple enzyme & cell-wall targets
+
+Non-tuberculous mycobacteria
+
+MRSA and other resistant Staphylococcus aureus
+
+VRE (vancomycin-resistant Enterococci)
+
+Carbapenem-resistant Enterobacteriaceae
+
+Pseudomonas aeruginosa (multi-drug resistant strains)
+
+Clostridioides difficile
+
+Helicobacter pylori
+
+Gonorrhea (multi-drug resistant Neisseria gonorrhoeae)
+
+Syphilis (Treponema pallidum) – less small molecule innovation but still a space
+
+Novel broad-spectrum or narrow-spectrum antibacterials for specific enzymes, efflux pumps, quorum sensing
+
+🍄 Infectious Diseases – Fungal & Parasitic
+
+Candida spp. (including C. auris)
+
+Aspergillus spp.
+
+Cryptococcus
+
+Dermatophyte infections (onychomycosis, tinea)
+
+Malaria (Plasmodium falciparum & vivax)
+
+Leishmaniasis
+
+Chagas disease (Trypanosoma cruzi)
+
+African sleeping sickness (T. brucei)
+
+Toxoplasmosis
+
+Helminth infections (various anthelmintic targets)
+
+🧬 Oncology (massive small-molecule space)
+
+Solid tumors & general targets:
+
+Non-small cell lung cancer (EGFR, ALK, ROS1, MET, RET, KRAS, etc.)
+
+Small cell lung cancer
+
+Breast cancer (ER+, HER2+, triple-negative subtypes)
+
+Prostate cancer (androgen receptor, PARP, etc.)
+
+Ovarian cancer
+
+Colorectal cancer (KRAS, BRAF, EGFR, etc.)
+
+Pancreatic cancer
+
+Gastric cancer
+
+Hepatocellular carcinoma (HCC)
+
+Renal cell carcinoma
+
+Melanoma (BRAF, MEK, etc.)
+
+Thyroid cancers
+
+Hematologic malignancies:
+
+Chronic myeloid leukemia (CML – BCR-ABL)
+
+Acute myeloid leukemia (AML – FLT3, IDH, etc.)
+
+ALL (acute lymphoblastic leukemia)
+
+Multiple myeloma
+
+Non-Hodgkin lymphoma (BTK, PI3K, etc.)
+
+Hodgkin lymphoma
+
+Mechanistic niches (great for cheminformatics):
+
+Kinase inhibitor discovery across many kinases
+
+HDAC and epigenetic modulators
+
+Bromodomain (BET) inhibitors
+
+Proteasome inhibitors
+
+DNA damage repair (PARP, ATR, CHK1, etc.)
+
+Metabolic enzyme inhibitors (IDH1/2, others)
+
+PROTAC-style degraders for various oncoproteins (E3 ligase binders + warheads)
+
+❤️ Cardiometabolic & Renal
+
+Hypertension (multiple receptor/enzyme targets)
+
+Heart failure (various neurohormonal and metabolic modulators)
+
+Atherosclerosis and dyslipidemia (PCSK9, CETP, Lp(a) & novel targets)
+
+Thrombosis and anticoagulation (FXa, thrombin, new coagulation targets)
+
+Type 2 diabetes (DPP-4, SGLT2, GLP-1 oral small molecules, GIP/dual modulators)
+
+Obesity (small molecules complementing peptides, central appetite targets, etc.)
+
+Non-alcoholic fatty liver disease (NAFLD) / NASH
+
+Diabetic nephropathy
+
+Chronic kidney disease (CKD) – various pathways (RAAS, metabolic)
+
+Gout (urate transporters and related enzymes)
+
+🔥 Autoimmune & Inflammatory
+
+Rheumatoid arthritis
+
+Psoriatic arthritis
+
+Ankylosing spondylitis / axial spondyloarthritis
+
+Systemic lupus erythematosus (SLE)
+
+Inflammatory bowel disease (Crohn’s, ulcerative colitis)
+
+Psoriasis (beyond biologics – small molecule JAK/SYK/TYK2, etc.)
+
+Atopic dermatitis (small molecule JAK inhibitors, etc.)
+
+Multiple sclerosis (oral agents like S1P modulators and beyond)
+
+Vasculitides (e.g., ANCA-associated) – small molecule immunomodulators
+
+Gouty arthritis (inflammation cascade)
+
+Cheminformatics here is great for:
+
+JAK/SYK inhibitors
+
+S1P modulators
+
+BTK, TYK2, PI3K, etc.
+
+🫁 Respiratory
+
+Asthma (including severe eosinophilic asthma – small molecules alongside biologics)
+
+COPD
+
+Pulmonary hypertension (multiple pathways)
+
+Cystic fibrosis (CFTR modulators – classic cheminformatics success story)
+
+Idiopathic pulmonary fibrosis (IPF) and other fibrotic lung diseases
+
+🧪 Endocrine & Metabolic (beyond diabetes)
+
+Thyroid diseases (hyper/hypothyroidism control)
+
+Cushing’s syndrome (adrenal steroidogenesis inhibitors)
+
+Hyperaldosteronism
+
+Hypogonadism / hormone modulation (selective receptor modulators)
+
+Osteoporosis (bone resorption/formation modulators)
+
+Rare inborn errors of metabolism where small molecules modulate enzymes or chaperone misfolded proteins (e.g., PKU analogs, urea cycle disorders, lysosomal storage diseases where chaperones apply)
+
+🧠 Rare Genetic / Orphan Diseases (cheminformatics angles)
+
+Cystic fibrosis (already noted, but huge)
+
+Spinal muscular atrophy (small-molecule splicing enhancers / pathway modulators)
+
+Duchenne muscular dystrophy (UTR / splicing / downstream pathways)
+
+Sickle cell disease (HbS polymerization inhibitors, modulators of HbF, etc.)
+
+Thalassemias (HbF regulation, iron metabolism)
+
+Gaucher disease (substrate reduction therapy)
+
+Fabry disease (chaperones, substrate reduction)
+
+Pompe disease (adjunct small molecules)
+
+PKU (phenylalanine hydroxylase modulators / cofactor analogs)
+
+Various channelopathies (Nav, Cav, Kv channels in rare epilepsy / cardiac arrhythmias)
+
+Rare oncogenic drivers where small dedicated inhibitors can be designed
+
+🧻 Gastrointestinal & Hepatic
+
+GERD and acid-related disorders (beyond PPIs)
+
+Peptic ulcer disease (H. pylori-related + mucosal protection)
+
+IBS (IBS-C, IBS-D symptom modulators)
+
+IBD (already under autoimmune, but small molecules for integrins, sphingosine pathways, etc.)
+
+Cholestatic liver diseases (PBC, PSC – bile acid modulators, FXR agonists)
+
+NAFLD/NASH (again – multi-pathway metabolic and inflammatory targets)
+
+🧍‍♀️ Women’s Health / Urogenital
+
+Endometriosis
+
+Uterine fibroids
+
+Polycystic ovary syndrome (PCOS)
+
+Contraception (novel hormone and non-hormone small molecules)
+
+Menopause symptoms (non-hormonal small molecules)
+
+Overactive bladder
+
+Interstitial cystitis / bladder pain syndrome
+
+Benign prostatic hyperplasia (BPH)
+
+🧩 Neuromuscular & Pain
+
+Chronic lower back pain (central & peripheral targets)
+
+Fibromyalgia (central sensitization modulators)
+
+Osteoarthritis pain (NGF, ion channels, etc.)
+
+Peripheral neuropathy (already under CNS)
+
+🧿 Ophthalmology
+
+Glaucoma
+
+Age-related macular degeneration (adjunct small molecules)
+
+Diabetic retinopathy
+
+Dry eye disease
+
+Uveitis (inflammatory targets)
+
+💊 Adjacent Modalities Where Cheminformatics Still Helps
+
+Even when final therapies are biologics or gene therapies, cheminformatics can target:
+
+Small-molecule modulators that:
+
+Improve delivery
+
+Modulate immune responses
+
+Enhance or complement gene therapies / RNA therapies
+
+PROTACs and molecular glues for:
+
+Neurodegeneration targets
+
+Oncology targets
+
+Immune targets

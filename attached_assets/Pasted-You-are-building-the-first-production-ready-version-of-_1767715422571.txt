@@ -1,0 +1,339 @@
+You are building the first production-ready version of **Lika Sciences**, an adaptive AI-powered drug discovery CONTROL PLANE.
+
+IMPORTANT CONCEPT:
+- This repo is the **web app + API + database + orchestration shell**.
+- ALL heavy chemistry / GPU / ML work is done by EXTERNAL SERVICES (BioNeMo NIMs, Python ML microservices, docking microservices) that we call over HTTP.
+- The code must be designed so we can later plug in Python services running on **Vast.ai (GPUs)** and **Hetzner (CPUs)** without changing the front-end.
+
+==================================================
+HIGH-LEVEL REQUIREMENTS
+==================================================
+
+The platform must support the following STANDARD FEATURES:
+
+A. Data & Molecule Management  
+B. Virtual Screening & Prioritization  
+C. Structure & Docking Tools (UI + orchestration; docking itself is external)  
+D. Property & ADMET Predictions (via external molecular ML APIs)  
+E. Workflow Execution / Automation (campaigns & jobs)  
+F. Reporting & Traceability  
+
+And must be architected to enable these UNIQUE SELLING PROPOSITIONS (USPs):
+
+1. Adaptive, Configurable Discovery Pipelines  
+2. Design + Simulation in the Loop (BioNeMo + docking + ML, iterated)  
+3. Fast Iteration & Parallel Campaign Execution  
+4. Internal Learning Graph (Self-Improving Platform)  
+5. Collaboration-First UX (projects, roles, comments, shared views)  
+6. Domain-Specialized Pipelines (CNS, Oncology, Rare Disease, etc.)
+
+You are building **v0 of the CONTROL PLANE** that makes all of this possible, with mock implementations for external compute.
+
+==================================================
+TECH STACK & DEPLOYMENT TARGETS
+==================================================
+
+FRONT-END:
+- React + TypeScript SPA
+- Clean, modern SaaS-style layout suitable for a biotech / AI tool.
+- Use a component library or Tailwind-style utilities.
+
+BACK-END:
+- Node.js + TypeScript
+- REST API (no GraphQL needed for v0).
+- Separate layers:
+  - HTTP handlers
+  - Service layer (business logic)
+  - Data access layer (ORM / query builder)
+
+DATABASE:
+- PostgreSQL (hosted on DigitalOcean).
+- Use an ORM (Prisma or similar) and migration files.
+
+RUNTIME CONTEXT:
+- The app will run on **DigitalOcean** (web + DB).
+- Heavy compute will be on:
+  - **Vast.ai** (GPU, BioNeMo & docking)
+  - **Hetzner** (CPU, molecular ML microservices)
+- This repository must treat those compute services as EXTERNAL HTTP APIs only.
+
+ENVIRONMENT VARIABLES:
+- `DATABASE_URL`
+- `BIONEMO_API_BASE_URL`, `BIONEMO_API_KEY`
+- `ML_API_BASE_URL` (internal molecular ML farm)
+- `DOCKING_API_BASE_URL` (if separated from BioNeMo)
+- `VAST_API_BASE_URL`, `VAST_API_KEY` (optional: if you need to track jobs there)
+- `HETZNER_API_BASE_URL`, `HETZNER_API_KEY` (optional)
+
+Provide a `.env.example` showing all required variables.
+
+==================================================
+CORE DATA MODEL (POSTGRES)
+==================================================
+
+Define a schema that supports A–F + USPs. You can adjust names, but keep these concepts:
+
+- `users`
+  - id, name, email, password_hash, created_at
+
+- `projects`
+  - id, name, description, disease_area (CNS/Oncology/Rare/Other),
+    owner_id (FK users), created_at, updated_at
+
+- `project_collaborators`
+  - id, project_id (FK), user_id (FK), role (owner/editor/viewer)
+
+- `targets`
+  - id, name, uniprot_id, sequence (TEXT),
+    has_structure (BOOLEAN),
+    structure_source (enum: uploaded/bionemo_predicted/other),
+    created_at
+
+- `molecules`
+  - id, smiles (TEXT), source (enum: generated/uploaded/screened),
+    created_at
+
+- `project_molecules`
+  - id, project_id, molecule_id
+
+- `campaigns`
+  - id, project_id,
+    name,
+    domain_type (CNS/Oncology/Rare/Custom),
+    pipeline_config (JSONB),   -- This is key for USP #1
+    status (pending/running/completed/failed),
+    created_at, updated_at
+
+- `jobs`
+  - id, campaign_id,
+    type (generation/filtering/docking/scoring/other),
+    status (pending/running/completed/failed),
+    created_at, started_at, finished_at,
+    external_job_id (nullable, for mapping to future Python worker IDs)
+
+- `model_runs`
+  - id, campaign_id,
+    step_name (e.g. "bionemo_generation", "ml_admet", "docking_diffdock", "ml_qsar"),
+    provider_type (bionemo/ml/docking),
+    status (pending/running/completed/failed),
+    started_at, finished_at,
+    request_payload (JSONB),
+    response_payload (JSONB)
+
+- `molecule_scores`
+  - id, molecule_id, campaign_id,
+    docking_score (FLOAT),
+    admet_score (FLOAT),
+    qsar_score (FLOAT),
+    oracle_score (FLOAT),
+    raw_scores (JSONB),
+    created_at
+
+- `learning_graph_entries`
+  - id, molecule_id, campaign_id, domain_type,
+    outcome_label (promising/dropped/hit/unknown),
+    oracle_score,
+    created_at
+
+- `comments`
+  - id, project_id (nullable), campaign_id (nullable),
+    user_id, body, created_at
+
+This schema must allow:
+- A–F standard features,
+- USPs like adaptive pipelines (pipeline_config), learning graph, and domain-specific logic.
+
+==================================================
+API LAYER & EXTERNAL SERVICE CONTRACTS
+==================================================
+
+Design the back-end with explicit clients for external services. These are **just HTTP clients** now; later we will point them to real Python/BioNeMo services on Vast/Hetzner.
+
+1) **BioNeMo Client (GPU services, typically on Vast.ai)**
+
+Create a TypeScript client class, e.g. `BioNemoClient`, configured with `BIONEMO_API_BASE_URL` and `BIONEMO_API_KEY`.
+
+Define methods (with TypeScript interfaces):
+
+- `generateMolecules(params: { seedSmiles: string[]; n: number; domain: string; }): Promise<{ smiles: string[] }>`
+- `dockMolecules(params: { targetId: string; smiles: string[]; }): Promise<{ scores: { smiles: string; score: number; }[] }>`
+- (Optional) `predictStructure(params: { targetId: string; sequence: string; }): Promise<{ pdb: string }>` if you expose folding.
+
+For v0:
+- Implement these methods but return mock data (e.g. canned SMILES or random scores).
+- The important part is the **interface**, which must be easy to implement later with Python/BioNeMo NIM.
+
+2) **Molecular ML Client (ADMET + QSAR, typically on Hetzner CPUs)**
+
+Create `MolecularMLClient`, configured with `ML_API_BASE_URL`.
+
+Methods:
+
+- `predictAdmet(params: { smiles: string[]; domainType?: string; }): Promise<{ [smiles: string]: { logP: number; tpsa: number; bbbScore?: number; hergRisk?: number; admetComposite: number; } }>`
+- `predictQsar(params: { targetId: string; smiles: string[]; }): Promise<{ [smiles: string]: { activityScore: number; } }>`
+
+Again, return mock data for now, but enforce TypeScript types and a clear separation.
+
+3) **Docking Client** (optional if not using BioNeMo for docking)
+
+If docking is separate from BioNeMo, define a `DockingClient` with:
+
+- `dock(params: { targetId: string; smiles: string[]; }): Promise<{ [smiles: string]: { dockingScore: number; poseId?: string; } }>`
+
+4) **Job Orchestrator**
+
+Implement a simple in-process orchestrator in the Node back-end:
+
+- When a campaign is created:
+  - Create a `campaign` row (status = "pending").
+  - Create a sequence of `jobs`:
+    - generation → filtering → docking → scoring
+  - Provide an endpoint like `POST /api/campaigns/:id/start`:
+    - This triggers a pseudo-asynchronous flow:
+      - Mark campaign as `running`
+      - Sequentially call:
+        - `BioNemoClient.generateMolecules`
+        - `MolecularMLClient.predictAdmet`
+        - `DockingClient.dock` or `BioNemoClient.dockMolecules`
+        - `MolecularMLClient.predictQsar`
+      - Write `model_runs` and `molecule_scores` rows.
+      - Mark campaign as `completed`.
+    - For v0, you can implement this in a simple background task (e.g. using `setTimeout` / simple queue) with mock data.
+
+IMPORTANT: 
+The orchestrator should be coded so we can later REPLACE individual model calls with calls to Python workers (using the same HTTP interfaces or via a message queue) without changing the front-end.
+
+==================================================
+FRONT-END VIEWS (SUPPORTING A–F + USPs)
+==================================================
+
+Implement at least the following views:
+
+1) **Auth + Landing Page**
+   - Basic sign up / login (email + password).
+   - Landing shows:
+     - “Lika Sciences – Adaptive AI Drug Discovery”
+     - Short explanation: “Configure pipelines, orchestrate BioNeMo & ML models, and explore candidates.”
+     - Button: “Enter Platform”.
+
+2) **Dashboard**
+   - Cards for:
+     - Recent projects
+     - Recent campaigns (with status)
+   - Small metrics:
+     - Total molecules evaluated (sum of rows in `molecule_scores`)
+     - Total campaigns
+     - # of CNS / Oncology / Rare campaigns
+   - USP #3: show campaign throughput (e.g., # of campaigns completed in last 7 days).
+
+3) **Projects View**
+   - Table of projects:
+     - name, disease_area, owner, # campaigns, last updated.
+   - Create new project form.
+   - Project detail page:
+     - Overview: description, disease_area, collaborators.
+     - Campaigns tab (list of campaigns).
+     - Molecules tab (molecules associated to this project).
+     - Targets tab.
+     - Comments/Activity feed (for USP #5 collaboration).
+
+4) **Target Registry**
+   - Table:
+     - name, uniprot_id, has_structure, structure_source.
+   - Detail page with:
+     - Sequence (truncated view).
+     - “Structure predicted by BioNeMo” (boolean from DB; for now we just mock).
+   - Button to “Add target”.
+
+5) **Molecule Registry**
+   - Global view; supports Data & Molecule Management (A).
+   - Table:
+     - id, smiles, source, created_at.
+   - Filters by:
+     - Project
+     - Source
+     - Domain (infer from campaigns).
+   - Molecule detail:
+     - Basic info.
+     - Small property panel (read from `molecule_scores` or a simplified aggregate).
+     - History of campaigns & scores (supports F and USP #4).
+
+6) **Campaign Configurator (Pipeline Builder)**
+   - For a given project:
+     - Form to configure:
+       - name
+       - domain_type (CNS/Oncology/Rare/Custom)
+       - target(s) to use (select from targets)
+       - pipeline steps using a simple visual stepper:
+         - Step 1: Generator (options: “BioNeMo MolMIM”, “Upload library”)
+         - Step 2: Filtering:
+           - rule-based (Lipinski, etc.) + ADMET (Mol-ML)
+         - Step 3: Docking:
+           - “BioNeMo DiffDock” or “External docking service”
+         - Step 4: Scoring (“oracle”):
+           - combine docking, ADMET, QSAR.
+       - Sliders/inputs for oracle weightings:
+         - `w_docking`, `w_admet`, `w_qsar`.
+   - Save this pipeline as `pipeline_config` JSONB on `campaigns`.
+   - Provide buttons:
+     - “Save pipeline”
+     - “Start campaign” (calls back-end to create jobs and run the pseudo-orchestrator).
+
+   THIS PAGE ENABLES:
+   - A, B, C, D, E (config-level)
+   - USP #1 (adaptive pipelines)
+   - USP #6 (domain-specific presets: CNS, Oncology, etc.)
+
+7) **Campaign Detail & Execution Monitor**
+   - Summary:
+     - campaign name, project, domain_type.
+   - Display the pipeline graph as read-only.
+   - Show jobs and model_runs with status & timestamps:
+     - This is the “workflow execution / automation” (E) + traceability (F).
+   - Table of top molecules:
+     - SMILES
+     - docking_score
+     - admet_score
+     - qsar_score
+     - oracle_score
+   - Actions:
+     - “View molecule”
+     - “Export top N molecules as CSV”.
+
+8) **Reports & Learning Graph**
+   - Reports page:
+     - Charts using mock data from DB:
+       - Distribution of oracle_score for recent campaigns.
+       - ADMET pass/fail rates.
+       - Domain breakdown (CNS vs Oncology vs Rare).
+   - Learning Graph page:
+     - Table from `learning_graph_entries`:
+       - molecule_id, domain_type, outcome_label, oracle_score.
+     - This is the internal “memory” used for future reward models (USP #4).
+
+9) **Collaboration Features**
+   - On project and campaign detail pages:
+     - Comments section backed by `comments` table.
+   - Show project collaborators with roles.
+   - Activity log:
+     - e.g., “User X created campaign Y”, “User Y started campaign Z”.
+
+==================================================
+IMPLEMENTATION NOTES
+==================================================
+
+- Use mock data for external service responses, but:
+  - Keep the API client interfaces realistic and typed so we can later implement them in Python or BioNeMo NIM.
+- Ensure that all core flows work end-to-end using mock data:
+  - create project → add target → configure campaign → start campaign → see updated job/model_run statuses → see molecules and scores in registry → see them appear in reports and learning_graph_entries.
+- Use a sidebar navigation:
+  - Dashboard
+  - Projects
+  - Molecules
+  - Targets
+  - Campaigns (or accessible via Projects)
+  - Reports
+  - Learning Graph
+- Make the app look like a serious SaaS product (not a toy).
+
+Name the app in the UI as **“Lika Sciences Control Plane”**.
