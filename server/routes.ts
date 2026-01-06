@@ -989,12 +989,24 @@ export async function registerRoutes(
     try {
       const userId = (req.user as any)?.id || "";
       const { projectId, campaignId } = req.query;
+      
+      const userProjects = await storage.getProjects(userId);
+      const userProjectIds = userProjects.map(p => p.id);
+      
+      if (projectId && !userProjectIds.includes(projectId as string)) {
+        return res.status(403).json({ error: "Access denied to this project" });
+      }
+      
       const meters = await storage.getUsageMeters({
-        userId,
         projectId: projectId as string | undefined,
         campaignId: campaignId as string | undefined,
       });
-      res.json(meters);
+      
+      const filteredMeters = meters.filter(m => 
+        m.projectId && userProjectIds.includes(m.projectId)
+      );
+      
+      res.json(filteredMeters);
     } catch (error) {
       console.error("Error fetching usage meters:", error);
       res.status(500).json({ error: "Failed to fetch usage" });
@@ -1003,6 +1015,13 @@ export async function registerRoutes(
 
   app.get("/api/usage/summary/:projectId", requireAuth, async (req, res) => {
     try {
+      const userId = (req.user as any)?.id || "";
+      const project = await storage.getProject(req.params.projectId);
+      
+      if (!project || project.ownerId !== userId) {
+        return res.status(403).json({ error: "Access denied to this project" });
+      }
+      
       const summary = await storage.getUsageSummary(req.params.projectId);
       res.json(summary);
     } catch (error) {

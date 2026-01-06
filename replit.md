@@ -59,6 +59,8 @@ attached_assets/ # Specification documents
 - **Curated Libraries**: Domain-aware SMILES libraries with scaffolds, cleaning workflows, and agent validation
 - **Compute Nodes**: Infrastructure management for ML, docking, quantum, and agent workloads (Hetzner, Vast.ai)
 - **SSH Key Management**: User SSH key registration for compute node access
+- **Usage Tracking**: Resource consumption tracking (CPU, GPU, storage) per campaign/project with source attribution
+- **Credit Wallet**: Foundation for credits-based billing (wallet balance, transactions) - stub only in v0
 
 ### API Design Pattern
 RESTful endpoints under `/api/` prefix. Example endpoint structure:
@@ -84,6 +86,14 @@ Designed for AI agents and bots to interact with the platform:
 - `POST /api/compute-nodes/:id/register-key` - Request SSH key registration (mock, future automation)
 - `GET /api/ssh-keys` - List user's SSH public keys
 - `POST /api/ssh-keys` - Upload a new SSH public key
+
+### Usage & Credits Endpoints (v0 Foundation)
+- `GET /api/usage` - List usage meters for the current user (filterable by projectId, campaignId)
+- `GET /api/usage/summary/:projectId` - Aggregated usage summary by resource type for a project
+- `GET /api/credits/wallet` - Get or create user's credit wallet
+- `GET /api/credits/transactions` - List credit transactions for user's wallet
+- `POST /api/credits/purchase` - Stub endpoint (returns 501, placeholder for billing)
+- `POST /api/credits/apply` - Stub endpoint (returns 501, placeholder for billing)
 
 ### Service Account Roles
 The platform supports service accounts for agents with defined roles:
