@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 
 export type DiscoveryDomain = "drug" | "materials";
 
@@ -14,9 +14,12 @@ const DomainContext = createContext<DomainContextValue | undefined>(undefined);
 export function DomainProvider({ children, defaultDomain = "drug" }: { children: ReactNode; defaultDomain?: DiscoveryDomain }) {
   const [domain, setDomainState] = useState<DiscoveryDomain>(defaultDomain);
 
+  useEffect(() => {
+    document.documentElement.setAttribute("data-domain", domain);
+  }, [domain]);
+
   const setDomain = useCallback((newDomain: DiscoveryDomain) => {
     setDomainState(newDomain);
-    document.documentElement.setAttribute("data-domain", newDomain);
   }, []);
 
   const value: DomainContextValue = {
