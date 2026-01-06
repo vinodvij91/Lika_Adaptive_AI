@@ -1603,7 +1603,7 @@ export async function registerRoutes(
   app.get("/api/agent/variants/:targetId", async (req, res) => {
     try {
       const variants = await storage.getTargetVariants(req.params.targetId);
-      res.json(variants.map(v => ({ id: v.id, name: v.name, clinicalSignificance: v.clinicalSignificance })));
+      res.json(variants.map(v => ({ id: v.id, variantName: v.variantName, sequence: v.sequence })));
     } catch (error) {
       console.error("Error fetching variants for agent:", error);
       res.status(500).json({ error: "Failed to fetch variants" });
@@ -1613,7 +1613,7 @@ export async function registerRoutes(
   app.get("/api/agent/programs", async (req, res) => {
     try {
       const programs = await storage.getPrograms();
-      res.json(programs.map(p => ({ id: p.id, name: p.name, stage: p.stage, status: p.status })));
+      res.json(programs.map(p => ({ id: p.id, name: p.name, diseaseArea: p.diseaseArea })));
     } catch (error) {
       console.error("Error fetching programs for agent:", error);
       res.status(500).json({ error: "Failed to fetch programs" });
@@ -1623,7 +1623,7 @@ export async function registerRoutes(
   app.get("/api/agent/oracle-versions", async (req, res) => {
     try {
       const versions = await storage.getOracleVersions();
-      res.json(versions.map(v => ({ id: v.id, name: v.name, isActive: v.isActive })));
+      res.json(versions.map(v => ({ id: v.id, name: v.name, componentVersions: v.componentVersions })));
     } catch (error) {
       console.error("Error fetching oracle versions for agent:", error);
       res.status(500).json({ error: "Failed to fetch oracle versions" });

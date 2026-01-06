@@ -54,13 +54,40 @@ attached_assets/ # Specification documents
 ### Key Domain Features
 - **Molecule Registry**: Storage and management of chemical compounds via SMILES notation
 - **Project Organization**: Molecules linked to projects via junction tables
-- **Campaign Configurator**: Workflow for research campaign setup
+- **Campaign Configurator**: Workflow for research campaign setup with modality selection (small molecule, PROTAC, peptide, fragment)
 - **SMILES Import**: Batch import with duplicate detection and validation
 - **Curated Libraries**: Domain-aware SMILES libraries with scaffolds, cleaning workflows, and agent validation
 - **Compute Nodes**: Infrastructure management for ML, docking, quantum, and agent workloads (Hetzner, Vast.ai)
 - **SSH Key Management**: User SSH key registration for compute node access
 - **Usage Tracking**: Resource consumption tracking (CPU, GPU, storage) per campaign/project with source attribution
 - **Credit Wallet**: Foundation for credits-based billing (wallet balance, transactions) - stub only in v0
+
+### Translational Medicine Features (v1)
+- **Target Variants**: Track clinically significant genetic variants for variant-aware scoring
+- **Disease Context Signals**: Store disease-specific context signals (GWAS, clinical trial data, biomarker relevance)
+- **Programs**: Organize campaigns into higher-level drug discovery programs with disease area tracking
+- **Oracle Versions**: Model governance via version tracking for reproducibility (stores component versions as JSONB)
+- **Extended Molecule Scoring**: 
+  - `translationalScore`: Disease context relevance
+  - `synthesisScore`: Synthesis feasibility prediction
+  - `variantRobustnessScore`: Cross-variant robustness
+  - Uncertainty metrics: `dockingUncertainty`, `admetUncertainty`, `qsarUncertainty`, `translationalUncertainty`
+  - IP screening: `ipSimilarity`, `mostSimilarPatentId`
+  - `applicabilityDomainFlag`: Confidence in predictions
+
+### Wet-Lab Integration Features (v1)
+- **Assays**: Define wet-lab assays with estimated cost and duration (binding, functional, in_vivo, pk, admet)
+- **Experiment Recommendations**: AI-generated suggestions for which molecules to test next
+- **Assay Results**: Feedback loop for experimental outcomes with outcome labels (active, inactive, toxic, no_effect, inconclusive)
+
+### Literature & IP Features (v1)
+- **Literature Annotations**: Store PubMed/literature references with relevance scores for targets and molecules
+- **IP Risk Screening**: Similarity scoring against patent databases (stored in molecule_scores)
+
+### Multi-Organization Collaboration (v1)
+- **Organizations**: Create and manage organizations for team collaboration
+- **Organization Members**: Role-based access (admin, member, viewer)
+- **Shared Assets**: Share SMILES libraries, pipeline templates, or programs between organizations with read/fork permissions
 
 ### API Design Pattern
 RESTful endpoints under `/api/` prefix. Example endpoint structure:
@@ -78,6 +105,16 @@ Designed for AI agents and bots to interact with the platform:
 - `GET /api/agent/libraries/:id/status` - Returns library validation progress and readiness
 - `POST /api/agent/libraries/:id/validate` - Validates or invalidates library molecules
 - `POST /api/agent/libraries/:id/classify` - Classifies molecules with domain annotations
+- `GET /api/agent/variants/:targetId` - Returns target variants for variant-aware scoring
+- `GET /api/agent/programs` - Returns programs with disease area info
+- `GET /api/agent/oracle-versions` - Returns oracle versions for model governance
+- `GET /api/agent/assays` - Returns available assays with cost estimates
+- `GET /api/agent/campaigns/:campaignId/recommendations` - Returns experiment recommendations
+- `POST /api/agent/assay-results` - Bulk create assay results from wet-lab feedback
+- `GET /api/agent/literature/:targetId` - Returns literature annotations for a target
+- `POST /api/agent/literature` - Creates literature annotation
+- `POST /api/agent/recommendations/:id/approve` - Approves an experiment recommendation
+- `POST /api/agent/recommendations/:id/reject` - Rejects an experiment recommendation
 
 ### Compute Infrastructure Endpoints
 - `GET /api/compute-nodes` - List all compute nodes
