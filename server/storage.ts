@@ -15,6 +15,8 @@ import {
   scaffolds,
   libraryAnnotations,
   computeNodes,
+  sshConfigs,
+  companies,
   userSshKeys,
   nodeKeyRegistrations,
   usageMeters,
@@ -65,6 +67,10 @@ import {
   type InsertLibraryAnnotation,
   type ComputeNode,
   type InsertComputeNode,
+  type SshConfig,
+  type InsertSshConfig,
+  type Company,
+  type InsertCompany,
   type UserSshKey,
   type InsertUserSshKey,
   type NodeKeyRegistration,
@@ -195,6 +201,19 @@ export interface IStorage {
   createComputeNode(node: InsertComputeNode): Promise<ComputeNode>;
   updateComputeNode(id: string, node: Partial<InsertComputeNode>): Promise<ComputeNode | undefined>;
   deleteComputeNode(id: string): Promise<void>;
+
+  getSshConfigs(): Promise<SshConfig[]>;
+  getSshConfig(id: string): Promise<SshConfig | undefined>;
+  createSshConfig(config: InsertSshConfig): Promise<SshConfig>;
+  updateSshConfig(id: string, config: Partial<InsertSshConfig>): Promise<SshConfig | undefined>;
+  deleteSshConfig(id: string): Promise<void>;
+  updateSshConfigStatus(id: string, status: string, lastConnected?: Date): Promise<SshConfig | undefined>;
+
+  getCompanies(): Promise<Company[]>;
+  getCompany(id: string): Promise<Company | undefined>;
+  createCompany(company: InsertCompany): Promise<Company>;
+  updateCompany(id: string, company: Partial<InsertCompany>): Promise<Company | undefined>;
+  deleteCompany(id: string): Promise<void>;
 
   getUserSshKeys(userId: string): Promise<UserSshKey[]>;
   getUserSshKey(id: string): Promise<UserSshKey | undefined>;
@@ -794,6 +813,59 @@ export class DatabaseStorage implements IStorage {
 
   async deleteComputeNode(id: string): Promise<void> {
     await db.delete(computeNodes).where(eq(computeNodes.id, id));
+  }
+
+  async getSshConfigs(): Promise<SshConfig[]> {
+    return db.select().from(sshConfigs).orderBy(desc(sshConfigs.createdAt));
+  }
+
+  async getSshConfig(id: string): Promise<SshConfig | undefined> {
+    const result = await db.select().from(sshConfigs).where(eq(sshConfigs.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createSshConfig(config: InsertSshConfig): Promise<SshConfig> {
+    const result = await db.insert(sshConfigs).values(config).returning();
+    return result[0];
+  }
+
+  async updateSshConfig(id: string, config: Partial<InsertSshConfig>): Promise<SshConfig | undefined> {
+    const result = await db.update(sshConfigs).set({ ...config, updatedAt: new Date() }).where(eq(sshConfigs.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteSshConfig(id: string): Promise<void> {
+    await db.delete(sshConfigs).where(eq(sshConfigs.id, id));
+  }
+
+  async updateSshConfigStatus(id: string, status: string, lastConnected?: Date): Promise<SshConfig | undefined> {
+    const updates: any = { status: status as any, updatedAt: new Date() };
+    if (lastConnected) updates.lastConnected = lastConnected;
+    const result = await db.update(sshConfigs).set(updates).where(eq(sshConfigs.id, id)).returning();
+    return result[0];
+  }
+
+  async getCompanies(): Promise<Company[]> {
+    return db.select().from(companies).orderBy(desc(companies.createdAt));
+  }
+
+  async getCompany(id: string): Promise<Company | undefined> {
+    const result = await db.select().from(companies).where(eq(companies.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createCompany(company: InsertCompany): Promise<Company> {
+    const result = await db.insert(companies).values(company).returning();
+    return result[0];
+  }
+
+  async updateCompany(id: string, company: Partial<InsertCompany>): Promise<Company | undefined> {
+    const result = await db.update(companies).set({ ...company, updatedAt: new Date() }).where(eq(companies.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteCompany(id: string): Promise<void> {
+    await db.delete(companies).where(eq(companies.id, id));
   }
 
   async getUserSshKeys(userId: string): Promise<UserSshKey[]> {

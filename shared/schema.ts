@@ -568,6 +568,8 @@ export const computeNodes = pgTable("compute_nodes", {
   sshHost: text("ssh_host"),
   sshPort: text("ssh_port").default("22"),
   sshUsername: text("ssh_username"),
+  sshConfigId: varchar("ssh_config_id"),
+  companyId: varchar("company_id"),
   region: text("region"),
   isDefault: boolean("is_default").default(false),
   status: computeStatusEnum("status").default("active"),
@@ -584,6 +586,38 @@ export type ConnectionType = "ssh" | "cloud_api";
 export type GpuType = "none" | "T4" | "A40" | "A100" | "H100" | "H200" | "MI300" | "other";
 export type GpuTier = "shared-low" | "shared-mid" | "shared-high" | "dedicated-A100" | "dedicated-H100" | "dedicated-H200" | "enterprise";
 export type ComputeProvider = "hetzner" | "vast" | "onprem" | "aws" | "azure" | "gcp" | "other";
+
+export const sshConfigStatusEnum = pgEnum("ssh_config_status", ["connected", "disconnected", "error", "unknown"]);
+
+export const sshConfigs = pgTable("ssh_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  host: text("host").notNull(),
+  port: text("port").default("22"),
+  username: text("username").notNull(),
+  serviceLabel: text("service_label"),
+  companyId: varchar("company_id"),
+  status: sshConfigStatusEnum("status").default("unknown"),
+  lastConnected: timestamp("last_connected"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSshConfigSchema = createInsertSchema(sshConfigs).omit({ id: true, createdAt: true, updatedAt: true, lastConnected: true });
+export type SshConfig = typeof sshConfigs.$inferSelect;
+export type InsertSshConfig = z.infer<typeof insertSshConfigSchema>;
+
+export const companies = pgTable("companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  gpuTier: gpuTierEnum("gpu_tier"),
+  defaultComputeNodeId: varchar("default_compute_node_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCompanySchema = createInsertSchema(companies).omit({ id: true, createdAt: true, updatedAt: true });
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
 
 export const userSshKeys = pgTable("user_ssh_keys", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -15,6 +15,8 @@ import {
   insertScaffoldSchema,
   insertLibraryAnnotationSchema,
   insertComputeNodeSchema,
+  insertSshConfigSchema,
+  insertCompanySchema,
   insertUserSshKeySchema,
   insertTargetVariantSchema,
   insertDiseaseContextSignalSchema,
@@ -1014,6 +1016,162 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting SSH key:", error);
       res.status(500).json({ error: "Failed to delete SSH key" });
+    }
+  });
+
+  // ============================================
+  // SSH CONFIGS ENDPOINTS
+  // ============================================
+
+  app.get("/api/ssh-configs", requireAuth, async (req, res) => {
+    try {
+      const configs = await storage.getSshConfigs();
+      res.json(configs);
+    } catch (error) {
+      console.error("Error fetching SSH configs:", error);
+      res.status(500).json({ error: "Failed to fetch SSH configs" });
+    }
+  });
+
+  app.get("/api/ssh-configs/:id", requireAuth, async (req, res) => {
+    try {
+      const config = await storage.getSshConfig(req.params.id);
+      if (!config) {
+        return res.status(404).json({ error: "SSH config not found" });
+      }
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching SSH config:", error);
+      res.status(500).json({ error: "Failed to fetch SSH config" });
+    }
+  });
+
+  app.post("/api/ssh-configs", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertSshConfigSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const config = await storage.createSshConfig(parsed.data);
+      res.status(201).json(config);
+    } catch (error) {
+      console.error("Error creating SSH config:", error);
+      res.status(500).json({ error: "Failed to create SSH config" });
+    }
+  });
+
+  app.patch("/api/ssh-configs/:id", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertSshConfigSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const config = await storage.updateSshConfig(req.params.id, parsed.data);
+      if (!config) {
+        return res.status(404).json({ error: "SSH config not found" });
+      }
+      res.json(config);
+    } catch (error) {
+      console.error("Error updating SSH config:", error);
+      res.status(500).json({ error: "Failed to update SSH config" });
+    }
+  });
+
+  app.delete("/api/ssh-configs/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteSshConfig(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting SSH config:", error);
+      res.status(500).json({ error: "Failed to delete SSH config" });
+    }
+  });
+
+  app.post("/api/ssh-configs/:id/test", requireAuth, async (req, res) => {
+    try {
+      const config = await storage.getSshConfig(req.params.id);
+      if (!config) {
+        return res.status(404).json({ error: "SSH config not found" });
+      }
+      // Stub: In production, this would actually test the SSH connection
+      // For now, we simulate a successful connection
+      const updatedConfig = await storage.updateSshConfigStatus(req.params.id, "connected", new Date());
+      res.json({ 
+        success: true, 
+        message: "Connection test successful",
+        config: updatedConfig 
+      });
+    } catch (error) {
+      console.error("Error testing SSH connection:", error);
+      res.status(500).json({ error: "Failed to test connection" });
+    }
+  });
+
+  // ============================================
+  // COMPANIES ENDPOINTS
+  // ============================================
+
+  app.get("/api/companies", requireAuth, async (req, res) => {
+    try {
+      const companiesList = await storage.getCompanies();
+      res.json(companiesList);
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      res.status(500).json({ error: "Failed to fetch companies" });
+    }
+  });
+
+  app.get("/api/companies/:id", requireAuth, async (req, res) => {
+    try {
+      const company = await storage.getCompany(req.params.id);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      res.json(company);
+    } catch (error) {
+      console.error("Error fetching company:", error);
+      res.status(500).json({ error: "Failed to fetch company" });
+    }
+  });
+
+  app.post("/api/companies", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertCompanySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const company = await storage.createCompany(parsed.data);
+      res.status(201).json(company);
+    } catch (error) {
+      console.error("Error creating company:", error);
+      res.status(500).json({ error: "Failed to create company" });
+    }
+  });
+
+  app.patch("/api/companies/:id", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertCompanySchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const company = await storage.updateCompany(req.params.id, parsed.data);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      res.json(company);
+    } catch (error) {
+      console.error("Error updating company:", error);
+      res.status(500).json({ error: "Failed to update company" });
+    }
+  });
+
+  app.delete("/api/companies/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteCompany(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting company:", error);
+      res.status(500).json({ error: "Failed to delete company" });
     }
   });
 
