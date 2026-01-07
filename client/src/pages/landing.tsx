@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { DualDomainBackground } from "@/components/scientific-background";
 import { AnimatedGrid, FloatingParticles, GlowingOrbs } from "@/components/animated-grid";
 import { MetricsStrip } from "@/components/metrics-strip";
 import { IntegrationLogos, TrustSignals } from "@/components/integration-logos";
-import { LikaLogo, LikaLogoIcon } from "@/components/lika-logo";
+import { LikaLogo, LikaLogoLeafGradient } from "@/components/lika-logo";
+import { Navbar } from "@/components/navbar";
 import {
   Beaker,
   Sparkles,
@@ -29,17 +29,7 @@ import {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-          <LikaLogo size="default" />
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <a href="/api/login">
-              <Button data-testid="button-login">Sign In</Button>
-            </a>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main>
         <section className="relative pt-32 pb-28 overflow-hidden min-h-[90vh] flex items-center">
@@ -66,14 +56,14 @@ export default function LandingPage() {
               </p>
               
               <div className="flex flex-wrap items-center justify-center gap-4 mb-12">
-                <a href="/api/login">
+                <a href="/login">
                   <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-explore-drug">
                     <FlaskConical className="h-4 w-4" />
                     Explore Drug Discovery
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
-                <a href="/api/login">
+                <a href="/login">
                   <Button size="lg" variant="outline" className="gap-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/10 backdrop-blur-sm" data-testid="button-explore-materials">
                     <Hexagon className="h-4 w-4" />
                     Explore Materials Science
@@ -364,7 +354,7 @@ export default function LandingPage() {
               Get started with Lika Sciences today and accelerate your drug discovery and materials science programs.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
-              <a href="/api/login">
+              <a href="/login">
                 <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-get-started">
                   Get Started Free
                   <ArrowRight className="h-4 w-4" />

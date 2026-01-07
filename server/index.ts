@@ -1,7 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import authRoutes from "./auth-routes";
 
 const app = express();
 const httpServer = createServer(app);
@@ -12,6 +14,7 @@ declare module "http" {
   }
 }
 
+app.use(cookieParser());
 app.use(
   express.json({
     verify: (req, _res, buf) => {
@@ -21,6 +24,9 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// External auth routes (for DigitalOcean database)
+app.use("/api/ext-auth", authRoutes);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

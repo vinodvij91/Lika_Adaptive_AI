@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
 import LandingPage from "@/pages/landing";
+import LoginPage from "@/pages/login";
 import DashboardPage from "@/pages/dashboard";
 import ProjectsPage from "@/pages/projects";
 import ProjectDetailPage from "@/pages/project-detail";
@@ -85,6 +86,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={LandingPage} />
+        <Route path="/login" component={LoginPage} />
         <Route>
           <LandingPage />
         </Route>

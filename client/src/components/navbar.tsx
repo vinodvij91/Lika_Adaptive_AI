@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { LikaLogo, LikaLogoLeafGradient } from "@/components/lika-logo";
+import { LikaLogoLeafGradient } from "@/components/lika-logo";
 import { useAuth } from "@/hooks/use-auth";
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import { Link } from "wouter";
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
-  const { user, company, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -59,22 +59,16 @@ export function Navbar() {
                 <Button variant="ghost" className="gap-2 text-white/80 hover:text-white hover:bg-white/10" data-testid="button-user-menu">
                   <Avatar className="h-7 w-7">
                     <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-teal-600 text-white text-xs">
-                      {user.username.slice(0, 2).toUpperCase()}
+                      {(user.firstName || user.email || "U").slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden sm:inline text-sm">{user.username}</span>
+                  <span className="hidden sm:inline text-sm">{user.firstName || user.email || "User"}</span>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <div className="px-2 py-1.5">
-                  <p className="text-sm font-medium">{user.username}</p>
-                  {company && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Building2 className="h-3 w-3" />
-                      {company.name}
-                    </p>
-                  )}
+                  <p className="text-sm font-medium">{user.firstName || user.email || "User"}</p>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
@@ -86,7 +80,7 @@ export function Navbar() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-destructive cursor-pointer" data-testid="button-logout">
+                <DropdownMenuItem onClick={() => logout()} disabled={isLoggingOut} className="text-destructive cursor-pointer" data-testid="button-logout">
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
                 </DropdownMenuItem>
