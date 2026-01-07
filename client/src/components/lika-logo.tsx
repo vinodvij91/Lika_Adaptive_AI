@@ -1,49 +1,9 @@
-export function LikaLogo({ size = "default" }: { size?: "sm" | "default" | "lg" }) {
-  const dimensions = {
-    sm: { icon: 28, text: "text-sm" },
-    default: { icon: 36, text: "text-lg" },
-    lg: { icon: 48, text: "text-2xl" },
-  };
-  
-  const { icon, text } = dimensions[size];
-
-  return (
-    <div className="flex items-center gap-3">
-      <svg
-        width={icon}
-        height={icon}
-        viewBox="0 0 48 48"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="flex-shrink-0"
-      >
-        <defs>
-          <linearGradient id="lika-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22d3ee" />
-            <stop offset="50%" stopColor="#14b8a6" />
-            <stop offset="100%" stopColor="#0d9488" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M24 4C24 4 8 16 8 28C8 36.837 15.163 44 24 44C32.837 44 40 36.837 40 28C40 16 24 4 24 4Z"
-          fill="url(#lika-gradient)"
-        />
-        <path
-          d="M24 12C24 12 14 20 14 28C14 33.523 18.477 38 24 38C29.523 38 34 33.523 34 28C34 20 24 12 24 12Z"
-          fill="white"
-          fillOpacity="0.25"
-        />
-        <circle cx="20" cy="26" r="3" fill="white" fillOpacity="0.6" />
-        <circle cx="28" cy="30" r="2" fill="white" fillOpacity="0.4" />
-      </svg>
-      <span className={`${text} font-light tracking-[0.25em] uppercase text-foreground`}>
-        Lika Sciences
-      </span>
-    </div>
-  );
+interface LogoProps {
+  size?: number;
+  className?: string;
 }
 
-export function LikaLogoIcon({ size = 36 }: { size?: number }) {
+export function LikaLogoLeafMono({ size = 36, className = "" }: LogoProps) {
   return (
     <svg
       width={size}
@@ -51,26 +11,113 @@ export function LikaLogoIcon({ size = 36 }: { size?: number }) {
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="flex-shrink-0"
+      className={className}
+    >
+      <path
+        d="M18 6C18 6 6 14 6 26C6 34 12 42 20 44C20 44 16 36 16 28C16 18 24 10 24 10C24 10 18 6 18 6Z"
+        fill="currentColor"
+      />
+      <path
+        d="M30 6C30 6 42 14 42 26C42 34 36 42 28 44C28 44 32 36 32 28C32 18 24 10 24 10C24 10 30 6 30 6Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function LikaLogoLeafGradient({ size = 36, className = "" }: LogoProps) {
+  const gradientId = `lika-leaf-gradient-${Math.random().toString(36).substr(2, 9)}`;
+  const gradientId2 = `lika-leaf-gradient2-${Math.random().toString(36).substr(2, 9)}`;
+  
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
     >
       <defs>
-        <linearGradient id="lika-icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={gradientId} x1="6" y1="6" x2="24" y2="44" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#22d3ee" />
           <stop offset="50%" stopColor="#14b8a6" />
-          <stop offset="100%" stopColor="#0d9488" />
+          <stop offset="100%" stopColor="#10b981" />
+        </linearGradient>
+        <linearGradient id={gradientId2} x1="24" y1="6" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#f59e0b" />
+          <stop offset="50%" stopColor="#eab308" />
+          <stop offset="100%" stopColor="#84cc16" />
         </linearGradient>
       </defs>
       <path
-        d="M24 4C24 4 8 16 8 28C8 36.837 15.163 44 24 44C32.837 44 40 36.837 40 28C40 16 24 4 24 4Z"
-        fill="url(#lika-icon-gradient)"
+        d="M18 6C18 6 6 14 6 26C6 34 12 42 20 44C20 44 16 36 16 28C16 18 24 10 24 10C24 10 18 6 18 6Z"
+        fill={`url(#${gradientId})`}
       />
       <path
-        d="M24 12C24 12 14 20 14 28C14 33.523 18.477 38 24 38C29.523 38 34 33.523 34 28C34 20 24 12 24 12Z"
-        fill="white"
-        fillOpacity="0.25"
+        d="M30 6C30 6 42 14 42 26C42 34 36 42 28 44C28 44 32 36 32 28C32 18 24 10 24 10C24 10 30 6 30 6Z"
+        fill={`url(#${gradientId2})`}
       />
-      <circle cx="20" cy="26" r="3" fill="white" fillOpacity="0.6" />
-      <circle cx="28" cy="30" r="2" fill="white" fillOpacity="0.4" />
     </svg>
   );
+}
+
+export function LikaLogoLeafCompact({ size = 24, className = "" }: LogoProps) {
+  const gradientId = `lika-compact-gradient-${Math.random().toString(36).substr(2, 9)}`;
+  
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="6" y1="6" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#22d3ee" />
+          <stop offset="100%" stopColor="#f59e0b" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M18 6C18 6 6 14 6 26C6 34 12 42 20 44C20 44 16 36 16 28C16 18 24 10 24 10C24 10 18 6 18 6Z"
+        fill={`url(#${gradientId})`}
+      />
+      <path
+        d="M30 6C30 6 42 14 42 26C42 34 36 42 28 44C28 44 32 36 32 28C32 18 24 10 24 10C24 10 30 6 30 6Z"
+        fill={`url(#${gradientId})`}
+      />
+    </svg>
+  );
+}
+
+interface LikaLogoFullProps {
+  size?: "sm" | "default" | "lg";
+  variant?: "mono" | "gradient";
+  className?: string;
+}
+
+export function LikaLogo({ size = "default", variant = "gradient", className = "" }: LikaLogoFullProps) {
+  const dimensions = {
+    sm: { icon: 24, text: "text-xs", spacing: "tracking-[0.2em]" },
+    default: { icon: 32, text: "text-sm", spacing: "tracking-[0.25em]" },
+    lg: { icon: 40, text: "text-base", spacing: "tracking-[0.25em]" },
+  };
+  
+  const { icon, text, spacing } = dimensions[size];
+  const LogoIcon = variant === "gradient" ? LikaLogoLeafGradient : LikaLogoLeafMono;
+
+  return (
+    <div className={`flex items-center gap-2.5 ${className}`}>
+      <LogoIcon size={icon} />
+      <span className={`${text} font-medium ${spacing} uppercase text-foreground`}>
+        Lika Sciences
+      </span>
+    </div>
+  );
+}
+
+export function LikaLogoIcon({ size = 36 }: { size?: number }) {
+  return <LikaLogoLeafGradient size={size} />;
 }
