@@ -57,7 +57,12 @@ attached_assets/ # Specification documents
 - **Campaign Configurator**: Workflow for research campaign setup with modality selection (small molecule, PROTAC, peptide, fragment)
 - **SMILES Import**: Batch import with duplicate detection and validation
 - **Curated Libraries**: Domain-aware SMILES libraries with scaffolds, cleaning workflows, and agent validation
-- **Compute Nodes**: Infrastructure management for ML, docking, quantum, and agent workloads (Hetzner, Vast.ai)
+- **Compute Nodes**: Multi-provider infrastructure management for ML, docking, quantum, and agent workloads
+  - **Providers**: Hetzner, Vast.ai, AWS, Azure, GCP, On-Prem
+  - **Connection Types**: SSH (direct connection) or Cloud API (provider SDK)
+  - **GPU Types**: T4, A40, A100, H100, H200, MI300
+  - **Tiers**: shared-low, shared-mid, shared-high, dedicated-A100, dedicated-H100, dedicated-H200, enterprise
+  - **ComputeAdapter Interface**: Unified abstraction for SSHAdapter and CloudAPIAdapter implementations
 - **SSH Key Management**: User SSH key registration for compute node access
 - **Usage Tracking**: Resource consumption tracking (CPU, GPU, storage) per campaign/project with source attribution
 - **Credit Wallet**: Foundation for credits-based billing (wallet balance, transactions) - stub only in v0
@@ -139,9 +144,12 @@ Designed for AI agents and bots to interact with the platform:
 - `POST /api/agent/recommendations/:id/reject` - Rejects an experiment recommendation
 
 ### Compute Infrastructure Endpoints
-- `GET /api/compute-nodes` - List all compute nodes
+- `GET /api/compute-nodes` - List all compute nodes (optional `?tier=` query param to filter by tier)
 - `GET /api/compute-nodes/:id` - Get node details with SSH key registrations
-- `POST /api/compute-nodes` - Register a new compute node
+- `GET /api/compute-nodes/default/:tier` - Get default node for a tier
+- `POST /api/compute-nodes` - Register a new compute node (supports provider, tier, gpuType, connectionType, SSH config)
+- `PATCH /api/compute-nodes/:id` - Update compute node
+- `DELETE /api/compute-nodes/:id` - Delete compute node
 - `POST /api/compute-nodes/:id/register-key` - Request SSH key registration (mock, future automation)
 - `GET /api/ssh-keys` - List user's SSH public keys
 - `POST /api/ssh-keys` - Upload a new SSH public key
