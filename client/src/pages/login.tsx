@@ -10,8 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { LikaLogoLeafGradient } from "@/components/lika-logo";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { AUTH_QUERY_KEY } from "@/hooks/use-auth";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -38,11 +38,10 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const response = await apiRequest("POST", "/api/ext-auth/login", data);
-      const result = await response.json();
+      await apiRequest("POST", "/api/ext-auth/login", data);
       
       // Invalidate auth queries to refresh user state
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       
       // Redirect to dashboard
       setLocation("/dashboard");
