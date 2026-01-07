@@ -35,18 +35,27 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Server, Cpu, Activity, Globe, AlertCircle, CheckCircle, MinusCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import type { ComputeNode, ComputeProvider, ComputePurpose, ComputeStatus } from "@shared/schema";
+import type { ComputeNode, ComputeProvider, ComputePurpose, ComputeStatus, GpuType, GpuTier, ConnectionType } from "@shared/schema";
 import { useState } from "react";
 
-const providers: ComputeProvider[] = ["hetzner", "vastai", "other"];
+const providers: ComputeProvider[] = ["hetzner", "vast", "onprem", "aws", "azure", "gcp", "other"];
 const purposes: ComputePurpose[] = ["ml", "bionemo", "docking", "quantum", "agents", "general"];
+const gpuTypes: GpuType[] = ["none", "T4", "A40", "A100", "H100", "H200", "MI300", "other"];
+const gpuTiers: GpuTier[] = ["shared-low", "shared-mid", "shared-high", "dedicated-A100", "dedicated-H100", "dedicated-H200", "enterprise"];
+const connectionTypes: ConnectionType[] = ["ssh", "cloud_api"];
 
 const nodeFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  provider: z.enum(["hetzner", "vastai", "other"]),
+  provider: z.enum(["hetzner", "vast", "onprem", "aws", "azure", "gcp", "other"]),
+  connectionType: z.enum(["ssh", "cloud_api"]),
+  gpuType: z.enum(["none", "T4", "A40", "A100", "H100", "H200", "MI300", "other"]),
+  tier: z.enum(["shared-low", "shared-mid", "shared-high", "dedicated-A100", "dedicated-H100", "dedicated-H200", "enterprise"]),
   purpose: z.enum(["ml", "bionemo", "docking", "quantum", "agents", "general"]),
-  ipAddress: z.string().optional(),
+  sshHost: z.string().optional(),
+  sshPort: z.string().optional(),
+  sshUsername: z.string().optional(),
   region: z.string().optional(),
+  isDefault: z.boolean().optional(),
 });
 
 type NodeFormValues = z.infer<typeof nodeFormSchema>;
@@ -59,8 +68,42 @@ const statusConfig: Record<string, { icon: typeof CheckCircle; color: string; la
 
 const providerColors: Record<string, string> = {
   hetzner: "bg-blue-500/20 text-blue-700 dark:text-blue-300",
-  vastai: "bg-purple-500/20 text-purple-700 dark:text-purple-300",
+  vast: "bg-purple-500/20 text-purple-700 dark:text-purple-300",
+  onprem: "bg-slate-500/20 text-slate-700 dark:text-slate-300",
+  aws: "bg-orange-500/20 text-orange-700 dark:text-orange-300",
+  azure: "bg-sky-500/20 text-sky-700 dark:text-sky-300",
+  gcp: "bg-red-500/20 text-red-700 dark:text-red-300",
   other: "bg-gray-500/20 text-gray-700 dark:text-gray-300",
+};
+
+const providerLabels: Record<string, string> = {
+  hetzner: "Hetzner",
+  vast: "Vast.ai",
+  onprem: "On-Prem",
+  aws: "AWS",
+  azure: "Azure",
+  gcp: "GCP",
+  other: "Other",
+};
+
+const tierLabels: Record<string, string> = {
+  "shared-low": "Shared Low",
+  "shared-mid": "Shared Mid",
+  "shared-high": "Shared High",
+  "dedicated-A100": "Dedicated A100",
+  "dedicated-H100": "Dedicated H100",
+  "dedicated-H200": "Dedicated H200",
+  enterprise: "Enterprise",
+};
+
+const tierColors: Record<string, string> = {
+  "shared-low": "bg-gray-500/20 text-gray-700 dark:text-gray-300",
+  "shared-mid": "bg-green-500/20 text-green-700 dark:text-green-300",
+  "shared-high": "bg-cyan-500/20 text-cyan-700 dark:text-cyan-300",
+  "dedicated-A100": "bg-amber-500/20 text-amber-700 dark:text-amber-300",
+  "dedicated-H100": "bg-orange-500/20 text-orange-700 dark:text-orange-300",
+  "dedicated-H200": "bg-red-500/20 text-red-700 dark:text-red-300",
+  enterprise: "bg-purple-500/20 text-purple-700 dark:text-purple-300",
 };
 
 const purposeLabels: Record<string, string> = {
@@ -84,10 +127,16 @@ export default function ComputeNodesPage() {
     resolver: zodResolver(nodeFormSchema),
     defaultValues: {
       name: "",
-      provider: "other",
+      provider: "hetzner",
+      connectionType: "ssh",
+      gpuType: "T4",
+      tier: "shared-low",
       purpose: "general",
-      ipAddress: "",
+      sshHost: "",
+      sshPort: "22",
+      sshUsername: "",
       region: "",
+      isDefault: false,
     },
   });
 
@@ -179,30 +228,97 @@ export default function ComputeNodesPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="provider"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Provider</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-provider">
-                            <SelectValue placeholder="Select provider" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {providers.map((p) => (
-                            <SelectItem key={p} value={p}>
-                              {p === "hetzner" ? "Hetzner" : p === "vastai" ? "Vast.ai" : "Other"}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="provider"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Provider</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-provider">
+                              <SelectValue placeholder="Select provider" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {providers.map((p) => (
+                              <SelectItem key={p} value={p}>{providerLabels[p]}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="tier"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tier</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-tier">
+                              <SelectValue placeholder="Select tier" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {gpuTiers.map((t) => (
+                              <SelectItem key={t} value={t}>{tierLabels[t]}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="gpuType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>GPU Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-gpu">
+                              <SelectValue placeholder="Select GPU" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {gpuTypes.map((g) => (
+                              <SelectItem key={g} value={g}>{g}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="connectionType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Connection</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-connection">
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="ssh">SSH</SelectItem>
+                            <SelectItem value="cloud_api">Cloud API</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
                   name="purpose"
@@ -225,14 +341,42 @@ export default function ComputeNodesPage() {
                     </FormItem>
                   )}
                 />
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="sshHost"
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>SSH Host</FormLabel>
+                        <FormControl>
+                          <Input placeholder="192.168.1.100" {...field} data-testid="input-ssh-host" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="sshPort"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Port</FormLabel>
+                        <FormControl>
+                          <Input placeholder="22" {...field} data-testid="input-ssh-port" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
-                  name="ipAddress"
+                  name="sshUsername"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>IP Address</FormLabel>
+                      <FormLabel>SSH Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="192.168.1.100" {...field} data-testid="input-ip" />
+                        <Input placeholder="ubuntu" {...field} data-testid="input-ssh-user" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -319,22 +463,37 @@ function NodeCard({ node }: { node: ComputeNode }) {
             <div className="flex items-center gap-2 min-w-0">
               <Server className="h-5 w-5 text-primary flex-shrink-0" />
               <CardTitle className="text-base truncate">{node.name}</CardTitle>
+              {node.isDefault && (
+                <Badge variant="outline" className="text-xs">Default</Badge>
+              )}
             </div>
             <Badge className={providerColors[node.provider || "other"]}>
-              {node.provider === "hetzner" ? "Hetzner" : node.provider === "vastai" ? "Vast.ai" : "Other"}
+              {providerLabels[node.provider || "other"]}
             </Badge>
           </div>
-          <CardDescription className="flex items-center gap-2">
-            <Cpu className="h-3 w-3" />
-            {purposeLabels[node.purpose || "general"]}
+          <CardDescription className="flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1">
+              <Cpu className="h-3 w-3" />
+              {node.gpuType || "No GPU"}
+            </span>
+            <span className="text-muted-foreground/50">|</span>
+            <span>{purposeLabels[node.purpose || "general"]}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <Badge className={tierColors[node.tier || "shared-low"]} variant="secondary">
+              {tierLabels[node.tier || "shared-low"]}
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              {node.connectionType === "cloud_api" ? "Cloud API" : "SSH"}
+            </Badge>
+          </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            {node.ipAddress && (
+            {(node.sshHost || node.ipAddress) && (
               <div className="flex items-center gap-1">
                 <Globe className="h-4 w-4" />
-                <span className="font-mono text-xs">{node.ipAddress}</span>
+                <span className="font-mono text-xs">{node.sshHost || node.ipAddress}</span>
               </div>
             )}
             <div className={`flex items-center gap-1 ${statusInfo.color}`}>

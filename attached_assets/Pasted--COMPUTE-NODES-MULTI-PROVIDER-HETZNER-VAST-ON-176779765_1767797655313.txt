@@ -1,0 +1,123 @@
+==================================================
+COMPUTE NODES – MULTI-PROVIDER (HETZNER, VAST, ON-PREM, AWS, AZURE)
+==================================================
+
+We want ONE abstraction for all compute backends (current cheap GPUs, future H100/H200 racks, and cloud providers like AWS/Azure).
+
+DATA MODEL:
+
+Create a `compute_nodes` table (or extend it if already present):
+
+- compute_nodes
+  - id
+  - name
+  - provider          -- "hetzner" | "vast" | "onprem" | "aws" | "azure" | "gcp"
+  - connection_type   -- "ssh" | "cloud_api"
+  - gpu_type          -- "none","T4","A40","H100","H200","MI300", etc.
+  - tier              -- "shared-low","shared-mid","dedicated-H100","dedicated-H200",...
+  - ssh_config_id     -- FK to ssh_configs (nullable; used only when connection_type="ssh")
+  - region            -- e.g. "eu-central-1" / "westeurope" / "lon1" (nullable)
+  - is_default        -- boolean (marks default node for a tier)
+  - status            -- "active","offline","degraded"
+  - created_at, updated_at
+
+Existing `ssh_configs` table is used for SSH endpoints:
+
+- ssh_configs
+  - id, company_id, service, host, port, username, status, last_connected
+
+ENVIRONMENT VARIABLES (GLOBAL, NOT PER-COMPANY):
+
+Use `.env` ONLY for platform-level cloud credentials & default shared pools:
+
+- DATABASE_URL=...
+- JWT_SECRET=...
+
+- SHARED_GPU_HOST=...        # optional seed for first shared SSH node
+- SHARED_GPU_USER=...
+- SHARED_GPU_PORT=22
+
+- AWS_ACCESS_KEY_ID=...      # for future AWS GPU integration
+- AWS_SECRET_ACCESS_KEY=...
+- AWS_REGION=...
+
+- AZURE_CLIENT_ID=...        # for future Azure GPU integration
+- AZURE_CLIENT_SECRET=...
+- AZURE_TENANT_ID=...
+- AZURE_SUBSCRIPTION_ID=...
+
+On startup:
+- If `compute_nodes` is empty, seed:
+  - one "shared-low" SSH node using SHARED_GPU_* env vars.
+- After that, the scheduler ALWAYS uses `compute_nodes` and NEVER reads SHARED_GPU_* directly.
+
+COMPANY-LEVEL GPU TIER:
+
+Extend `companies` with:
+
+- gpu_tier                -- text, e.g. "shared-low","shared-mid","dedicated-H100"
+- default_compute_node_id -- nullable FK to compute_nodes
+
+Scheduler rule:
+
+1) If company.default_compute_node_id is not null:
+     - use that compute node.
+2) Else:
+     - pick any compute_node where:
+       - tier == company.gpu_tier
+       - is_default = true
+       - status = "active"
+
+This allows:
+- budget companies → gpu_tier = "shared-low" using cheap shared GPUs
+- 1-year subscribers → gpu_tier = "dedicated-H100" + default_compute_node_id pointing to their H100/H200 node (on-prem, AWS, Azure, etc.)
+
+CONNECTION ADAPTERS:
+
+Implement a small abstraction in the backend:
+
+- `ComputeAdapter` interface with methods like:
+  - `runJob(node: ComputeNode, job: ProcessingJob): Promise<void>`
+
+Provide at least two implementations:
+
+1) SshComputeAdapter (for provider="hetzner","vast","onprem", connection_type="ssh")
+   - Uses ssh_configs.host/port/username
+   - SSH into the node and trigger the job.
+
+2) CloudApiComputeAdapter (for provider="aws","azure","gcp", connection_type="cloud_api")
+   - Uses AWS/Azure SDKs configured with env credentials (not stored in DB).
+   - For v0, the implementation can be stubbed (e.g., log a message instead of running a real cloud job).
+
+The scheduler chooses adapter based on `compute_nodes.connection_type`.
+
+NO PER-CUSTOMER HOSTS IN .ENV:
+
+- Never store individual customer GPU endpoints in `.env`.
+- All per-node details (host, region, gpu_type, tier) must live in the database (compute_nodes + ssh_configs).
+- `.env` is only for:
+  - database credentials
+  - secrets
+  - shared default pool endpoints
+  - cloud provider credentials (AWS/Azure/GCP).
+
+UX / ADMIN UI:
+
+- Provide an internal admin page (or at least API endpoints) to:
+  - list compute_nodes
+  - create/update compute_nodes
+  - assign gpu_tier + default_compute_node_id to companies
+
+This must allow:
+- Upgrading a company to a dedicated H100/H200 by editing just:
+  - one compute_nodes row (for the new node)
+  - one companies row (gpu_tier + default_compute_node_id)
+- WITHOUT editing `.env` or redeploying the app.
+
+==================================================
+GOAL
+==================================================
+This design allows:
+- current phase: cheap shared GPUs defined via `.env` as a seed
+- future phase: your own H100/H200 racks or AWS/Azure GPUs
+- with one unified scheduler and no `.env` hell when you add new customers or nodes.

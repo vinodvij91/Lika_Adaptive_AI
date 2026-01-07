@@ -17,9 +17,12 @@ export const collaboratorRoleEnum = pgEnum("collaborator_role", ["owner", "edito
 export const libraryTypeEnum = pgEnum("library_type", ["internal", "uploaded", "generated"]);
 export const libraryStatusEnum = pgEnum("library_status", ["draft", "processing", "curated", "deprecated"]);
 export const cleaningStatusEnum = pgEnum("cleaning_status", ["pending", "cleaning", "validated", "failed"]);
-export const computeProviderEnum = pgEnum("compute_provider", ["hetzner", "vastai", "other"]);
+export const computeProviderEnum = pgEnum("compute_provider", ["hetzner", "vast", "onprem", "aws", "azure", "gcp", "other"]);
 export const computePurposeEnum = pgEnum("compute_purpose", ["ml", "bionemo", "docking", "quantum", "agents", "general"]);
 export const computeStatusEnum = pgEnum("compute_status", ["active", "offline", "degraded"]);
+export const connectionTypeEnum = pgEnum("connection_type", ["ssh", "cloud_api"]);
+export const gpuTypeEnum = pgEnum("gpu_type", ["none", "T4", "A40", "A100", "H100", "H200", "MI300", "other"]);
+export const gpuTierEnum = pgEnum("gpu_tier", ["shared-low", "shared-mid", "shared-high", "dedicated-A100", "dedicated-H100", "dedicated-H200", "enterprise"]);
 export const modalityEnum = pgEnum("modality", ["small_molecule", "fragment", "protac", "peptide", "other"]);
 export const assayTypeEnum = pgEnum("assay_type", ["binding", "functional", "in_vivo", "pk", "admet", "other"]);
 export const assayOutcomeEnum = pgEnum("assay_outcome", ["active", "inactive", "toxic", "no_effect", "inconclusive"]);
@@ -557,9 +560,16 @@ export const computeNodes = pgTable("compute_nodes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   provider: computeProviderEnum("provider").default("other"),
+  connectionType: connectionTypeEnum("connection_type").default("ssh"),
+  gpuType: gpuTypeEnum("gpu_type").default("none"),
+  tier: gpuTierEnum("tier").default("shared-low"),
   purpose: computePurposeEnum("purpose").default("general"),
   ipAddress: text("ip_address"),
+  sshHost: text("ssh_host"),
+  sshPort: text("ssh_port").default("22"),
+  sshUsername: text("ssh_username"),
   region: text("region"),
+  isDefault: boolean("is_default").default(false),
   status: computeStatusEnum("status").default("active"),
   specs: jsonb("specs"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -569,6 +579,11 @@ export const computeNodes = pgTable("compute_nodes", {
 export const insertComputeNodeSchema = createInsertSchema(computeNodes).omit({ id: true, createdAt: true, updatedAt: true });
 export type ComputeNode = typeof computeNodes.$inferSelect;
 export type InsertComputeNode = z.infer<typeof insertComputeNodeSchema>;
+
+export type ConnectionType = "ssh" | "cloud_api";
+export type GpuType = "none" | "T4" | "A40" | "A100" | "H100" | "H200" | "MI300" | "other";
+export type GpuTier = "shared-low" | "shared-mid" | "shared-high" | "dedicated-A100" | "dedicated-H100" | "dedicated-H200" | "enterprise";
+export type ComputeProvider = "hetzner" | "vast" | "onprem" | "aws" | "azure" | "gcp" | "other";
 
 export const userSshKeys = pgTable("user_ssh_keys", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -767,7 +782,6 @@ export type AssayOutcome = "active" | "inactive" | "toxic" | "no_effect" | "inco
 export type OrgRole = "admin" | "member" | "viewer";
 export type AssetType = "smiles_library" | "pipeline_template" | "program";
 export type SharePermission = "read" | "fork";
-export type ComputeProvider = "hetzner" | "vastai" | "other";
 export type ComputePurpose = "ml" | "bionemo" | "docking" | "quantum" | "agents" | "general";
 export type ComputeStatus = "active" | "offline" | "degraded";
 export type ResourceType = "cpu_time" | "gpu_time" | "storage_gb";

@@ -190,6 +190,8 @@ export interface IStorage {
 
   getComputeNodes(): Promise<ComputeNode[]>;
   getComputeNode(id: string): Promise<ComputeNode | undefined>;
+  getComputeNodesByTier(tier: string): Promise<ComputeNode[]>;
+  getDefaultComputeNode(tier: string): Promise<ComputeNode | undefined>;
   createComputeNode(node: InsertComputeNode): Promise<ComputeNode>;
   updateComputeNode(id: string, node: Partial<InsertComputeNode>): Promise<ComputeNode | undefined>;
   deleteComputeNode(id: string): Promise<void>;
@@ -760,6 +762,23 @@ export class DatabaseStorage implements IStorage {
 
   async getComputeNode(id: string): Promise<ComputeNode | undefined> {
     const result = await db.select().from(computeNodes).where(eq(computeNodes.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getComputeNodesByTier(tier: string): Promise<ComputeNode[]> {
+    return db.select().from(computeNodes)
+      .where(and(eq(computeNodes.tier, tier as any), eq(computeNodes.status, "active")))
+      .orderBy(desc(computeNodes.isDefault), desc(computeNodes.createdAt));
+  }
+
+  async getDefaultComputeNode(tier: string): Promise<ComputeNode | undefined> {
+    const result = await db.select().from(computeNodes)
+      .where(and(
+        eq(computeNodes.tier, tier as any),
+        eq(computeNodes.isDefault, true),
+        eq(computeNodes.status, "active")
+      ))
+      .limit(1);
     return result[0];
   }
 

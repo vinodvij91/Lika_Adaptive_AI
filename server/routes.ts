@@ -856,11 +856,30 @@ export async function registerRoutes(
 
   app.get("/api/compute-nodes", requireAuth, async (req, res) => {
     try {
-      const nodes = await storage.getComputeNodes();
-      res.json(nodes);
+      const { tier } = req.query;
+      if (tier && typeof tier === "string") {
+        const nodes = await storage.getComputeNodesByTier(tier);
+        res.json(nodes);
+      } else {
+        const nodes = await storage.getComputeNodes();
+        res.json(nodes);
+      }
     } catch (error) {
       console.error("Error fetching compute nodes:", error);
       res.status(500).json({ error: "Failed to fetch compute nodes" });
+    }
+  });
+
+  app.get("/api/compute-nodes/default/:tier", requireAuth, async (req, res) => {
+    try {
+      const node = await storage.getDefaultComputeNode(req.params.tier);
+      if (!node) {
+        return res.status(404).json({ error: "No default node found for this tier" });
+      }
+      res.json(node);
+    } catch (error) {
+      console.error("Error fetching default compute node:", error);
+      res.status(500).json({ error: "Failed to fetch default compute node" });
     }
   });
 
