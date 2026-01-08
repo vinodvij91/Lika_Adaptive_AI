@@ -8,6 +8,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
+import { GlobalFooter } from "@/components/global-footer";
 
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
@@ -42,7 +43,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
-          {children}
+          <div className="flex-1 overflow-auto">
+            {children}
+          </div>
+          <GlobalFooter />
         </div>
       </div>
     </SidebarProvider>
@@ -90,13 +94,18 @@ function Router() {
 
   if (!user) {
     return (
-      <Switch>
-        <Route path="/" component={LandingPage} />
-        <Route path="/login" component={LoginPage} />
-        <Route>
-          <LandingPage />
-        </Route>
-      </Switch>
+      <div className="flex flex-col min-h-screen">
+        <div className="flex-1">
+          <Switch>
+            <Route path="/" component={LandingPage} />
+            <Route path="/login" component={LoginPage} />
+            <Route>
+              <LandingPage />
+            </Route>
+          </Switch>
+        </div>
+        <GlobalFooter />
+      </div>
     );
   }
 
