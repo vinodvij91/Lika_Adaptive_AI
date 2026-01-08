@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, real, jsonb, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, real, jsonb, pgEnum, index, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -589,11 +589,16 @@ export type ComputeProvider = "hetzner" | "vast" | "onprem" | "aws" | "azure" | 
 
 export const sshConfigStatusEnum = pgEnum("ssh_config_status", ["connected", "disconnected", "error", "unknown"]);
 
+export const sshAuthMethodEnum = pgEnum("ssh_auth_method", ["key", "password"]);
+
 export const sshConfigs = pgTable("ssh_configs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
   host: text("host").notNull(),
-  port: text("port").default("22"),
+  port: integer("port").default(22),
   username: text("username").notNull(),
+  authMethod: sshAuthMethodEnum("auth_method").default("key"),
+  fingerprint: text("fingerprint"),
   serviceLabel: text("service_label"),
   companyId: varchar("company_id"),
   status: sshConfigStatusEnum("status").default("unknown"),
@@ -609,6 +614,7 @@ export type InsertSshConfig = z.infer<typeof insertSshConfigSchema>;
 export const companies = pgTable("companies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  slug: text("slug").notNull(),
   gpuTier: gpuTierEnum("gpu_tier"),
   defaultComputeNodeId: varchar("default_compute_node_id"),
   createdAt: timestamp("created_at").defaultNow(),
