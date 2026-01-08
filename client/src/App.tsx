@@ -34,6 +34,8 @@ import PropertyPipelinesPage from "@/pages/property-pipelines";
 import StructurePropertyPage from "@/pages/structure-property";
 import MaterialsCampaignsPage from "@/pages/materials-campaigns";
 import MultiScaleRepresentationsPage from "@/pages/multi-scale-representations";
+import PropertyPredictionPage from "@/pages/property-prediction";
+import ManufacturabilitySccoringPage from "@/pages/manufacturability-scoring";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -83,6 +85,8 @@ function AuthenticatedRoutes() {
         <Route path="/structure-property" component={StructurePropertyPage} />
         <Route path="/materials-campaigns" component={MaterialsCampaignsPage} />
         <Route path="/multi-scale-representations" component={MultiScaleRepresentationsPage} />
+        <Route path="/property-prediction" component={PropertyPredictionPage} />
+        <Route path="/manufacturability-scoring" component={ManufacturabilitySccoringPage} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>

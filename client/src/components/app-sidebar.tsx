@@ -27,6 +27,8 @@ import {
   Zap,
   Hexagon,
   Layers,
+  Calculator,
+  Factory,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -75,6 +77,16 @@ const workflowItems = [
     title: "Multi-Scale Repr.",
     url: "/multi-scale-representations",
     icon: Layers,
+  },
+  {
+    title: "Property Prediction",
+    url: "/property-prediction",
+    icon: Calculator,
+  },
+  {
+    title: "Manufacturability",
+    url: "/manufacturability-scoring",
+    icon: Factory,
   },
   {
     title: "Property Pipelines",
