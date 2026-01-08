@@ -43,6 +43,8 @@ import {
   assayPanelTargets,
   moaNodes,
   moaEdges,
+  pipelineTemplates,
+  pipelineTemplateTargets,
   type Project,
   type InsertProject,
   type Target,
@@ -124,6 +126,10 @@ import {
   type InsertAssayPanel,
   type AssayPanelTarget,
   type InsertAssayPanelTarget,
+  type PipelineTemplate,
+  type InsertPipelineTemplate,
+  type PipelineTemplateTarget,
+  type InsertPipelineTemplateTarget,
   type MoaNode,
   type InsertMoaNode,
   type MoaEdge,
@@ -362,6 +368,12 @@ export interface IStorage {
   getMoaSubgraph(targetId: string): Promise<{ nodes: MoaNode[]; edges: MoaEdge[] }>;
   createMoaNode(node: InsertMoaNode): Promise<MoaNode>;
   createMoaEdge(edge: InsertMoaEdge): Promise<MoaEdge>;
+
+  getPipelineTemplates(domain?: string): Promise<PipelineTemplate[]>;
+  getPipelineTemplate(id: string): Promise<(PipelineTemplate & { targets: PipelineTemplateTarget[] }) | undefined>;
+  createPipelineTemplate(template: InsertPipelineTemplate, targets?: InsertPipelineTemplateTarget[]): Promise<PipelineTemplate>;
+  deletePipelineTemplate(id: string): Promise<void>;
+  seedBuiltInTemplates(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1914,6 +1926,183 @@ export class DatabaseStorage implements IStorage {
   async createMoaEdge(edge: InsertMoaEdge): Promise<MoaEdge> {
     const result = await db.insert(moaEdges).values(edge).returning();
     return result[0];
+  }
+
+  async getPipelineTemplates(domain?: string): Promise<PipelineTemplate[]> {
+    if (domain) {
+      return db.select().from(pipelineTemplates).where(eq(pipelineTemplates.domain, domain as any)).orderBy(desc(pipelineTemplates.createdAt));
+    }
+    return db.select().from(pipelineTemplates).orderBy(desc(pipelineTemplates.createdAt));
+  }
+
+  async getPipelineTemplate(id: string): Promise<(PipelineTemplate & { targets: PipelineTemplateTarget[] }) | undefined> {
+    const template = await db.select().from(pipelineTemplates).where(eq(pipelineTemplates.id, id)).limit(1);
+    if (template.length === 0) return undefined;
+
+    const targets = await db.select().from(pipelineTemplateTargets).where(eq(pipelineTemplateTargets.templateId, id)).orderBy(pipelineTemplateTargets.sortOrder);
+    return { ...template[0], targets };
+  }
+
+  async createPipelineTemplate(template: InsertPipelineTemplate, templateTargets?: InsertPipelineTemplateTarget[]): Promise<PipelineTemplate> {
+    const result = await db.insert(pipelineTemplates).values(template).returning();
+    const created = result[0];
+
+    if (templateTargets && templateTargets.length > 0) {
+      await db.insert(pipelineTemplateTargets).values(
+        templateTargets.map((t, i) => ({
+          ...t,
+          templateId: created.id,
+          sortOrder: t.sortOrder ?? i,
+        }))
+      );
+    }
+
+    return created;
+  }
+
+  async deletePipelineTemplate(id: string): Promise<void> {
+    await db.delete(pipelineTemplates).where(eq(pipelineTemplates.id, id));
+  }
+
+  async seedBuiltInTemplates(): Promise<void> {
+    const existing = await db.select().from(pipelineTemplates).where(eq(pipelineTemplates.isBuiltIn, true)).limit(1);
+    if (existing.length > 0) return;
+
+    const alzheimersTemplate = await this.createPipelineTemplate({
+      name: "Alzheimer's Disease Pipeline",
+      description: "Multi-target approach for Alzheimer's disease focusing on amyloid, tau, and neuroinflammation pathways. Optimized for blood-brain barrier penetration and CNS safety.",
+      domain: "alzheimers",
+      isBuiltIn: true,
+      modality: "small_molecule",
+      pipelineConfig: {
+        steps: ["hit_generation", "screening_cascade", "virtual_docking", "admet_prediction", "bbb_prediction", "hit_prioritization"],
+        defaultLibrary: "cns_focused",
+        dockingProtocol: "multi_target_ensemble"
+      },
+      scoringWeights: {
+        efficacy: 0.35,
+        selectivity: 0.25,
+        bbbPenetration: 0.20,
+        safety: 0.20
+      },
+      assayPanelConfig: {
+        primaryAssays: ["amyloid_binding", "tau_aggregation", "cholinesterase"],
+        secondaryAssays: ["microglial_activation", "synaptic_function"],
+        safetyAssays: ["herg", "cyp_inhibition", "hepatotoxicity"]
+      },
+      visualizationPresets: {
+        defaultView: "multi_target_radar",
+        highlightSafetyFlags: true,
+        bbbThreshold: 0.5
+      }
+    }, [
+      { name: "Amyloid Beta", description: "Primary Alzheimer's target for amyloid pathway modulation", role: "primary", category: "amyloid_pathway", templateId: "", sortOrder: 0 },
+      { name: "Tau Protein", description: "Secondary target for tau aggregation inhibition", role: "secondary", category: "tau_pathway", templateId: "", sortOrder: 1 },
+      { name: "AChE", description: "Acetylcholinesterase for symptomatic treatment", role: "secondary", category: "cholinergic", templateId: "", sortOrder: 2 },
+      { name: "hERG", description: "Cardiac safety target", role: "safety", category: "safety", templateId: "", sortOrder: 3 }
+    ]);
+
+    const oncologyTemplate = await this.createPipelineTemplate({
+      name: "Oncology Multi-Target Pipeline",
+      description: "Comprehensive oncology pipeline for kinase inhibitors and targeted therapies. Includes resistance profiling and selectivity optimization.",
+      domain: "oncology",
+      isBuiltIn: true,
+      modality: "small_molecule",
+      pipelineConfig: {
+        steps: ["hit_generation", "kinase_selectivity", "virtual_docking", "resistance_prediction", "metabolic_stability", "hit_prioritization"],
+        defaultLibrary: "kinase_focused",
+        dockingProtocol: "kinase_ensemble"
+      },
+      scoringWeights: {
+        efficacy: 0.40,
+        selectivity: 0.30,
+        resistance: 0.15,
+        safety: 0.15
+      },
+      assayPanelConfig: {
+        primaryAssays: ["target_kinase", "cell_viability"],
+        secondaryAssays: ["kinase_panel", "apoptosis", "cell_cycle"],
+        safetyAssays: ["herg", "mitotoxicity", "genotoxicity"]
+      },
+      visualizationPresets: {
+        defaultView: "selectivity_matrix",
+        highlightResistance: true,
+        kinasePanelView: true
+      }
+    }, [
+      { name: "Primary Kinase", description: "Main oncology target kinase", role: "primary", category: "kinase", templateId: "", sortOrder: 0 },
+      { name: "Resistance Mutant", description: "Common resistance mutation variant", role: "primary", category: "kinase", templateId: "", sortOrder: 1 },
+      { name: "Off-Target Kinase 1", description: "Selectivity counter-screen", role: "secondary", category: "kinase", templateId: "", sortOrder: 2 },
+      { name: "hERG", description: "Cardiac safety target", role: "safety", category: "safety", templateId: "", sortOrder: 3 }
+    ]);
+
+    const neuroinflammationTemplate = await this.createPipelineTemplate({
+      name: "Neuroinflammation Pipeline",
+      description: "Focused on microglial modulation and neuroinflammatory pathways. Combines anti-inflammatory and neuroprotective screening.",
+      domain: "neuroinflammation",
+      isBuiltIn: true,
+      modality: "small_molecule",
+      pipelineConfig: {
+        steps: ["hit_generation", "inflammation_panel", "microglial_assay", "bbb_prediction", "hit_prioritization"],
+        defaultLibrary: "cns_focused",
+        dockingProtocol: "inflammatory_targets"
+      },
+      scoringWeights: {
+        antiInflammatory: 0.35,
+        neuroprotection: 0.25,
+        bbbPenetration: 0.20,
+        safety: 0.20
+      },
+      assayPanelConfig: {
+        primaryAssays: ["microglial_activation", "cytokine_release"],
+        secondaryAssays: ["neuronal_survival", "oxidative_stress"],
+        safetyAssays: ["herg", "immunosuppression"]
+      },
+      visualizationPresets: {
+        defaultView: "inflammation_heatmap",
+        highlightSafetyFlags: true,
+        bbbThreshold: 0.6
+      }
+    }, [
+      { name: "NLRP3", description: "Inflammasome modulation target", role: "primary", category: "inflammasome", templateId: "", sortOrder: 0 },
+      { name: "TNF-alpha", description: "Pro-inflammatory cytokine pathway", role: "secondary", category: "cytokine", templateId: "", sortOrder: 1 },
+      { name: "IL-1beta", description: "Interleukin signaling", role: "secondary", category: "cytokine", templateId: "", sortOrder: 2 },
+      { name: "hERG", description: "Cardiac safety target", role: "safety", category: "safety", templateId: "", sortOrder: 3 }
+    ]);
+
+    const metabolicTemplate = await this.createPipelineTemplate({
+      name: "Metabolic Disease Pipeline",
+      description: "Multi-pathway approach for diabetes and metabolic disorders. Includes glucose homeostasis, lipid metabolism, and NASH-related targets.",
+      domain: "metabolic_disease",
+      isBuiltIn: true,
+      modality: "small_molecule",
+      pipelineConfig: {
+        steps: ["hit_generation", "metabolic_panel", "liver_safety", "pk_prediction", "hit_prioritization"],
+        defaultLibrary: "metabolic_focused",
+        dockingProtocol: "gpcr_nuclear_receptor"
+      },
+      scoringWeights: {
+        glucoseControl: 0.30,
+        lipidModulation: 0.25,
+        liverSafety: 0.25,
+        cardioSafety: 0.20
+      },
+      assayPanelConfig: {
+        primaryAssays: ["glucose_uptake", "insulin_sensitivity"],
+        secondaryAssays: ["lipogenesis", "fatty_acid_oxidation", "hepatocyte_health"],
+        safetyAssays: ["herg", "hepatotoxicity", "steatosis"]
+      },
+      visualizationPresets: {
+        defaultView: "metabolic_radar",
+        highlightLiverFlags: true,
+        glucoseThreshold: 0.7
+      }
+    }, [
+      { name: "GLP-1R", description: "Glucagon-like peptide-1 receptor", role: "primary", category: "glucose", templateId: "", sortOrder: 0 },
+      { name: "PPAR-gamma", description: "Nuclear receptor for lipid metabolism", role: "secondary", category: "lipid", templateId: "", sortOrder: 1 },
+      { name: "AMPK", description: "Energy sensing kinase", role: "secondary", category: "energy", templateId: "", sortOrder: 2 },
+      { name: "hERG", description: "Cardiac safety target", role: "safety", category: "safety", templateId: "", sortOrder: 3 }
+    ]);
   }
 }
 

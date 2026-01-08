@@ -892,6 +892,54 @@ export type TargetRole = "primary" | "secondary" | "safety";
 export type MoaNodeType = "target" | "pathway" | "process" | "phenotype";
 export type MoaRelation = "activates" | "inhibits" | "associated_with";
 
+export const pipelineTemplateDomainEnum = pgEnum("pipeline_template_domain", [
+  "alzheimers", "oncology", "neuroinflammation", "metabolic_disease", "immunology", "infectious_disease", "custom"
+]);
+
+export const pipelineTemplates = pgTable("pipeline_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  domain: pipelineTemplateDomainEnum("domain").notNull(),
+  isBuiltIn: boolean("is_built_in").default(false),
+  pipelineConfig: jsonb("pipeline_config"),
+  targetConfigs: jsonb("target_configs"),
+  assayPanelConfig: jsonb("assay_panel_config"),
+  scoringWeights: jsonb("scoring_weights"),
+  visualizationPresets: jsonb("visualization_presets"),
+  modality: modalityEnum("modality").default("small_molecule"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const pipelineTemplateTargets = pgTable("pipeline_template_targets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull().references(() => pipelineTemplates.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  role: targetRoleEnum("role").default("primary"),
+  category: text("category"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pipelineTemplatesRelations = relations(pipelineTemplates, ({ many }) => ({
+  targets: many(pipelineTemplateTargets),
+}));
+
+export const pipelineTemplateTargetsRelations = relations(pipelineTemplateTargets, ({ one }) => ({
+  template: one(pipelineTemplates, { fields: [pipelineTemplateTargets.templateId], references: [pipelineTemplates.id] }),
+}));
+
+export const insertPipelineTemplateSchema = createInsertSchema(pipelineTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPipelineTemplateTargetSchema = createInsertSchema(pipelineTemplateTargets).omit({ id: true, createdAt: true });
+
+export type PipelineTemplate = typeof pipelineTemplates.$inferSelect;
+export type InsertPipelineTemplate = z.infer<typeof insertPipelineTemplateSchema>;
+export type PipelineTemplateTarget = typeof pipelineTemplateTargets.$inferSelect;
+export type InsertPipelineTemplateTarget = z.infer<typeof insertPipelineTemplateTargetSchema>;
+export type PipelineTemplateDomain = "alzheimers" | "oncology" | "neuroinflammation" | "metabolic_disease" | "immunology" | "infectious_disease" | "custom";
+
 export type DiseaseArea = "CNS" | "Oncology" | "Rare" | "Infectious" | "Cardiometabolic" | "Autoimmune" | "Respiratory" | "Other";
 export type LibraryType = "internal" | "uploaded" | "generated";
 export type LibraryStatus = "draft" | "processing" | "curated" | "deprecated";
@@ -980,6 +1028,8 @@ export interface PipelineConfig {
     constraints?: Record<string, unknown>;
   };
   diseaseArea?: DiseaseArea;
+  templateId?: string;
+  templateTargets?: { name: string; role: TargetRole | null; category: string | null }[];
 }
 
 export interface MaterialsPipelineStep {

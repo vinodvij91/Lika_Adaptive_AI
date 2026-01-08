@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { PageHeader } from "@/components/page-header";
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -28,8 +29,13 @@ import {
   Save,
   CheckCircle,
   Library,
+  FileStack,
+  Brain,
+  Activity,
+  Dna,
+  Heart,
 } from "lucide-react";
-import type { Project, Target as TargetType, DiseaseArea, PipelineConfig, CuratedLibrary } from "@shared/schema";
+import type { Project, Target as TargetType, DiseaseArea, PipelineConfig, CuratedLibrary, PipelineTemplate, PipelineTemplateTarget } from "@shared/schema";
 
 const diseaseAreas: DiseaseArea[] = ["CNS", "Oncology", "Rare", "Infectious", "Cardiometabolic", "Autoimmune", "Respiratory", "Other"];
 
@@ -47,6 +53,26 @@ interface PipelineStep {
   completed: boolean;
 }
 
+const templateDomainIcons: Record<string, typeof Brain> = {
+  alzheimers: Brain,
+  oncology: Dna,
+  neuroinflammation: Activity,
+  metabolic_disease: Heart,
+  immunology: Activity,
+  infectious_disease: Dna,
+  custom: FileStack,
+};
+
+const templateDomainLabels: Record<string, string> = {
+  alzheimers: "Alzheimer's Disease",
+  oncology: "Oncology",
+  neuroinflammation: "Neuroinflammation",
+  metabolic_disease: "Metabolic Disease",
+  immunology: "Immunology",
+  infectious_disease: "Infectious Disease",
+  custom: "Custom",
+};
+
 export default function CampaignNewPage() {
   const [, setLocation] = useLocation();
   const searchParams = useSearch();
@@ -55,10 +81,12 @@ export default function CampaignNewPage() {
   const { toast } = useToast();
 
   const [currentStep, setCurrentStep] = useState(0);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState(projectIdFromUrl || "");
   const [domainType, setDomainType] = useState<DiseaseArea>("CNS");
   const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
+  const [templateTargets, setTemplateTargets] = useState<PipelineTemplateTarget[]>([]);
   const [generator, setGenerator] = useState<"bionemo_molmim" | "upload_library" | "curated_library">("bionemo_molmim");
   const [selectedLibraryId, setSelectedLibraryId] = useState<string>("");
   const [selectedFilters, setSelectedFilters] = useState<string[]>(["lipinski"]);
@@ -82,6 +110,45 @@ export default function CampaignNewPage() {
     queryKey: ["/api/libraries"],
   });
 
+  const { data: pipelineTemplates } = useQuery<PipelineTemplate[]>({
+    queryKey: ["/api/pipeline-templates"],
+  });
+
+  const { data: selectedTemplate } = useQuery<PipelineTemplate & { targets: PipelineTemplateTarget[] }>({
+    queryKey: ["/api/pipeline-templates", selectedTemplateId],
+    enabled: !!selectedTemplateId,
+  });
+
+  useEffect(() => {
+    if (selectedTemplateId === null) {
+      setTemplateTargets([]);
+      setWDocking(0.4);
+      setWAdmet(0.3);
+      setWQsar(0.3);
+      return;
+    }
+    if (selectedTemplate) {
+      const weights = selectedTemplate.scoringWeights as { efficacy?: number; selectivity?: number; safety?: number } | null;
+      if (weights) {
+        setWDocking(weights.efficacy || 0.4);
+        setWAdmet(weights.selectivity || 0.3);
+        setWQsar(weights.safety || 0.3);
+      }
+      if (selectedTemplate.targets) {
+        setTemplateTargets(selectedTemplate.targets);
+      } else {
+        setTemplateTargets([]);
+      }
+      if (selectedTemplate.domain === "alzheimers" || selectedTemplate.domain === "neuroinflammation") {
+        setDomainType("CNS");
+      } else if (selectedTemplate.domain === "oncology") {
+        setDomainType("Oncology");
+      } else if (selectedTemplate.domain === "metabolic_disease") {
+        setDomainType("Cardiometabolic");
+      }
+    }
+  }, [selectedTemplate, selectedTemplateId]);
+
   const curatedLibraries = libraries?.filter(lib => lib.status === "curated" && lib.domainType === domainType) || [];
   const selectedLibrary = libraries?.find(lib => lib.id === selectedLibraryId);
 
@@ -102,11 +169,12 @@ export default function CampaignNewPage() {
   });
 
   const steps: PipelineStep[] = [
-    { id: 0, title: "Basic Info", icon: Beaker, completed: !!name && !!projectId },
-    { id: 1, title: "Targets", icon: Target, completed: selectedTargets.length > 0 },
-    { id: 2, title: "Generator", icon: Sparkles, completed: true },
-    { id: 3, title: "Filtering", icon: FlaskConical, completed: true },
-    { id: 4, title: "Scoring", icon: Target, completed: true },
+    { id: 0, title: "Template", icon: FileStack, completed: true },
+    { id: 1, title: "Basic Info", icon: Beaker, completed: !!name && !!projectId },
+    { id: 2, title: "Targets", icon: Target, completed: selectedTargets.length > 0 || templateTargets.length > 0 },
+    { id: 3, title: "Generator", icon: Sparkles, completed: true },
+    { id: 4, title: "Filtering", icon: FlaskConical, completed: true },
+    { id: 5, title: "Scoring", icon: Target, completed: true },
   ];
 
   const handleSubmit = () => {
@@ -129,6 +197,12 @@ export default function CampaignNewPage() {
       } : {
         type: "generated",
       },
+      templateId: selectedTemplateId || undefined,
+      templateTargets: templateTargets.length > 0 ? templateTargets.map(t => ({
+        name: t.name,
+        role: t.role,
+        category: t.category,
+      })) : undefined,
     };
 
     createMutation.mutate({
@@ -141,8 +215,9 @@ export default function CampaignNewPage() {
 
   const canProceed = () => {
     switch (currentStep) {
-      case 0: return !!name && !!projectId;
-      case 1: return selectedTargets.length > 0;
+      case 0: return true;
+      case 1: return !!name && !!projectId;
+      case 2: return selectedTargets.length > 0 || templateTargets.length > 0;
       default: return true;
     }
   };
@@ -223,6 +298,82 @@ export default function CampaignNewPage() {
               {currentStep === 0 && (
                 <Card>
                   <CardHeader>
+                    <CardTitle>Select Pipeline Template</CardTitle>
+                    <CardDescription>
+                      Choose a disease-specific template to pre-configure targets, assay panels, and scoring weights, or start from scratch.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <button
+                        onClick={() => setSelectedTemplateId(null)}
+                        className={`p-5 rounded-lg border-2 text-left transition-colors ${
+                          selectedTemplateId === null
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover-elevate"
+                        }`}
+                        data-testid="option-blank-template"
+                      >
+                        <FileStack className="h-8 w-8 text-muted-foreground mb-3" />
+                        <h3 className="font-semibold mb-1">Start from Scratch</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Configure all pipeline settings manually
+                        </p>
+                      </button>
+                      {pipelineTemplates?.filter(t => t.isBuiltIn).map((template) => {
+                        const DomainIcon = templateDomainIcons[template.domain] || FileStack;
+                        return (
+                          <button
+                            key={template.id}
+                            onClick={() => setSelectedTemplateId(template.id)}
+                            className={`p-5 rounded-lg border-2 text-left transition-colors ${
+                              selectedTemplateId === template.id
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover-elevate"
+                            }`}
+                            data-testid={`option-template-${template.id}`}
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <DomainIcon className="h-8 w-8 text-chart-3" />
+                              <Badge variant="secondary" className="text-xs">
+                                {templateDomainLabels[template.domain] || template.domain}
+                              </Badge>
+                            </div>
+                            <h3 className="font-semibold mb-1">{template.name}</h3>
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {template.description}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedTemplate && (
+                      <div className="p-4 bg-muted/50 rounded-md space-y-3">
+                        <div>
+                          <p className="font-medium">{selectedTemplate.name}</p>
+                          <p className="text-sm text-muted-foreground">{selectedTemplate.description}</p>
+                        </div>
+                        {templateTargets.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium mb-2">Pre-configured Targets:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {templateTargets.map((t, i) => (
+                                <Badge key={i} variant={t.role === "primary" ? "default" : t.role === "safety" ? "destructive" : "secondary"}>
+                                  {t.name} ({t.role})
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {currentStep === 1 && (
+                <Card>
+                  <CardHeader>
                     <CardTitle>Basic Information</CardTitle>
                     <CardDescription>
                       Set up the campaign name and select a project
@@ -273,45 +424,84 @@ export default function CampaignNewPage() {
                 </Card>
               )}
 
-              {currentStep === 1 && (
+              {currentStep === 2 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Select Targets</CardTitle>
                     <CardDescription>
-                      Choose one or more protein targets for this campaign
+                      {templateTargets.length > 0 
+                        ? "Template targets are pre-configured. You can also add targets from your database."
+                        : "Choose one or more protein targets for this campaign"}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    {targets && targets.length > 0 ? (
-                      <div className="space-y-2">
-                        {targets.map((target) => (
-                          <div
-                            key={target.id}
-                            className={`flex items-center gap-3 p-3 rounded-md cursor-pointer transition-colors ${
-                              selectedTargets.includes(target.id)
-                                ? "bg-primary/10 border border-primary/30"
-                                : "hover-elevate"
-                            }`}
-                            onClick={() => toggleTarget(target.id)}
-                            data-testid={`target-option-${target.id}`}
-                          >
-                            <Checkbox
-                              checked={selectedTargets.includes(target.id)}
-                              onCheckedChange={() => toggleTarget(target.id)}
-                            />
-                            <div className="w-9 h-9 rounded-md bg-chart-3/10 flex items-center justify-center">
-                              <Target className="h-4 w-4 text-chart-3" />
+                  <CardContent className="space-y-6">
+                    {templateTargets.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Template Targets (pre-configured)</h4>
+                        <div className="space-y-2">
+                          {templateTargets.map((t, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-3 p-3 rounded-md bg-muted/50 border border-muted"
+                              data-testid={`template-target-${i}`}
+                            >
+                              <div className={`w-9 h-9 rounded-md flex items-center justify-center ${
+                                t.role === "primary" ? "bg-primary/10" : t.role === "safety" ? "bg-destructive/10" : "bg-chart-2/10"
+                              }`}>
+                                <Target className={`h-4 w-4 ${
+                                  t.role === "primary" ? "text-primary" : t.role === "safety" ? "text-destructive" : "text-chart-2"
+                                }`} />
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium">{t.name}</p>
+                                <p className="text-sm text-muted-foreground">{t.description || t.category}</p>
+                              </div>
+                              <Badge variant={t.role === "primary" ? "default" : t.role === "safety" ? "destructive" : "secondary"}>
+                                {t.role}
+                              </Badge>
                             </div>
-                            <div>
-                              <p className="font-medium">{target.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {target.uniprotId || "No UniProt ID"}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    ) : (
+                    )}
+                    
+                    {targets && targets.length > 0 && (
+                      <div className="space-y-3">
+                        {templateTargets.length > 0 && (
+                          <h4 className="text-sm font-medium text-muted-foreground">Additional Targets (from database)</h4>
+                        )}
+                        <div className="space-y-2">
+                          {targets.map((target) => (
+                            <div
+                              key={target.id}
+                              className={`flex items-center gap-3 p-3 rounded-md cursor-pointer transition-colors ${
+                                selectedTargets.includes(target.id)
+                                  ? "bg-primary/10 border border-primary/30"
+                                  : "hover-elevate"
+                              }`}
+                              onClick={() => toggleTarget(target.id)}
+                              data-testid={`target-option-${target.id}`}
+                            >
+                              <Checkbox
+                                checked={selectedTargets.includes(target.id)}
+                                onCheckedChange={() => toggleTarget(target.id)}
+                              />
+                              <div className="w-9 h-9 rounded-md bg-chart-3/10 flex items-center justify-center">
+                                <Target className="h-4 w-4 text-chart-3" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{target.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {target.uniprotId || "No UniProt ID"}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!targets?.length && !templateTargets.length && (
                       <p className="text-muted-foreground text-center py-8">
                         No targets available. Add targets first.
                       </p>
@@ -320,7 +510,7 @@ export default function CampaignNewPage() {
                 </Card>
               )}
 
-              {currentStep === 2 && (
+              {currentStep === 3 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Molecule Generator</CardTitle>
@@ -425,7 +615,7 @@ export default function CampaignNewPage() {
                 </Card>
               )}
 
-              {currentStep === 3 && (
+              {currentStep === 4 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Filtering Rules</CardTitle>
@@ -492,7 +682,7 @@ export default function CampaignNewPage() {
                 </Card>
               )}
 
-              {currentStep === 4 && (
+              {currentStep === 5 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Scoring Weights</CardTitle>

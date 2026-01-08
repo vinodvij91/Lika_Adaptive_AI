@@ -1844,6 +1844,73 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // PIPELINE TEMPLATES ENDPOINTS
+  // ============================================
+
+  app.get("/api/pipeline-templates", requireAuth, async (req, res) => {
+    try {
+      const { domain } = req.query;
+      const templates = await storage.getPipelineTemplates(domain as string | undefined);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching pipeline templates:", error);
+      res.status(500).json({ error: "Failed to fetch pipeline templates" });
+    }
+  });
+
+  app.get("/api/pipeline-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getPipelineTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching pipeline template:", error);
+      res.status(500).json({ error: "Failed to fetch pipeline template" });
+    }
+  });
+
+  app.post("/api/pipeline-templates", requireAuth, async (req, res) => {
+    try {
+      const { targets, ...templateData } = req.body;
+      const template = await storage.createPipelineTemplate(templateData, targets || []);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating pipeline template:", error);
+      res.status(500).json({ error: "Failed to create pipeline template" });
+    }
+  });
+
+  app.delete("/api/pipeline-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getPipelineTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      if (template.isBuiltIn) {
+        return res.status(403).json({ error: "Cannot delete built-in templates" });
+      }
+      await storage.deletePipelineTemplate(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting pipeline template:", error);
+      res.status(500).json({ error: "Failed to delete pipeline template" });
+    }
+  });
+
+  app.post("/api/pipeline-templates/seed", requireAuth, async (req, res) => {
+    try {
+      await storage.seedBuiltInTemplates();
+      const templates = await storage.getPipelineTemplates();
+      res.json({ message: "Built-in templates seeded successfully", templates });
+    } catch (error) {
+      console.error("Error seeding templates:", error);
+      res.status(500).json({ error: "Failed to seed templates" });
+    }
+  });
+
+  // ============================================
   // EXPERIMENT RECOMMENDATIONS ENDPOINTS
   // ============================================
 
