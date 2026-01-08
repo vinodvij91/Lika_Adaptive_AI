@@ -138,6 +138,9 @@ export const projectTargetsRelations = relations(projectTargets, ({ one }) => ({
 export const molecules = pgTable("molecules", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   smiles: text("smiles").notNull(),
+  name: text("name"),
+  seriesId: text("series_id"),
+  scaffoldId: text("scaffold_id"),
   source: moleculeSourceEnum("source").default("generated"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -374,15 +377,23 @@ export const libraryCollaboratorsRelations = relations(libraryCollaborators, ({ 
   library: one(curatedLibraries, { fields: [libraryCollaborators.libraryId], references: [curatedLibraries.id] }),
 }));
 
+export const assayReadoutTypeEnum = pgEnum("assay_readout_type", ["IC50", "EC50", "percent_inhibition", "AUC", "Ki", "Kd", "other"]);
+
 export const assays = pgTable("assays", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   targetId: varchar("target_id").references(() => targets.id, { onDelete: "set null" }),
+  diseaseId: varchar("disease_id"),
+  companyId: varchar("company_id"),
   type: assayTypeEnum("type").default("binding"),
+  readoutType: assayReadoutTypeEnum("readout_type").default("IC50"),
+  units: text("units"),
+  description: text("description"),
   estimatedCost: real("estimated_cost"),
   estimatedDurationDays: real("estimated_duration_days"),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const assaysRelations = relations(assays, ({ one, many }) => ({
@@ -413,12 +424,18 @@ export const assayResults = pgTable("assay_results", {
   assayId: varchar("assay_id").notNull().references(() => assays.id, { onDelete: "cascade" }),
   campaignId: varchar("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
   moleculeId: varchar("molecule_id").notNull().references(() => molecules.id, { onDelete: "cascade" }),
-  value: real("value"),
+  concentration: real("concentration"),
+  value: real("value").notNull(),
   units: text("units"),
   outcomeLabel: assayOutcomeEnum("outcome_label"),
+  replicateId: text("replicate_id"),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_assay_results_assay").on(table.assayId),
+  index("idx_assay_results_molecule").on(table.moleculeId),
+  index("idx_assay_results_campaign").on(table.campaignId),
+]);
 
 export const assayResultsRelations = relations(assayResults, ({ one }) => ({
   assay: one(assays, { fields: [assayResults.assayId], references: [assays.id] }),
