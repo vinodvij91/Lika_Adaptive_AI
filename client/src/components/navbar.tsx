@@ -35,13 +35,11 @@ export function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-        <Link href="/">
-          <a className="flex items-center gap-2.5 group">
-            <LikaLogoLeafGradient size={32} className="transition-transform group-hover:scale-105" />
-            <span className="text-sm font-medium tracking-[0.25em] uppercase text-white/90 group-hover:text-white transition-colors">
-              Lika Sciences
-            </span>
-          </a>
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <LikaLogoLeafGradient size={32} className="transition-transform group-hover:scale-105" />
+          <span className="text-sm font-medium tracking-[0.25em] uppercase text-white/90 group-hover:text-white transition-colors">
+            Lika Sciences
+          </span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -72,11 +70,9 @@ export function Navbar() {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard">
-                    <a className="flex items-center gap-2 w-full cursor-pointer">
-                      <User className="h-4 w-4" />
-                      Dashboard
-                    </a>
+                  <Link href="/dashboard" className="flex items-center gap-2 w-full cursor-pointer">
+                    <User className="h-4 w-4" />
+                    Dashboard
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -87,7 +83,7 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link href="/login">
+            <Link href="/login" asChild>
               <Button 
                 className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 border-0 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 transition-all"
                 data-testid="button-login"

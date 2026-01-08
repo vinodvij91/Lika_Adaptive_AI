@@ -39,6 +39,10 @@ import {
   materialsCampaigns,
   materialsOracleScores,
   materialsLearningGraph,
+  assayPanels,
+  assayPanelTargets,
+  moaNodes,
+  moaEdges,
   type Project,
   type InsertProject,
   type Target,
@@ -116,6 +120,14 @@ import {
   type InsertMaterialsOracleScore,
   type MaterialsLearningGraphEntry,
   type InsertMaterialsLearningGraphEntry,
+  type AssayPanel,
+  type InsertAssayPanel,
+  type AssayPanelTarget,
+  type InsertAssayPanelTarget,
+  type MoaNode,
+  type InsertMoaNode,
+  type MoaEdge,
+  type InsertMoaEdge,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -318,7 +330,38 @@ export interface IStorage {
   labelMaterialsLearningGraphEntry(id: string, label: string): Promise<MaterialsLearningGraphEntry | undefined>;
 
   getSarSeries(campaignId: string): Promise<{ seriesId: string | null; scaffoldId: string | null; molecules: Molecule[]; assaySummary: { count: number; meanValue: number | null; bestValue: number | null }; scoreRanges: { minOracle: number | null; maxOracle: number | null } }[]>;
-  getSarMoleculeDetails(campaignId: string, moleculeId: string): Promise<{ molecule: Molecule; analogs: Molecule[]; assayValues: { assayId: number; assayName: string; value: number; outcome: string | null }[]; predictedVsExperimental: { predictedScore: number | null; experimentalValue: number | null } } | null>;
+  getSarMoleculeDetails(campaignId: string, moleculeId: string): Promise<{ molecule: Molecule; analogs: Molecule[]; assayValues: { assayId: string; assayName: string; value: number; outcome: string | null }[]; predictedVsExperimental: { predictedScore: number | null; experimentalValue: number | null } } | null>;
+
+  getMultiTargetSar(campaignId: string): Promise<{
+    molecules: {
+      id: string;
+      smiles: string;
+      seriesId: string | null;
+      scaffoldId: string | null;
+      oracleScore: number | null;
+      targetScores: { targetId: string; targetName: string; predictedScore: number | null; experimentalValue: number | null; safetyFlag: boolean }[];
+      compositeScore: number | null;
+    }[];
+    targets: { id: string; name: string; role: string }[];
+    series: { seriesId: string; improvesMultipleTargets: boolean; degradesSafety: boolean }[];
+  }>;
+
+  getAssayPanels(campaignId?: string): Promise<AssayPanel[]>;
+  getAssayPanel(id: string): Promise<(AssayPanel & { targets: (AssayPanelTarget & { target: Target })[] }) | undefined>;
+  createAssayPanel(panel: InsertAssayPanel, targetIds: { targetId: string; role: string }[]): Promise<AssayPanel>;
+  deleteAssayPanel(id: string): Promise<void>;
+  getAssayPanelResults(panelId: string): Promise<{
+    molecules: { id: string; smiles: string; name: string | null }[];
+    targets: { id: string; name: string; role: string }[];
+    matrix: { moleculeId: string; targetId: string; value: number | null; outcomeLabel: string | null }[];
+    summary: { totalMolecules: number; balancedActives: number; selectiveCompounds: number };
+  }>;
+  uploadAssayPanelResults(panelId: string, results: { moleculeId?: string; smiles?: string; targetId: string; value: number; concentration?: number; outcomeLabel?: string }[]): Promise<{ imported: number; warnings: string[] }>;
+
+  getMoaGraph(campaignId?: string): Promise<{ nodes: MoaNode[]; edges: MoaEdge[] }>;
+  getMoaSubgraph(targetId: string): Promise<{ nodes: MoaNode[]; edges: MoaEdge[] }>;
+  createMoaNode(node: InsertMoaNode): Promise<MoaNode>;
+  createMoaEdge(edge: InsertMoaEdge): Promise<MoaEdge>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1372,21 +1415,21 @@ export class DatabaseStorage implements IStorage {
 
     if (scoresData.length === 0) return [];
 
-    const moleculeIds = scoresData.map(s => s.moleculeId).filter((id): id is number => id !== null);
+    const moleculeIds = scoresData.map(s => s.moleculeId).filter((id): id is string => id !== null);
     if (moleculeIds.length === 0) return [];
 
     const moleculesData = await db
       .select()
       .from(molecules)
-      .where(inArray(molecules.id, moleculeIds));
+      .where(sql`${molecules.id} = ANY(${moleculeIds})`);
 
     const assayResultsData = await db
       .select()
       .from(assayResults)
-      .where(inArray(assayResults.moleculeId, moleculeIds));
+      .where(sql`${assayResults.moleculeId} = ANY(${moleculeIds})`);
 
     const moleculeScoreMap = new Map(scoresData.map(s => [s.moleculeId, s]));
-    const moleculeAssayMap = new Map<number, typeof assayResultsData>();
+    const moleculeAssayMap = new Map<string, typeof assayResultsData>();
     for (const ar of assayResultsData) {
       if (ar.moleculeId) {
         if (!moleculeAssayMap.has(ar.moleculeId)) {
@@ -1435,22 +1478,21 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getSarMoleculeDetails(campaignId: string, moleculeId: string): Promise<{ molecule: Molecule; analogs: Molecule[]; assayValues: { assayId: number; assayName: string; value: number; outcome: string | null }[]; predictedVsExperimental: { predictedScore: number | null; experimentalValue: number | null } } | null> {
-    const molId = parseInt(moleculeId, 10);
-    if (isNaN(molId)) return null;
+  async getSarMoleculeDetails(campaignId: string, moleculeId: string): Promise<{ molecule: Molecule; analogs: Molecule[]; assayValues: { assayId: string; assayName: string; value: number; outcome: string | null }[]; predictedVsExperimental: { predictedScore: number | null; experimentalValue: number | null } } | null> {
+    if (!moleculeId) return null;
 
-    const molResult = await db.select().from(molecules).where(eq(molecules.id, molId)).limit(1);
+    const molResult = await db.select().from(molecules).where(eq(molecules.id, moleculeId)).limit(1);
     if (molResult.length === 0) return null;
     const molecule = molResult[0];
 
     let analogs: Molecule[] = [];
     if (molecule.seriesId) {
       analogs = await db.select().from(molecules)
-        .where(and(eq(molecules.seriesId, molecule.seriesId), sql`${molecules.id} != ${molId}`))
+        .where(and(eq(molecules.seriesId, molecule.seriesId), sql`${molecules.id} != ${moleculeId}`))
         .limit(20);
     } else if (molecule.scaffoldId) {
       analogs = await db.select().from(molecules)
-        .where(and(eq(molecules.scaffoldId, molecule.scaffoldId), sql`${molecules.id} != ${molId}`))
+        .where(and(eq(molecules.scaffoldId, molecule.scaffoldId), sql`${molecules.id} != ${moleculeId}`))
         .limit(20);
     }
 
@@ -1463,17 +1505,17 @@ export class DatabaseStorage implements IStorage {
       })
       .from(assayResults)
       .innerJoin(assays, eq(assayResults.assayId, assays.id))
-      .where(eq(assayResults.moleculeId, molId));
+      .where(eq(assayResults.moleculeId, moleculeId));
 
     const assayValues = assayResultsData.map(ar => ({
       assayId: ar.assayId,
       assayName: ar.assayName,
       value: Number(ar.value),
-      outcome: ar.outcomeLabel,
+      outcome: ar.outcomeLabel as string | null,
     }));
 
     const scoreResult = await db.select().from(moleculeScores)
-      .where(and(eq(moleculeScores.moleculeId, molId), eq(moleculeScores.campaignId, campaignId)))
+      .where(and(eq(moleculeScores.moleculeId, moleculeId), eq(moleculeScores.campaignId, campaignId)))
       .limit(1);
 
     const predictedScore = scoreResult.length > 0 && scoreResult[0].oracleScore ? Number(scoreResult[0].oracleScore) : null;
@@ -1485,6 +1527,393 @@ export class DatabaseStorage implements IStorage {
       assayValues,
       predictedVsExperimental: { predictedScore, experimentalValue },
     };
+  }
+
+  async getMultiTargetSar(campaignId: string): Promise<{
+    molecules: {
+      id: string;
+      smiles: string;
+      seriesId: string | null;
+      scaffoldId: string | null;
+      oracleScore: number | null;
+      targetScores: { targetId: string; targetName: string; predictedScore: number | null; experimentalValue: number | null; safetyFlag: boolean }[];
+      compositeScore: number | null;
+    }[];
+    targets: { id: string; name: string; role: string }[];
+    series: { seriesId: string; improvesMultipleTargets: boolean; degradesSafety: boolean }[];
+  }> {
+    const campaign = await this.getCampaign(campaignId);
+    if (!campaign) {
+      return { molecules: [], targets: [], series: [] };
+    }
+
+    const scores = await db.select().from(moleculeScores).where(eq(moleculeScores.campaignId, campaignId));
+    if (scores.length === 0) {
+      return { molecules: [], targets: [], series: [] };
+    }
+
+    const molIds = Array.from(new Set(scores.map(s => s.moleculeId)));
+    const molsData = await db.select().from(molecules).where(sql`${molecules.id} = ANY(${molIds})`);
+
+    const panelData = await db.select().from(assayPanels).where(eq(assayPanels.campaignId, campaignId));
+    const panelTargets: { id: string; name: string; role: string }[] = [];
+    
+    for (const panel of panelData) {
+      const pts = await db
+        .select({
+          targetId: assayPanelTargets.targetId,
+          role: assayPanelTargets.role,
+          targetName: targets.name,
+        })
+        .from(assayPanelTargets)
+        .innerJoin(targets, eq(assayPanelTargets.targetId, targets.id))
+        .where(eq(assayPanelTargets.assayPanelId, panel.id));
+      
+      for (const pt of pts) {
+        if (!panelTargets.find(t => t.id === pt.targetId)) {
+          panelTargets.push({ id: pt.targetId, name: pt.targetName, role: pt.role || "primary" });
+        }
+      }
+    }
+
+    if (panelTargets.length === 0) {
+      const allTargets = await db.select().from(targets).limit(5);
+      for (const t of allTargets) {
+        panelTargets.push({ id: t.id, name: t.name, role: "primary" });
+      }
+    }
+
+    const assayResultsData = await db
+      .select()
+      .from(assayResults)
+      .where(eq(assayResults.campaignId, campaignId));
+
+    const resultsByMolecule = new Map<string, Map<string, { value: number; isSafety: boolean }>>();
+    for (const ar of assayResultsData) {
+      const assay = await db.select().from(assays).where(eq(assays.id, ar.assayId)).limit(1);
+      if (assay.length === 0) continue;
+      const targetId = assay[0].targetId;
+      if (!targetId) continue;
+      
+      if (!resultsByMolecule.has(ar.moleculeId)) {
+        resultsByMolecule.set(ar.moleculeId, new Map());
+      }
+      const targetRole = panelTargets.find(pt => pt.id === targetId)?.role || "primary";
+      resultsByMolecule.get(ar.moleculeId)!.set(targetId, {
+        value: ar.value,
+        isSafety: targetRole === "safety",
+      });
+    }
+
+    const moleculesResult: {
+      id: string;
+      smiles: string;
+      seriesId: string | null;
+      scaffoldId: string | null;
+      oracleScore: number | null;
+      targetScores: { targetId: string; targetName: string; predictedScore: number | null; experimentalValue: number | null; safetyFlag: boolean }[];
+      compositeScore: number | null;
+    }[] = [];
+
+    const seriesMap = new Map<string, { improvesCount: number; degradesSafety: boolean }>();
+
+    for (const mol of molsData) {
+      const score = scores.find(s => s.moleculeId === mol.id);
+      const oracleScore = score?.oracleScore ?? null;
+
+      const targetScores: { targetId: string; targetName: string; predictedScore: number | null; experimentalValue: number | null; safetyFlag: boolean }[] = [];
+      let compositeSum = 0;
+      let compositeCount = 0;
+      
+      for (const pt of panelTargets) {
+        const expData = resultsByMolecule.get(mol.id)?.get(pt.id);
+        const experimentalValue = expData?.value ?? null;
+        const predictedScore = oracleScore;
+        const isSafety = pt.role === "safety";
+        
+        targetScores.push({
+          targetId: pt.id,
+          targetName: pt.name,
+          predictedScore,
+          experimentalValue,
+          safetyFlag: isSafety,
+        });
+
+        if (experimentalValue !== null) {
+          compositeSum += experimentalValue;
+          compositeCount++;
+        }
+      }
+
+      const compositeScore = compositeCount > 0 ? compositeSum / compositeCount : oracleScore;
+
+      moleculesResult.push({
+        id: mol.id,
+        smiles: mol.smiles,
+        seriesId: mol.seriesId,
+        scaffoldId: mol.scaffoldId,
+        oracleScore,
+        targetScores,
+        compositeScore,
+      });
+
+      if (mol.seriesId) {
+        if (!seriesMap.has(mol.seriesId)) {
+          seriesMap.set(mol.seriesId, { improvesCount: 0, degradesSafety: false });
+        }
+        const seriesData = seriesMap.get(mol.seriesId)!;
+        const activeTargets = targetScores.filter(ts => ts.experimentalValue !== null && ts.experimentalValue < 1000);
+        if (activeTargets.length > 1) {
+          seriesData.improvesCount++;
+        }
+        const safetyIssue = targetScores.find(ts => ts.safetyFlag && ts.experimentalValue !== null && ts.experimentalValue < 100);
+        if (safetyIssue) {
+          seriesData.degradesSafety = true;
+        }
+      }
+    }
+
+    const series = Array.from(seriesMap.entries()).map(([seriesId, data]) => ({
+      seriesId,
+      improvesMultipleTargets: data.improvesCount > 0,
+      degradesSafety: data.degradesSafety,
+    }));
+
+    return {
+      molecules: moleculesResult,
+      targets: panelTargets,
+      series,
+    };
+  }
+
+  async getAssayPanels(campaignId?: string): Promise<AssayPanel[]> {
+    if (campaignId) {
+      return db.select().from(assayPanels).where(eq(assayPanels.campaignId, campaignId)).orderBy(desc(assayPanels.createdAt));
+    }
+    return db.select().from(assayPanels).orderBy(desc(assayPanels.createdAt));
+  }
+
+  async getAssayPanel(id: string): Promise<(AssayPanel & { targets: (AssayPanelTarget & { target: Target })[] }) | undefined> {
+    const panelResult = await db.select().from(assayPanels).where(eq(assayPanels.id, id)).limit(1);
+    if (panelResult.length === 0) return undefined;
+    
+    const panel = panelResult[0];
+    const panelTargetsData = await db
+      .select()
+      .from(assayPanelTargets)
+      .where(eq(assayPanelTargets.assayPanelId, id));
+    
+    const targetsWithInfo: (AssayPanelTarget & { target: Target })[] = [];
+    for (const pt of panelTargetsData) {
+      const targetData = await db.select().from(targets).where(eq(targets.id, pt.targetId)).limit(1);
+      if (targetData.length > 0) {
+        targetsWithInfo.push({ ...pt, target: targetData[0] });
+      }
+    }
+
+    return { ...panel, targets: targetsWithInfo };
+  }
+
+  async createAssayPanel(panel: InsertAssayPanel, targetIds: { targetId: string; role: string }[]): Promise<AssayPanel> {
+    const result = await db.insert(assayPanels).values(panel).returning();
+    const createdPanel = result[0];
+
+    for (const t of targetIds) {
+      await db.insert(assayPanelTargets).values({
+        assayPanelId: createdPanel.id,
+        targetId: t.targetId,
+        role: t.role as "primary" | "secondary" | "safety",
+      });
+    }
+
+    return createdPanel;
+  }
+
+  async deleteAssayPanel(id: string): Promise<void> {
+    await db.delete(assayPanels).where(eq(assayPanels.id, id));
+  }
+
+  async getAssayPanelResults(panelId: string): Promise<{
+    molecules: { id: string; smiles: string; name: string | null }[];
+    targets: { id: string; name: string; role: string }[];
+    matrix: { moleculeId: string; targetId: string; value: number | null; outcomeLabel: string | null }[];
+    summary: { totalMolecules: number; balancedActives: number; selectiveCompounds: number };
+  }> {
+    const panel = await this.getAssayPanel(panelId);
+    if (!panel) {
+      return { molecules: [], targets: [], matrix: [], summary: { totalMolecules: 0, balancedActives: 0, selectiveCompounds: 0 } };
+    }
+
+    const targetsList = panel.targets.map(t => ({
+      id: t.targetId,
+      name: t.target.name,
+      role: t.role || "primary",
+    }));
+
+    const targetIdSet = new Set(targetsList.map(t => t.id));
+
+    const assayList = await db.select().from(assays).where(sql`${assays.targetId} = ANY(${Array.from(targetIdSet)})`);
+    const assayIdToTarget = new Map<string, string>();
+    for (const a of assayList) {
+      if (a.targetId) assayIdToTarget.set(a.id, a.targetId);
+    }
+
+    const arData = await db
+      .select()
+      .from(assayResults)
+      .where(eq(assayResults.campaignId, panel.campaignId));
+
+    const moleculeIds = new Set<string>();
+    const matrix: { moleculeId: string; targetId: string; value: number | null; outcomeLabel: string | null }[] = [];
+
+    for (const ar of arData) {
+      const targetId = assayIdToTarget.get(ar.assayId);
+      if (targetId && targetIdSet.has(targetId)) {
+        moleculeIds.add(ar.moleculeId);
+        matrix.push({
+          moleculeId: ar.moleculeId,
+          targetId,
+          value: ar.value,
+          outcomeLabel: ar.outcomeLabel,
+        });
+      }
+    }
+
+    const molData = moleculeIds.size > 0 
+      ? await db.select().from(molecules).where(sql`${molecules.id} = ANY(${Array.from(moleculeIds)})`)
+      : [];
+
+    const moleculesFormatted = molData.map(m => ({ id: m.id, smiles: m.smiles, name: m.name }));
+
+    const molTargetActive = new Map<string, Set<string>>();
+    for (const entry of matrix) {
+      if (entry.value !== null && entry.value < 1000) {
+        if (!molTargetActive.has(entry.moleculeId)) {
+          molTargetActive.set(entry.moleculeId, new Set());
+        }
+        molTargetActive.get(entry.moleculeId)!.add(entry.targetId);
+      }
+    }
+
+    let balancedActives = 0;
+    let selectiveCompounds = 0;
+    for (const activeTargets of Array.from(molTargetActive.values())) {
+      if (activeTargets.size >= 2) {
+        balancedActives++;
+      } else if (activeTargets.size === 1) {
+        selectiveCompounds++;
+      }
+    }
+
+    return {
+      molecules: moleculesFormatted,
+      targets: targetsList,
+      matrix,
+      summary: {
+        totalMolecules: moleculesFormatted.length,
+        balancedActives,
+        selectiveCompounds,
+      },
+    };
+  }
+
+  async uploadAssayPanelResults(panelId: string, results: { moleculeId?: string; smiles?: string; targetId: string; value: number; concentration?: number; outcomeLabel?: string }[]): Promise<{ imported: number; warnings: string[] }> {
+    const panel = await this.getAssayPanel(panelId);
+    if (!panel) {
+      return { imported: 0, warnings: ["Panel not found"] };
+    }
+
+    const panelTargetIds = new Set(panel.targets.map(t => t.targetId));
+    const warnings: string[] = [];
+    let imported = 0;
+
+    for (const row of results) {
+      if (!panelTargetIds.has(row.targetId)) {
+        warnings.push(`Target ${row.targetId} not in panel`);
+        continue;
+      }
+
+      let moleculeId = row.moleculeId;
+      if (!moleculeId && row.smiles) {
+        const existingMol = await db.select().from(molecules).where(eq(molecules.smiles, row.smiles)).limit(1);
+        if (existingMol.length > 0) {
+          moleculeId = existingMol[0].id;
+        } else {
+          const newMol = await db.insert(molecules).values({ smiles: row.smiles }).returning();
+          moleculeId = newMol[0].id;
+        }
+      }
+
+      if (!moleculeId) {
+        warnings.push("Row missing moleculeId and smiles");
+        continue;
+      }
+
+      const targetAssays = await db.select().from(assays).where(eq(assays.targetId, row.targetId)).limit(1);
+      let assayId: string;
+      if (targetAssays.length > 0) {
+        assayId = targetAssays[0].id;
+      } else {
+        const newAssay = await db.insert(assays).values({ 
+          name: `Panel Assay - ${row.targetId}`,
+          targetId: row.targetId,
+          type: "binding",
+        }).returning();
+        assayId = newAssay[0].id;
+      }
+
+      await db.insert(assayResults).values({
+        assayId,
+        campaignId: panel.campaignId,
+        moleculeId,
+        value: row.value,
+        concentration: row.concentration,
+        outcomeLabel: row.outcomeLabel as any,
+      });
+      imported++;
+    }
+
+    return { imported, warnings };
+  }
+
+  async getMoaGraph(campaignId?: string): Promise<{ nodes: MoaNode[]; edges: MoaEdge[] }> {
+    const allNodes = await db.select().from(moaNodes).orderBy(desc(moaNodes.createdAt));
+    const allEdges = await db.select().from(moaEdges).orderBy(desc(moaEdges.createdAt));
+    return { nodes: allNodes, edges: allEdges };
+  }
+
+  async getMoaSubgraph(targetId: string): Promise<{ nodes: MoaNode[]; edges: MoaEdge[] }> {
+    const targetNode = await db.select().from(moaNodes).where(
+      and(eq(moaNodes.type, "target"), sql`${moaNodes.metadata}->>'targetId' = ${targetId}`)
+    ).limit(1);
+
+    if (targetNode.length === 0) {
+      return { nodes: [], edges: [] };
+    }
+
+    const nodeId = targetNode[0].id;
+    const edgesFrom = await db.select().from(moaEdges).where(eq(moaEdges.fromNodeId, nodeId));
+    const edgesTo = await db.select().from(moaEdges).where(eq(moaEdges.toNodeId, nodeId));
+    
+    const allEdges = [...edgesFrom, ...edgesTo];
+    const connectedNodeIds = new Set<string>([nodeId]);
+    for (const e of allEdges) {
+      connectedNodeIds.add(e.fromNodeId);
+      connectedNodeIds.add(e.toNodeId);
+    }
+
+    const nodes = await db.select().from(moaNodes).where(sql`${moaNodes.id} = ANY(${Array.from(connectedNodeIds)})`);
+    return { nodes, edges: allEdges };
+  }
+
+  async createMoaNode(node: InsertMoaNode): Promise<MoaNode> {
+    const result = await db.insert(moaNodes).values(node).returning();
+    return result[0];
+  }
+
+  async createMoaEdge(edge: InsertMoaEdge): Promise<MoaEdge> {
+    const result = await db.insert(moaEdges).values(edge).returning();
+    return result[0];
   }
 }
 

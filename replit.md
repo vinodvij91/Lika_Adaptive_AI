@@ -71,6 +71,28 @@ attached_assets/ # Specification documents
 - **Usage Tracking**: Resource consumption tracking (CPU, GPU, storage) per campaign/project with source attribution
 - **Credit Wallet**: Foundation for credits-based billing (wallet balance, transactions) - stub only in v0
 
+### Multi-Target SAR Features (v1)
+- **Assay Panels**: Group multiple targets with role assignments (primary, secondary, safety) for multi-target profiling
+- **MoA Knowledge Graph**: Mechanism of action graph with nodes (target, pathway, process, phenotype) and edges (activates, inhibits, associated_with)
+- **Multi-Target SAR Visualization**: 
+  - Radar charts for target activity profiles
+  - Trade-off scatter plots for pairwise target comparison
+  - Series-level analysis with multi-target and safety flags
+  - Activity matrix heatmap across all targets
+- **Composite Scoring**: Combined scoring across multiple targets
+- **Safety Flag Detection**: Automatic identification of compounds with safety target liability
+
+### Multi-Target SAR Endpoints
+- `GET /api/campaigns/:id/sar/multi-target` - Returns molecules with per-target scores, targets with roles, and series analysis
+- `GET /api/assay-panels` - List assay panels (optional campaignId filter)
+- `GET /api/assay-panels/:id` - Get panel with target assignments
+- `POST /api/assay-panels` - Create assay panel with targets
+- `DELETE /api/assay-panels/:id` - Delete assay panel
+- `GET /api/assay-panels/:id/results` - Get results matrix for panel
+- `POST /api/assay-panels/:id/upload` - Bulk upload assay results
+- `GET /api/moa-graph` - Get full MoA graph
+- `GET /api/moa-graph/target/:id` - Get MoA subgraph for a target
+
 ### Translational Medicine Features (v1)
 - **Target Variants**: Track clinically significant genetic variants for variant-aware scoring
 - **Disease Context Signals**: Store disease-specific context signals (GWAS, clinical trial data, biomarker relevance)

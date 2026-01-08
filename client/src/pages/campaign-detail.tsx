@@ -35,6 +35,7 @@ import {
   Activity,
 } from "lucide-react";
 import { SarVisualization } from "@/components/sar-visualization";
+import { MultiTargetSar } from "@/components/multi-target-sar";
 import { formatDistanceToNow } from "date-fns";
 import type { Campaign, Job, MoleculeScore, PipelineConfig } from "@shared/schema";
 
@@ -290,6 +291,10 @@ export default function CampaignDetailPage() {
                 <Activity className="h-4 w-4" />
                 SAR
               </TabsTrigger>
+              <TabsTrigger value="multi-target" className="gap-2" data-testid="tab-multi-target">
+                <Target className="h-4 w-4" />
+                Multi-Target
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="molecules">
@@ -512,6 +517,10 @@ export default function CampaignDetailPage() {
 
             <TabsContent value="sar">
               <SarVisualization campaignId={id || ""} />
+            </TabsContent>
+
+            <TabsContent value="multi-target">
+              <MultiTargetSar campaignId={id || ""} />
             </TabsContent>
           </Tabs>
         </div>

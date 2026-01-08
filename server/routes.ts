@@ -35,6 +35,10 @@ import {
   insertMaterialsCampaignSchema,
   insertMaterialsOracleScoreSchema,
   insertMaterialsLearningGraphSchema,
+  insertAssayPanelSchema,
+  insertAssayPanelTargetSchema,
+  insertMoaNodeSchema,
+  insertMoaEdgeSchema,
   moleculeScores,
 } from "@shared/schema";
 
@@ -1692,6 +1696,150 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching SAR molecule details:", error);
       res.status(500).json({ error: "Failed to fetch SAR molecule details" });
+    }
+  });
+
+  // ============================================
+  // MULTI-TARGET SAR ENDPOINTS
+  // ============================================
+
+  app.get("/api/campaigns/:campaignId/sar/multi-target", requireAuth, async (req, res) => {
+    try {
+      const data = await storage.getMultiTargetSar(req.params.campaignId);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching multi-target SAR:", error);
+      res.status(500).json({ error: "Failed to fetch multi-target SAR data" });
+    }
+  });
+
+  // ============================================
+  // ASSAY PANELS ENDPOINTS
+  // ============================================
+
+  app.get("/api/assay-panels", requireAuth, async (req, res) => {
+    try {
+      const { campaignId } = req.query;
+      const panels = await storage.getAssayPanels(campaignId as string | undefined);
+      res.json(panels);
+    } catch (error) {
+      console.error("Error fetching assay panels:", error);
+      res.status(500).json({ error: "Failed to fetch assay panels" });
+    }
+  });
+
+  app.get("/api/assay-panels/:id", requireAuth, async (req, res) => {
+    try {
+      const panel = await storage.getAssayPanel(req.params.id);
+      if (!panel) {
+        return res.status(404).json({ error: "Assay panel not found" });
+      }
+      res.json(panel);
+    } catch (error) {
+      console.error("Error fetching assay panel:", error);
+      res.status(500).json({ error: "Failed to fetch assay panel" });
+    }
+  });
+
+  app.post("/api/assay-panels", requireAuth, async (req, res) => {
+    try {
+      const { targets, ...panelData } = req.body;
+      const parsed = insertAssayPanelSchema.safeParse(panelData);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const panel = await storage.createAssayPanel(parsed.data, targets || []);
+      res.status(201).json(panel);
+    } catch (error) {
+      console.error("Error creating assay panel:", error);
+      res.status(500).json({ error: "Failed to create assay panel" });
+    }
+  });
+
+  app.delete("/api/assay-panels/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteAssayPanel(req.params.id);
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting assay panel:", error);
+      res.status(500).json({ error: "Failed to delete assay panel" });
+    }
+  });
+
+  app.get("/api/assay-panels/:panelId/results", requireAuth, async (req, res) => {
+    try {
+      const matrix = await storage.getAssayPanelResults(req.params.panelId);
+      res.json(matrix);
+    } catch (error) {
+      console.error("Error fetching assay panel results:", error);
+      res.status(500).json({ error: "Failed to fetch assay panel results" });
+    }
+  });
+
+  app.post("/api/assay-panels/:panelId/upload", requireAuth, async (req, res) => {
+    try {
+      const { results } = req.body;
+      if (!Array.isArray(results)) {
+        return res.status(400).json({ error: "Results must be an array" });
+      }
+      const created = await storage.uploadAssayPanelResults(req.params.panelId, results);
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error uploading assay panel results:", error);
+      res.status(500).json({ error: "Failed to upload assay panel results" });
+    }
+  });
+
+  // ============================================
+  // MOA (MECHANISM OF ACTION) GRAPH ENDPOINTS
+  // ============================================
+
+  app.get("/api/moa/graph", requireAuth, async (req, res) => {
+    try {
+      const { campaignId } = req.query;
+      const graph = await storage.getMoaGraph(campaignId as string | undefined);
+      res.json(graph);
+    } catch (error) {
+      console.error("Error fetching MoA graph:", error);
+      res.status(500).json({ error: "Failed to fetch MoA graph" });
+    }
+  });
+
+  app.get("/api/moa/target/:targetId", requireAuth, async (req, res) => {
+    try {
+      const subgraph = await storage.getMoaSubgraph(req.params.targetId);
+      res.json(subgraph);
+    } catch (error) {
+      console.error("Error fetching MoA subgraph:", error);
+      res.status(500).json({ error: "Failed to fetch MoA subgraph" });
+    }
+  });
+
+  app.post("/api/moa/nodes", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertMoaNodeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const node = await storage.createMoaNode(parsed.data);
+      res.status(201).json(node);
+    } catch (error) {
+      console.error("Error creating MoA node:", error);
+      res.status(500).json({ error: "Failed to create MoA node" });
+    }
+  });
+
+  app.post("/api/moa/edges", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertMoaEdgeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const edge = await storage.createMoaEdge(parsed.data);
+      res.status(201).json(edge);
+    } catch (error) {
+      console.error("Error creating MoA edge:", error);
+      res.status(500).json({ error: "Failed to create MoA edge" });
     }
   });
 
