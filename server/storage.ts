@@ -316,6 +316,9 @@ export interface IStorage {
   getMaterialsLearningGraph(campaignId?: string): Promise<MaterialsLearningGraphEntry[]>;
   createMaterialsLearningGraphEntry(entry: InsertMaterialsLearningGraphEntry): Promise<MaterialsLearningGraphEntry>;
   labelMaterialsLearningGraphEntry(id: string, label: string): Promise<MaterialsLearningGraphEntry | undefined>;
+
+  getSarSeries(campaignId: string): Promise<{ seriesId: string | null; scaffoldId: string | null; molecules: Molecule[]; assaySummary: { count: number; meanValue: number | null; bestValue: number | null }; scoreRanges: { minOracle: number | null; maxOracle: number | null } }[]>;
+  getSarMoleculeDetails(campaignId: string, moleculeId: string): Promise<{ molecule: Molecule; analogs: Molecule[]; assayValues: { assayId: number; assayName: string; value: number; outcome: string | null }[]; predictedVsExperimental: { predictedScore: number | null; experimentalValue: number | null } } | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1359,6 +1362,129 @@ export class DatabaseStorage implements IStorage {
   async labelMaterialsLearningGraphEntry(id: string, label: string): Promise<MaterialsLearningGraphEntry | undefined> {
     const result = await db.update(materialsLearningGraph).set({ label, labeledAt: new Date() }).where(eq(materialsLearningGraph.id, id)).returning();
     return result[0];
+  }
+
+  async getSarSeries(campaignId: string): Promise<{ seriesId: string | null; scaffoldId: string | null; molecules: Molecule[]; assaySummary: { count: number; meanValue: number | null; bestValue: number | null }; scoreRanges: { minOracle: number | null; maxOracle: number | null } }[]> {
+    const scoresData = await db
+      .select()
+      .from(moleculeScores)
+      .where(eq(moleculeScores.campaignId, campaignId));
+
+    if (scoresData.length === 0) return [];
+
+    const moleculeIds = scoresData.map(s => s.moleculeId).filter((id): id is number => id !== null);
+    if (moleculeIds.length === 0) return [];
+
+    const moleculesData = await db
+      .select()
+      .from(molecules)
+      .where(inArray(molecules.id, moleculeIds));
+
+    const assayResultsData = await db
+      .select()
+      .from(assayResults)
+      .where(inArray(assayResults.moleculeId, moleculeIds));
+
+    const moleculeScoreMap = new Map(scoresData.map(s => [s.moleculeId, s]));
+    const moleculeAssayMap = new Map<number, typeof assayResultsData>();
+    for (const ar of assayResultsData) {
+      if (ar.moleculeId) {
+        if (!moleculeAssayMap.has(ar.moleculeId)) {
+          moleculeAssayMap.set(ar.moleculeId, []);
+        }
+        moleculeAssayMap.get(ar.moleculeId)!.push(ar);
+      }
+    }
+
+    const groupMap = new Map<string, { seriesId: string | null; scaffoldId: string | null; molecules: Molecule[]; oracleScores: number[]; assayValues: number[] }>();
+
+    for (const mol of moleculesData) {
+      const groupKey = mol.seriesId || mol.scaffoldId || `single-${mol.id}`;
+      if (!groupMap.has(groupKey)) {
+        groupMap.set(groupKey, { seriesId: mol.seriesId, scaffoldId: mol.scaffoldId, molecules: [], oracleScores: [], assayValues: [] });
+      }
+      const group = groupMap.get(groupKey)!;
+      group.molecules.push(mol);
+
+      const score = moleculeScoreMap.get(mol.id);
+      if (score?.oracleScore) {
+        group.oracleScores.push(Number(score.oracleScore));
+      }
+
+      const molAssays = moleculeAssayMap.get(mol.id) || [];
+      for (const ar of molAssays) {
+        if (ar.value !== null) {
+          group.assayValues.push(Number(ar.value));
+        }
+      }
+    }
+
+    return Array.from(groupMap.values()).map(g => ({
+      seriesId: g.seriesId,
+      scaffoldId: g.scaffoldId,
+      molecules: g.molecules,
+      assaySummary: {
+        count: g.assayValues.length,
+        meanValue: g.assayValues.length > 0 ? g.assayValues.reduce((a, b) => a + b, 0) / g.assayValues.length : null,
+        bestValue: g.assayValues.length > 0 ? Math.min(...g.assayValues) : null,
+      },
+      scoreRanges: {
+        minOracle: g.oracleScores.length > 0 ? Math.min(...g.oracleScores) : null,
+        maxOracle: g.oracleScores.length > 0 ? Math.max(...g.oracleScores) : null,
+      },
+    }));
+  }
+
+  async getSarMoleculeDetails(campaignId: string, moleculeId: string): Promise<{ molecule: Molecule; analogs: Molecule[]; assayValues: { assayId: number; assayName: string; value: number; outcome: string | null }[]; predictedVsExperimental: { predictedScore: number | null; experimentalValue: number | null } } | null> {
+    const molId = parseInt(moleculeId, 10);
+    if (isNaN(molId)) return null;
+
+    const molResult = await db.select().from(molecules).where(eq(molecules.id, molId)).limit(1);
+    if (molResult.length === 0) return null;
+    const molecule = molResult[0];
+
+    let analogs: Molecule[] = [];
+    if (molecule.seriesId) {
+      analogs = await db.select().from(molecules)
+        .where(and(eq(molecules.seriesId, molecule.seriesId), sql`${molecules.id} != ${molId}`))
+        .limit(20);
+    } else if (molecule.scaffoldId) {
+      analogs = await db.select().from(molecules)
+        .where(and(eq(molecules.scaffoldId, molecule.scaffoldId), sql`${molecules.id} != ${molId}`))
+        .limit(20);
+    }
+
+    const assayResultsData = await db
+      .select({
+        assayId: assays.id,
+        assayName: assays.name,
+        value: assayResults.value,
+        outcomeLabel: assayResults.outcomeLabel,
+      })
+      .from(assayResults)
+      .innerJoin(assays, eq(assayResults.assayId, assays.id))
+      .where(eq(assayResults.moleculeId, molId));
+
+    const assayValues = assayResultsData.map(ar => ({
+      assayId: ar.assayId,
+      assayName: ar.assayName,
+      value: Number(ar.value),
+      outcome: ar.outcomeLabel,
+    }));
+
+    const scoreResult = await db.select().from(moleculeScores)
+      .where(and(eq(moleculeScores.moleculeId, molId), eq(moleculeScores.campaignId, campaignId)))
+      .limit(1);
+
+    const predictedScore = scoreResult.length > 0 && scoreResult[0].oracleScore ? Number(scoreResult[0].oracleScore) : null;
+    const experimentalValue = assayValues.length > 0 ? Math.min(...assayValues.map(v => v.value)) : null;
+
+    return {
+      molecule,
+      analogs,
+      assayValues,
+      predictedVsExperimental: { predictedScore, experimentalValue },
+    };
   }
 }
 

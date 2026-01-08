@@ -1669,6 +1669,33 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // SAR (STRUCTURE-ACTIVITY RELATIONSHIP) ENDPOINTS
+  // ============================================
+
+  app.get("/api/campaigns/:campaignId/sar/series", requireAuth, async (req, res) => {
+    try {
+      const series = await storage.getSarSeries(req.params.campaignId);
+      res.json(series);
+    } catch (error) {
+      console.error("Error fetching SAR series:", error);
+      res.status(500).json({ error: "Failed to fetch SAR series" });
+    }
+  });
+
+  app.get("/api/campaigns/:campaignId/sar/molecule/:moleculeId", requireAuth, async (req, res) => {
+    try {
+      const details = await storage.getSarMoleculeDetails(req.params.campaignId, req.params.moleculeId);
+      if (!details) {
+        return res.status(404).json({ error: "Molecule not found" });
+      }
+      res.json(details);
+    } catch (error) {
+      console.error("Error fetching SAR molecule details:", error);
+      res.status(500).json({ error: "Failed to fetch SAR molecule details" });
+    }
+  });
+
+  // ============================================
   // EXPERIMENT RECOMMENDATIONS ENDPOINTS
   // ============================================
 

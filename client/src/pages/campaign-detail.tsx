@@ -32,7 +32,9 @@ import {
   Target,
   Beaker,
   Atom,
+  Activity,
 } from "lucide-react";
+import { SarVisualization } from "@/components/sar-visualization";
 import { formatDistanceToNow } from "date-fns";
 import type { Campaign, Job, MoleculeScore, PipelineConfig } from "@shared/schema";
 
@@ -174,6 +176,12 @@ export default function CampaignDetailPage() {
                 Start Campaign
               </Button>
             )}
+            <Link href={`/campaigns/${id}/hit-triage`}>
+              <Button variant="outline" className="gap-2" data-testid="button-hit-triage">
+                <Target className="h-4 w-4" />
+                Hit Triage
+              </Button>
+            </Link>
             <Button variant="outline" onClick={handleExport} className="gap-2" data-testid="button-export">
               <Download className="h-4 w-4" />
               Export CSV
@@ -277,6 +285,10 @@ export default function CampaignDetailPage() {
               <TabsTrigger value="config" className="gap-2" data-testid="tab-config">
                 <Target className="h-4 w-4" />
                 Configuration
+              </TabsTrigger>
+              <TabsTrigger value="sar" className="gap-2" data-testid="tab-sar">
+                <Activity className="h-4 w-4" />
+                SAR
               </TabsTrigger>
             </TabsList>
 
@@ -496,6 +508,10 @@ export default function CampaignDetailPage() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="sar">
+              <SarVisualization campaignId={id || ""} />
             </TabsContent>
           </Tabs>
         </div>
