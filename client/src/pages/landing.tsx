@@ -24,6 +24,15 @@ import {
   Hexagon,
   Cpu,
   Play,
+  Filter,
+  TestTube2,
+  Activity,
+  Network,
+  Radar,
+  Scale,
+  Boxes,
+  Thermometer,
+  TrendingUp,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -407,6 +416,327 @@ export default function LandingPage() {
 
         <TrustSignals />
 
+        {/* Drug Discovery Section: From Virtual Hits to Assay-Validated Leads */}
+        <section className="py-24 border-t relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-teal-500/5" />
+          <div className="relative max-w-7xl mx-auto px-6">
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 text-cyan-400 text-sm font-medium mb-6 border border-cyan-500/20">
+                <FlaskConical className="h-4 w-4" />
+                Drug Discovery
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                From Virtual Hits to Assay-Validated Leads
+              </h2>
+              <p className="text-muted-foreground max-w-3xl mx-auto text-lg leading-relaxed">
+                Lika unifies virtual screening, hit triage, assay validation, and SAR-driven 
+                optimization into one adaptive AI discovery workflow.
+              </p>
+            </div>
+            
+            <div className="mb-12 max-w-4xl mx-auto">
+              <p className="text-center text-muted-foreground leading-relaxed">
+                Lika doesn't stop at virtual ranking. The platform provides comprehensive tools for 
+                identifying and prioritizing virtual hits, selecting the most promising compounds for assays, 
+                integrating experimental results back into the discovery loop, analyzing structure-activity 
+                relationships, and iterating toward stronger hit-to-lead candidates.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              <Card className="border-cyan-500/20 bg-gradient-to-br from-cyan-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center mb-4 border border-cyan-500/30">
+                    <Filter className="h-6 w-6 text-cyan-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">Hit Triage</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Refine virtual hit lists with docking, ADMET, uncertainty filters, synthesis 
+                    feasibility, and translational relevance — creating ranked shortlists ready 
+                    for assay testing.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs text-cyan-400/80">hit identification</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-cyan-400/80">prioritization</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-cyan-400/80">screening cascades</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-cyan-500/20 bg-gradient-to-br from-cyan-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center mb-4 border border-cyan-500/30">
+                    <TestTube2 className="h-6 w-6 text-cyan-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">Assay Feedback</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Upload in-vitro and cell-based assay results into structured workflows. 
+                    Track dose-response behavior, experimental outcomes, and validation signals 
+                    that inform the next iteration.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs text-cyan-400/80">assay validation</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-cyan-400/80">dose-response</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-cyan-400/80">active vs inactive</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-cyan-500/20 bg-gradient-to-br from-cyan-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center mb-4 border border-cyan-500/30">
+                    <Activity className="h-6 w-6 text-cyan-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">SAR Insight</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Visualize structure-activity relationships across series, scaffolds, and 
+                    analogs. Compare predicted vs experimental activity to drive rational 
+                    hit-to-lead refinement.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs text-cyan-400/80">SAR</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-cyan-400/80">analog comparison</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-cyan-400/80">hit-to-lead</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="text-center">
+              <p className="text-muted-foreground mb-6">
+                See how Lika connects screening, assays, and SAR into a continuous discovery loop.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <a href="/login">
+                  <Button variant="outline" className="gap-2 border-cyan-500/50 text-cyan-400" data-testid="button-explore-hit-triage">
+                    <Filter className="h-4 w-4" />
+                    Explore Hit Triage
+                  </Button>
+                </a>
+                <a href="/login">
+                  <Button variant="outline" className="gap-2 border-cyan-500/50 text-cyan-400" data-testid="button-see-assay-feedback">
+                    <TestTube2 className="h-4 w-4" />
+                    See Assay Feedback
+                  </Button>
+                </a>
+                <a href="/login">
+                  <Button variant="outline" className="gap-2 border-cyan-500/50 text-cyan-400" data-testid="button-view-sar-tools">
+                    <Activity className="h-4 w-4" />
+                    View SAR Tools
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Materials Science Section: From Structure to Performance */}
+        <section className="py-24 border-t relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-orange-500/5" />
+          <div className="relative max-w-7xl mx-auto px-6">
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-400 text-sm font-medium mb-6 border border-amber-500/20">
+                <Hexagon className="h-4 w-4" />
+                Materials Science
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                From Molecular Structure to Real-World Performance
+              </h2>
+              <p className="text-muted-foreground max-w-3xl mx-auto text-lg leading-relaxed">
+                Lika brings structure-property understanding, simulation feedback, and 
+                iterative materials optimization into a unified discovery environment.
+              </p>
+            </div>
+
+            <div className="mb-12 max-w-4xl mx-auto">
+              <p className="text-center text-muted-foreground leading-relaxed">
+                Lika enables materials teams to explore polymer, crystal, and composite structures, 
+                predict and simulate material properties, analyze structure-property relationships, 
+                and iterate toward higher-performance materials for real applications — with focus on 
+                engineering performance, manufacturability, and applied R&D.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              <Card className="border-amber-500/20 bg-gradient-to-br from-amber-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center mb-4 border border-amber-500/30">
+                    <Boxes className="h-6 w-6 text-amber-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">Structure Libraries & Design</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Manage curated libraries of polymers, crystals, and composite formulations. 
+                    Generate and explore new structural variants aligned to performance goals.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs text-amber-400/80">materials design</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-amber-400/80">polymers</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-amber-400/80">composites</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-amber-500/20 bg-gradient-to-br from-amber-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center mb-4 border border-amber-500/30">
+                    <Thermometer className="h-6 w-6 text-amber-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">Property & Simulation Feedback</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Run property prediction and simulation workflows to evaluate thermal, 
+                    mechanical, transport, and surface behavior — feeding results back into 
+                    the discovery loop.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs text-amber-400/80">simulation-in-the-loop</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-amber-400/80">thermal stability</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-amber-400/80">conductivity</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-amber-500/20 bg-gradient-to-br from-amber-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center mb-4 border border-amber-500/30">
+                    <TrendingUp className="h-6 w-6 text-amber-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">Structure-Property Insight</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Analyze structure-property relationships across material families. 
+                    Compare variants, visualize performance trends, and guide the next 
+                    iteration of material design.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs text-amber-400/80">structure-property mapping</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-amber-400/80">optimization</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-amber-400/80">analytics</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="text-center">
+              <p className="text-muted-foreground mb-6">
+                See how Lika accelerates property-driven materials innovation.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <a href="/login">
+                  <Button variant="outline" className="gap-2 border-amber-500/50 text-amber-400" data-testid="button-explore-materials-workspace">
+                    <Boxes className="h-4 w-4" />
+                    Explore Materials Workspace
+                  </Button>
+                </a>
+                <a href="/login">
+                  <Button variant="outline" className="gap-2 border-amber-500/50 text-amber-400" data-testid="button-view-property-pipelines">
+                    <Thermometer className="h-4 w-4" />
+                    View Property Pipelines
+                  </Button>
+                </a>
+                <a href="/login">
+                  <Button variant="outline" className="gap-2 border-amber-500/50 text-amber-400" data-testid="button-structure-property-tools">
+                    <TrendingUp className="h-4 w-4" />
+                    Structure-Property Tools
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Multi-Target Discovery Section */}
+        <section className="py-24 border-t relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-cyan-500/5" />
+          <div className="relative max-w-7xl mx-auto px-6">
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 text-purple-400 text-sm font-medium mb-6 border border-purple-500/20">
+                <Network className="h-4 w-4" />
+                Network-Level Discovery
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Designed for Multi-Target and Network-Level Discovery
+              </h2>
+              <p className="text-muted-foreground max-w-3xl mx-auto text-lg leading-relaxed">
+                Complex diseases rarely have a single-target solution. Lika evaluates compounds 
+                across multiple biological targets, pathways, and safety panels — enabling rational, 
+                poly-pharmacology-aware design.
+              </p>
+            </div>
+
+            <div className="mb-12 max-w-4xl mx-auto">
+              <p className="text-center text-muted-foreground leading-relaxed">
+                Lika allows researchers to define campaigns with multiple primary and secondary targets, 
+                include compensatory and safety-relevant off-targets, compute composite multi-objective scores, 
+                visualize network-level effects instead of single-endpoint potency, and iterate using 
+                experimental assay feedback.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              <Card className="border-purple-500/20 bg-gradient-to-br from-purple-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/10 flex items-center justify-center mb-4 border border-purple-500/30">
+                    <Network className="h-6 w-6 text-purple-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">Pathway-Aware Campaigns</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Campaigns can include multiple efficacy, synergy, and safety targets — 
+                    reflecting the biological reality of complex diseases such as Alzheimer's, 
+                    oncology, and metabolic disorders.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-purple-500/20 bg-gradient-to-br from-purple-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/10 flex items-center justify-center mb-4 border border-purple-500/30">
+                    <Scale className="h-6 w-6 text-purple-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">Multi-Objective Scoring</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Weighted composite scoring integrates target potency, safety signals, 
+                    ADMET behavior, and uncertainty to reveal compounds with the strongest 
+                    network-level performance.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-purple-500/20 bg-gradient-to-br from-purple-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/10 flex items-center justify-center mb-4 border border-purple-500/30">
+                    <Radar className="h-6 w-6 text-purple-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">Radar-Plot Molecule Profiles</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Each molecule can be visualized across all targets simultaneously via 
+                    radar-plot activity profiles — enabling intuitive trade-off decisions and 
+                    balanced optimization.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="text-center">
+              <div className="inline-block px-6 py-3 rounded-lg bg-purple-500/10 border border-purple-500/20 mb-6">
+                <p className="text-purple-300 font-medium">
+                  Beyond single-target screening — Lika enables network-aware, poly-pharmacology discovery.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="py-24 border-t relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-amber-500/5" />
           <div className="relative max-w-7xl mx-auto px-6 text-center">
@@ -416,8 +746,8 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <a href="/login">
-                <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-get-started">
-                  Get Started Free
+                <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-explore-platform">
+                  Explore Platform
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
