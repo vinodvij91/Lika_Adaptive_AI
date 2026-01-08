@@ -59,6 +59,59 @@ The platform utilizes a full-stack TypeScript architecture. The frontend is buil
 - **materials_campaigns**: Materials discovery campaigns with pipeline configurations
 - **materials_oracle_scores**: Scoring with property breakdown, synthesis feasibility, manufacturing cost
 
+### Enterprise-Scale Processing Infrastructure
+
+#### Scalability Design
+The platform is designed for industrial-scale materials discovery:
+- Materials libraries: 100K-5M+ polymer, crystal, or composite variants
+- Property prediction pipelines: batch sizes of 10K-500K variants
+- Multiple concurrent campaigns per organization
+- Distributed processing across compute nodes
+- Resumable and fault-tolerant execution
+
+#### Processing Jobs System
+- **processing_jobs**: Core job orchestration table
+  - `id`: UUID primary key
+  - `type`: Job type (property_prediction, simulation, variant_generation, optimization, screening, aggregation)
+  - `status`: State machine (queued, dispatched, running, succeeded, failed, cancelled, paused)
+  - `priority`: Job priority for queue ordering
+  - `itemsTotal/itemsCompleted`: Progress tracking for batch operations
+  - `progressPercent`: Real-time progress percentage
+  - `checkpointData`: JSONB for resumable execution state
+  - `inputPayload/outputPayload`: JSONB for job data
+  - `computeNodeId`: Assigned compute node
+  - `retryCount/maxRetries`: Fault tolerance configuration
+  - `heartbeatAt`: Worker liveness tracking
+
+- **processing_job_runs**: Retry/resumption tracking per job
+- **processing_job_events**: Streaming partial results and events
+
+#### Precomputed Aggregations
+- **materials_campaign_aggregates**: Campaign-level dashboard data
+  - Total materials/variants counts
+  - Score distributions and histograms
+  - Top variant IDs for quick access
+  - Property correlations
+  - Auto-refresh on job completion
+
+- **material_variant_metrics**: Per-variant computed metrics
+  - Property scores breakdown
+  - Aggregate scores with ranking
+  - Percentile positioning
+  - Quality flags
+
+### Processing Job Endpoints
+- `GET /api/processing-jobs` - List jobs with filters (status, type, campaignId)
+- `GET /api/processing-jobs/:id` - Get job with runs and events
+- `POST /api/processing-jobs` - Create new processing job
+- `PATCH /api/processing-jobs/:id` - Update job status/data
+- `POST /api/processing-jobs/:id/progress` - Update job progress with checkpoints
+- `POST /api/processing-jobs/:id/events` - Stream partial results
+- `POST /api/materials/:id/variants/batch-submit` - Async batch variant generation
+- `GET /api/materials-campaigns/:id/aggregates` - Get precomputed aggregates
+- `POST /api/materials-campaigns/:id/aggregates/refresh` - Schedule aggregate refresh
+- `GET /api/materials-campaigns/:id/variant-metrics` - Get variant rankings
+
 ### Materials Science Endpoints
 - `GET /api/materials` - List material entities (optional `?type=` filter)
 - `GET /api/materials/:id` - Get material with properties
@@ -68,7 +121,7 @@ The platform utilizes a full-stack TypeScript architecture. The frontend is buil
 - `POST /api/materials/:id/properties` - Add property to material
 - `GET /api/materials/:id/variants` - List variants for a material
 - `POST /api/materials/:id/variants` - Create single variant
-- `POST /api/materials/:id/variants/batch` - Batch create variants
+- `POST /api/materials/:id/variants/batch` - Synchronous batch create variants
 - `GET /api/material-variants/:id` - Get variant by ID
 - `PATCH /api/material-variants/:id` - Update variant
 - `DELETE /api/material-variants/:id` - Delete variant

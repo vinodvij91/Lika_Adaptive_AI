@@ -33,6 +33,8 @@ export const discoveryDomainEnum = pgEnum("discovery_domain", ["drug", "material
 export const materialTypeEnum = pgEnum("material_type", ["polymer", "crystal", "composite", "surface", "membrane", "catalyst", "coating"]);
 export const materialPropertySourceEnum = pgEnum("material_property_source", ["ml", "simulation", "experiment"]);
 export const variantGeneratedByEnum = pgEnum("variant_generated_by", ["human", "ml", "genetic", "quantum"]);
+export const processingJobStatusEnum = pgEnum("processing_job_status", ["queued", "dispatched", "running", "succeeded", "failed", "cancelled", "paused"]);
+export const processingJobTypeEnum = pgEnum("processing_job_type", ["property_prediction", "simulation", "variant_generation", "optimization", "screening", "aggregation"]);
 
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -842,6 +844,115 @@ export const materialsLearningGraph = pgTable("materials_learning_graph", {
 export const insertMaterialsLearningGraphSchema = createInsertSchema(materialsLearningGraph).omit({ id: true, createdAt: true });
 export type MaterialsLearningGraphEntry = typeof materialsLearningGraph.$inferSelect;
 export type InsertMaterialsLearningGraphEntry = z.infer<typeof insertMaterialsLearningGraphSchema>;
+
+export const processingJobs = pgTable("processing_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: processingJobTypeEnum("type").notNull(),
+  status: processingJobStatusEnum("status").default("queued"),
+  priority: integer("priority").default(0),
+  campaignId: varchar("campaign_id"),
+  materialsCampaignId: varchar("materials_campaign_id"),
+  organizationId: varchar("organization_id"),
+  computeNodeId: varchar("compute_node_id"),
+  itemsTotal: integer("items_total").default(0),
+  itemsCompleted: integer("items_completed").default(0),
+  progressPercent: real("progress_percent").default(0),
+  checkpointData: jsonb("checkpoint_data"),
+  inputPayload: jsonb("input_payload"),
+  outputPayload: jsonb("output_payload"),
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  heartbeatAt: timestamp("heartbeat_at"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertProcessingJobSchema = createInsertSchema(processingJobs).omit({ id: true, createdAt: true, updatedAt: true });
+export type ProcessingJob = typeof processingJobs.$inferSelect;
+export type InsertProcessingJob = z.infer<typeof insertProcessingJobSchema>;
+
+export const processingJobRuns = pgTable("processing_job_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => processingJobs.id, { onDelete: "cascade" }),
+  runNumber: integer("run_number").default(1),
+  computeNodeId: varchar("compute_node_id"),
+  status: processingJobStatusEnum("status").default("running"),
+  checkpointData: jsonb("checkpoint_data"),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+});
+
+export const processingJobRunsRelations = relations(processingJobRuns, ({ one }) => ({
+  job: one(processingJobs, { fields: [processingJobRuns.jobId], references: [processingJobs.id] }),
+}));
+
+export const insertProcessingJobRunSchema = createInsertSchema(processingJobRuns).omit({ id: true });
+export type ProcessingJobRun = typeof processingJobRuns.$inferSelect;
+export type InsertProcessingJobRun = z.infer<typeof insertProcessingJobRunSchema>;
+
+export const processingJobEvents = pgTable("processing_job_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => processingJobs.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(),
+  payload: jsonb("payload"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const processingJobEventsRelations = relations(processingJobEvents, ({ one }) => ({
+  job: one(processingJobs, { fields: [processingJobEvents.jobId], references: [processingJobs.id] }),
+}));
+
+export const insertProcessingJobEventSchema = createInsertSchema(processingJobEvents).omit({ id: true, createdAt: true });
+export type ProcessingJobEvent = typeof processingJobEvents.$inferSelect;
+export type InsertProcessingJobEvent = z.infer<typeof insertProcessingJobEventSchema>;
+
+export const materialsCampaignAggregates = pgTable("materials_campaign_aggregates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => materialsCampaigns.id, { onDelete: "cascade" }),
+  totalMaterials: integer("total_materials").default(0),
+  totalVariants: integer("total_variants").default(0),
+  variantsByType: jsonb("variants_by_type"),
+  avgOracleScore: real("avg_oracle_score"),
+  scoreDistribution: jsonb("score_distribution"),
+  topVariantIds: jsonb("top_variant_ids"),
+  propertyCorrelations: jsonb("property_correlations"),
+  lastRefreshedAt: timestamp("last_refreshed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const materialsCampaignAggregatesRelations = relations(materialsCampaignAggregates, ({ one }) => ({
+  campaign: one(materialsCampaigns, { fields: [materialsCampaignAggregates.campaignId], references: [materialsCampaigns.id] }),
+}));
+
+export const insertMaterialsCampaignAggregateSchema = createInsertSchema(materialsCampaignAggregates).omit({ id: true, createdAt: true });
+export type MaterialsCampaignAggregate = typeof materialsCampaignAggregates.$inferSelect;
+export type InsertMaterialsCampaignAggregate = z.infer<typeof insertMaterialsCampaignAggregateSchema>;
+
+export const materialVariantMetrics = pgTable("material_variant_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  variantId: varchar("variant_id").notNull().references(() => materialVariants.id, { onDelete: "cascade" }),
+  campaignId: varchar("campaign_id").references(() => materialsCampaigns.id, { onDelete: "set null" }),
+  propertyScores: jsonb("property_scores"),
+  aggregateScore: real("aggregate_score"),
+  rank: integer("rank"),
+  percentile: real("percentile"),
+  flags: jsonb("flags"),
+  lastComputedAt: timestamp("last_computed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const materialVariantMetricsRelations = relations(materialVariantMetrics, ({ one }) => ({
+  variant: one(materialVariants, { fields: [materialVariantMetrics.variantId], references: [materialVariants.id] }),
+  campaign: one(materialsCampaigns, { fields: [materialVariantMetrics.campaignId], references: [materialsCampaigns.id] }),
+}));
+
+export const insertMaterialVariantMetricSchema = createInsertSchema(materialVariantMetrics).omit({ id: true, createdAt: true });
+export type MaterialVariantMetric = typeof materialVariantMetrics.$inferSelect;
+export type InsertMaterialVariantMetric = z.infer<typeof insertMaterialVariantMetricSchema>;
 
 export const targetRoleEnum = pgEnum("target_role", ["primary", "secondary", "safety"]);
 export const moaNodeTypeEnum = pgEnum("moa_node_type", ["target", "pathway", "process", "phenotype"]);

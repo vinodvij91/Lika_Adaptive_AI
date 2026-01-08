@@ -125,6 +125,21 @@ import {
   type InsertMaterialsOracleScore,
   type MaterialsLearningGraphEntry,
   type InsertMaterialsLearningGraphEntry,
+  type ProcessingJob,
+  type InsertProcessingJob,
+  type ProcessingJobRun,
+  type InsertProcessingJobRun,
+  type ProcessingJobEvent,
+  type InsertProcessingJobEvent,
+  type MaterialsCampaignAggregate,
+  type InsertMaterialsCampaignAggregate,
+  type MaterialVariantMetric,
+  type InsertMaterialVariantMetric,
+  processingJobs,
+  processingJobRuns,
+  processingJobEvents,
+  materialsCampaignAggregates,
+  materialVariantMetrics,
   type AssayPanel,
   type InsertAssayPanel,
   type AssayPanelTarget,
@@ -384,6 +399,21 @@ export interface IStorage {
   createPipelineTemplate(template: InsertPipelineTemplate, targets?: InsertPipelineTemplateTarget[]): Promise<PipelineTemplate>;
   deletePipelineTemplate(id: string): Promise<void>;
   seedBuiltInTemplates(): Promise<void>;
+
+  getProcessingJobs(filters?: { status?: string; type?: string; campaignId?: string; materialsCampaignId?: string; limit?: number; offset?: number }): Promise<{ jobs: ProcessingJob[]; total: number }>;
+  getProcessingJob(id: string): Promise<ProcessingJob | undefined>;
+  createProcessingJob(job: InsertProcessingJob): Promise<ProcessingJob>;
+  updateProcessingJob(id: string, job: Partial<InsertProcessingJob>): Promise<ProcessingJob | undefined>;
+  updateProcessingJobProgress(id: string, itemsCompleted: number, checkpointData?: unknown): Promise<ProcessingJob | undefined>;
+  getProcessingJobRuns(jobId: string): Promise<ProcessingJobRun[]>;
+  createProcessingJobRun(run: InsertProcessingJobRun): Promise<ProcessingJobRun>;
+  getProcessingJobEvents(jobId: string): Promise<ProcessingJobEvent[]>;
+  createProcessingJobEvent(event: InsertProcessingJobEvent): Promise<ProcessingJobEvent>;
+
+  getMaterialsCampaignAggregate(campaignId: string): Promise<MaterialsCampaignAggregate | undefined>;
+  upsertMaterialsCampaignAggregate(aggregate: InsertMaterialsCampaignAggregate): Promise<MaterialsCampaignAggregate>;
+  getMaterialVariantMetrics(campaignId: string, limit?: number): Promise<MaterialVariantMetric[]>;
+  upsertMaterialVariantMetric(metric: InsertMaterialVariantMetric): Promise<MaterialVariantMetric>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2142,6 +2172,139 @@ export class DatabaseStorage implements IStorage {
       { name: "AMPK", description: "Energy sensing kinase", role: "secondary", category: "energy", templateId: "", sortOrder: 2 },
       { name: "hERG", description: "Cardiac safety target", role: "safety", category: "safety", templateId: "", sortOrder: 3 }
     ]);
+  }
+
+  async getProcessingJobs(filters?: { status?: string; type?: string; campaignId?: string; materialsCampaignId?: string; limit?: number; offset?: number }): Promise<{ jobs: ProcessingJob[]; total: number }> {
+    const conditions: any[] = [];
+    const pageLimit = Math.min(filters?.limit || 100, 1000);
+    const pageOffset = filters?.offset || 0;
+    
+    if (filters?.status) {
+      conditions.push(eq(processingJobs.status, filters.status as any));
+    }
+    if (filters?.type) {
+      conditions.push(eq(processingJobs.type, filters.type as any));
+    }
+    if (filters?.campaignId) {
+      conditions.push(eq(processingJobs.campaignId, filters.campaignId));
+    }
+    if (filters?.materialsCampaignId) {
+      conditions.push(eq(processingJobs.materialsCampaignId, filters.materialsCampaignId));
+    }
+    
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    const countResult = await db.select({ count: sql<number>`count(*)::int` })
+      .from(processingJobs)
+      .where(whereClause);
+    const total = countResult[0]?.count || 0;
+    
+    const jobs = await db.select()
+      .from(processingJobs)
+      .where(whereClause)
+      .orderBy(desc(processingJobs.createdAt))
+      .limit(pageLimit)
+      .offset(pageOffset);
+    
+    return { jobs, total };
+  }
+
+  async getProcessingJob(id: string): Promise<ProcessingJob | undefined> {
+    const result = await db.select().from(processingJobs).where(eq(processingJobs.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createProcessingJob(job: InsertProcessingJob): Promise<ProcessingJob> {
+    const result = await db.insert(processingJobs).values(job).returning();
+    return result[0];
+  }
+
+  async updateProcessingJob(id: string, job: Partial<InsertProcessingJob>): Promise<ProcessingJob | undefined> {
+    const result = await db.update(processingJobs).set({ ...job, updatedAt: new Date() }).where(eq(processingJobs.id, id)).returning();
+    return result[0];
+  }
+
+  async updateProcessingJobProgress(id: string, itemsCompleted: number, checkpointData?: unknown): Promise<ProcessingJob | undefined> {
+    const job = await this.getProcessingJob(id);
+    if (!job) return undefined;
+    
+    const total = job.itemsTotal || 1;
+    const progressPercent = (itemsCompleted / total) * 100;
+    
+    const result = await db.update(processingJobs).set({
+      itemsCompleted,
+      progressPercent,
+      checkpointData: checkpointData || job.checkpointData,
+      heartbeatAt: new Date(),
+      updatedAt: new Date()
+    }).where(eq(processingJobs.id, id)).returning();
+    return result[0];
+  }
+
+  async getProcessingJobRuns(jobId: string): Promise<ProcessingJobRun[]> {
+    return db.select().from(processingJobRuns).where(eq(processingJobRuns.jobId, jobId)).orderBy(desc(processingJobRuns.startedAt));
+  }
+
+  async createProcessingJobRun(run: InsertProcessingJobRun): Promise<ProcessingJobRun> {
+    const result = await db.insert(processingJobRuns).values(run).returning();
+    return result[0];
+  }
+
+  async getProcessingJobEvents(jobId: string): Promise<ProcessingJobEvent[]> {
+    return db.select().from(processingJobEvents).where(eq(processingJobEvents.jobId, jobId)).orderBy(desc(processingJobEvents.createdAt));
+  }
+
+  async createProcessingJobEvent(event: InsertProcessingJobEvent): Promise<ProcessingJobEvent> {
+    const result = await db.insert(processingJobEvents).values(event).returning();
+    return result[0];
+  }
+
+  async getMaterialsCampaignAggregate(campaignId: string): Promise<MaterialsCampaignAggregate | undefined> {
+    const result = await db.select().from(materialsCampaignAggregates).where(eq(materialsCampaignAggregates.campaignId, campaignId)).limit(1);
+    return result[0];
+  }
+
+  async upsertMaterialsCampaignAggregate(aggregate: InsertMaterialsCampaignAggregate): Promise<MaterialsCampaignAggregate> {
+    const existing = await this.getMaterialsCampaignAggregate(aggregate.campaignId);
+    if (existing) {
+      const result = await db.update(materialsCampaignAggregates)
+        .set({ ...aggregate, lastRefreshedAt: new Date() })
+        .where(eq(materialsCampaignAggregates.id, existing.id))
+        .returning();
+      return result[0];
+    }
+    const result = await db.insert(materialsCampaignAggregates).values(aggregate).returning();
+    return result[0];
+  }
+
+  async getMaterialVariantMetrics(campaignId: string, limit?: number): Promise<MaterialVariantMetric[]> {
+    if (limit) {
+      return db.select().from(materialVariantMetrics)
+        .where(eq(materialVariantMetrics.campaignId, campaignId))
+        .orderBy(desc(materialVariantMetrics.aggregateScore))
+        .limit(limit);
+    }
+    return db.select().from(materialVariantMetrics)
+      .where(eq(materialVariantMetrics.campaignId, campaignId))
+      .orderBy(desc(materialVariantMetrics.aggregateScore));
+  }
+
+  async upsertMaterialVariantMetric(metric: InsertMaterialVariantMetric): Promise<MaterialVariantMetric> {
+    const existing = await db.select().from(materialVariantMetrics)
+      .where(and(
+        eq(materialVariantMetrics.variantId, metric.variantId),
+        eq(materialVariantMetrics.campaignId, metric.campaignId || "")
+      )).limit(1);
+    
+    if (existing.length > 0) {
+      const result = await db.update(materialVariantMetrics)
+        .set({ ...metric, lastComputedAt: new Date() })
+        .where(eq(materialVariantMetrics.id, existing[0].id))
+        .returning();
+      return result[0];
+    }
+    const result = await db.insert(materialVariantMetrics).values(metric).returning();
+    return result[0];
   }
 }
 

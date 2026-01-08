@@ -36,6 +36,8 @@ import {
   insertMaterialsCampaignSchema,
   insertMaterialsOracleScoreSchema,
   insertMaterialsLearningGraphSchema,
+  insertProcessingJobSchema,
+  insertProcessingJobEventSchema,
   insertAssayPanelSchema,
   insertAssayPanelTargetSchema,
   insertMoaNodeSchema,
@@ -2643,6 +2645,159 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching materials scores for agent:", error);
       res.status(500).json({ error: "Failed to fetch materials scores" });
+    }
+  });
+
+  app.get("/api/processing-jobs", requireAuth, async (req, res) => {
+    try {
+      const { status, type, campaignId, materialsCampaignId, limit, offset } = req.query;
+      const filters: any = {};
+      if (status) filters.status = status as string;
+      if (type) filters.type = type as string;
+      if (campaignId) filters.campaignId = campaignId as string;
+      if (materialsCampaignId) filters.materialsCampaignId = materialsCampaignId as string;
+      if (limit) {
+        const parsedLimit = parseInt(limit as string);
+        if (!Number.isNaN(parsedLimit)) filters.limit = parsedLimit;
+      }
+      if (offset) {
+        const parsedOffset = parseInt(offset as string);
+        if (!Number.isNaN(parsedOffset)) filters.offset = parsedOffset;
+      }
+      const result = await storage.getProcessingJobs(Object.keys(filters).length > 0 ? filters : undefined);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching processing jobs:", error);
+      res.status(500).json({ error: "Failed to fetch processing jobs" });
+    }
+  });
+
+  app.get("/api/processing-jobs/:id", requireAuth, async (req, res) => {
+    try {
+      const job = await storage.getProcessingJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Processing job not found" });
+      }
+      const runs = await storage.getProcessingJobRuns(job.id);
+      const events = await storage.getProcessingJobEvents(job.id);
+      res.json({ ...job, runs, events });
+    } catch (error) {
+      console.error("Error fetching processing job:", error);
+      res.status(500).json({ error: "Failed to fetch processing job" });
+    }
+  });
+
+  app.post("/api/processing-jobs", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertProcessingJobSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const job = await storage.createProcessingJob(parsed.data);
+      res.status(201).json(job);
+    } catch (error) {
+      console.error("Error creating processing job:", error);
+      res.status(500).json({ error: "Failed to create processing job" });
+    }
+  });
+
+  app.patch("/api/processing-jobs/:id", requireAuth, async (req, res) => {
+    try {
+      const job = await storage.updateProcessingJob(req.params.id, req.body);
+      if (!job) {
+        return res.status(404).json({ error: "Processing job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      console.error("Error updating processing job:", error);
+      res.status(500).json({ error: "Failed to update processing job" });
+    }
+  });
+
+  app.post("/api/processing-jobs/:id/progress", requireAuth, async (req, res) => {
+    try {
+      const { itemsCompleted, checkpointData } = req.body;
+      const job = await storage.updateProcessingJobProgress(req.params.id, itemsCompleted, checkpointData);
+      if (!job) {
+        return res.status(404).json({ error: "Processing job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      console.error("Error updating processing job progress:", error);
+      res.status(500).json({ error: "Failed to update processing job progress" });
+    }
+  });
+
+  app.post("/api/processing-jobs/:id/events", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertProcessingJobEventSchema.safeParse({ ...req.body, jobId: req.params.id });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const event = await storage.createProcessingJobEvent(parsed.data);
+      res.status(201).json(event);
+    } catch (error) {
+      console.error("Error creating processing job event:", error);
+      res.status(500).json({ error: "Failed to create processing job event" });
+    }
+  });
+
+  app.post("/api/materials/:materialId/variants/batch-submit", requireAuth, async (req, res) => {
+    try {
+      const { variants, priority } = req.body;
+      if (!Array.isArray(variants)) {
+        return res.status(400).json({ error: "variants must be an array" });
+      }
+      const job = await storage.createProcessingJob({
+        type: "variant_generation",
+        status: "queued",
+        priority: priority || 0,
+        itemsTotal: variants.length,
+        inputPayload: { materialId: req.params.materialId, variants }
+      });
+      res.status(202).json({ jobId: job.id, itemsTotal: variants.length, status: job.status });
+    } catch (error) {
+      console.error("Error submitting batch variant job:", error);
+      res.status(500).json({ error: "Failed to submit batch variant job" });
+    }
+  });
+
+  app.get("/api/materials-campaigns/:id/aggregates", requireAuth, async (req, res) => {
+    try {
+      const aggregate = await storage.getMaterialsCampaignAggregate(req.params.id);
+      if (!aggregate) {
+        return res.status(404).json({ error: "No aggregates found for this campaign" });
+      }
+      res.json(aggregate);
+    } catch (error) {
+      console.error("Error fetching campaign aggregates:", error);
+      res.status(500).json({ error: "Failed to fetch campaign aggregates" });
+    }
+  });
+
+  app.post("/api/materials-campaigns/:id/aggregates/refresh", requireAuth, async (req, res) => {
+    try {
+      const job = await storage.createProcessingJob({
+        type: "aggregation",
+        status: "queued",
+        materialsCampaignId: req.params.id,
+        itemsTotal: 1
+      });
+      res.status(202).json({ jobId: job.id, status: "queued" });
+    } catch (error) {
+      console.error("Error scheduling aggregation refresh:", error);
+      res.status(500).json({ error: "Failed to schedule aggregation refresh" });
+    }
+  });
+
+  app.get("/api/materials-campaigns/:id/variant-metrics", requireAuth, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const metrics = await storage.getMaterialVariantMetrics(req.params.id, limit);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching variant metrics:", error);
+      res.status(500).json({ error: "Failed to fetch variant metrics" });
     }
   });
 
