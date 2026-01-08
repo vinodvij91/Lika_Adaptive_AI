@@ -57,6 +57,10 @@ attached_assets/ # Specification documents
 - **Campaign Configurator**: Workflow for research campaign setup with modality selection (small molecule, PROTAC, peptide, fragment)
 - **SMILES Import**: Batch import with duplicate detection and validation
 - **Curated Libraries**: Domain-aware SMILES libraries with scaffolds, cleaning workflows, and agent validation
+- **Professional Drug Discovery Terminology**: 
+  - Hit identification, screening cascades, assay validation, SAR feedback, hit-to-lead optimization
+  - Job types: Hit Generation, Screening Cascade, Virtual Docking, Hit Prioritization
+  - Campaign tabs: Hit Candidates, Assay Validation, Hit-to-Lead Progress
 - **Compute Nodes**: Multi-provider infrastructure management for ML, docking, quantum, and agent workloads
   - **Providers**: Hetzner, Vast.ai, AWS, Azure, GCP, On-Prem
   - **Connection Types**: SSH (direct connection) or Cloud API (provider SDK)
@@ -94,16 +98,16 @@ attached_assets/ # Specification documents
 - **Organization Members**: Role-based access (admin, member, viewer)
 - **Shared Assets**: Share SMILES libraries, pipeline templates, or programs between organizations with read/fork permissions
 
-### Materials Sciences (v1)
+### Materials Science (v1)
 - **Material Entities**: Support for polymers, crystals, composites, surfaces, membranes, and catalysts
 - **Material Properties**: Track property predictions with values, units, confidence, and source (ML, simulation, experiment)
-- **Materials Programs**: Organize materials sciences efforts by material type
+- **Materials Programs**: Organize materials science efforts by material type
 - **Materials Campaigns**: Parallel to drug campaigns, with materials-specific pipeline configs
 - **Materials Oracle Scores**: Property breakdown, synthesis feasibility, manufacturing cost factor
-- **Materials Learning Graph**: Self-improving knowledge from materials sciences outcomes
+- **Materials Learning Graph**: Self-improving knowledge from materials science outcomes
 - **Pipeline Templates**: Polymer discovery, coatings/surface materials, energy materials pipelines
 
-### Materials Sciences Endpoints
+### Materials Science Endpoints
 - `GET /api/materials` - List material entities (filterable by type)
 - `GET /api/materials/:id` - Get material with properties
 - `POST /api/materials` - Create material entity

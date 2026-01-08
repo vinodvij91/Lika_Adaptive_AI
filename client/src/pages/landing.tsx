@@ -119,27 +119,27 @@ export default function LandingPage() {
                       </div>
                     </div>
                     <p className="text-muted-foreground mb-4">
-                      End-to-end AI discovery with ADMET, docking, variant-aware scoring, 
-                      multi-modality pipelines, and simulation-driven iteration.
+                      From virtual hit discovery to assay-validated candidates with ADMET, docking, 
+                      variant-aware scoring, and SAR-driven iteration.
                     </p>
                     <ul className="space-y-3 text-sm">
                       <li className="flex items-center gap-3">
                         <div className="w-6 h-6 rounded-md bg-cyan-500/10 flex items-center justify-center">
                           <Target className="h-3.5 w-3.5 text-cyan-400" />
                         </div>
-                        <span className="text-muted-foreground">BioNeMo Integration</span>
+                        <span className="text-muted-foreground">Hit Identification & Triage</span>
                       </li>
                       <li className="flex items-center gap-3">
                         <div className="w-6 h-6 rounded-md bg-cyan-500/10 flex items-center justify-center">
                           <Brain className="h-3.5 w-3.5 text-cyan-400" />
                         </div>
-                        <span className="text-muted-foreground">ML-Guided Docking</span>
+                        <span className="text-muted-foreground">Screening Cascades & Prioritization</span>
                       </li>
                       <li className="flex items-center gap-3">
                         <div className="w-6 h-6 rounded-md bg-cyan-500/10 flex items-center justify-center">
                           <BarChart3 className="h-3.5 w-3.5 text-cyan-400" />
                         </div>
-                        <span className="text-muted-foreground">ADMET Predictions</span>
+                        <span className="text-muted-foreground">Assay Validation & SAR Feedback</span>
                       </li>
                     </ul>
                   </div>
@@ -236,6 +236,67 @@ export default function LandingPage() {
 
         <IntegrationLogos />
 
+        <section className="py-20 bg-gradient-to-br from-cyan-950/30 via-teal-950/20 to-background border-t relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl" />
+          <div className="relative max-w-7xl mx-auto px-6">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-500 text-xs font-medium mb-4 border border-cyan-500/20">
+                <FlaskConical className="h-3 w-3" />
+                Hit Discovery Pipeline
+              </div>
+              <h2 className="text-3xl font-bold mb-4">From Virtual Hits to Assay-Validated Candidates</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Rigorous, scientifically-grounded workflows for modern drug discovery
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+              <div className="p-6 rounded-lg bg-slate-900/40 border border-cyan-500/20 backdrop-blur-sm">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center border border-cyan-500/30 mb-4">
+                  <Target className="h-5 w-5 text-cyan-400" />
+                </div>
+                <h3 className="font-semibold mb-2 text-white">AI-Guided Hit Discovery & Prioritization</h3>
+                <p className="text-sm text-slate-400">Identify virtual hits through generative design and ML-powered prioritization scoring.</p>
+              </div>
+              <div className="p-6 rounded-lg bg-slate-900/40 border border-cyan-500/20 backdrop-blur-sm">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center border border-cyan-500/30 mb-4">
+                  <Layers className="h-5 w-5 text-cyan-400" />
+                </div>
+                <h3 className="font-semibold mb-2 text-white">Docking + ML Screening Cascades</h3>
+                <p className="text-sm text-slate-400">Tiered virtual screening with physics-based docking and ML property filters.</p>
+              </div>
+              <div className="p-6 rounded-lg bg-slate-900/40 border border-cyan-500/20 backdrop-blur-sm">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center border border-cyan-500/30 mb-4">
+                  <Beaker className="h-5 w-5 text-cyan-400" />
+                </div>
+                <h3 className="font-semibold mb-2 text-white">Assay Workflows for Experimental Validation</h3>
+                <p className="text-sm text-slate-400">Integrated bioassay tracking with dose-response curves and hit triage queues.</p>
+              </div>
+              <div className="p-6 rounded-lg bg-slate-900/40 border border-cyan-500/20 backdrop-blur-sm">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center border border-cyan-500/30 mb-4">
+                  <BarChart3 className="h-5 w-5 text-cyan-400" />
+                </div>
+                <h3 className="font-semibold mb-2 text-white">SAR-Aware Feedback Loops</h3>
+                <p className="text-sm text-slate-400">Structure-activity insights refine scoring models and inform next-round design.</p>
+              </div>
+              <div className="p-6 rounded-lg bg-slate-900/40 border border-cyan-500/20 backdrop-blur-sm">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center border border-cyan-500/30 mb-4">
+                  <Sparkles className="h-5 w-5 text-cyan-400" />
+                </div>
+                <h3 className="font-semibold mb-2 text-white">Hit-to-Lead Optimization</h3>
+                <p className="text-sm text-slate-400">Multi-modality support for small molecules, PROTACs, peptides, and fragments.</p>
+              </div>
+              <div className="p-6 rounded-lg bg-slate-900/40 border border-cyan-500/20 backdrop-blur-sm">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center border border-cyan-500/30 mb-4">
+                  <Brain className="h-5 w-5 text-cyan-400" />
+                </div>
+                <h3 className="font-semibold mb-2 text-white">Continuous Learning Platform</h3>
+                <p className="text-sm text-slate-400">Self-improving models that learn from outcomes to boost future campaign success.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="py-20 bg-gradient-to-br from-cyan-950/20 via-background to-background border-t relative overflow-hidden">
           <div className="absolute top-0 left-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
           <div className="relative max-w-7xl mx-auto px-6">
@@ -251,39 +312,39 @@ export default function LandingPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <USPCard
-                icon={Zap}
-                title="Adaptive, Configurable Pipelines"
-                description="Design custom discovery workflows with flexible pipeline configuration. Choose generators, filters, docking methods, and scoring functions."
+                icon={Target}
+                title="AI-Guided Hit Discovery"
+                description="Virtual screening cascades identify and prioritize hit candidates with docking + ML scoring pipelines."
                 accentColor="cyan"
               />
               <USPCard
-                icon={Brain}
-                title="Design + Simulation in the Loop"
-                description="Iterate with BioNeMo molecule generation, docking, and ML predictions in a continuous feedback loop."
+                icon={Beaker}
+                title="Assay Validation Workflows"
+                description="Integrated bioassay tracking for experimental validation with dose-response and hit triage support."
                 accentColor="cyan"
               />
               <USPCard
-                icon={GitBranch}
-                title="Fast Iteration & Parallel Campaigns"
-                description="Run multiple campaigns simultaneously with real-time status tracking and job orchestration."
+                icon={BarChart3}
+                title="SAR-Aware Feedback Loops"
+                description="Structure-activity relationship insights that refine models and scoring with each iteration."
                 accentColor="cyan"
               />
               <USPCard
                 icon={Sparkles}
-                title="Internal Learning Graph"
-                description="Build a self-improving platform that learns from outcomes to inform future experiments."
+                title="Hit-to-Lead Optimization"
+                description="Systematic refinement from virtual hits to lead candidates across multiple modalities."
                 accentColor="cyan"
               />
               <USPCard
-                icon={Users}
-                title="Collaboration-First UX"
-                description="Projects, roles, comments, and shared views for team-based drug discovery."
+                icon={GitBranch}
+                title="Screening Cascade Management"
+                description="Tiered filtering from primary screens through selectivity and ADMET to final hit selection."
                 accentColor="cyan"
               />
               <USPCard
-                icon={Target}
-                title="Domain-Specialized Pipelines"
-                description="Pre-configured workflows for CNS, Oncology, Rare Disease, and more with domain-specific oracles."
+                icon={Brain}
+                title="Self-Improving Platform"
+                description="Internal learning graph captures outcomes and continuously improves prediction accuracy."
                 accentColor="cyan"
               />
             </div>

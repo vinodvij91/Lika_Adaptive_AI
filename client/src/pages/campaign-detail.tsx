@@ -42,12 +42,14 @@ interface CampaignWithDetails extends Campaign {
 }
 
 const jobTypeLabels: Record<string, string> = {
-  generation: "Molecule Generation",
-  filtering: "ADMET Filtering",
-  docking: "Docking",
-  scoring: "Oracle Scoring",
+  generation: "Hit Generation",
+  filtering: "Screening Cascade",
+  docking: "Virtual Docking",
+  scoring: "Hit Prioritization",
   quantum_optimization: "Quantum Optimization",
   quantum_scoring: "Quantum Scoring",
+  assay_validation: "Assay Validation",
+  sar_feedback: "SAR Feedback",
 };
 
 const jobTypeIcons: Record<string, typeof Sparkles> = {
@@ -262,11 +264,15 @@ export default function CampaignDetailPage() {
             <TabsList>
               <TabsTrigger value="molecules" className="gap-2" data-testid="tab-molecules">
                 <FlaskConical className="h-4 w-4" />
-                Top Molecules
+                Hit Candidates
+              </TabsTrigger>
+              <TabsTrigger value="assay" className="gap-2" data-testid="tab-assay">
+                <Beaker className="h-4 w-4" />
+                Assay Validation
               </TabsTrigger>
               <TabsTrigger value="jobs" className="gap-2" data-testid="tab-jobs">
                 <Workflow className="h-4 w-4" />
-                Jobs
+                Hit-to-Lead Progress
               </TabsTrigger>
               <TabsTrigger value="config" className="gap-2" data-testid="tab-config">
                 <Target className="h-4 w-4" />
@@ -276,6 +282,17 @@ export default function CampaignDetailPage() {
 
             <TabsContent value="molecules">
               <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <CardTitle className="text-lg">Virtual Hit Candidates</CardTitle>
+                      <p className="text-sm text-muted-foreground">Prioritized molecules from screening cascade</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
+                      {campaign.moleculeScores?.length || 0} hits identified
+                    </Badge>
+                  </div>
+                </CardHeader>
                 <CardContent className="p-0">
                   {campaign.moleculeScores && campaign.moleculeScores.length > 0 ? (
                     <div className="overflow-x-auto">
@@ -283,10 +300,10 @@ export default function CampaignDetailPage() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>SMILES</TableHead>
-                            <TableHead className="text-right">Docking</TableHead>
-                            <TableHead className="text-right">ADMET</TableHead>
-                            <TableHead className="text-right">QSAR</TableHead>
-                            <TableHead className="text-right">Oracle</TableHead>
+                            <TableHead className="text-right">Docking Score</TableHead>
+                            <TableHead className="text-right">ADMET Score</TableHead>
+                            <TableHead className="text-right">SAR Score</TableHead>
+                            <TableHead className="text-right">Hit Score</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -322,10 +339,10 @@ export default function CampaignDetailPage() {
                       <FlaskConical className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">
                         {campaign.status === "pending"
-                          ? "Start the campaign to generate molecules"
+                          ? "Start the campaign to begin hit identification"
                           : campaign.status === "running"
-                          ? "Molecules will appear here as they are processed"
-                          : "No molecules found"}
+                          ? "Virtual hits will appear here as they are screened"
+                          : "No hit candidates found"}
                       </p>
                     </div>
                   )}
@@ -333,17 +350,64 @@ export default function CampaignDetailPage() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="assay">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <CardTitle className="text-lg">Assay Validation Queue</CardTitle>
+                      <p className="text-sm text-muted-foreground">Hits pending experimental validation</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
+                      Bioassay tracking
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="p-4 rounded-lg bg-muted/50 border">
+                      <p className="text-sm text-muted-foreground mb-1">Awaiting Assay</p>
+                      <p className="text-2xl font-semibold">0</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted/50 border">
+                      <p className="text-sm text-muted-foreground mb-1">In Testing</p>
+                      <p className="text-2xl font-semibold">0</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted/50 border">
+                      <p className="text-sm text-muted-foreground mb-1">Validated Hits</p>
+                      <p className="text-2xl font-semibold">0</p>
+                    </div>
+                  </div>
+                  <div className="py-8 text-center border rounded-lg">
+                    <Beaker className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground mb-2">No assay results yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Submit top hits for dose-response and selectivity assays
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="jobs">
               <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <CardTitle className="text-lg">Hit-to-Lead Progress</CardTitle>
+                      <p className="text-sm text-muted-foreground">Screening cascade and optimization pipeline status</p>
+                    </div>
+                  </div>
+                </CardHeader>
                 <CardContent className="p-0">
                   {campaign.jobs && campaign.jobs.length > 0 ? (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Step</TableHead>
+                          <TableHead>Pipeline Step</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Started</TableHead>
-                          <TableHead>Finished</TableHead>
+                          <TableHead>Completed</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -373,7 +437,7 @@ export default function CampaignDetailPage() {
                     <div className="py-16 text-center">
                       <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">
-                        No jobs yet. Start the campaign to create jobs.
+                        No pipeline steps yet. Start the campaign to begin hit discovery.
                       </p>
                     </div>
                   )}
