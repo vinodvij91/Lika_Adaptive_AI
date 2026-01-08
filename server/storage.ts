@@ -253,18 +253,23 @@ export interface IStorage {
   getOracleVersion(id: string): Promise<OracleVersion | undefined>;
   createOracleVersion(version: InsertOracleVersion): Promise<OracleVersion>;
 
-  getAssays(targetId?: string): Promise<Assay[]>;
+  getAssays(filters?: { targetId?: string; companyId?: string }): Promise<Assay[]>;
   getAssay(id: string): Promise<Assay | undefined>;
+  getAssayWithResultsCount(id: string): Promise<(Assay & { resultsCount: number }) | undefined>;
   createAssay(assay: InsertAssay): Promise<Assay>;
   updateAssay(id: string, assay: Partial<InsertAssay>): Promise<Assay | undefined>;
+  deleteAssay(id: string): Promise<void>;
 
   getExperimentRecommendations(campaignId: string): Promise<ExperimentRecommendation[]>;
   createExperimentRecommendation(rec: InsertExperimentRecommendation): Promise<ExperimentRecommendation>;
   updateExperimentRecommendation(id: string, rec: Partial<InsertExperimentRecommendation>): Promise<ExperimentRecommendation | undefined>;
 
   getAssayResults(assayId?: string, campaignId?: string): Promise<AssayResult[]>;
+  getAssayResultsWithMolecules(assayId: string, moleculeId?: string): Promise<(AssayResult & { molecule: Molecule | null })[]>;
   createAssayResult(result: InsertAssayResult): Promise<AssayResult>;
   bulkCreateAssayResults(results: InsertAssayResult[]): Promise<AssayResult[]>;
+  getMoleculeBySmiles(smiles: string): Promise<Molecule | undefined>;
+  getHitCandidates(campaignId: string, filters?: { minOracleScore?: number; maxOracleScore?: number; maxSynthesisComplexity?: number; ipSafeOnly?: boolean; hasAssayData?: boolean }): Promise<(MoleculeScore & { molecule: Molecule | null; lastAssayOutcome?: string; bestAssayValue?: number })[]>;
 
   getLiteratureAnnotations(targetId?: string, moleculeId?: string): Promise<LiteratureAnnotation[]>;
   createLiteratureAnnotation(annotation: InsertLiteratureAnnotation): Promise<LiteratureAnnotation>;
@@ -1047,16 +1052,30 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getAssays(targetId?: string): Promise<Assay[]> {
-    if (targetId) {
-      return db.select().from(assays).where(eq(assays.targetId, targetId)).orderBy(desc(assays.createdAt));
+  async getAssays(filters?: { targetId?: string; companyId?: string }): Promise<Assay[]> {
+    const conditions = [];
+    if (filters?.targetId) conditions.push(eq(assays.targetId, filters.targetId));
+    if (filters?.companyId) conditions.push(eq(assays.companyId, filters.companyId));
+    
+    if (conditions.length === 0) {
+      return db.select().from(assays).orderBy(desc(assays.createdAt));
     }
-    return db.select().from(assays).orderBy(desc(assays.createdAt));
+    return db.select().from(assays).where(and(...conditions)).orderBy(desc(assays.createdAt));
   }
 
   async getAssay(id: string): Promise<Assay | undefined> {
     const result = await db.select().from(assays).where(eq(assays.id, id)).limit(1);
     return result[0];
+  }
+
+  async getAssayWithResultsCount(id: string): Promise<(Assay & { resultsCount: number }) | undefined> {
+    const assay = await this.getAssay(id);
+    if (!assay) return undefined;
+    
+    const countResult = await db.select({ count: count() }).from(assayResults).where(eq(assayResults.assayId, id));
+    const resultsCount = countResult[0]?.count ?? 0;
+    
+    return { ...assay, resultsCount };
   }
 
   async createAssay(assay: InsertAssay): Promise<Assay> {
@@ -1065,8 +1084,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAssay(id: string, assay: Partial<InsertAssay>): Promise<Assay | undefined> {
-    const result = await db.update(assays).set(assay).where(eq(assays.id, id)).returning();
+    const result = await db.update(assays).set({ ...assay, updatedAt: new Date() }).where(eq(assays.id, id)).returning();
     return result[0];
+  }
+
+  async deleteAssay(id: string): Promise<void> {
+    await db.delete(assays).where(eq(assays.id, id));
   }
 
   async getExperimentRecommendations(campaignId: string): Promise<ExperimentRecommendation[]> {
@@ -1102,6 +1125,60 @@ export class DatabaseStorage implements IStorage {
   async bulkCreateAssayResults(results: InsertAssayResult[]): Promise<AssayResult[]> {
     if (results.length === 0) return [];
     return db.insert(assayResults).values(results).returning();
+  }
+
+  async getAssayResultsWithMolecules(assayId: string, moleculeId?: string): Promise<(AssayResult & { molecule: Molecule | null })[]> {
+    const conditions = [eq(assayResults.assayId, assayId)];
+    if (moleculeId) conditions.push(eq(assayResults.moleculeId, moleculeId));
+    
+    const results = await db
+      .select({
+        assayResult: assayResults,
+        molecule: molecules,
+      })
+      .from(assayResults)
+      .leftJoin(molecules, eq(assayResults.moleculeId, molecules.id))
+      .where(and(...conditions))
+      .orderBy(desc(assayResults.createdAt));
+    
+    return results.map(r => ({ ...r.assayResult, molecule: r.molecule }));
+  }
+
+  async getMoleculeBySmiles(smiles: string): Promise<Molecule | undefined> {
+    const result = await db.select().from(molecules).where(eq(molecules.smiles, smiles)).limit(1);
+    return result[0];
+  }
+
+  async getHitCandidates(campaignId: string, filters?: { minOracleScore?: number; maxOracleScore?: number; maxSynthesisComplexity?: number; ipSafeOnly?: boolean; hasAssayData?: boolean }): Promise<(MoleculeScore & { molecule: Molecule | null; lastAssayOutcome?: string; bestAssayValue?: number })[]> {
+    const baseQuery = db
+      .select({
+        score: moleculeScores,
+        molecule: molecules,
+      })
+      .from(moleculeScores)
+      .leftJoin(molecules, eq(moleculeScores.moleculeId, molecules.id))
+      .where(eq(moleculeScores.campaignId, campaignId))
+      .orderBy(desc(moleculeScores.oracleScore))
+      .limit(500);
+    
+    const results = await baseQuery;
+    
+    let filtered = results.map(r => ({ ...r.score, molecule: r.molecule, lastAssayOutcome: undefined as string | undefined, bestAssayValue: undefined as number | undefined }));
+    
+    if (filters?.minOracleScore !== undefined) {
+      filtered = filtered.filter(r => (r.oracleScore ?? 0) >= filters.minOracleScore!);
+    }
+    if (filters?.maxOracleScore !== undefined) {
+      filtered = filtered.filter(r => (r.oracleScore ?? 0) <= filters.maxOracleScore!);
+    }
+    if (filters?.maxSynthesisComplexity !== undefined) {
+      filtered = filtered.filter(r => (r.synthesisComplexity ?? 0) <= filters.maxSynthesisComplexity!);
+    }
+    if (filters?.ipSafeOnly) {
+      filtered = filtered.filter(r => !r.ipRiskFlag);
+    }
+    
+    return filtered;
   }
 
   async getLiteratureAnnotations(targetId?: string, moleculeId?: string): Promise<LiteratureAnnotation[]> {

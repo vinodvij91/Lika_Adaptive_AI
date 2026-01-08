@@ -1471,9 +1471,12 @@ export async function registerRoutes(
 
   app.get("/api/assays", requireAuth, async (req, res) => {
     try {
-      const { targetId } = req.query;
-      const assays = await storage.getAssays(targetId as string | undefined);
-      res.json(assays);
+      const { targetId, companyId } = req.query;
+      const filters: { targetId?: string; companyId?: string } = {};
+      if (targetId) filters.targetId = targetId as string;
+      if (companyId) filters.companyId = companyId as string;
+      const assaysList = await storage.getAssays(Object.keys(filters).length > 0 ? filters : undefined);
+      res.json(assaysList);
     } catch (error) {
       console.error("Error fetching assays:", error);
       res.status(500).json({ error: "Failed to fetch assays" });
@@ -1517,6 +1520,151 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating assay:", error);
       res.status(500).json({ error: "Failed to update assay" });
+    }
+  });
+
+  app.delete("/api/assays/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteAssay(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting assay:", error);
+      res.status(500).json({ error: "Failed to delete assay" });
+    }
+  });
+
+  app.get("/api/assays/:id/details", requireAuth, async (req, res) => {
+    try {
+      const assay = await storage.getAssayWithResultsCount(req.params.id);
+      if (!assay) {
+        return res.status(404).json({ error: "Assay not found" });
+      }
+      res.json(assay);
+    } catch (error) {
+      console.error("Error fetching assay details:", error);
+      res.status(500).json({ error: "Failed to fetch assay details" });
+    }
+  });
+
+  app.get("/api/assays/:assayId/results", requireAuth, async (req, res) => {
+    try {
+      const { moleculeId } = req.query;
+      const results = await storage.getAssayResultsWithMolecules(req.params.assayId, moleculeId as string | undefined);
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching assay results with molecules:", error);
+      res.status(500).json({ error: "Failed to fetch assay results" });
+    }
+  });
+
+  app.post("/api/assays/:assayId/upload", requireAuth, async (req, res) => {
+    try {
+      const { rows, campaignId } = req.body;
+      
+      if (!Array.isArray(rows)) {
+        return res.status(400).json({ error: "rows must be an array" });
+      }
+      
+      const assay = await storage.getAssay(req.params.assayId);
+      if (!assay) {
+        return res.status(404).json({ error: "Assay not found" });
+      }
+      
+      const importResults = {
+        imported: 0,
+        moleculesUpdated: 0,
+        moleculesCreated: 0,
+        errors: [] as { row: number; error: string }[],
+      };
+      
+      const resultsToCreate = [];
+      
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        try {
+          let moleculeId = row.molecule_id;
+          
+          if (!moleculeId && row.smiles) {
+            const existing = await storage.getMoleculeBySmiles(row.smiles);
+            if (existing) {
+              moleculeId = existing.id;
+              importResults.moleculesUpdated++;
+            } else {
+              const newMol = await storage.createMolecule({ smiles: row.smiles, name: row.name });
+              moleculeId = newMol.id;
+              importResults.moleculesCreated++;
+            }
+          }
+          
+          if (!moleculeId) {
+            importResults.errors.push({ row: i + 1, error: "No molecule_id or smiles provided" });
+            continue;
+          }
+          
+          const value = parseFloat(row.value);
+          if (isNaN(value)) {
+            importResults.errors.push({ row: i + 1, error: "Invalid value" });
+            continue;
+          }
+          
+          const { molecule_id, smiles, name, ...extraFields } = row;
+          
+          resultsToCreate.push({
+            assayId: req.params.assayId,
+            campaignId: campaignId || null,
+            moleculeId,
+            value,
+            units: row.units || assay.units,
+            concentration: row.concentration ? parseFloat(row.concentration) : null,
+            outcomeLabel: row.outcome_label || null,
+            replicateId: row.replicate_id || null,
+            metadata: Object.keys(extraFields).length > 0 ? extraFields : null,
+          });
+          
+        } catch (err: any) {
+          importResults.errors.push({ row: i + 1, error: err.message || "Unknown error" });
+        }
+      }
+      
+      if (resultsToCreate.length > 0) {
+        await storage.bulkCreateAssayResults(resultsToCreate as any);
+        importResults.imported = resultsToCreate.length;
+      }
+      
+      res.status(201).json(importResults);
+    } catch (error) {
+      console.error("Error uploading assay data:", error);
+      res.status(500).json({ error: "Failed to upload assay data" });
+    }
+  });
+
+  // ============================================
+  // HIT TRIAGE ENDPOINTS
+  // ============================================
+
+  app.get("/api/campaigns/:campaignId/hits", requireAuth, async (req, res) => {
+    try {
+      const { minOracleScore, maxOracleScore, maxSynthesisComplexity, ipSafeOnly, hasAssayData } = req.query;
+      
+      const filters: {
+        minOracleScore?: number;
+        maxOracleScore?: number;
+        maxSynthesisComplexity?: number;
+        ipSafeOnly?: boolean;
+        hasAssayData?: boolean;
+      } = {};
+      
+      if (minOracleScore) filters.minOracleScore = parseFloat(minOracleScore as string);
+      if (maxOracleScore) filters.maxOracleScore = parseFloat(maxOracleScore as string);
+      if (maxSynthesisComplexity) filters.maxSynthesisComplexity = parseFloat(maxSynthesisComplexity as string);
+      if (ipSafeOnly === "true") filters.ipSafeOnly = true;
+      if (hasAssayData === "true" || hasAssayData === "false") filters.hasAssayData = hasAssayData === "true";
+      
+      const hits = await storage.getHitCandidates(req.params.campaignId, Object.keys(filters).length > 0 ? filters : undefined);
+      res.json(hits);
+    } catch (error) {
+      console.error("Error fetching hit candidates:", error);
+      res.status(500).json({ error: "Failed to fetch hit candidates" });
     }
   });
 
