@@ -31,6 +31,7 @@ import {
   insertSharedAssetSchema,
   insertMaterialEntitySchema,
   insertMaterialPropertySchema,
+  insertMaterialVariantSchema,
   insertMaterialsProgramSchema,
   insertMaterialsCampaignSchema,
   insertMaterialsOracleScoreSchema,
@@ -2376,6 +2377,86 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error creating material property:", error);
       res.status(500).json({ error: "Failed to create material property" });
+    }
+  });
+
+  app.get("/api/materials/:id/variants", requireAuth, async (req, res) => {
+    try {
+      const variants = await storage.getMaterialVariants(req.params.id);
+      res.json(variants);
+    } catch (error) {
+      console.error("Error fetching material variants:", error);
+      res.status(500).json({ error: "Failed to fetch material variants" });
+    }
+  });
+
+  app.get("/api/material-variants/:id", requireAuth, async (req, res) => {
+    try {
+      const variant = await storage.getMaterialVariant(req.params.id);
+      if (!variant) {
+        return res.status(404).json({ error: "Material variant not found" });
+      }
+      res.json(variant);
+    } catch (error) {
+      console.error("Error fetching material variant:", error);
+      res.status(500).json({ error: "Failed to fetch material variant" });
+    }
+  });
+
+  app.post("/api/materials/:id/variants", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertMaterialVariantSchema.safeParse({ ...req.body, materialId: req.params.id });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const variant = await storage.createMaterialVariant(parsed.data);
+      res.status(201).json(variant);
+    } catch (error) {
+      console.error("Error creating material variant:", error);
+      res.status(500).json({ error: "Failed to create material variant" });
+    }
+  });
+
+  app.post("/api/materials/:id/variants/batch", requireAuth, async (req, res) => {
+    try {
+      const { variants } = req.body;
+      if (!Array.isArray(variants)) {
+        return res.status(400).json({ error: "variants must be an array" });
+      }
+      const batchSchema = z.array(insertMaterialVariantSchema);
+      const variantsWithMaterialId = variants.map((v: any) => ({ ...v, materialId: req.params.id }));
+      const parsed = batchSchema.safeParse(variantsWithMaterialId);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const created = await storage.batchCreateMaterialVariants(parsed.data);
+      res.status(201).json({ created: created.length, variants: created });
+    } catch (error) {
+      console.error("Error batch creating material variants:", error);
+      res.status(500).json({ error: "Failed to batch create material variants" });
+    }
+  });
+
+  app.patch("/api/material-variants/:id", requireAuth, async (req, res) => {
+    try {
+      const variant = await storage.updateMaterialVariant(req.params.id, req.body);
+      if (!variant) {
+        return res.status(404).json({ error: "Material variant not found" });
+      }
+      res.json(variant);
+    } catch (error) {
+      console.error("Error updating material variant:", error);
+      res.status(500).json({ error: "Failed to update material variant" });
+    }
+  });
+
+  app.delete("/api/material-variants/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteMaterialVariant(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting material variant:", error);
+      res.status(500).json({ error: "Failed to delete material variant" });
     }
   });
 

@@ -114,6 +114,9 @@ import {
   type InsertMaterialEntity,
   type MaterialProperty,
   type InsertMaterialProperty,
+  type MaterialVariant,
+  type InsertMaterialVariant,
+  materialVariants,
   type MaterialsProgram,
   type InsertMaterialsProgram,
   type MaterialsCampaign,
@@ -315,6 +318,13 @@ export interface IStorage {
 
   getMaterialProperties(materialId: string): Promise<MaterialProperty[]>;
   createMaterialProperty(property: InsertMaterialProperty): Promise<MaterialProperty>;
+
+  getMaterialVariants(materialId: string): Promise<MaterialVariant[]>;
+  getMaterialVariant(id: string): Promise<MaterialVariant | undefined>;
+  createMaterialVariant(variant: InsertMaterialVariant): Promise<MaterialVariant>;
+  updateMaterialVariant(id: string, variant: Partial<InsertMaterialVariant>): Promise<MaterialVariant | undefined>;
+  deleteMaterialVariant(id: string): Promise<void>;
+  batchCreateMaterialVariants(variants: InsertMaterialVariant[]): Promise<MaterialVariant[]>;
 
   getMaterialsPrograms(): Promise<MaterialsProgram[]>;
   getMaterialsProgram(id: string): Promise<MaterialsProgram | undefined>;
@@ -1342,6 +1352,35 @@ export class DatabaseStorage implements IStorage {
   async createMaterialProperty(property: InsertMaterialProperty): Promise<MaterialProperty> {
     const result = await db.insert(materialProperties).values(property).returning();
     return result[0];
+  }
+
+  async getMaterialVariants(materialId: string): Promise<MaterialVariant[]> {
+    return db.select().from(materialVariants).where(eq(materialVariants.materialId, materialId)).orderBy(desc(materialVariants.createdAt));
+  }
+
+  async getMaterialVariant(id: string): Promise<MaterialVariant | undefined> {
+    const result = await db.select().from(materialVariants).where(eq(materialVariants.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createMaterialVariant(variant: InsertMaterialVariant): Promise<MaterialVariant> {
+    const result = await db.insert(materialVariants).values(variant).returning();
+    return result[0];
+  }
+
+  async updateMaterialVariant(id: string, variant: Partial<InsertMaterialVariant>): Promise<MaterialVariant | undefined> {
+    const result = await db.update(materialVariants).set(variant).where(eq(materialVariants.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteMaterialVariant(id: string): Promise<void> {
+    await db.delete(materialVariants).where(eq(materialVariants.id, id));
+  }
+
+  async batchCreateMaterialVariants(variants: InsertMaterialVariant[]): Promise<MaterialVariant[]> {
+    if (variants.length === 0) return [];
+    const result = await db.insert(materialVariants).values(variants).returning();
+    return result;
   }
 
   async getMaterialsPrograms(): Promise<MaterialsProgram[]> {

@@ -30,8 +30,9 @@ export const orgRoleEnum = pgEnum("org_role", ["admin", "member", "viewer"]);
 export const assetTypeEnum = pgEnum("asset_type", ["smiles_library", "pipeline_template", "program"]);
 export const sharePermissionEnum = pgEnum("share_permission", ["read", "fork"]);
 export const discoveryDomainEnum = pgEnum("discovery_domain", ["drug", "materials"]);
-export const materialTypeEnum = pgEnum("material_type", ["polymer", "crystal", "composite", "surface", "membrane", "catalyst"]);
+export const materialTypeEnum = pgEnum("material_type", ["polymer", "crystal", "composite", "surface", "membrane", "catalyst", "coating"]);
 export const materialPropertySourceEnum = pgEnum("material_property_source", ["ml", "simulation", "experiment"]);
+export const variantGeneratedByEnum = pgEnum("variant_generated_by", ["human", "ml", "genetic", "quantum"]);
 
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -718,16 +719,37 @@ export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSche
 
 export const materialEntities = pgTable("material_entities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name"),
   type: materialTypeEnum("type").notNull(),
   representation: jsonb("representation"),
+  baseFamily: text("base_family"),
   metadata: jsonb("metadata"),
   isCurated: boolean("is_curated").default(false),
+  companyId: varchar("company_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertMaterialEntitySchema = createInsertSchema(materialEntities).omit({ id: true, createdAt: true });
 export type MaterialEntity = typeof materialEntities.$inferSelect;
 export type InsertMaterialEntity = z.infer<typeof insertMaterialEntitySchema>;
+
+export const materialVariants = pgTable("material_variants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  materialId: varchar("material_id").notNull().references(() => materialEntities.id, { onDelete: "cascade" }),
+  variantParams: jsonb("variant_params"),
+  generatedBy: variantGeneratedByEnum("generated_by").default("human"),
+  simulationState: text("simulation_state"),
+  manufacturabilityScore: real("manufacturability_score"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const materialVariantsRelations = relations(materialVariants, ({ one }) => ({
+  material: one(materialEntities, { fields: [materialVariants.materialId], references: [materialEntities.id] }),
+}));
+
+export const insertMaterialVariantSchema = createInsertSchema(materialVariants).omit({ id: true, createdAt: true });
+export type MaterialVariant = typeof materialVariants.$inferSelect;
+export type InsertMaterialVariant = z.infer<typeof insertMaterialVariantSchema>;
 
 export const materialProperties = pgTable("material_properties", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

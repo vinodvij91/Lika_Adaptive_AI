@@ -26,7 +26,57 @@ The platform utilizes a full-stack TypeScript architecture. The frontend is buil
 - **Literature & IP (v1)**: Allows for literature annotations and IP risk screening.
 - **Multi-Organization Collaboration (v1)**: Supports creating organizations with role-based access for team collaboration and sharing assets.
 - **Disease-Specific Pipeline Templates (v1)**: Offers pre-configured pipeline templates for various disease domains (Alzheimer's, Oncology, Neuroinflammation, Metabolic Disease, etc.) with customizable targets, scoring weights, and visualization presets.
-- **Materials Science (v1)**: Extends capabilities to materials science, supporting material entities (polymers, crystals, composites), property tracking, and dedicated materials programs and campaigns with specialized oracle scores and pipeline templates.
+- **Materials Science (v1)**: First-class materials science domain supporting polymers, crystals, composites, catalysts, membranes, and coatings with structure-first and property-first discovery modes.
+
+### Materials Science Data Model (v1)
+
+#### Core Tables
+- **material_entities**: Core material identity table
+  - `id`: UUID primary key
+  - `name`: Material name
+  - `type`: Structure type (polymer, crystal, composite, surface, membrane, catalyst, coating)
+  - `representation`: JSONB for structural data (SMILES, BigSMILES, CIF, graph, repeat unit, lattice)
+  - `baseFamily`: Base family (e.g., "polyamide", "perovskite", "carbon composite")
+  - `metadata`: JSONB for additional metadata
+  - `isCurated`: Boolean curation flag
+  - `companyId`: Organization/company reference
+  - `createdAt`: Timestamp
+
+- **material_variants**: Structural variants for systematic exploration
+  - `id`: UUID primary key
+  - `materialId`: Foreign key to material_entities
+  - `variantParams`: JSONB for substitutions, chain length, dopants, ratios
+  - `generatedBy`: Generation method (human, ml, genetic, quantum)
+  - `simulationState`: Current simulation status
+  - `manufacturabilityScore`: Manufacturing feasibility score
+  - `createdAt`: Timestamp
+
+- **material_properties**: Property predictions and measurements
+  - Links to material_entities via materialId
+  - Supports ML, simulation, and experimental sources
+
+- **materials_programs**: High-level materials research programs
+- **materials_campaigns**: Materials discovery campaigns with pipeline configurations
+- **materials_oracle_scores**: Scoring with property breakdown, synthesis feasibility, manufacturing cost
+
+### Materials Science Endpoints
+- `GET /api/materials` - List material entities (optional `?type=` filter)
+- `GET /api/materials/:id` - Get material with properties
+- `POST /api/materials` - Create material entity
+- `PATCH /api/materials/:id` - Update material entity
+- `DELETE /api/materials/:id` - Delete material entity
+- `POST /api/materials/:id/properties` - Add property to material
+- `GET /api/materials/:id/variants` - List variants for a material
+- `POST /api/materials/:id/variants` - Create single variant
+- `POST /api/materials/:id/variants/batch` - Batch create variants
+- `GET /api/material-variants/:id` - Get variant by ID
+- `PATCH /api/material-variants/:id` - Update variant
+- `DELETE /api/material-variants/:id` - Delete variant
+- `GET /api/materials-programs` - List materials programs
+- `POST /api/materials-programs` - Create materials program
+- `GET /api/materials-campaigns` - List materials campaigns
+- `POST /api/materials-campaigns` - Create materials campaign
+- Agent endpoints: `/api/agent/materials`, `/api/agent/materials-programs`, `/api/agent/materials-campaigns`
 
 ### API Design
 The platform uses RESTful API endpoints under the `/api/` prefix, with specific agent-friendly endpoints designed for AI interaction, including `GET /api/agent/campaigns/pending`, `POST /api/agent/campaigns/:id/start`, and various learning graph, library, and recommendation management endpoints. Service account roles (`agent_pipeline_copilot`, `agent_operator`, `agent_readonly`) define agent permissions.
@@ -39,8 +89,8 @@ The platform is designed to integrate with quantum computation services (e.g., I
 
 ## External Dependencies
 
--   **PostgreSQL**: Primary relational database.
--   **Radix UI primitives**: For UI components (dialogs, dropdowns, forms, navigation).
--   **cmdk**: For command palette functionality.
--   **embla-carousel-react**: For carousel components.
--   **date-fns**: For date utility functions.
+- **PostgreSQL**: Primary relational database.
+- **Radix UI primitives**: For UI components (dialogs, dropdowns, forms, navigation).
+- **cmdk**: For command palette functionality.
+- **embla-carousel-react**: For carousel components.
+- **date-fns**: For date utility functions.
