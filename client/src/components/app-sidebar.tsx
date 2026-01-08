@@ -23,6 +23,7 @@ import {
   Library,
   Server,
   Activity,
+  TestTube2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -61,6 +62,11 @@ const workflowItems = [
     title: "Campaigns",
     url: "/campaigns",
     icon: Workflow,
+  },
+  {
+    title: "Assays",
+    url: "/assays",
+    icon: TestTube2,
   },
   {
     title: "Reports",
