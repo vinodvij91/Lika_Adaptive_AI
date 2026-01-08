@@ -26,6 +26,7 @@ import {
   TestTube2,
   Zap,
   Hexagon,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -69,6 +70,11 @@ const workflowItems = [
     title: "Materials Campaigns",
     url: "/materials-campaigns",
     icon: Hexagon,
+  },
+  {
+    title: "Multi-Scale Repr.",
+    url: "/multi-scale-representations",
+    icon: Layers,
   },
   {
     title: "Property Pipelines",
