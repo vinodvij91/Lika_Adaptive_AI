@@ -821,6 +821,77 @@ export const insertMaterialsLearningGraphSchema = createInsertSchema(materialsLe
 export type MaterialsLearningGraphEntry = typeof materialsLearningGraph.$inferSelect;
 export type InsertMaterialsLearningGraphEntry = z.infer<typeof insertMaterialsLearningGraphSchema>;
 
+export const targetRoleEnum = pgEnum("target_role", ["primary", "secondary", "safety"]);
+export const moaNodeTypeEnum = pgEnum("moa_node_type", ["target", "pathway", "process", "phenotype"]);
+export const moaRelationEnum = pgEnum("moa_relation", ["activates", "inhibits", "associated_with"]);
+
+export const assayPanels = pgTable("assay_panels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  campaignId: varchar("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const assayPanelsRelations = relations(assayPanels, ({ one, many }) => ({
+  campaign: one(campaigns, { fields: [assayPanels.campaignId], references: [campaigns.id] }),
+  targets: many(assayPanelTargets),
+}));
+
+export const assayPanelTargets = pgTable("assay_panel_targets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assayPanelId: varchar("assay_panel_id").notNull().references(() => assayPanels.id, { onDelete: "cascade" }),
+  targetId: varchar("target_id").notNull().references(() => targets.id, { onDelete: "cascade" }),
+  role: targetRoleEnum("role").default("primary"),
+});
+
+export const assayPanelTargetsRelations = relations(assayPanelTargets, ({ one }) => ({
+  panel: one(assayPanels, { fields: [assayPanelTargets.assayPanelId], references: [assayPanels.id] }),
+  target: one(targets, { fields: [assayPanelTargets.targetId], references: [targets.id] }),
+}));
+
+export const moaNodes = pgTable("moa_nodes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: moaNodeTypeEnum("type").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const moaEdges = pgTable("moa_edges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromNodeId: varchar("from_node_id").notNull().references(() => moaNodes.id, { onDelete: "cascade" }),
+  toNodeId: varchar("to_node_id").notNull().references(() => moaNodes.id, { onDelete: "cascade" }),
+  relation: moaRelationEnum("relation").notNull(),
+  confidence: real("confidence").default(1.0),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const moaEdgesRelations = relations(moaEdges, ({ one }) => ({
+  fromNode: one(moaNodes, { fields: [moaEdges.fromNodeId], references: [moaNodes.id] }),
+  toNode: one(moaNodes, { fields: [moaEdges.toNodeId], references: [moaNodes.id] }),
+}));
+
+export const insertAssayPanelSchema = createInsertSchema(assayPanels).omit({ id: true, createdAt: true });
+export const insertAssayPanelTargetSchema = createInsertSchema(assayPanelTargets).omit({ id: true });
+export const insertMoaNodeSchema = createInsertSchema(moaNodes).omit({ id: true, createdAt: true });
+export const insertMoaEdgeSchema = createInsertSchema(moaEdges).omit({ id: true, createdAt: true });
+
+export type AssayPanel = typeof assayPanels.$inferSelect;
+export type InsertAssayPanel = z.infer<typeof insertAssayPanelSchema>;
+export type AssayPanelTarget = typeof assayPanelTargets.$inferSelect;
+export type InsertAssayPanelTarget = z.infer<typeof insertAssayPanelTargetSchema>;
+export type MoaNode = typeof moaNodes.$inferSelect;
+export type InsertMoaNode = z.infer<typeof insertMoaNodeSchema>;
+export type MoaEdge = typeof moaEdges.$inferSelect;
+export type InsertMoaEdge = z.infer<typeof insertMoaEdgeSchema>;
+
+export type TargetRole = "primary" | "secondary" | "safety";
+export type MoaNodeType = "target" | "pathway" | "process" | "phenotype";
+export type MoaRelation = "activates" | "inhibits" | "associated_with";
+
 export type DiseaseArea = "CNS" | "Oncology" | "Rare" | "Infectious" | "Cardiometabolic" | "Autoimmune" | "Respiratory" | "Other";
 export type LibraryType = "internal" | "uploaded" | "generated";
 export type LibraryStatus = "draft" | "processing" | "curated" | "deprecated";
