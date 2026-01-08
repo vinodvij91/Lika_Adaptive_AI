@@ -66,6 +66,11 @@ const workflowItems = [
     icon: Workflow,
   },
   {
+    title: "Materials Campaigns",
+    url: "/materials-campaigns",
+    icon: Hexagon,
+  },
+  {
     title: "Property Pipelines",
     url: "/property-pipelines",
     icon: Zap,

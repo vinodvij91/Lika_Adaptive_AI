@@ -32,6 +32,7 @@ import AssayDetailPage from "@/pages/assay-detail";
 import HitTriagePage from "@/pages/hit-triage";
 import PropertyPipelinesPage from "@/pages/property-pipelines";
 import StructurePropertyPage from "@/pages/structure-property";
+import MaterialsCampaignsPage from "@/pages/materials-campaigns";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -79,6 +80,7 @@ function AuthenticatedRoutes() {
         <Route path="/usage" component={UsagePage} />
         <Route path="/property-pipelines" component={PropertyPipelinesPage} />
         <Route path="/structure-property" component={StructurePropertyPage} />
+        <Route path="/materials-campaigns" component={MaterialsCampaignsPage} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>

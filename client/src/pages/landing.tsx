@@ -169,27 +169,26 @@ export default function LandingPage() {
                       </div>
                     </div>
                     <p className="text-muted-foreground mb-4">
-                      AI-guided materials design for coatings, membranes, catalysts, 
-                      and functional materials with property-first pipelines.
+                      Evaluate <strong className="text-amber-400">millions of material variants</strong>, run <strong className="text-amber-400">hundreds of thousands</strong> of property predictions per day, and manage <strong className="text-amber-400">dozens of concurrent campaigns</strong>.
                     </p>
                     <ul className="space-y-3 text-sm">
                       <li className="flex items-center gap-3">
                         <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center">
                           <Layers className="h-3.5 w-3.5 text-amber-400" />
                         </div>
-                        <span className="text-muted-foreground">Multi-Scale Representations</span>
+                        <span className="text-muted-foreground">100K-5M+ variants per campaign</span>
                       </li>
                       <li className="flex items-center gap-3">
                         <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center">
                           <Atom className="h-3.5 w-3.5 text-amber-400" />
                         </div>
-                        <span className="text-muted-foreground">Property Prediction</span>
+                        <span className="text-muted-foreground">High-throughput property prediction</span>
                       </li>
                       <li className="flex items-center gap-3">
                         <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center">
                           <Settings className="h-3.5 w-3.5 text-amber-400" />
                         </div>
-                        <span className="text-muted-foreground">Manufacturability Scoring</span>
+                        <span className="text-muted-foreground">Simulation-in-the-loop optimization</span>
                       </li>
                     </ul>
                   </div>
@@ -376,8 +375,8 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <USPCard
                 icon={Layers}
-                title="Property-Driven, Simulation-in-the-Loop"
-                description="Candidates optimized not just theoretically, but for real-world engineering constraints with physics-aware + ML-guided scoring loops."
+                title="Million-Scale Variant Exploration"
+                description="Explore millions of structural variants with high-throughput property prediction pipelines processing 100K-500K variants per batch."
                 accentColor="amber"
               />
               <USPCard
@@ -388,26 +387,26 @@ export default function LandingPage() {
               />
               <USPCard
                 icon={Settings}
-                title="Adaptive Domain Pipelines"
-                description="Tailored workflows for polymers, coatings, membranes, energy materials, catalysts, and composites."
+                title="Simulation-in-the-Loop Optimization"
+                description="Execute high-throughput property prediction pipelines and iterate toward real-world performance with distributed compute."
                 accentColor="amber"
               />
               <USPCard
                 icon={Hexagon}
-                title="Curated Materials Libraries"
-                description="Structure-property archetypes with generative expansion for novel material discovery."
+                title="Enterprise-Scale Campaign Management"
+                description="Manage dozens of concurrent discovery campaigns, each handling 420K+ variants with millions of property predictions."
                 accentColor="amber"
               />
               <USPCard
                 icon={Shield}
-                title="Manufacturability Awareness"
-                description="Production feasibility, cost estimation, and scale-up considerations as first-class scores."
+                title="Manufacturing-Ready Candidates"
+                description="Production feasibility, cost estimation, and scale-up considerations as first-class scores for real-world deployment."
                 accentColor="amber"
               />
               <USPCard
                 icon={Brain}
                 title="Cross-Domain Intelligence"
-                description="Shared insights and reusable scientific knowledge between drug discovery and materials science."
+                description="Shared insights and reusable scientific knowledge between drug discovery and materials science at enterprise scale."
                 accentColor="amber"
               />
             </div>
