@@ -30,6 +30,7 @@ import UsagePage from "@/pages/usage";
 import AssaysPage from "@/pages/assays";
 import AssayDetailPage from "@/pages/assay-detail";
 import HitTriagePage from "@/pages/hit-triage";
+import PropertyPipelinesPage from "@/pages/property-pipelines";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -75,6 +76,7 @@ function AuthenticatedRoutes() {
         <Route path="/compute-nodes" component={ComputeNodesPage} />
         <Route path="/compute-nodes/:id" component={ComputeNodeDetailPage} />
         <Route path="/usage" component={UsagePage} />
+        <Route path="/property-pipelines" component={PropertyPipelinesPage} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>

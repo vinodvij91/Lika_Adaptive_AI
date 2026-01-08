@@ -24,6 +24,7 @@ import {
   Server,
   Activity,
   TestTube2,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -62,6 +63,11 @@ const workflowItems = [
     title: "Campaigns",
     url: "/campaigns",
     icon: Workflow,
+  },
+  {
+    title: "Property Pipelines",
+    url: "/property-pipelines",
+    icon: Zap,
   },
   {
     title: "Assays",
