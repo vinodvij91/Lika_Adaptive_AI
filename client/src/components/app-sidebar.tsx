@@ -25,6 +25,7 @@ import {
   Activity,
   TestTube2,
   Zap,
+  Hexagon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -68,6 +69,11 @@ const workflowItems = [
     title: "Property Pipelines",
     url: "/property-pipelines",
     icon: Zap,
+  },
+  {
+    title: "Structure-Property",
+    url: "/structure-property",
+    icon: Hexagon,
   },
   {
     title: "Assays",
