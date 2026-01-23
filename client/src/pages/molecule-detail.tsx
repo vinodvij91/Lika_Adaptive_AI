@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Molecule, MoleculeScore, AssayResult } from "@shared/schema";
+import { MoleculeStructureViewer } from "@/components/molecule-structure-viewer";
+import { ExternalDatabasePanel } from "@/components/external-database-panel";
+import { AIPredictionsPanel } from "@/components/ai-predictions-panel";
 
 type MoleculeWithDetails = Molecule & {
   scores: MoleculeScore[];
@@ -101,6 +104,22 @@ export default function MoleculeDetailPage() {
             <Badge variant="outline">{molecule.source}</Badge>
           )}
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <MoleculeStructureViewer 
+          smiles={molecule.smiles} 
+          moleculeName={molecule.name || "Molecule Structure"} 
+          size="lg"
+        />
+        <ExternalDatabasePanel 
+          smiles={molecule.smiles} 
+          moleculeName={molecule.name || undefined}
+        />
+        <AIPredictionsPanel 
+          smiles={molecule.smiles} 
+          moleculeName={molecule.name || undefined}
+        />
       </div>
 
       <Card>

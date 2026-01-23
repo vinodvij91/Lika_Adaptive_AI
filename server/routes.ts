@@ -3251,5 +3251,253 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== AI/ML Prediction Endpoints ====================
+  
+  app.get("/api/integrations/status", requireAuth, async (req, res) => {
+    try {
+      const { isOpenAIConfigured } = await import("./services/openai-predictions");
+      res.json({
+        openai: {
+          configured: isOpenAIConfigured(),
+          status: isOpenAIConfigured() ? "ready" : "api_key_required",
+          capabilities: ["molecule_predictions", "material_predictions", "admet", "drug_likeness"],
+          message: isOpenAIConfigured() 
+            ? "OpenAI API is configured and ready for predictions"
+            : "Set OPENAI_API_KEY environment variable to enable AI predictions",
+        },
+        chembl: {
+          configured: true,
+          status: "public_api",
+          capabilities: ["molecule_lookup", "activity_data", "target_info"],
+          message: "ChEMBL is a public API - no authentication required",
+        },
+        pubchem: {
+          configured: true,
+          status: "public_api",
+          capabilities: ["compound_lookup", "properties", "synonyms"],
+          message: "PubChem is a public API - no authentication required",
+        },
+        uniprot: {
+          configured: true,
+          status: "public_api",
+          capabilities: ["protein_lookup", "sequence_data", "function_annotations"],
+          message: "UniProt is a public API - no authentication required",
+        },
+      });
+    } catch (error) {
+      console.error("Error checking integrations status:", error);
+      res.status(500).json({ error: "Failed to check integrations status" });
+    }
+  });
+
+  app.post("/api/predictions/molecule", requireAuth, async (req, res) => {
+    try {
+      const { smiles } = req.body;
+      if (!smiles || typeof smiles !== "string") {
+        return res.status(400).json({ error: "SMILES string is required" });
+      }
+
+      const { predictMoleculeProperties, isOpenAIConfigured } = await import("./services/openai-predictions");
+      
+      if (!isOpenAIConfigured()) {
+        return res.status(503).json({ 
+          error: "OpenAI not configured",
+          message: "Set OPENAI_API_KEY environment variable to enable AI predictions"
+        });
+      }
+
+      const prediction = await predictMoleculeProperties(smiles);
+      res.json(prediction);
+    } catch (error: any) {
+      console.error("Error generating molecule prediction:", error);
+      res.status(500).json({ error: error.message || "Failed to generate prediction" });
+    }
+  });
+
+  app.post("/api/predictions/material", requireAuth, async (req, res) => {
+    try {
+      const { representation, materialType } = req.body;
+      if (!representation || !materialType) {
+        return res.status(400).json({ error: "Material representation and type are required" });
+      }
+
+      const { predictMaterialProperties, isOpenAIConfigured } = await import("./services/openai-predictions");
+      
+      if (!isOpenAIConfigured()) {
+        return res.status(503).json({ 
+          error: "OpenAI not configured",
+          message: "Set OPENAI_API_KEY environment variable to enable AI predictions"
+        });
+      }
+
+      const prediction = await predictMaterialProperties(representation, materialType);
+      res.json(prediction);
+    } catch (error: any) {
+      console.error("Error generating material prediction:", error);
+      res.status(500).json({ error: error.message || "Failed to generate prediction" });
+    }
+  });
+
+  // ==================== External Database Lookup Endpoints ====================
+
+  app.get("/api/lookup/chembl/smiles", requireAuth, async (req, res) => {
+    try {
+      const smiles = req.query.smiles as string;
+      if (!smiles) {
+        return res.status(400).json({ error: "SMILES query parameter is required" });
+      }
+
+      const { searchChEMBLBySmiles } = await import("./services/external-databases");
+      const result = await searchChEMBLBySmiles(smiles);
+      
+      if (!result) {
+        return res.status(404).json({ error: "Molecule not found in ChEMBL" });
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("ChEMBL SMILES lookup error:", error);
+      res.status(500).json({ error: error.message || "Failed to search ChEMBL" });
+    }
+  });
+
+  app.get("/api/lookup/chembl/search", requireAuth, async (req, res) => {
+    try {
+      const name = req.query.name as string;
+      if (!name) {
+        return res.status(400).json({ error: "Name query parameter is required" });
+      }
+
+      const { searchChEMBLByName } = await import("./services/external-databases");
+      const results = await searchChEMBLByName(name);
+      res.json({ results, count: results.length });
+    } catch (error: any) {
+      console.error("ChEMBL name search error:", error);
+      res.status(500).json({ error: error.message || "Failed to search ChEMBL" });
+    }
+  });
+
+  app.get("/api/lookup/chembl/target/:chemblId", requireAuth, async (req, res) => {
+    try {
+      const { getChEMBLTarget } = await import("./services/external-databases");
+      const result = await getChEMBLTarget(req.params.chemblId);
+      
+      if (!result) {
+        return res.status(404).json({ error: "Target not found in ChEMBL" });
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("ChEMBL target lookup error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch ChEMBL target" });
+    }
+  });
+
+  app.get("/api/lookup/pubchem/smiles", requireAuth, async (req, res) => {
+    try {
+      const smiles = req.query.smiles as string;
+      if (!smiles) {
+        return res.status(400).json({ error: "SMILES query parameter is required" });
+      }
+
+      const { searchPubChemBySmiles } = await import("./services/external-databases");
+      const result = await searchPubChemBySmiles(smiles);
+      
+      if (!result) {
+        return res.status(404).json({ error: "Compound not found in PubChem" });
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("PubChem SMILES lookup error:", error);
+      res.status(500).json({ error: error.message || "Failed to search PubChem" });
+    }
+  });
+
+  app.get("/api/lookup/pubchem/search", requireAuth, async (req, res) => {
+    try {
+      const name = req.query.name as string;
+      if (!name) {
+        return res.status(400).json({ error: "Name query parameter is required" });
+      }
+
+      const { searchPubChemByName } = await import("./services/external-databases");
+      const results = await searchPubChemByName(name);
+      res.json({ results, count: results.length });
+    } catch (error: any) {
+      console.error("PubChem name search error:", error);
+      res.status(500).json({ error: error.message || "Failed to search PubChem" });
+    }
+  });
+
+  app.get("/api/lookup/uniprot/search", requireAuth, async (req, res) => {
+    try {
+      const query = req.query.query as string;
+      if (!query) {
+        return res.status(400).json({ error: "Query parameter is required" });
+      }
+
+      const { searchUniProt } = await import("./services/external-databases");
+      const results = await searchUniProt(query);
+      res.json({ results, count: results.length });
+    } catch (error: any) {
+      console.error("UniProt search error:", error);
+      res.status(500).json({ error: error.message || "Failed to search UniProt" });
+    }
+  });
+
+  // ==================== Molecular Visualization Endpoints ====================
+
+  app.get("/api/visualization/structure-2d", requireAuth, async (req, res) => {
+    try {
+      const smiles = req.query.smiles as string;
+      if (!smiles) {
+        return res.status(400).json({ error: "SMILES query parameter is required" });
+      }
+
+      const pubchemSvgUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/${encodeURIComponent(smiles)}/PNG?record_type=2d&image_size=300x300`;
+      
+      const response = await fetch(pubchemSvgUrl);
+      if (!response.ok) {
+        return res.status(404).json({ error: "Could not generate structure image" });
+      }
+
+      const buffer = await response.arrayBuffer();
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.send(Buffer.from(buffer));
+    } catch (error: any) {
+      console.error("Structure visualization error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate structure image" });
+    }
+  });
+
+  app.get("/api/visualization/structure-3d", requireAuth, async (req, res) => {
+    try {
+      const smiles = req.query.smiles as string;
+      if (!smiles) {
+        return res.status(400).json({ error: "SMILES query parameter is required" });
+      }
+
+      const pubchem3dUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/${encodeURIComponent(smiles)}/SDF?record_type=3d`;
+      
+      const response = await fetch(pubchem3dUrl);
+      if (!response.ok) {
+        return res.status(404).json({ 
+          error: "3D structure not available",
+          message: "PubChem may not have a 3D conformer for this molecule"
+        });
+      }
+
+      const sdf = await response.text();
+      res.setHeader("Content-Type", "chemical/x-mdl-sdfile");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.send(sdf);
+    } catch (error: any) {
+      console.error("3D structure error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch 3D structure" });
+    }
+  });
+
   return httpServer;
 }
