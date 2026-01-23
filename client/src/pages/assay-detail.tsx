@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { CsvFormatGuide, CSV_FORMATS } from "@/components/csv-format-guide";
 import { useParams, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -385,6 +386,12 @@ export default function AssayDetailPage() {
                   onChange={(e) => handleCSVChange(e.target.value)}
                   className="font-mono text-sm min-h-[150px]"
                   data-testid="textarea-csv-data"
+                />
+                <CsvFormatGuide
+                  columns={CSV_FORMATS.assayResults.columns}
+                  exampleRows={CSV_FORMATS.assayResults.exampleRows}
+                  templateFilename={CSV_FORMATS.assayResults.templateFilename}
+                  templateContent={CSV_FORMATS.assayResults.templateContent}
                 />
               </div>
 

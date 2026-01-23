@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { CsvFormatGuide, CSV_FORMATS } from "@/components/csv-format-guide";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -186,6 +187,13 @@ export default function LibraryDetailPage() {
               rows={10}
               className="font-mono text-sm"
               data-testid="textarea-smiles-import"
+            />
+            <CsvFormatGuide
+              title="Expected format:"
+              columns={CSV_FORMATS.smiles.columns}
+              exampleRows={CSV_FORMATS.smiles.exampleRows}
+              templateFilename={CSV_FORMATS.smiles.templateFilename}
+              templateContent={CSV_FORMATS.smiles.templateContent}
             />
             <Button
               onClick={handleImport}
