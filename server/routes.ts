@@ -74,6 +74,26 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/dashboard/stats/drug", requireAuth, async (req, res) => {
+    try {
+      const stats = await storage.getDrugDashboardStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching drug dashboard stats:", error);
+      res.status(500).json({ error: "Failed to fetch drug dashboard stats" });
+    }
+  });
+
+  app.get("/api/dashboard/stats/materials", requireAuth, async (req, res) => {
+    try {
+      const stats = await storage.getMaterialsDashboardStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching materials dashboard stats:", error);
+      res.status(500).json({ error: "Failed to fetch materials dashboard stats" });
+    }
+  });
+
   app.get("/api/projects", requireAuth, async (req, res) => {
     try {
       const userId = (req.user as any)?.id || "";

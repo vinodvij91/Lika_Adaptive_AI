@@ -256,6 +256,21 @@ export interface IStorage {
     domainBreakdown: Record<DiseaseArea, number>;
   }>;
 
+  getDrugDashboardStats(): Promise<{
+    moleculesScreened: number;
+    hitsIdentified: number;
+    activeTargets: number;
+    assaysUploaded: number;
+    activeCampaigns: number;
+  }>;
+
+  getMaterialsDashboardStats(): Promise<{
+    materialVariantsEvaluated: number;
+    propertiesPredicted: number;
+    manufacturableCandidates: number;
+    activePipelines: number;
+  }>;
+
   getReportsData(): Promise<{
     oracleDistribution: { range: string; count: number }[];
     admetPassRate: { passed: number; failed: number };
@@ -751,6 +766,66 @@ export class DatabaseStorage implements IStorage {
       activeCampaigns: Number(activeCount.count),
       campaignsThisWeek: Number(weekCount.count),
       domainBreakdown,
+    };
+  }
+
+  async getDrugDashboardStats(): Promise<{
+    moleculesScreened: number;
+    hitsIdentified: number;
+    activeTargets: number;
+    assaysUploaded: number;
+    activeCampaigns: number;
+  }> {
+    const [moleculeCount] = await db.select({ count: count() }).from(molecules);
+    
+    const [hitsCount] = await db
+      .select({ count: count() })
+      .from(moleculeScores)
+      .where(sql`${moleculeScores.oracleScore} >= 0.7`);
+    
+    const [targetCount] = await db.select({ count: count() }).from(targets);
+    
+    const [assayCount] = await db.select({ count: count() }).from(assays);
+    
+    const [activeCampaignCount] = await db
+      .select({ count: count() })
+      .from(campaigns)
+      .where(eq(campaigns.status, "running"));
+
+    return {
+      moleculesScreened: Number(moleculeCount.count),
+      hitsIdentified: Number(hitsCount.count),
+      activeTargets: Number(targetCount.count),
+      assaysUploaded: Number(assayCount.count),
+      activeCampaigns: Number(activeCampaignCount.count),
+    };
+  }
+
+  async getMaterialsDashboardStats(): Promise<{
+    materialVariantsEvaluated: number;
+    propertiesPredicted: number;
+    manufacturableCandidates: number;
+    activePipelines: number;
+  }> {
+    const [materialCount] = await db.select({ count: count() }).from(materialEntities);
+    
+    const [propertyCount] = await db.select({ count: count() }).from(materialProperties);
+    
+    const [manufacturableCount] = await db
+      .select({ count: count() })
+      .from(materialsOracleScores)
+      .where(sql`${materialsOracleScores.synthesisFeasibility} >= 0.7`);
+    
+    const [pipelineCount] = await db
+      .select({ count: count() })
+      .from(materialsCampaigns)
+      .where(eq(materialsCampaigns.status, "running"));
+
+    return {
+      materialVariantsEvaluated: Number(materialCount.count),
+      propertiesPredicted: Number(propertyCount.count),
+      manufacturableCandidates: Number(manufacturableCount.count),
+      activePipelines: Number(pipelineCount.count),
     };
   }
 

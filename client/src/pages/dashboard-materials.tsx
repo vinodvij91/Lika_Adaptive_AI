@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Hexagon,
   Workflow,
@@ -14,8 +15,9 @@ import {
   Sparkles,
   TrendingUp,
   Zap,
+  Beaker,
 } from "lucide-react";
-import type { MaterialsCampaign } from "@shared/schema";
+import type { MaterialsCampaign, MaterialEntity } from "@shared/schema";
 
 interface MaterialsDashboardStats {
   materialVariantsEvaluated: number;
@@ -26,11 +28,15 @@ interface MaterialsDashboardStats {
 
 export default function MaterialsDashboardPage() {
   const { data: stats, isLoading: statsLoading } = useQuery<MaterialsDashboardStats>({
-    queryKey: ["/api/dashboard/stats", "materials"],
+    queryKey: ["/api/dashboard/stats/materials"],
+  });
+
+  const { data: recentMaterials } = useQuery<MaterialEntity[]>({
+    queryKey: ["/api/materials"],
   });
 
   const { data: recentCampaigns } = useQuery<MaterialsCampaign[]>({
-    queryKey: ["/api/materials-campaigns", { limit: 5 }],
+    queryKey: ["/api/materials-campaigns"],
   });
 
   return (
@@ -164,24 +170,49 @@ export default function MaterialsDashboardPage() {
                     <h2 className="font-semibold">Materials Library</h2>
                   </div>
                   <Link href="/materials-library">
-                    <Button variant="ghost" size="sm" className="gap-1">
+                    <Button variant="ghost" size="sm" className="gap-1" data-testid="link-view-all-materials">
                       View all <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
                 </div>
-                <div className="p-10 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 flex items-center justify-center mx-auto mb-4">
-                    <Hexagon className="h-7 w-7 text-emerald-500" />
+                {recentMaterials && recentMaterials.length > 0 ? (
+                  <div className="divide-y">
+                    {recentMaterials.slice(0, 5).map((material) => (
+                      <div key={material.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors" data-testid={`card-material-${material.id}`}>
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
+                          <Beaker className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium truncate">{material.name}</p>
+                            {material.isDemo && (
+                              <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                Demo
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate capitalize">
+                            {material.type} - {material.baseFamily || "Unknown family"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <p className="font-semibold mb-1">No materials yet</p>
-                  <p className="text-sm text-muted-foreground mb-5">Import materials to start your discovery</p>
-                  <Link href="/import/materials/materials">
-                    <Button className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
-                      <Plus className="h-4 w-4" />
-                      Import Materials
-                    </Button>
-                  </Link>
-                </div>
+                ) : (
+                  <div className="p-10 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 flex items-center justify-center mx-auto mb-4">
+                      <Hexagon className="h-7 w-7 text-emerald-500" />
+                    </div>
+                    <p className="font-semibold mb-1">No materials yet</p>
+                    <p className="text-sm text-muted-foreground mb-5">Import materials to start your discovery</p>
+                    <Link href="/import/materials/materials">
+                      <Button className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600" data-testid="button-import-materials">
+                        <Plus className="h-4 w-4" />
+                        Import Materials
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   FlaskConical,
   Workflow,
@@ -28,15 +29,15 @@ interface DrugDashboardStats {
 
 export default function DrugDashboardPage() {
   const { data: stats, isLoading: statsLoading } = useQuery<DrugDashboardStats>({
-    queryKey: ["/api/dashboard/stats", "drug"],
+    queryKey: ["/api/dashboard/stats/drug"],
   });
 
   const { data: recentProjects } = useQuery<Project[]>({
-    queryKey: ["/api/projects", { limit: 5, domain: "drug" }],
+    queryKey: ["/api/projects"],
   });
 
   const { data: recentCampaigns } = useQuery<Campaign[]>({
-    queryKey: ["/api/campaigns", { limit: 5, domain: "drug" }],
+    queryKey: ["/api/campaigns"],
   });
 
   return (
@@ -179,12 +180,19 @@ export default function DrugDashboardPage() {
                   <div className="divide-y">
                     {recentProjects.slice(0, 4).map((project) => (
                       <Link key={project.id} href={`/projects/${project.id}`}>
-                        <div className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`card-project-${project.id}`}>
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
                             <FolderKanban className="h-5 w-5 text-blue-600" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{project.name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate">{project.name}</p>
+                              {project.isDemo && (
+                                <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                  Demo
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground truncate">
                               {project.description || "No description"}
                             </p>
@@ -231,12 +239,19 @@ export default function DrugDashboardPage() {
                   <div className="divide-y">
                     {recentCampaigns.slice(0, 4).map((campaign) => (
                       <Link key={campaign.id} href={`/campaigns/${campaign.id}`}>
-                        <div className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`card-campaign-${campaign.id}`}>
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
                             <Workflow className="h-5 w-5 text-emerald-600" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{campaign.name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate">{campaign.name}</p>
+                              {campaign.isDemo && (
+                                <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                  Demo
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           {campaign.status && (
                             <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">
