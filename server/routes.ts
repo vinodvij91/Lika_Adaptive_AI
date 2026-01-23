@@ -38,6 +38,7 @@ import {
   insertMaterialsLearningGraphSchema,
   insertProcessingJobSchema,
   insertProcessingJobEventSchema,
+  insertJobArtifactSchema,
   insertAssayPanelSchema,
   insertAssayPanelTargetSchema,
   insertMoaNodeSchema,
@@ -2739,6 +2740,70 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error creating processing job event:", error);
       res.status(500).json({ error: "Failed to create processing job event" });
+    }
+  });
+
+  app.get("/api/jobs/:jobId/artifacts", requireAuth, async (req, res) => {
+    try {
+      const artifacts = await storage.getJobArtifacts(req.params.jobId);
+      res.json(artifacts);
+    } catch (error) {
+      console.error("Error fetching job artifacts:", error);
+      res.status(500).json({ error: "Failed to fetch job artifacts" });
+    }
+  });
+
+  app.get("/api/campaigns/:campaignId/artifacts", requireAuth, async (req, res) => {
+    try {
+      const artifacts = await storage.getArtifactsByCampaign(req.params.campaignId, "drug");
+      res.json(artifacts);
+    } catch (error) {
+      console.error("Error fetching campaign artifacts:", error);
+      res.status(500).json({ error: "Failed to fetch campaign artifacts" });
+    }
+  });
+
+  app.get("/api/materials-campaigns/:campaignId/artifacts", requireAuth, async (req, res) => {
+    try {
+      const artifacts = await storage.getArtifactsByCampaign(req.params.campaignId, "materials");
+      res.json(artifacts);
+    } catch (error) {
+      console.error("Error fetching materials campaign artifacts:", error);
+      res.status(500).json({ error: "Failed to fetch materials campaign artifacts" });
+    }
+  });
+
+  app.post("/api/jobs/:jobId/artifacts", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertJobArtifactSchema.safeParse({ ...req.body, jobId: req.params.jobId });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const artifact = await storage.createJobArtifact(parsed.data);
+      res.status(201).json(artifact);
+    } catch (error) {
+      console.error("Error creating job artifact:", error);
+      res.status(500).json({ error: "Failed to create job artifact" });
+    }
+  });
+
+  app.post("/api/jobs/:jobId/artifacts/batch", requireAuth, async (req, res) => {
+    try {
+      const { artifacts } = req.body;
+      if (!Array.isArray(artifacts)) {
+        return res.status(400).json({ error: "artifacts must be an array" });
+      }
+      const parsedArtifacts = artifacts.map((a: unknown) => {
+        const artifactData = a as Record<string, unknown>;
+        const parsed = insertJobArtifactSchema.safeParse({ ...artifactData, jobId: req.params.jobId });
+        if (!parsed.success) throw new Error("Invalid artifact");
+        return parsed.data;
+      });
+      const result = await storage.createJobArtifactsBatch(parsedArtifacts);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error creating job artifacts batch:", error);
+      res.status(500).json({ error: "Failed to create job artifacts batch" });
     }
   });
 

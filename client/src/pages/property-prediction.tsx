@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/page-header";
+import { ResultsPanel } from "@/components/results-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -442,6 +443,13 @@ export default function PropertyPredictionPage() {
               No predictions match current filters. Try adjusting the percentile or confidence threshold.
             </div>
           )}
+
+          <ResultsPanel
+            materialsCampaignId="demo-campaign"
+            title="Computation Artifacts"
+            collapsible={true}
+            defaultExpanded={false}
+          />
         </div>
       </main>
     </div>

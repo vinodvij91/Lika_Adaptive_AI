@@ -910,6 +910,32 @@ export const insertProcessingJobEventSchema = createInsertSchema(processingJobEv
 export type ProcessingJobEvent = typeof processingJobEvents.$inferSelect;
 export type InsertProcessingJobEvent = z.infer<typeof insertProcessingJobEventSchema>;
 
+export const artifactDomainEnum = pgEnum("artifact_domain", ["drug", "materials"]);
+export const artifactTypeEnum = pgEnum("artifact_type", ["json", "table", "image", "model3d", "report"]);
+
+export const jobArtifacts = pgTable("job_artifacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().references(() => processingJobs.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id"),
+  campaignId: varchar("campaign_id"),
+  materialsCampaignId: varchar("materials_campaign_id"),
+  domain: artifactDomainEnum("domain").notNull(),
+  artifactType: artifactTypeEnum("artifact_type").notNull(),
+  name: text("name").notNull(),
+  uri: text("uri").notNull(),
+  mimeType: text("mime_type"),
+  summaryJson: jsonb("summary_json"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const jobArtifactsRelations = relations(jobArtifacts, ({ one }) => ({
+  job: one(processingJobs, { fields: [jobArtifacts.jobId], references: [processingJobs.id] }),
+}));
+
+export const insertJobArtifactSchema = createInsertSchema(jobArtifacts).omit({ id: true, createdAt: true });
+export type JobArtifact = typeof jobArtifacts.$inferSelect;
+export type InsertJobArtifact = z.infer<typeof insertJobArtifactSchema>;
+
 export const materialsCampaignAggregates = pgTable("materials_campaign_aggregates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   campaignId: varchar("campaign_id").notNull().references(() => materialsCampaigns.id, { onDelete: "cascade" }),

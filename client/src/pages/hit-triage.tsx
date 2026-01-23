@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { useState, useMemo, useCallback } from "react";
+import { ResultsPanel } from "@/components/results-panel";
 import {
   Card,
   CardContent,

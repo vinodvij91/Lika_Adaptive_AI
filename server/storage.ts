@@ -140,6 +140,9 @@ import {
   processingJobEvents,
   materialsCampaignAggregates,
   materialVariantMetrics,
+  jobArtifacts,
+  type JobArtifact,
+  type InsertJobArtifact,
   type AssayPanel,
   type InsertAssayPanel,
   type AssayPanelTarget,
@@ -409,6 +412,11 @@ export interface IStorage {
   createProcessingJobRun(run: InsertProcessingJobRun): Promise<ProcessingJobRun>;
   getProcessingJobEvents(jobId: string): Promise<ProcessingJobEvent[]>;
   createProcessingJobEvent(event: InsertProcessingJobEvent): Promise<ProcessingJobEvent>;
+
+  getJobArtifacts(jobId: string): Promise<JobArtifact[]>;
+  getArtifactsByCampaign(campaignId: string, domain: "drug" | "materials"): Promise<JobArtifact[]>;
+  createJobArtifact(artifact: InsertJobArtifact): Promise<JobArtifact>;
+  createJobArtifactsBatch(artifacts: InsertJobArtifact[]): Promise<JobArtifact[]>;
 
   getMaterialsCampaignAggregate(campaignId: string): Promise<MaterialsCampaignAggregate | undefined>;
   upsertMaterialsCampaignAggregate(aggregate: InsertMaterialsCampaignAggregate): Promise<MaterialsCampaignAggregate>;
@@ -2257,6 +2265,38 @@ export class DatabaseStorage implements IStorage {
   async createProcessingJobEvent(event: InsertProcessingJobEvent): Promise<ProcessingJobEvent> {
     const result = await db.insert(processingJobEvents).values(event).returning();
     return result[0];
+  }
+
+  async getJobArtifacts(jobId: string): Promise<JobArtifact[]> {
+    return db.select().from(jobArtifacts).where(eq(jobArtifacts.jobId, jobId)).orderBy(desc(jobArtifacts.createdAt));
+  }
+
+  async getArtifactsByCampaign(campaignId: string, domain: "drug" | "materials"): Promise<JobArtifact[]> {
+    if (domain === "materials") {
+      return db.select().from(jobArtifacts).where(
+        and(
+          eq(jobArtifacts.materialsCampaignId, campaignId),
+          eq(jobArtifacts.domain, "materials")
+        )
+      ).orderBy(desc(jobArtifacts.createdAt));
+    }
+    return db.select().from(jobArtifacts).where(
+      and(
+        eq(jobArtifacts.campaignId, campaignId),
+        eq(jobArtifacts.domain, "drug")
+      )
+    ).orderBy(desc(jobArtifacts.createdAt));
+  }
+
+  async createJobArtifact(artifact: InsertJobArtifact): Promise<JobArtifact> {
+    const result = await db.insert(jobArtifacts).values(artifact).returning();
+    return result[0];
+  }
+
+  async createJobArtifactsBatch(artifacts: InsertJobArtifact[]): Promise<JobArtifact[]> {
+    if (artifacts.length === 0) return [];
+    const result = await db.insert(jobArtifacts).values(artifacts).returning();
+    return result;
   }
 
   async getMaterialsCampaignAggregate(campaignId: string): Promise<MaterialsCampaignAggregate | undefined> {
