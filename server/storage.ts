@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, desc, sql, count, avg, sum } from "drizzle-orm";
+import { eq, and, or, desc, sql, count, avg, sum } from "drizzle-orm";
 import {
   projects,
   targets,
@@ -541,7 +541,9 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getProjects(userId: string): Promise<Project[]> {
-    return db.select().from(projects).where(eq(projects.ownerId, userId)).orderBy(desc(projects.updatedAt));
+    return db.select().from(projects).where(
+      or(eq(projects.ownerId, userId), eq(projects.isDemo, true))
+    ).orderBy(desc(projects.updatedAt));
   }
 
   async getProject(id: string): Promise<Project | undefined> {
