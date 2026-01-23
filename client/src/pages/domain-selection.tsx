@@ -2,7 +2,8 @@ import { useLocation } from "wouter";
 import { useDomain, type DiscoveryDomain } from "@/contexts/domain-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FlaskConical, Hexagon, ArrowRight, Atom, Beaker, Layers, Sparkles, Check } from "lucide-react";
+import { FlaskConical, Hexagon, ArrowRight, Check } from "lucide-react";
+import { LikaLogoLeafGradient } from "@/components/lika-logo";
 
 const domains: {
   id: DiscoveryDomain;
@@ -67,14 +68,7 @@ export default function DomainSelectionPage() {
         <div className="w-full max-w-5xl">
           <div className="text-center mb-12">
             <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/25">
-                  <Atom className="h-9 w-9 text-primary-foreground" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-chart-2 flex items-center justify-center">
-                  <Sparkles className="h-3 w-3 text-white" />
-                </div>
-              </div>
+              <LikaLogoLeafGradient size={72} />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text" data-testid="text-welcome-title">
               Welcome to Lika Sciences
