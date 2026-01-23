@@ -51,8 +51,9 @@ import {
 } from "@shared/schema";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: "Unauthorized" });
+  // DEV MODE: Skip authentication for exploration
+  if (!req.user) {
+    (req as any).user = { id: "dev-user", username: "Developer", email: "dev@lika.sciences" };
   }
   next();
 }

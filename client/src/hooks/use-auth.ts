@@ -4,19 +4,16 @@ import type { User } from "@shared/models/auth";
 const AUTH_QUERY_KEY = ["/api/ext-auth/me"];
 
 async function fetchUser(): Promise<User | null> {
-  const response = await fetch("/api/ext-auth/me", {
-    credentials: "include",
-  });
-
-  if (response.status === 401) {
-    return null;
-  }
-
-  if (!response.ok) {
-    throw new Error(`${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
+  // DEV MODE: Return mock user for exploration
+  return {
+    id: "dev-user",
+    email: "dev@lika.sciences",
+    firstName: "Developer",
+    lastName: "User",
+    profileImageUrl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 }
 
 async function performLogout(): Promise<void> {
