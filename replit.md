@@ -1,200 +1,47 @@
 # Lika Sciences Platform
 
 ## Overview
-
-Lika Sciences is a scientific SaaS platform for drug discovery and molecular research. It focuses on managing molecule registries, research campaigns, and SMILES data. The platform aims to provide clear information, robust data visualization, and professional scientific presentation, with future extensibility for advanced chemistry computations. The business vision is to streamline drug discovery workflows, accelerate molecular research, and enable data-driven decisions in scientific R&D.
+Lika Sciences is a scientific SaaS platform for drug discovery and molecular research, focusing on managing molecule registries, research campaigns, and SMILES data. It aims to streamline drug discovery workflows, accelerate molecular research, and enable data-driven decisions in scientific R&D through clear information, robust data visualization, and professional scientific presentation, with future extensibility for advanced chemistry computations.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
-
-### Core Architecture
-The platform utilizes a full-stack TypeScript architecture. The frontend is built with React, Vite, and shadcn/ui, styled with Tailwind CSS, and manages state using TanStack React Query. The backend runs on Node.js with Express, leveraging TypeScript and PostgreSQL for data persistence. Drizzle ORM is used for database interactions, with schema validation via drizzle-zod. Shared schemas and types reside in a `shared/` directory, accessible by both frontend and backend.
+The platform utilizes a full-stack TypeScript architecture with React, Vite, shadcn/ui, and Tailwind CSS for the frontend, using TanStack React Query for state management. The backend is built with Node.js, Express, TypeScript, and PostgreSQL, employing Drizzle ORM and drizzle-zod for database interactions and schema validation. Shared schemas and types are managed in a `shared/` directory.
 
 ### Key Domain Features
-- **Molecule Registry**: Manages chemical compounds using SMILES notation.
-- **Project & Campaign Management**: Organizes molecules into projects and facilitates research campaign setup with various modalities (small molecule, PROTAC, peptide, fragment).
-- **SMILES Import**: Supports batch import with validation and duplicate detection.
-- **Curated Libraries**: Provides domain-aware SMILES libraries with cleaning and validation workflows.
-- **Scientific Terminology**: Incorporates professional drug discovery terminology for job types, campaign tabs, and process descriptions (e.g., Hit identification, SAR feedback, Hit-to-Lead optimization).
-- **Compute Nodes**: Manages multi-provider infrastructure (Hetzner, Vast.ai, AWS, Azure, GCP, On-Prem) for ML, docking, quantum, and agent workloads, supporting various GPU types and connection methods (SSH, Cloud API). Features include SSH key management and usage tracking.
-- **Multi-Target SAR (v1)**: Enables multi-target profiling with assay panels, a Mechanism of Action (MoA) knowledge graph, and advanced visualizations (radar charts, trade-off plots, activity heatmaps) for multi-target optimization and safety flagging.
-- **Translational Medicine (v1)**: Integrates target variants, disease context signals, and organizes campaigns into higher-level drug discovery programs. Introduces extended molecule scoring (translational, synthesis, variant robustness, uncertainty metrics, IP screening).
-- **Wet-Lab Integration (v1)**: Defines wet-lab assays, provides AI-generated experiment recommendations, and incorporates experimental outcomes.
-- **Literature & IP (v1)**: Allows for literature annotations and IP risk screening.
-- **Multi-Organization Collaboration (v1)**: Supports creating organizations with role-based access for team collaboration and sharing assets.
-- **Disease-Specific Pipeline Templates (v1)**: Offers pre-configured pipeline templates for various disease domains (Alzheimer's, Oncology, Neuroinflammation, Metabolic Disease, etc.) with customizable targets, scoring weights, and visualization presets.
-- **Materials Science (v1)**: First-class materials science domain supporting polymers, crystals, composites, catalysts, membranes, and coatings with structure-first and property-first discovery modes.
+- **Molecule & Project Management**: Manages chemical compounds (SMILES notation) and organizes them into projects and research campaigns with various modalities (small molecule, PROTAC, peptide, fragment).
+- **Data Import & Curation**: Supports batch import of SMILES with validation, duplicate detection, and provides curated domain-aware SMILES libraries.
+- **Scientific Terminology**: Integrates professional drug discovery terminology across the platform.
+- **Compute Nodes**: Manages multi-provider infrastructure (Hetzner, Vast.ai, AWS, Azure, GCP, On-Prem) for ML, docking, quantum, and agent workloads, including SSH key management and usage tracking.
+- **Advanced Scientific Modules**: Includes Multi-Target SAR for profiling and visualization, Translational Medicine for target variants and extended molecule scoring, Wet-Lab Integration for assay definition and experiment recommendations, and Literature & IP for annotations and risk screening.
+- **Collaboration & Templates**: Supports multi-organization collaboration with role-based access and provides disease-specific pipeline templates.
+- **Materials Science**: A first-class domain supporting polymers, crystals, composites, catalysts, membranes, and coatings with both structure-first and property-first discovery modes.
 
-### Materials Science Data Model (v1)
+### Materials Science Data Model
+Core tables include `material_entities` for material identity and representation, `material_variants` for structural exploration, `material_properties` for predictions, `materials_programs` for high-level research, `materials_campaigns` for discovery, and `materials_oracle_scores` for scoring.
 
-#### Core Tables
-- **material_entities**: Core material identity table
-  - `id`: UUID primary key
-  - `name`: Material name
-  - `type`: Structure type (polymer, crystal, composite, surface, membrane, catalyst, coating)
-  - `representation`: JSONB for structural data (SMILES, BigSMILES, CIF, graph, repeat unit, lattice)
-  - `baseFamily`: Base family (e.g., "polyamide", "perovskite", "carbon composite")
-  - `metadata`: JSONB for additional metadata
-  - `isCurated`: Boolean curation flag
-  - `companyId`: Organization/company reference
-  - `createdAt`: Timestamp
+### Internal Normalized Schemas
+The Import Hub converts diverse industry formats into canonical tables, performing deduplication and normalization for both drug discovery (e.g., `canonical_molecules`, `molecule_descriptors`, `canonical_assays`) and materials science (e.g., `canonical_materials`, `canonical_material_properties`).
 
-- **material_variants**: Structural variants for systematic exploration
-  - `id`: UUID primary key
-  - `materialId`: Foreign key to material_entities
-  - `variantParams`: JSONB for substitutions, chain length, dopants, ratios
-  - `generatedBy`: Generation method (human, ml, genetic, quantum)
-  - `simulationState`: Current simulation status
-  - `manufacturabilityScore`: Manufacturing feasibility score
-  - `createdAt`: Timestamp
-
-- **material_properties**: Property predictions and measurements
-  - Links to material_entities via materialId
-  - Supports ML, simulation, and experimental sources
-
-- **materials_programs**: High-level materials research programs
-- **materials_campaigns**: Materials discovery campaigns with pipeline configurations
-- **materials_oracle_scores**: Scoring with property breakdown, synthesis feasibility, manufacturing cost
-
-### Internal Normalized Schemas (v1)
-
-The Import Hub converts messy industry formats (CSV/SDF/CIF/etc.) into canonical tables with deduplication and normalization.
-
-#### Drug Discovery Canonical Tables
-- **canonical_molecules**: Deduplicated molecules with inchikey index
-  - `canonical_smiles`: Normalized SMILES (NOT NULL)
-  - `inchikey`: Deduplication key (NOT NULL, indexed)
-  - `source`: Origin (import, built_in, vendor, generated)
-- **molecule_descriptors**: Computed properties (mw, logp, tpsa, hbd, hba, rotb, rings)
-- **molecule_fingerprints**: Morgan/ECFP fingerprints for similarity search
-- **hit_lists/hit_list_items**: Campaign hit lists with ranked molecules
-- **canonical_assays/canonical_assay_results**: Normalized assay data with unit conversion
-
-#### Materials Science Canonical Tables
-- **canonical_materials**: Deduplicated materials with material_hash index
-  - `material_hash`: Deduplication key (NOT NULL, indexed)
-  - `canonical_representation_json`: Normalized structure representation
-- **canonical_material_variants**: Parameterized versions with variant_hash
-- **canonical_material_properties**: Normalized property values with method tracking
-- **simulation_runs**: MD/DFT/FEM simulation tracking
-- **manufacturability_scores**: Feasibility, cost, and scale risk assessments
-
-#### Normalization Rules
-- Drug: Canonicalize SMILES, compute InChIKey, strip salts, merge duplicates
-- Materials: Detect format (CIF/XYZ/POSCAR/BigSMILES), compute material_hash, normalize units
-- Import output contract: counts (inserted/updated/skipped), validation report, normalization summary
+### Asset Storage Strategy
+DigitalOcean Spaces (S3-compatible) is used for primary storage of assets generated by compute nodes, with metadata stored in a `compound_assets` PostgreSQL table. Assets are served via CDN.
 
 ### Enterprise-Scale Processing Infrastructure
-
-#### Scalability Design
-The platform is designed for industrial-scale materials discovery:
-- Materials libraries: 100K-5M+ polymer, crystal, or composite variants
-- Property prediction pipelines: batch sizes of 10K-500K variants
-- Multiple concurrent campaigns per organization
-- Distributed processing across compute nodes
-- Resumable and fault-tolerant execution
-
-#### Processing Jobs System
-- **processing_jobs**: Core job orchestration table
-  - `id`: UUID primary key
-  - `type`: Job type (property_prediction, simulation, variant_generation, optimization, screening, aggregation)
-  - `status`: State machine (queued, dispatched, running, succeeded, failed, cancelled, paused)
-  - `priority`: Job priority for queue ordering
-  - `itemsTotal/itemsCompleted`: Progress tracking for batch operations
-  - `progressPercent`: Real-time progress percentage
-  - `checkpointData`: JSONB for resumable execution state
-  - `inputPayload/outputPayload`: JSONB for job data
-  - `computeNodeId`: Assigned compute node
-  - `retryCount/maxRetries`: Fault tolerance configuration
-  - `heartbeatAt`: Worker liveness tracking
-
-- **processing_job_runs**: Retry/resumption tracking per job
-- **processing_job_events**: Streaming partial results and events
-- **job_artifacts**: Computation output storage for Python/ML pipeline results
-  - `id`: UUID primary key
-  - `jobId`: Reference to processing job
-  - `companyId/campaignId/materialsCampaignId`: Ownership references (derived from job)
-  - `domain`: "drug" or "materials"
-  - `artifactType`: json, table, image, model3d, report
-  - `name/uri/mimeType`: Artifact metadata and storage location
-  - `summaryJson`: Optional structured summary for quick preview
-
-#### Artifact Ingestion System
-- **registerArtifactsFromManifest(jobId, manifest)**: Ingests Python computation outputs
-  - Validates manifest structure via Zod schema
-  - Derives campaign/company IDs from job record (not manifest) for security
-  - Auto-detects MIME types from file extensions
-  - Batch inserts artifacts with job association
-
-#### Artifact Endpoints
-- `GET /api/jobs/:jobId/artifacts` - List artifacts for a job
-- `GET /api/campaigns/:campaignId/artifacts` - List drug campaign artifacts
-- `GET /api/materials-campaigns/:campaignId/artifacts` - List materials campaign artifacts
-- `POST /api/jobs/:jobId/artifacts` - Create single artifact
-- `POST /api/jobs/:jobId/artifacts/batch` - Batch create artifacts
-- `POST /api/jobs/:jobId/artifacts/from-manifest` - Ingest from Python manifest.json
-
-#### Precomputed Aggregations
-- **materials_campaign_aggregates**: Campaign-level dashboard data
-  - Total materials/variants counts
-  - Score distributions and histograms
-  - Top variant IDs for quick access
-  - Property correlations
-  - Auto-refresh on job completion
-
-- **material_variant_metrics**: Per-variant computed metrics
-  - Property scores breakdown
-  - Aggregate scores with ranking
-  - Percentile positioning
-  - Quality flags
-
-### Processing Job Endpoints
-- `GET /api/processing-jobs` - List jobs with filters (status, type, campaignId)
-- `GET /api/processing-jobs/:id` - Get job with runs and events
-- `POST /api/processing-jobs` - Create new processing job
-- `PATCH /api/processing-jobs/:id` - Update job status/data
-- `POST /api/processing-jobs/:id/progress` - Update job progress with checkpoints
-- `POST /api/processing-jobs/:id/events` - Stream partial results
-- `POST /api/materials/:id/variants/batch-submit` - Async batch variant generation
-- `GET /api/materials-campaigns/:id/aggregates` - Get precomputed aggregates
-- `POST /api/materials-campaigns/:id/aggregates/refresh` - Schedule aggregate refresh
-- `GET /api/materials-campaigns/:id/variant-metrics` - Get variant rankings
-
-### Materials Science Endpoints
-- `GET /api/materials` - List material entities (optional `?type=` filter)
-- `GET /api/materials/:id` - Get material with properties
-- `POST /api/materials` - Create material entity
-- `PATCH /api/materials/:id` - Update material entity
-- `DELETE /api/materials/:id` - Delete material entity
-- `POST /api/materials/:id/properties` - Add property to material
-- `GET /api/materials/:id/variants` - List variants for a material
-- `POST /api/materials/:id/variants` - Create single variant
-- `POST /api/materials/:id/variants/batch` - Synchronous batch create variants
-- `GET /api/material-variants/:id` - Get variant by ID
-- `PATCH /api/material-variants/:id` - Update variant
-- `DELETE /api/material-variants/:id` - Delete variant
-- `GET /api/materials-programs` - List materials programs
-- `POST /api/materials-programs` - Create materials program
-- `GET /api/materials-campaigns` - List materials campaigns
-- `POST /api/materials-campaigns` - Create materials campaign
-- Agent endpoints: `/api/agent/materials`, `/api/agent/materials-programs`, `/api/agent/materials-campaigns`
+Designed for industrial-scale materials discovery, the platform features a robust processing jobs system (`processing_jobs` table) for orchestration, status tracking, and fault tolerance. It includes `processing_job_runs` for retry management, `processing_job_events` for streaming results, and `job_artifacts` for storing computation outputs, with an artifact ingestion system to process Python computation results. Precomputed aggregations (`materials_campaign_aggregates`, `material_variant_metrics`) provide dashboard data and per-variant metrics.
 
 ### API Design
-The platform uses RESTful API endpoints under the `/api/` prefix, with specific agent-friendly endpoints designed for AI interaction, including `GET /api/agent/campaigns/pending`, `POST /api/agent/campaigns/:id/start`, and various learning graph, library, and recommendation management endpoints. Service account roles (`agent_pipeline_copilot`, `agent_operator`, `agent_readonly`) define agent permissions.
+The platform uses RESTful API endpoints under `/api/`, with specific `/api/agent/` endpoints tailored for AI interaction and service account roles defining agent permissions.
 
 ### Design System
-Adheres to Material Design principles with Carbon Design data patterns, using Inter and JetBrains Mono fonts. Emphasizes information hierarchy and data-dense layouts with a custom Tailwind theme for scientific visualization.
+Adheres to Material Design principles with Carbon Design data patterns, utilizing Inter and JetBrains Mono fonts, and a custom Tailwind theme for scientific visualization and data-dense layouts.
 
 ### Quantum Compute Integration
-The platform is designed to integrate with quantum computation services (e.g., IonQ/IBM Quantum) for optimization and scoring, with placeholder configurations for future use.
+The architecture is designed to integrate with quantum computation services for future optimization and scoring.
 
 ## External Dependencies
-
 - **PostgreSQL**: Primary relational database.
-- **Radix UI primitives**: For UI components (dialogs, dropdowns, forms, navigation).
+- **Radix UI primitives**: For building UI components.
 - **cmdk**: For command palette functionality.
 - **embla-carousel-react**: For carousel components.
 - **date-fns**: For date utility functions.

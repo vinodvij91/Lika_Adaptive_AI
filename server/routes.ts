@@ -40,6 +40,7 @@ import {
   insertProcessingJobSchema,
   insertProcessingJobEventSchema,
   insertJobArtifactSchema,
+  insertCompoundAssetSchema,
   insertAssayPanelSchema,
   insertAssayPanelTargetSchema,
   insertMoaNodeSchema,
@@ -3039,6 +3040,164 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating import job:", error);
       res.status(500).json({ error: "Failed to update import job" });
+    }
+  });
+
+  app.get("/api/compound-assets/molecule/:moleculeId", requireAuth, async (req, res) => {
+    try {
+      const assets = await storage.getCompoundAssetsByMolecule(req.params.moleculeId);
+      res.json(assets);
+    } catch (error) {
+      console.error("Error fetching compound assets:", error);
+      res.status(500).json({ error: "Failed to fetch compound assets" });
+    }
+  });
+
+  app.get("/api/compound-assets/molecule/:moleculeId/:assetType", requireAuth, async (req, res) => {
+    try {
+      const asset = await storage.getCompoundAssetByTypeAndMolecule(
+        req.params.moleculeId,
+        req.params.assetType
+      );
+      if (!asset) {
+        return res.status(404).json({ error: "Asset not found" });
+      }
+      res.json(asset);
+    } catch (error) {
+      console.error("Error fetching compound asset:", error);
+      res.status(500).json({ error: "Failed to fetch compound asset" });
+    }
+  });
+
+  app.post("/api/compound-assets", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertCompoundAssetSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid asset data", details: parsed.error.errors });
+      }
+      const asset = await storage.createCompoundAsset(parsed.data);
+      res.status(201).json(asset);
+    } catch (error) {
+      console.error("Error creating compound asset:", error);
+      res.status(500).json({ error: "Failed to create compound asset" });
+    }
+  });
+
+  app.post("/api/compound-assets/batch", requireAuth, async (req, res) => {
+    try {
+      const { assets } = req.body;
+      if (!Array.isArray(assets)) {
+        return res.status(400).json({ error: "assets must be an array" });
+      }
+      const parsedAssets = assets.map((a: unknown) => {
+        const parsed = insertCompoundAssetSchema.safeParse(a);
+        if (!parsed.success) throw new Error("Invalid asset");
+        return parsed.data;
+      });
+      const result = await storage.bulkCreateCompoundAssets(parsedAssets);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error creating compound assets batch:", error);
+      res.status(500).json({ error: "Failed to create compound assets batch" });
+    }
+  });
+
+  app.delete("/api/compound-assets/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteCompoundAsset(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting compound asset:", error);
+      res.status(500).json({ error: "Failed to delete compound asset" });
+    }
+  });
+
+  app.get("/api/compound-assets/signed-url/:assetType/:moleculeId", requireAuth, async (req, res) => {
+    try {
+      const { getSignedDownloadUrl, generateAssetKey, getExtensionForAsset, isSpacesConfigured } = await import("./spaces-storage");
+      
+      if (!isSpacesConfigured()) {
+        return res.status(503).json({ error: "Object storage not configured" });
+      }
+      
+      const extension = getExtensionForAsset(req.params.assetType);
+      const key = generateAssetKey(req.params.moleculeId, req.params.assetType, extension);
+      const expiresIn = parseInt(req.query.expiresIn as string) || 3600;
+      
+      const signedUrl = await getSignedDownloadUrl(key, { expiresIn });
+      res.json({ signedUrl, key, expiresIn });
+    } catch (error) {
+      console.error("Error generating signed download URL:", error);
+      res.status(500).json({ error: "Failed to generate signed URL" });
+    }
+  });
+
+  app.post("/api/compound-assets/signed-upload-url", requireAuth, async (req, res) => {
+    try {
+      const { getSignedUploadUrl, generateAssetKey, getExtensionForAsset, getMimeTypeForAsset, isSpacesConfigured } = await import("./spaces-storage");
+      
+      if (!isSpacesConfigured()) {
+        return res.status(503).json({ error: "Object storage not configured" });
+      }
+      
+      const { moleculeId, assetType, companyId, expiresIn = 3600 } = req.body;
+      if (!moleculeId || !assetType) {
+        return res.status(400).json({ error: "moleculeId and assetType are required" });
+      }
+      
+      const extension = getExtensionForAsset(assetType);
+      const mimeType = getMimeTypeForAsset(assetType);
+      const key = generateAssetKey(moleculeId, assetType, extension, companyId);
+      
+      const signedUrl = await getSignedUploadUrl(key, mimeType, { expiresIn });
+      res.json({ signedUrl, key, mimeType, expiresIn });
+    } catch (error) {
+      console.error("Error generating signed upload URL:", error);
+      res.status(500).json({ error: "Failed to generate signed upload URL" });
+    }
+  });
+
+  app.get("/api/built-in-molecules", requireAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100000;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const molecules = await storage.getBuiltInMolecules(limit, offset);
+      const total = await storage.countBuiltInMolecules();
+      res.json({ molecules, total, limit, offset });
+    } catch (error) {
+      console.error("Error fetching built-in molecules:", error);
+      res.status(500).json({ error: "Failed to fetch built-in molecules" });
+    }
+  });
+
+  app.post("/api/built-in-molecules/mark", requireAuth, async (req, res) => {
+    try {
+      const { moleculeIds } = req.body;
+      if (!Array.isArray(moleculeIds)) {
+        return res.status(400).json({ error: "moleculeIds must be an array" });
+      }
+      await storage.markMoleculesAsBuiltIn(moleculeIds);
+      res.json({ marked: moleculeIds.length });
+    } catch (error) {
+      console.error("Error marking molecules as built-in:", error);
+      res.status(500).json({ error: "Failed to mark molecules as built-in" });
+    }
+  });
+
+  app.get("/api/storage/status", requireAuth, async (req, res) => {
+    try {
+      const { isSpacesConfigured } = await import("./spaces-storage");
+      const configured = isSpacesConfigured();
+      res.json({
+        configured,
+        provider: configured ? "do_spaces" : null,
+        message: configured 
+          ? "DigitalOcean Spaces storage is configured and ready"
+          : "Object storage not configured. Set DO_SPACES_* environment variables.",
+      });
+    } catch (error) {
+      console.error("Error checking storage status:", error);
+      res.status(500).json({ error: "Failed to check storage status" });
     }
   });
 

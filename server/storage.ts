@@ -45,6 +45,7 @@ import {
   moaEdges,
   pipelineTemplates,
   pipelineTemplateTargets,
+  compoundAssets,
   type Project,
   type InsertProject,
   type Target,
@@ -188,6 +189,8 @@ import {
   type InsertSimulationRun,
   type ManufacturabilityScore,
   type InsertManufacturabilityScore,
+  type CompoundAsset,
+  type InsertCompoundAsset,
   type AssayPanel,
   type InsertAssayPanel,
   type AssayPanelTarget,
@@ -508,6 +511,17 @@ export interface IStorage {
 
   createSimulationRun(run: InsertSimulationRun): Promise<SimulationRun>;
   createManufacturabilityScore(score: InsertManufacturabilityScore): Promise<ManufacturabilityScore>;
+
+  createCompoundAsset(asset: InsertCompoundAsset): Promise<CompoundAsset>;
+  bulkCreateCompoundAssets(assets: InsertCompoundAsset[]): Promise<CompoundAsset[]>;
+  getCompoundAsset(id: string): Promise<CompoundAsset | undefined>;
+  getCompoundAssetsByMolecule(moleculeId: string): Promise<CompoundAsset[]>;
+  getCompoundAssetByTypeAndMolecule(moleculeId: string, assetType: string): Promise<CompoundAsset | undefined>;
+  deleteCompoundAsset(id: string): Promise<void>;
+
+  getBuiltInMolecules(limit?: number, offset?: number): Promise<{ id: string; inchikey: string; canonicalSmiles: string }[]>;
+  countBuiltInMolecules(): Promise<number>;
+  markMoleculesAsBuiltIn(moleculeIds: string[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2620,6 +2634,67 @@ export class DatabaseStorage implements IStorage {
   async createManufacturabilityScore(score: InsertManufacturabilityScore): Promise<ManufacturabilityScore> {
     const result = await db.insert(manufacturabilityScores).values(score).returning();
     return result[0];
+  }
+
+  async createCompoundAsset(asset: InsertCompoundAsset): Promise<CompoundAsset> {
+    const result = await db.insert(compoundAssets).values(asset).returning();
+    return result[0];
+  }
+
+  async bulkCreateCompoundAssets(assets: InsertCompoundAsset[]): Promise<CompoundAsset[]> {
+    if (assets.length === 0) return [];
+    return db.insert(compoundAssets).values(assets).returning();
+  }
+
+  async getCompoundAsset(id: string): Promise<CompoundAsset | undefined> {
+    const result = await db.select().from(compoundAssets).where(eq(compoundAssets.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getCompoundAssetsByMolecule(moleculeId: string): Promise<CompoundAsset[]> {
+    return db.select().from(compoundAssets).where(eq(compoundAssets.moleculeId, moleculeId));
+  }
+
+  async getCompoundAssetByTypeAndMolecule(moleculeId: string, assetType: string): Promise<CompoundAsset | undefined> {
+    const result = await db.select().from(compoundAssets)
+      .where(and(
+        eq(compoundAssets.moleculeId, moleculeId),
+        eq(compoundAssets.assetType, assetType as any)
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async deleteCompoundAsset(id: string): Promise<void> {
+    await db.delete(compoundAssets).where(eq(compoundAssets.id, id));
+  }
+
+  async getBuiltInMolecules(limit: number = 100000, offset: number = 0): Promise<{ id: string; inchikey: string; canonicalSmiles: string }[]> {
+    return db.select({
+      id: canonicalMolecules.id,
+      inchikey: canonicalMolecules.inchikey,
+      canonicalSmiles: canonicalMolecules.canonicalSmiles,
+    })
+      .from(canonicalMolecules)
+      .where(eq(canonicalMolecules.isBuiltIn, true))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async countBuiltInMolecules(): Promise<number> {
+    const result = await db.select({ count: count() })
+      .from(canonicalMolecules)
+      .where(eq(canonicalMolecules.isBuiltIn, true));
+    return result[0]?.count || 0;
+  }
+
+  async markMoleculesAsBuiltIn(moleculeIds: string[]): Promise<void> {
+    if (moleculeIds.length === 0) return;
+    for (const id of moleculeIds) {
+      await db.update(canonicalMolecules)
+        .set({ isBuiltIn: true })
+        .where(eq(canonicalMolecules.id, id));
+    }
   }
 }
 

@@ -1293,11 +1293,47 @@ export const canonicalMolecules = pgTable("canonical_molecules", {
   inchikey: text("inchikey").notNull(),
   inchi: text("inchi"),
   source: canonicalMoleculeSourceEnum("source").default("import"),
+  isBuiltIn: boolean("is_built_in").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_canonical_molecules_inchikey").on(table.inchikey),
   index("idx_canonical_molecules_company").on(table.companyId),
+  index("idx_canonical_molecules_built_in").on(table.isBuiltIn),
 ]);
+
+export const compoundAssetTypeEnum = pgEnum("compound_asset_type", [
+  "thumbnail_2d",
+  "thumbnail_3d",
+  "conformer_sdf",
+  "conformer_pdb",
+  "descriptors_json",
+  "fingerprint_json",
+]);
+
+export const compoundAssets = pgTable("compound_assets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  moleculeId: varchar("molecule_id").notNull().references(() => canonicalMolecules.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id"),
+  assetType: compoundAssetTypeEnum("asset_type").notNull(),
+  storageKey: text("storage_key").notNull(),
+  storageBucket: text("storage_bucket").notNull(),
+  storageProvider: text("storage_provider").default("do_spaces"),
+  mimeType: text("mime_type"),
+  sizeBytes: integer("size_bytes"),
+  cdnUrl: text("cdn_url"),
+  metadata: jsonb("metadata"),
+  generatedByJobId: varchar("generated_by_job_id"),
+  computeNodeId: varchar("compute_node_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_compound_assets_molecule").on(table.moleculeId),
+  index("idx_compound_assets_type").on(table.assetType),
+  index("idx_compound_assets_company").on(table.companyId),
+]);
+
+export const insertCompoundAssetSchema = createInsertSchema(compoundAssets).omit({ id: true, createdAt: true });
+export type InsertCompoundAsset = z.infer<typeof insertCompoundAssetSchema>;
+export type CompoundAsset = typeof compoundAssets.$inferSelect;
 
 export const moleculeDescriptors = pgTable("molecule_descriptors", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
