@@ -5,6 +5,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import authRoutes from "./auth-routes";
 import { storage } from "./storage";
+import { seedDemoData } from "./demo-data-seeder";
 
 const app = express();
 const httpServer = createServer(app);
@@ -74,6 +75,13 @@ app.use((req, res, next) => {
     log("Built-in pipeline templates seeded");
   } catch (err) {
     log("Failed to seed pipeline templates (may already exist)");
+  }
+
+  try {
+    await seedDemoData();
+    log("Demo data seeded successfully");
+  } catch (err) {
+    log("Failed to seed demo data: " + (err instanceof Error ? err.message : "Unknown error"));
   }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
