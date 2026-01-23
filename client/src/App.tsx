@@ -23,7 +23,9 @@ import ProjectDetailPage from "@/pages/project-detail";
 import LibrariesPage from "@/pages/libraries";
 import LibraryDetailPage from "@/pages/library-detail";
 import TargetsPage from "@/pages/targets";
+import TargetDetailPage from "@/pages/target-detail";
 import MoleculesPage from "@/pages/molecules";
+import MoleculeDetailPage from "@/pages/molecule-detail";
 import CampaignsPage from "@/pages/campaigns";
 import CampaignNewPage from "@/pages/campaign-new";
 import CampaignDetailPage from "@/pages/campaign-detail";
@@ -84,7 +86,9 @@ function AuthenticatedRoutes() {
         <Route path="/libraries" component={LibrariesPage} />
         <Route path="/libraries/:id" component={LibraryDetailPage} />
         <Route path="/targets" component={TargetsPage} />
+        <Route path="/targets/:id" component={TargetDetailPage} />
         <Route path="/molecules" component={MoleculesPage} />
+        <Route path="/molecules/:id" component={MoleculeDetailPage} />
         <Route path="/campaigns" component={CampaignsPage} />
         <Route path="/campaigns/new" component={CampaignNewPage} />
         <Route path="/campaigns/:id" component={CampaignDetailPage} />

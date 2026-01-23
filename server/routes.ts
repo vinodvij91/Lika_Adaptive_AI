@@ -202,6 +202,20 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/targets/:id/details", requireAuth, async (req, res) => {
+    try {
+      const target = await storage.getTarget(req.params.id);
+      if (!target) {
+        return res.status(404).json({ error: "Target not found" });
+      }
+      const assays = await storage.getAssays({ targetId: req.params.id });
+      res.json({ ...target, assays });
+    } catch (error) {
+      console.error("Error fetching target details:", error);
+      res.status(500).json({ error: "Failed to fetch target details" });
+    }
+  });
+
   app.post("/api/targets", requireAuth, async (req, res) => {
     try {
       const parsed = insertTargetSchema.safeParse(req.body);
@@ -259,6 +273,21 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching molecule:", error);
       res.status(500).json({ error: "Failed to fetch molecule" });
+    }
+  });
+
+  app.get("/api/molecules/:id/details", requireAuth, async (req, res) => {
+    try {
+      const molecule = await storage.getMolecule(req.params.id);
+      if (!molecule) {
+        return res.status(404).json({ error: "Molecule not found" });
+      }
+      const scores = await storage.getMoleculeScoresByMolecule(req.params.id);
+      const assayResults = await storage.getAssayResultsByMolecule(req.params.id);
+      res.json({ ...molecule, scores, assayResults });
+    } catch (error) {
+      console.error("Error fetching molecule details:", error);
+      res.status(500).json({ error: "Failed to fetch molecule details" });
     }
   });
 

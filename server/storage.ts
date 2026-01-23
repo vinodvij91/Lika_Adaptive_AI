@@ -239,6 +239,8 @@ export interface IStorage {
   updateModelRun(id: string, run: Partial<ModelRun>): Promise<ModelRun | undefined>;
 
   getMoleculeScores(campaignId: string): Promise<(MoleculeScore & { molecule: Molecule | null })[]>;
+  getMoleculeScoresByMolecule(moleculeId: string): Promise<MoleculeScore[]>;
+  getAssayResultsByMolecule(moleculeId: string): Promise<(AssayResult & { assayName?: string })[]>;
   createMoleculeScore(score: InsertMoleculeScore): Promise<MoleculeScore>;
   bulkCreateMoleculeScores(scores: InsertMoleculeScore[]): Promise<MoleculeScore[]>;
 
@@ -680,6 +682,27 @@ export class DatabaseStorage implements IStorage {
     return scoresWithMolecules.map((row) => ({
       ...row.score,
       molecule: row.molecule,
+    }));
+  }
+
+  async getMoleculeScoresByMolecule(moleculeId: string): Promise<MoleculeScore[]> {
+    return db.select().from(moleculeScores).where(eq(moleculeScores.moleculeId, moleculeId)).orderBy(desc(moleculeScores.createdAt));
+  }
+
+  async getAssayResultsByMolecule(moleculeId: string): Promise<(AssayResult & { assayName?: string })[]> {
+    const resultsWithAssays = await db
+      .select({
+        result: assayResults,
+        assay: assays,
+      })
+      .from(assayResults)
+      .leftJoin(assays, eq(assayResults.assayId, assays.id))
+      .where(eq(assayResults.moleculeId, moleculeId))
+      .orderBy(desc(assayResults.createdAt));
+
+    return resultsWithAssays.map((row) => ({
+      ...row.result,
+      assayName: row.assay?.name,
     }));
   }
 
