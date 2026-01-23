@@ -29,6 +29,7 @@ import {
   Layers,
   Calculator,
   Factory,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -59,6 +60,11 @@ const navigationItems = [
     title: "Molecules",
     url: "/molecules",
     icon: FlaskConical,
+  },
+  {
+    title: "Import",
+    url: "/import",
+    icon: Upload,
   },
 ];
 

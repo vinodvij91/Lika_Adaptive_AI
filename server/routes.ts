@@ -44,6 +44,8 @@ import {
   insertAssayPanelTargetSchema,
   insertMoaNodeSchema,
   insertMoaEdgeSchema,
+  insertImportTemplateSchema,
+  insertImportJobSchema,
   moleculeScores,
 } from "@shared/schema";
 
@@ -2897,6 +2899,146 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching variant metrics:", error);
       res.status(500).json({ error: "Failed to fetch variant metrics" });
+    }
+  });
+
+  app.get("/api/import-templates", requireAuth, async (req, res) => {
+    try {
+      const { domain, importType, organizationId } = req.query;
+      const templates = await storage.getImportTemplates(
+        domain as string | undefined,
+        importType as string | undefined,
+        organizationId as string | undefined
+      );
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching import templates:", error);
+      res.status(500).json({ error: "Failed to fetch import templates" });
+    }
+  });
+
+  app.get("/api/import-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getImportTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Import template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching import template:", error);
+      res.status(500).json({ error: "Failed to fetch import template" });
+    }
+  });
+
+  app.post("/api/import-templates", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "";
+      const parsed = insertImportTemplateSchema.safeParse({
+        ...req.body,
+        createdBy: userId
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid template data", details: parsed.error.errors });
+      }
+      const template = await storage.createImportTemplate(parsed.data);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating import template:", error);
+      res.status(500).json({ error: "Failed to create import template" });
+    }
+  });
+
+  app.patch("/api/import-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.updateImportTemplate(req.params.id, req.body);
+      if (!template) {
+        return res.status(404).json({ error: "Import template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating import template:", error);
+      res.status(500).json({ error: "Failed to update import template" });
+    }
+  });
+
+  app.delete("/api/import-templates/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteImportTemplate(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting import template:", error);
+      res.status(500).json({ error: "Failed to delete import template" });
+    }
+  });
+
+  app.get("/api/import-jobs", requireAuth, async (req, res) => {
+    try {
+      const { domain, importType, status, organizationId } = req.query;
+      const jobs = await storage.getImportJobs({
+        domain: domain as string | undefined,
+        importType: importType as string | undefined,
+        status: status as string | undefined,
+        organizationId: organizationId as string | undefined
+      });
+      res.json(jobs);
+    } catch (error) {
+      console.error("Error fetching import jobs:", error);
+      res.status(500).json({ error: "Failed to fetch import jobs" });
+    }
+  });
+
+  app.get("/api/import-jobs/:id", requireAuth, async (req, res) => {
+    try {
+      const job = await storage.getImportJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Import job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      console.error("Error fetching import job:", error);
+      res.status(500).json({ error: "Failed to fetch import job" });
+    }
+  });
+
+  app.post("/api/import-jobs", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "";
+      
+      const processingJob = await storage.createProcessingJob({
+        type: "aggregation",
+        status: "queued",
+        itemsTotal: req.body.validationSummary?.totalRows || 1,
+        inputPayload: { importType: req.body.importType, domain: req.body.domain }
+      });
+      
+      const parsed = insertImportJobSchema.safeParse({
+        ...req.body,
+        processingJobId: processingJob.id,
+        createdBy: userId,
+        status: "pending"
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid import job data", details: parsed.error.errors });
+      }
+      
+      const importJob = await storage.createImportJob(parsed.data);
+      res.status(201).json(importJob);
+    } catch (error) {
+      console.error("Error creating import job:", error);
+      res.status(500).json({ error: "Failed to create import job" });
+    }
+  });
+
+  app.patch("/api/import-jobs/:id", requireAuth, async (req, res) => {
+    try {
+      const job = await storage.updateImportJob(req.params.id, req.body);
+      if (!job) {
+        return res.status(404).json({ error: "Import job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      console.error("Error updating import job:", error);
+      res.status(500).json({ error: "Failed to update import job" });
     }
   });
 

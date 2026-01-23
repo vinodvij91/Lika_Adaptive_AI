@@ -980,6 +980,60 @@ export const insertMaterialVariantMetricSchema = createInsertSchema(materialVari
 export type MaterialVariantMetric = typeof materialVariantMetrics.$inferSelect;
 export type InsertMaterialVariantMetric = z.infer<typeof insertMaterialVariantMetricSchema>;
 
+export const importDomainEnum = pgEnum("import_domain", ["drug", "materials"]);
+export const importTypeEnum = pgEnum("import_type", [
+  "compound_library", "hit_list", "assay_results", "target_structures", "sar_annotation",
+  "materials_library", "material_variants", "properties_dataset", "simulation_summaries", "imaging_spectroscopy"
+]);
+export const importStatusEnum = pgEnum("import_status", ["pending", "parsing", "validating", "ingesting", "succeeded", "failed", "cancelled"]);
+
+export const importTemplates = pgTable("import_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  domain: importDomainEnum("domain").notNull(),
+  importType: importTypeEnum("import_type").notNull(),
+  organizationId: varchar("organization_id"),
+  columnMapping: jsonb("column_mapping").notNull(),
+  isDefault: boolean("is_default").default(false),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertImportTemplateSchema = createInsertSchema(importTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export type ImportTemplate = typeof importTemplates.$inferSelect;
+export type InsertImportTemplate = z.infer<typeof insertImportTemplateSchema>;
+
+export const importJobs = pgTable("import_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  domain: importDomainEnum("domain").notNull(),
+  importType: importTypeEnum("import_type").notNull(),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type"),
+  fileSize: integer("file_size"),
+  status: importStatusEnum("status").default("pending"),
+  processingJobId: varchar("processing_job_id").references(() => processingJobs.id, { onDelete: "set null" }),
+  templateId: varchar("template_id").references(() => importTemplates.id, { onDelete: "set null" }),
+  columnMapping: jsonb("column_mapping"),
+  validationSummary: jsonb("validation_summary"),
+  createdObjects: jsonb("created_objects"),
+  organizationId: varchar("organization_id"),
+  createdBy: varchar("created_by"),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const importJobsRelations = relations(importJobs, ({ one }) => ({
+  processingJob: one(processingJobs, { fields: [importJobs.processingJobId], references: [processingJobs.id] }),
+  template: one(importTemplates, { fields: [importJobs.templateId], references: [importTemplates.id] }),
+}));
+
+export const insertImportJobSchema = createInsertSchema(importJobs).omit({ id: true, createdAt: true });
+export type ImportJob = typeof importJobs.$inferSelect;
+export type InsertImportJob = z.infer<typeof insertImportJobSchema>;
+
 export const targetRoleEnum = pgEnum("target_role", ["primary", "secondary", "safety"]);
 export const moaNodeTypeEnum = pgEnum("moa_node_type", ["target", "pathway", "process", "phenotype"]);
 export const moaRelationEnum = pgEnum("moa_relation", ["activates", "inhibits", "associated_with"]);
@@ -1124,6 +1178,10 @@ export type UsageUnit = "seconds" | "hours" | "gb";
 export type UsageSource = "hetzner" | "vastai" | "internal";
 export type OwnerType = "user" | "org";
 export type CurrencyType = "USD" | "EUR" | "CREDITS";
+
+export type ImportDomain = "drug" | "materials";
+export type ImportType = "compound_library" | "hit_list" | "assay_results" | "target_structures" | "sar_annotation" | "materials_library" | "material_variants" | "properties_dataset" | "simulation_summaries" | "imaging_spectroscopy";
+export type ImportStatus = "pending" | "parsing" | "validating" | "ingesting" | "succeeded" | "failed" | "cancelled";
 
 export type ServiceAccountRole = "agent_pipeline_copilot" | "agent_operator" | "agent_readonly";
 

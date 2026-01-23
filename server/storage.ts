@@ -141,8 +141,14 @@ import {
   materialsCampaignAggregates,
   materialVariantMetrics,
   jobArtifacts,
+  importTemplates,
+  importJobs,
   type JobArtifact,
   type InsertJobArtifact,
+  type ImportTemplate,
+  type InsertImportTemplate,
+  type ImportJob,
+  type InsertImportJob,
   type AssayPanel,
   type InsertAssayPanel,
   type AssayPanelTarget,
@@ -422,6 +428,17 @@ export interface IStorage {
   upsertMaterialsCampaignAggregate(aggregate: InsertMaterialsCampaignAggregate): Promise<MaterialsCampaignAggregate>;
   getMaterialVariantMetrics(campaignId: string, limit?: number): Promise<MaterialVariantMetric[]>;
   upsertMaterialVariantMetric(metric: InsertMaterialVariantMetric): Promise<MaterialVariantMetric>;
+
+  getImportTemplates(domain?: string, importType?: string, organizationId?: string): Promise<ImportTemplate[]>;
+  getImportTemplate(id: string): Promise<ImportTemplate | undefined>;
+  createImportTemplate(template: InsertImportTemplate): Promise<ImportTemplate>;
+  updateImportTemplate(id: string, template: Partial<InsertImportTemplate>): Promise<ImportTemplate | undefined>;
+  deleteImportTemplate(id: string): Promise<void>;
+
+  getImportJobs(filters?: { domain?: string; importType?: string; status?: string; organizationId?: string }): Promise<ImportJob[]>;
+  getImportJob(id: string): Promise<ImportJob | undefined>;
+  createImportJob(job: InsertImportJob): Promise<ImportJob>;
+  updateImportJob(id: string, job: Partial<InsertImportJob>): Promise<ImportJob | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2344,6 +2361,75 @@ export class DatabaseStorage implements IStorage {
       return result[0];
     }
     const result = await db.insert(materialVariantMetrics).values(metric).returning();
+    return result[0];
+  }
+
+  async getImportTemplates(domain?: string, importType?: string, organizationId?: string): Promise<ImportTemplate[]> {
+    const conditions = [];
+    if (domain) conditions.push(eq(importTemplates.domain, domain as any));
+    if (importType) conditions.push(eq(importTemplates.importType, importType as any));
+    if (organizationId) conditions.push(eq(importTemplates.organizationId, organizationId));
+    
+    if (conditions.length === 0) {
+      return db.select().from(importTemplates).orderBy(desc(importTemplates.createdAt));
+    }
+    return db.select().from(importTemplates)
+      .where(and(...conditions))
+      .orderBy(desc(importTemplates.createdAt));
+  }
+
+  async getImportTemplate(id: string): Promise<ImportTemplate | undefined> {
+    const result = await db.select().from(importTemplates).where(eq(importTemplates.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createImportTemplate(template: InsertImportTemplate): Promise<ImportTemplate> {
+    const result = await db.insert(importTemplates).values(template).returning();
+    return result[0];
+  }
+
+  async updateImportTemplate(id: string, template: Partial<InsertImportTemplate>): Promise<ImportTemplate | undefined> {
+    const result = await db.update(importTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(importTemplates.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteImportTemplate(id: string): Promise<void> {
+    await db.delete(importTemplates).where(eq(importTemplates.id, id));
+  }
+
+  async getImportJobs(filters?: { domain?: string; importType?: string; status?: string; organizationId?: string }): Promise<ImportJob[]> {
+    const conditions = [];
+    if (filters?.domain) conditions.push(eq(importJobs.domain, filters.domain as any));
+    if (filters?.importType) conditions.push(eq(importJobs.importType, filters.importType as any));
+    if (filters?.status) conditions.push(eq(importJobs.status, filters.status as any));
+    if (filters?.organizationId) conditions.push(eq(importJobs.organizationId, filters.organizationId));
+    
+    if (conditions.length === 0) {
+      return db.select().from(importJobs).orderBy(desc(importJobs.createdAt));
+    }
+    return db.select().from(importJobs)
+      .where(and(...conditions))
+      .orderBy(desc(importJobs.createdAt));
+  }
+
+  async getImportJob(id: string): Promise<ImportJob | undefined> {
+    const result = await db.select().from(importJobs).where(eq(importJobs.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createImportJob(job: InsertImportJob): Promise<ImportJob> {
+    const result = await db.insert(importJobs).values(job).returning();
+    return result[0];
+  }
+
+  async updateImportJob(id: string, job: Partial<InsertImportJob>): Promise<ImportJob | undefined> {
+    const result = await db.update(importJobs)
+      .set(job)
+      .where(eq(importJobs.id, id))
+      .returning();
     return result[0];
   }
 }
