@@ -49,6 +49,8 @@ const drugNavigationItems = [
 const drugWorkflowItems = [
   { title: "Campaigns", url: "/campaigns", icon: Workflow },
   { title: "Virtual Screening", url: "/campaigns/new", icon: Crosshair },
+  { title: "Docking & 3D", url: "/docking", icon: Layers },
+  { title: "ADMET", url: "/admet", icon: Beaker },
   { title: "Assays", url: "/assays", icon: TestTube2 },
   { title: "SAR Analysis", url: "/learning-graph", icon: BarChart3 },
   { title: "Reports", url: "/reports", icon: BarChart3 },
@@ -57,16 +59,16 @@ const drugWorkflowItems = [
 const materialsNavigationItems = [
   { title: "Dashboard", url: "/dashboard/materials", icon: LayoutDashboard },
   { title: "Import", url: "/import", icon: Upload },
-  { title: "Materials Library", url: "/multi-scale-representations", icon: Hexagon },
-  { title: "Variants", url: "/multi-scale-representations", icon: Layers },
+  { title: "Materials Library", url: "/materials-library", icon: Hexagon },
+  { title: "Variants", url: "/material-variants", icon: Layers },
+  { title: "Multi-Scale Representation", url: "/multi-scale-representations", icon: Layers },
 ];
 
 const materialsWorkflowItems = [
-  { title: "Campaigns", url: "/materials-campaigns", icon: Workflow },
   { title: "Property Prediction", url: "/property-prediction", icon: Calculator },
   { title: "Structure-Property", url: "/structure-property", icon: Beaker },
   { title: "Manufacturability", url: "/manufacturability-scoring", icon: Factory },
-  { title: "Property Pipelines", url: "/property-pipelines", icon: Workflow },
+  { title: "Simulation Runs", url: "/simulation-runs", icon: Workflow },
   { title: "Reports", url: "/reports", icon: BarChart3 },
 ];
 
