@@ -85,6 +85,29 @@ The platform is designed for industrial-scale materials discovery:
 
 - **processing_job_runs**: Retry/resumption tracking per job
 - **processing_job_events**: Streaming partial results and events
+- **job_artifacts**: Computation output storage for Python/ML pipeline results
+  - `id`: UUID primary key
+  - `jobId`: Reference to processing job
+  - `companyId/campaignId/materialsCampaignId`: Ownership references (derived from job)
+  - `domain`: "drug" or "materials"
+  - `artifactType`: json, table, image, model3d, report
+  - `name/uri/mimeType`: Artifact metadata and storage location
+  - `summaryJson`: Optional structured summary for quick preview
+
+#### Artifact Ingestion System
+- **registerArtifactsFromManifest(jobId, manifest)**: Ingests Python computation outputs
+  - Validates manifest structure via Zod schema
+  - Derives campaign/company IDs from job record (not manifest) for security
+  - Auto-detects MIME types from file extensions
+  - Batch inserts artifacts with job association
+
+#### Artifact Endpoints
+- `GET /api/jobs/:jobId/artifacts` - List artifacts for a job
+- `GET /api/campaigns/:campaignId/artifacts` - List drug campaign artifacts
+- `GET /api/materials-campaigns/:campaignId/artifacts` - List materials campaign artifacts
+- `POST /api/jobs/:jobId/artifacts` - Create single artifact
+- `POST /api/jobs/:jobId/artifacts/batch` - Batch create artifacts
+- `POST /api/jobs/:jobId/artifacts/from-manifest` - Ingest from Python manifest.json
 
 #### Precomputed Aggregations
 - **materials_campaign_aggregates**: Campaign-level dashboard data
