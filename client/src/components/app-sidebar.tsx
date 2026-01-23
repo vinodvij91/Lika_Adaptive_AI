@@ -18,125 +18,74 @@ import {
   FlaskConical,
   Workflow,
   BarChart3,
-  Brain,
   LogOut,
   Library,
   Server,
   Activity,
   TestTube2,
-  Zap,
   Hexagon,
   Layers,
   Calculator,
   Factory,
   Upload,
+  Crosshair,
+  Beaker,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
+import { useDomain, type DiscoveryDomain } from "@/contexts/domain-context";
 
-const navigationItems = [
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Projects",
-    url: "/projects",
-    icon: FolderKanban,
-  },
-  {
-    title: "Libraries",
-    url: "/libraries",
-    icon: Library,
-  },
-  {
-    title: "Targets",
-    url: "/targets",
-    icon: Target,
-  },
-  {
-    title: "Molecules",
-    url: "/molecules",
-    icon: FlaskConical,
-  },
-  {
-    title: "Import",
-    url: "/import",
-    icon: Upload,
-  },
+const drugNavigationItems = [
+  { title: "Dashboard", url: "/dashboard/drug", icon: LayoutDashboard },
+  { title: "Import", url: "/import", icon: Upload },
+  { title: "Projects", url: "/projects", icon: FolderKanban },
+  { title: "Molecules", url: "/molecules", icon: FlaskConical },
+  { title: "Libraries", url: "/libraries", icon: Library },
+  { title: "Targets", url: "/targets", icon: Target },
 ];
 
-const workflowItems = [
-  {
-    title: "Campaigns",
-    url: "/campaigns",
-    icon: Workflow,
-  },
-  {
-    title: "Materials Campaigns",
-    url: "/materials-campaigns",
-    icon: Hexagon,
-  },
-  {
-    title: "Multi-Scale Repr.",
-    url: "/multi-scale-representations",
-    icon: Layers,
-  },
-  {
-    title: "Property Prediction",
-    url: "/property-prediction",
-    icon: Calculator,
-  },
-  {
-    title: "Manufacturability",
-    url: "/manufacturability-scoring",
-    icon: Factory,
-  },
-  {
-    title: "Property Pipelines",
-    url: "/property-pipelines",
-    icon: Zap,
-  },
-  {
-    title: "Structure-Property",
-    url: "/structure-property",
-    icon: Hexagon,
-  },
-  {
-    title: "Assays",
-    url: "/assays",
-    icon: TestTube2,
-  },
-  {
-    title: "Reports",
-    url: "/reports",
-    icon: BarChart3,
-  },
-  {
-    title: "Learning Graph",
-    url: "/learning-graph",
-    icon: Brain,
-  },
+const drugWorkflowItems = [
+  { title: "Campaigns", url: "/campaigns", icon: Workflow },
+  { title: "Virtual Screening", url: "/campaigns/new", icon: Crosshair },
+  { title: "Assays", url: "/assays", icon: TestTube2 },
+  { title: "SAR Analysis", url: "/learning-graph", icon: BarChart3 },
+  { title: "Reports", url: "/reports", icon: BarChart3 },
+];
+
+const materialsNavigationItems = [
+  { title: "Dashboard", url: "/dashboard/materials", icon: LayoutDashboard },
+  { title: "Import", url: "/import", icon: Upload },
+  { title: "Materials Library", url: "/multi-scale-representations", icon: Hexagon },
+  { title: "Variants", url: "/multi-scale-representations", icon: Layers },
+];
+
+const materialsWorkflowItems = [
+  { title: "Campaigns", url: "/materials-campaigns", icon: Workflow },
+  { title: "Property Prediction", url: "/property-prediction", icon: Calculator },
+  { title: "Structure-Property", url: "/structure-property", icon: Beaker },
+  { title: "Manufacturability", url: "/manufacturability-scoring", icon: Factory },
+  { title: "Property Pipelines", url: "/property-pipelines", icon: Workflow },
+  { title: "Reports", url: "/reports", icon: BarChart3 },
 ];
 
 const infrastructureItems = [
-  {
-    title: "Compute Nodes",
-    url: "/compute-nodes",
-    icon: Server,
-  },
-  {
-    title: "Usage",
-    url: "/usage",
-    icon: Activity,
-  },
+  { title: "Compute Nodes", url: "/compute-nodes", icon: Server },
+  { title: "Usage", url: "/usage", icon: Activity },
 ];
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const { domain, setDomain, isDrugDomain, isMaterialsDomain, hasDomainSelected } = useDomain();
+
+  const navigationItems = isDrugDomain ? drugNavigationItems : materialsNavigationItems;
+  const workflowItems = isDrugDomain ? drugWorkflowItems : materialsWorkflowItems;
+  
+  if (!hasDomainSelected) {
+    return null;
+  }
 
   const getInitials = () => {
     if (!user) return "U";
@@ -153,17 +102,30 @@ export function AppSidebar() {
     return user.email || "User";
   };
 
+  const toggleDomain = () => {
+    const newDomain: DiscoveryDomain = isDrugDomain ? "materials" : "drug";
+    setDomain(newDomain);
+  };
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <Link href="/dashboard">
+        <Link href={isDrugDomain ? "/dashboard/drug" : "/dashboard/materials"}>
           <div className="flex items-center gap-2 cursor-pointer">
-            <div className="w-9 h-9 rounded-md bg-sidebar-primary flex items-center justify-center">
-              <FlaskConical className="h-5 w-5 text-sidebar-primary-foreground" />
+            <div className={`w-9 h-9 rounded-md flex items-center justify-center ${
+              isDrugDomain ? "bg-sidebar-primary" : "bg-chart-2"
+            }`}>
+              {isDrugDomain ? (
+                <FlaskConical className="h-5 w-5 text-sidebar-primary-foreground" />
+              ) : (
+                <Hexagon className="h-5 w-5 text-white" />
+              )}
             </div>
             <div>
               <span className="font-semibold text-sidebar-foreground">Lika Sciences</span>
-              <p className="text-xs text-muted-foreground">Drug Discovery</p>
+              <p className="text-xs text-muted-foreground">
+                {isDrugDomain ? "Drug Discovery" : "Materials Science"}
+              </p>
             </div>
           </div>
         </Link>
@@ -171,7 +133,9 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            {isDrugDomain ? "Drug Discovery" : "Materials Science"}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navigationItems.map((item) => (
@@ -180,7 +144,7 @@ export function AppSidebar() {
                     asChild
                     isActive={location === item.url || location.startsWith(item.url + "/")}
                   >
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
+                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -201,7 +165,7 @@ export function AppSidebar() {
                     asChild
                     isActive={location === item.url || location.startsWith(item.url + "/")}
                   >
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(" ", "-")}`}>
+                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -222,13 +186,26 @@ export function AppSidebar() {
                     asChild
                     isActive={location === item.url || location.startsWith(item.url + "/")}
                   >
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(" ", "-")}`}>
+                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={toggleDomain} data-testid="button-switch-domain">
+                  <ArrowLeftRight className="h-4 w-4" />
+                  <span>Switch to {isDrugDomain ? "Materials" : "Drug Discovery"}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

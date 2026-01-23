@@ -1,9 +1,11 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
+import { DomainProvider, useDomain } from "@/contexts/domain-context";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/use-auth";
@@ -12,6 +14,9 @@ import { GlobalFooter } from "@/components/global-footer";
 
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
+import DomainSelectionPage from "@/pages/domain-selection";
+import DrugDashboardPage from "@/pages/dashboard-drug";
+import MaterialsDashboardPage from "@/pages/dashboard-materials";
 import DashboardPage from "@/pages/dashboard";
 import ProjectsPage from "@/pages/projects";
 import ProjectDetailPage from "@/pages/project-detail";
@@ -66,7 +71,9 @@ function AuthenticatedRoutes() {
   return (
     <AuthenticatedLayout>
       <Switch>
-        <Route path="/dashboard" component={DashboardPage} />
+        <Route path="/dashboard/drug" component={DrugDashboardPage} />
+        <Route path="/dashboard/materials" component={MaterialsDashboardPage} />
+        <Route path="/dashboard" component={DashboardRedirect} />
         <Route path="/projects" component={ProjectsPage} />
         <Route path="/projects/:id" component={ProjectDetailPage} />
         <Route path="/libraries" component={LibrariesPage} />
@@ -99,6 +106,36 @@ function AuthenticatedRoutes() {
   );
 }
 
+function DashboardRedirect() {
+  const { domain } = useDomain();
+  const [, navigate] = useLocation();
+  
+  useEffect(() => {
+    if (!domain) {
+      navigate("/select-domain", { replace: true });
+    } else {
+      navigate(`/dashboard/${domain}`, { replace: true });
+    }
+  }, [domain, navigate]);
+  
+  return (
+    <div className="h-screen flex items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+function DomainGate({ children }: { children: React.ReactNode }) {
+  const { hasDomainSelected } = useDomain();
+  const [location] = useLocation();
+  
+  if (!hasDomainSelected && location !== "/select-domain" && !location.startsWith("/login")) {
+    return <DomainSelectionPage />;
+  }
+  
+  return <>{children}</>;
+}
+
 function Router() {
   const { user, isLoading } = useAuth();
 
@@ -128,16 +165,17 @@ function Router() {
   }
 
   return (
-    <Switch>
-      <Route path="/">
-        <AuthenticatedLayout>
-          <DashboardPage />
-        </AuthenticatedLayout>
-      </Route>
-      <Route>
-        <AuthenticatedRoutes />
-      </Route>
-    </Switch>
+    <DomainGate>
+      <Switch>
+        <Route path="/select-domain" component={DomainSelectionPage} />
+        <Route path="/">
+          <DashboardRedirect />
+        </Route>
+        <Route>
+          <AuthenticatedRoutes />
+        </Route>
+      </Switch>
+    </DomainGate>
   );
 }
 
@@ -145,10 +183,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <DomainProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </DomainProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

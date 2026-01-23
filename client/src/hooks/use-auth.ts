@@ -17,6 +17,7 @@ async function fetchUser(): Promise<User | null> {
 }
 
 async function performLogout(): Promise<void> {
+  localStorage.removeItem("lika-sciences-domain");
   const response = await fetch("/api/ext-auth/logout", {
     method: "POST",
     credentials: "include",

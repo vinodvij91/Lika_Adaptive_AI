@@ -3,30 +3,54 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 export type DiscoveryDomain = "drug" | "materials";
 
 interface DomainContextValue {
-  domain: DiscoveryDomain;
+  domain: DiscoveryDomain | null;
   setDomain: (domain: DiscoveryDomain) => void;
+  clearDomain: () => void;
   isDrugDomain: boolean;
   isMaterialsDomain: boolean;
+  hasDomainSelected: boolean;
 }
 
 const DomainContext = createContext<DomainContextValue | undefined>(undefined);
 
-export function DomainProvider({ children, defaultDomain = "drug" }: { children: ReactNode; defaultDomain?: DiscoveryDomain }) {
-  const [domain, setDomainState] = useState<DiscoveryDomain>(defaultDomain);
+const DOMAIN_STORAGE_KEY = "lika-sciences-domain";
+
+export function DomainProvider({ children }: { children: ReactNode }) {
+  const [domain, setDomainState] = useState<DiscoveryDomain | null>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(DOMAIN_STORAGE_KEY);
+      if (stored === "drug" || stored === "materials") {
+        return stored;
+      }
+    }
+    return null;
+  });
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-domain", domain);
+    if (domain) {
+      document.documentElement.setAttribute("data-domain", domain);
+    } else {
+      document.documentElement.removeAttribute("data-domain");
+    }
   }, [domain]);
 
   const setDomain = useCallback((newDomain: DiscoveryDomain) => {
     setDomainState(newDomain);
+    localStorage.setItem(DOMAIN_STORAGE_KEY, newDomain);
+  }, []);
+
+  const clearDomain = useCallback(() => {
+    setDomainState(null);
+    localStorage.removeItem(DOMAIN_STORAGE_KEY);
   }, []);
 
   const value: DomainContextValue = {
     domain,
     setDomain,
+    clearDomain,
     isDrugDomain: domain === "drug",
     isMaterialsDomain: domain === "materials",
+    hasDomainSelected: domain !== null,
   };
 
   return (
