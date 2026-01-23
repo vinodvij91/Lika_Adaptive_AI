@@ -41,6 +41,11 @@ import MaterialsCampaignsPage from "@/pages/materials-campaigns";
 import MultiScaleRepresentationsPage from "@/pages/multi-scale-representations";
 import PropertyPredictionPage from "@/pages/property-prediction";
 import ManufacturabilitySccoringPage from "@/pages/manufacturability-scoring";
+import DockingPage from "@/pages/docking";
+import AdmetPage from "@/pages/admet";
+import SimulationRunsPage from "@/pages/simulation-runs";
+import MaterialsLibraryPage from "@/pages/materials-library";
+import MaterialVariantsPage from "@/pages/material-variants";
 import ImportHubPage from "@/pages/import-hub";
 import ImportWizardPage from "@/pages/import-wizard";
 import ImportHistoryPage from "@/pages/import-history";
@@ -87,6 +92,8 @@ function AuthenticatedRoutes() {
         <Route path="/learning-graph" component={LearningGraphPage} />
         <Route path="/assays" component={AssaysPage} />
         <Route path="/assays/:id" component={AssayDetailPage} />
+        <Route path="/docking" component={DockingPage} />
+        <Route path="/admet" component={AdmetPage} />
         <Route path="/campaigns/:id/hit-triage" component={HitTriagePage} />
         <Route path="/compute-nodes" component={ComputeNodesPage} />
         <Route path="/compute-nodes/:id" component={ComputeNodeDetailPage} />
@@ -95,6 +102,9 @@ function AuthenticatedRoutes() {
         <Route path="/structure-property" component={StructurePropertyPage} />
         <Route path="/materials-campaigns" component={MaterialsCampaignsPage} />
         <Route path="/multi-scale-representations" component={MultiScaleRepresentationsPage} />
+        <Route path="/materials-library" component={MaterialsLibraryPage} />
+        <Route path="/material-variants" component={MaterialVariantsPage} />
+        <Route path="/simulation-runs" component={SimulationRunsPage} />
         <Route path="/property-prediction" component={PropertyPredictionPage} />
         <Route path="/manufacturability-scoring" component={ManufacturabilitySccoringPage} />
         <Route path="/import" component={ImportHubPage} />
