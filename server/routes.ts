@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { orchestrator } from "./orchestrator";
+import { registerArtifactsFromManifest } from "./artifact-ingestion";
 import { db } from "./db";
 import { eq, count } from "drizzle-orm";
 import { z } from "zod";
@@ -2745,6 +2746,10 @@ export async function registerRoutes(
 
   app.get("/api/jobs/:jobId/artifacts", requireAuth, async (req, res) => {
     try {
+      const job = await storage.getProcessingJob(req.params.jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
       const artifacts = await storage.getJobArtifacts(req.params.jobId);
       res.json(artifacts);
     } catch (error) {
@@ -2755,6 +2760,10 @@ export async function registerRoutes(
 
   app.get("/api/campaigns/:campaignId/artifacts", requireAuth, async (req, res) => {
     try {
+      const campaign = await storage.getCampaign(req.params.campaignId);
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
       const artifacts = await storage.getArtifactsByCampaign(req.params.campaignId, "drug");
       res.json(artifacts);
     } catch (error) {
@@ -2765,6 +2774,10 @@ export async function registerRoutes(
 
   app.get("/api/materials-campaigns/:campaignId/artifacts", requireAuth, async (req, res) => {
     try {
+      const materialsCampaign = await storage.getMaterialsCampaign(req.params.campaignId);
+      if (!materialsCampaign) {
+        return res.status(404).json({ error: "Materials campaign not found" });
+      }
       const artifacts = await storage.getArtifactsByCampaign(req.params.campaignId, "materials");
       res.json(artifacts);
     } catch (error) {
@@ -2804,6 +2817,27 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error creating job artifacts batch:", error);
       res.status(500).json({ error: "Failed to create job artifacts batch" });
+    }
+  });
+
+  app.post("/api/jobs/:jobId/artifacts/from-manifest", requireAuth, async (req, res) => {
+    try {
+      const job = await storage.getProcessingJob(req.params.jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      const { manifest } = req.body;
+      if (!manifest || typeof manifest !== "object") {
+        return res.status(400).json({ error: "manifest object is required" });
+      }
+      const result = await registerArtifactsFromManifest(req.params.jobId, manifest);
+      if (result.errors.length > 0 && result.registered === 0) {
+        return res.status(400).json({ error: "Failed to register artifacts", details: result.errors });
+      }
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error registering artifacts from manifest:", error);
+      res.status(500).json({ error: "Failed to register artifacts from manifest" });
     }
   });
 
