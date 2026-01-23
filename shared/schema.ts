@@ -52,6 +52,7 @@ export const projects = pgTable("projects", {
   description: text("description"),
   diseaseArea: diseaseAreaEnum("disease_area").default("Other"),
   ownerId: varchar("owner_id").notNull(),
+  isDemo: boolean("is_demo").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -80,9 +81,11 @@ export const targets = pgTable("targets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   uniprotId: text("uniprot_id"),
+  pdbId: text("pdb_id"),
   sequence: text("sequence"),
   hasStructure: boolean("has_structure").default(false),
   structureSource: structureSourceEnum("structure_source"),
+  isDemo: boolean("is_demo").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -155,6 +158,11 @@ export const molecules = pgTable("molecules", {
   seriesId: text("series_id"),
   scaffoldId: text("scaffold_id"),
   source: moleculeSourceEnum("source").default("generated"),
+  molecularWeight: real("molecular_weight"),
+  logP: real("log_p"),
+  numHBondDonors: integer("num_hbond_donors"),
+  numHBondAcceptors: integer("num_hbond_acceptors"),
+  isDemo: boolean("is_demo").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -179,6 +187,7 @@ export const campaigns = pgTable("campaigns", {
   oracleVersionId: varchar("oracle_version_id").references(() => oracleVersions.id, { onDelete: "set null" }),
   pipelineConfig: jsonb("pipeline_config"),
   status: campaignStatusEnum("status").default("pending"),
+  isDemo: boolean("is_demo").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -738,6 +747,7 @@ export const materialEntities = pgTable("material_entities", {
   metadata: jsonb("metadata"),
   isCurated: boolean("is_curated").default(false),
   companyId: varchar("company_id"),
+  isDemo: boolean("is_demo").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -806,6 +816,7 @@ export const materialsCampaigns = pgTable("materials_campaigns", {
   oracleVersionId: varchar("oracle_version_id").references(() => oracleVersions.id, { onDelete: "set null" }),
   status: campaignStatusEnum("status").default("pending"),
   ownerId: varchar("owner_id").notNull(),
+  isDemo: boolean("is_demo").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
