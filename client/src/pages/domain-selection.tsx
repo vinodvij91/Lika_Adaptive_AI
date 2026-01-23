@@ -1,20 +1,24 @@
 import { useLocation } from "wouter";
 import { useDomain, type DiscoveryDomain } from "@/contexts/domain-context";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FlaskConical, Hexagon, ArrowRight } from "lucide-react";
+import { FlaskConical, Hexagon, ArrowRight, Atom, Beaker, Layers, Sparkles, Check } from "lucide-react";
 
 const domains: {
   id: DiscoveryDomain;
   title: string;
+  subtitle: string;
   description: string;
   icon: typeof FlaskConical;
   features: string[];
+  gradient: string;
+  accentColor: string;
 }[] = [
   {
     id: "drug",
     title: "Drug Discovery",
-    description: "Small-molecule design, screening, docking, multi-target campaigns, assays, SAR.",
+    subtitle: "Accelerate therapeutic development",
+    description: "Design and screen small molecules, PROTACs, and peptides with AI-powered virtual screening and multi-target SAR analysis.",
     icon: FlaskConical,
     features: [
       "Small molecule & PROTAC design",
@@ -23,11 +27,14 @@ const domains: {
       "ADMET prediction",
       "Assay data management",
     ],
+    gradient: "from-blue-600 via-blue-500 to-cyan-500",
+    accentColor: "text-blue-500",
   },
   {
     id: "materials",
     title: "Materials Science",
-    description: "Polymers, crystals, composites, property-first pipelines, multi-scale representations.",
+    subtitle: "Discover next-gen materials",
+    description: "Explore polymers, crystals, and composites with property-first pipelines and manufacturability scoring.",
     icon: Hexagon,
     features: [
       "Polymer & crystal design",
@@ -36,6 +43,8 @@ const domains: {
       "Manufacturability scoring",
       "Structure-property analysis",
     ],
+    gradient: "from-emerald-600 via-teal-500 to-cyan-500",
+    accentColor: "text-emerald-500",
   },
 ];
 
@@ -49,63 +58,88 @@ export default function DomainSelectionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-4xl">
-        <div className="text-center mb-10">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center">
-              <FlaskConical className="h-7 w-7 text-primary-foreground" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold mb-2" data-testid="text-welcome-title">
-            Welcome to Lika Sciences
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Choose your discovery domain to get started. You can switch between domains anytime.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {domains.map((domain) => (
-            <Card
-              key={domain.id}
-              className="relative overflow-visible group cursor-pointer hover-elevate transition-all"
-              onClick={() => handleSelectDomain(domain.id)}
-              data-testid={`card-domain-${domain.id}`}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`w-11 h-11 rounded-lg flex items-center justify-center ${
-                    domain.id === "drug" ? "bg-primary/10" : "bg-chart-2/10"
-                  }`}>
-                    <domain.icon className={`h-6 w-6 ${
-                      domain.id === "drug" ? "text-primary" : "text-chart-2"
-                    }`} />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">{domain.title}</CardTitle>
-                  </div>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-chart-2/5" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-chart-2/10 rounded-full blur-3xl" />
+      
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-6">
+        <div className="w-full max-w-5xl">
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/25">
+                  <Atom className="h-9 w-9 text-primary-foreground" />
                 </div>
-                <CardDescription className="text-base">
-                  {domain.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <ul className="space-y-2 mb-4">
-                  {domain.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                <Button className="w-full gap-2" data-testid={`button-select-${domain.id}`}>
-                  Select {domain.title}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-chart-2 flex items-center justify-center">
+                  <Sparkles className="h-3 w-3 text-white" />
+                </div>
+              </div>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text" data-testid="text-welcome-title">
+              Welcome to Lika Sciences
+            </h1>
+            <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+              AI-powered discovery platform for scientific breakthroughs. 
+              Choose your domain to begin.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {domains.map((domain) => (
+              <Card
+                key={domain.id}
+                className="relative overflow-hidden group cursor-pointer border-2 border-transparent hover:border-primary/20 transition-all duration-300"
+                onClick={() => handleSelectDomain(domain.id)}
+                data-testid={`card-domain-${domain.id}`}
+              >
+                <div className={`absolute top-0 left-0 right-0 h-2 bg-gradient-to-r ${domain.gradient}`} />
+                
+                <CardContent className="p-8">
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${domain.gradient} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                      <domain.icon className="h-7 w-7 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-2xl font-bold mb-1">{domain.title}</h2>
+                      <p className={`text-sm font-medium ${domain.accentColor}`}>
+                        {domain.subtitle}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <p className="text-muted-foreground mb-6 leading-relaxed">
+                    {domain.description}
+                  </p>
+                  
+                  <div className="space-y-3 mb-8">
+                    {domain.features.map((feature) => (
+                      <div key={feature} className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${domain.gradient} flex items-center justify-center flex-shrink-0`}>
+                          <Check className="h-3 w-3 text-white" />
+                        </div>
+                        <span className="text-sm">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <Button 
+                    className={`w-full gap-2 bg-gradient-to-r ${domain.gradient} hover:opacity-90 transition-opacity border-0`}
+                    data-testid={`button-select-${domain.id}`}
+                  >
+                    Get Started with {domain.title}
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              You can switch between domains anytime from the sidebar
+            </p>
+          </div>
         </div>
       </div>
     </div>
