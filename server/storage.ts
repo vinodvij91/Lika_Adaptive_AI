@@ -149,6 +149,45 @@ import {
   type InsertImportTemplate,
   type ImportJob,
   type InsertImportJob,
+  canonicalMolecules,
+  moleculeDescriptors,
+  moleculeFingerprints,
+  hitLists,
+  hitListItems,
+  canonicalAssays,
+  canonicalAssayResults,
+  targetAssets,
+  canonicalMaterials,
+  canonicalMaterialVariants,
+  canonicalMaterialProperties,
+  simulationRuns,
+  manufacturabilityScores,
+  type CanonicalMolecule,
+  type InsertCanonicalMolecule,
+  type MoleculeDescriptor,
+  type InsertMoleculeDescriptor,
+  type MoleculeFingerprint,
+  type InsertMoleculeFingerprint,
+  type HitList,
+  type InsertHitList,
+  type HitListItem,
+  type InsertHitListItem,
+  type CanonicalAssay,
+  type InsertCanonicalAssay,
+  type CanonicalAssayResult,
+  type InsertCanonicalAssayResult,
+  type TargetAsset,
+  type InsertTargetAsset,
+  type CanonicalMaterial,
+  type InsertCanonicalMaterial,
+  type CanonicalMaterialVariant,
+  type InsertCanonicalMaterialVariant,
+  type CanonicalMaterialProperty,
+  type InsertCanonicalMaterialProperty,
+  type SimulationRun,
+  type InsertSimulationRun,
+  type ManufacturabilityScore,
+  type InsertManufacturabilityScore,
   type AssayPanel,
   type InsertAssayPanel,
   type AssayPanelTarget,
@@ -439,6 +478,36 @@ export interface IStorage {
   getImportJob(id: string): Promise<ImportJob | undefined>;
   createImportJob(job: InsertImportJob): Promise<ImportJob>;
   updateImportJob(id: string, job: Partial<InsertImportJob>): Promise<ImportJob | undefined>;
+
+  getCanonicalMolecules(companyId?: string): Promise<CanonicalMolecule[]>;
+  getCanonicalMoleculeByInchikey(inchikey: string, companyId?: string): Promise<CanonicalMolecule | undefined>;
+  createCanonicalMolecule(molecule: InsertCanonicalMolecule): Promise<CanonicalMolecule>;
+  bulkCreateCanonicalMolecules(molecules: InsertCanonicalMolecule[]): Promise<CanonicalMolecule[]>;
+
+  getCanonicalMaterials(companyId?: string): Promise<CanonicalMaterial[]>;
+  getCanonicalMaterialByHash(materialHash: string, companyId?: string): Promise<CanonicalMaterial | undefined>;
+  createCanonicalMaterial(material: InsertCanonicalMaterial): Promise<CanonicalMaterial>;
+  bulkCreateCanonicalMaterials(materials: InsertCanonicalMaterial[]): Promise<CanonicalMaterial[]>;
+
+  createHitList(hitList: InsertHitList): Promise<HitList>;
+  bulkCreateHitListItems(items: InsertHitListItem[]): Promise<HitListItem[]>;
+
+  createCanonicalAssay(assay: InsertCanonicalAssay): Promise<CanonicalAssay>;
+  bulkCreateCanonicalAssayResults(results: InsertCanonicalAssayResult[]): Promise<CanonicalAssayResult[]>;
+
+  createMoleculeDescriptor(descriptor: InsertMoleculeDescriptor): Promise<MoleculeDescriptor>;
+  createMoleculeFingerprint(fingerprint: InsertMoleculeFingerprint): Promise<MoleculeFingerprint>;
+  createTargetAsset(asset: InsertTargetAsset): Promise<TargetAsset>;
+
+  createCanonicalMaterialVariant(variant: InsertCanonicalMaterialVariant): Promise<CanonicalMaterialVariant>;
+  bulkCreateCanonicalMaterialVariants(variants: InsertCanonicalMaterialVariant[]): Promise<CanonicalMaterialVariant[]>;
+  getCanonicalMaterialVariantByHash(variantHash: string): Promise<CanonicalMaterialVariant | undefined>;
+
+  createCanonicalMaterialProperty(property: InsertCanonicalMaterialProperty): Promise<CanonicalMaterialProperty>;
+  bulkCreateCanonicalMaterialProperties(properties: InsertCanonicalMaterialProperty[]): Promise<CanonicalMaterialProperty[]>;
+
+  createSimulationRun(run: InsertSimulationRun): Promise<SimulationRun>;
+  createManufacturabilityScore(score: InsertManufacturabilityScore): Promise<ManufacturabilityScore>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2430,6 +2499,126 @@ export class DatabaseStorage implements IStorage {
       .set(job)
       .where(eq(importJobs.id, id))
       .returning();
+    return result[0];
+  }
+
+  async getCanonicalMolecules(companyId?: string): Promise<CanonicalMolecule[]> {
+    if (companyId) {
+      return db.select().from(canonicalMolecules).where(eq(canonicalMolecules.companyId, companyId)).orderBy(desc(canonicalMolecules.createdAt));
+    }
+    return db.select().from(canonicalMolecules).orderBy(desc(canonicalMolecules.createdAt));
+  }
+
+  async getCanonicalMoleculeByInchikey(inchikey: string, companyId?: string): Promise<CanonicalMolecule | undefined> {
+    const conditions = companyId 
+      ? and(eq(canonicalMolecules.inchikey, inchikey), eq(canonicalMolecules.companyId, companyId))
+      : eq(canonicalMolecules.inchikey, inchikey);
+    const result = await db.select().from(canonicalMolecules).where(conditions).limit(1);
+    return result[0];
+  }
+
+  async createCanonicalMolecule(molecule: InsertCanonicalMolecule): Promise<CanonicalMolecule> {
+    const result = await db.insert(canonicalMolecules).values(molecule).returning();
+    return result[0];
+  }
+
+  async bulkCreateCanonicalMolecules(molecules: InsertCanonicalMolecule[]): Promise<CanonicalMolecule[]> {
+    if (molecules.length === 0) return [];
+    return db.insert(canonicalMolecules).values(molecules).returning();
+  }
+
+  async getCanonicalMaterials(companyId?: string): Promise<CanonicalMaterial[]> {
+    if (companyId) {
+      return db.select().from(canonicalMaterials).where(eq(canonicalMaterials.companyId, companyId)).orderBy(desc(canonicalMaterials.createdAt));
+    }
+    return db.select().from(canonicalMaterials).orderBy(desc(canonicalMaterials.createdAt));
+  }
+
+  async getCanonicalMaterialByHash(materialHash: string, companyId?: string): Promise<CanonicalMaterial | undefined> {
+    const conditions = companyId
+      ? and(eq(canonicalMaterials.materialHash, materialHash), eq(canonicalMaterials.companyId, companyId))
+      : eq(canonicalMaterials.materialHash, materialHash);
+    const result = await db.select().from(canonicalMaterials).where(conditions).limit(1);
+    return result[0];
+  }
+
+  async createCanonicalMaterial(material: InsertCanonicalMaterial): Promise<CanonicalMaterial> {
+    const result = await db.insert(canonicalMaterials).values(material).returning();
+    return result[0];
+  }
+
+  async bulkCreateCanonicalMaterials(materials: InsertCanonicalMaterial[]): Promise<CanonicalMaterial[]> {
+    if (materials.length === 0) return [];
+    return db.insert(canonicalMaterials).values(materials).returning();
+  }
+
+  async createHitList(hitList: InsertHitList): Promise<HitList> {
+    const result = await db.insert(hitLists).values(hitList).returning();
+    return result[0];
+  }
+
+  async bulkCreateHitListItems(items: InsertHitListItem[]): Promise<HitListItem[]> {
+    if (items.length === 0) return [];
+    return db.insert(hitListItems).values(items).returning();
+  }
+
+  async createCanonicalAssay(assay: InsertCanonicalAssay): Promise<CanonicalAssay> {
+    const result = await db.insert(canonicalAssays).values(assay).returning();
+    return result[0];
+  }
+
+  async bulkCreateCanonicalAssayResults(results: InsertCanonicalAssayResult[]): Promise<CanonicalAssayResult[]> {
+    if (results.length === 0) return [];
+    return db.insert(canonicalAssayResults).values(results).returning();
+  }
+
+  async createMoleculeDescriptor(descriptor: InsertMoleculeDescriptor): Promise<MoleculeDescriptor> {
+    const result = await db.insert(moleculeDescriptors).values(descriptor).returning();
+    return result[0];
+  }
+
+  async createMoleculeFingerprint(fingerprint: InsertMoleculeFingerprint): Promise<MoleculeFingerprint> {
+    const result = await db.insert(moleculeFingerprints).values(fingerprint).returning();
+    return result[0];
+  }
+
+  async createTargetAsset(asset: InsertTargetAsset): Promise<TargetAsset> {
+    const result = await db.insert(targetAssets).values(asset).returning();
+    return result[0];
+  }
+
+  async createCanonicalMaterialVariant(variant: InsertCanonicalMaterialVariant): Promise<CanonicalMaterialVariant> {
+    const result = await db.insert(canonicalMaterialVariants).values(variant).returning();
+    return result[0];
+  }
+
+  async bulkCreateCanonicalMaterialVariants(variants: InsertCanonicalMaterialVariant[]): Promise<CanonicalMaterialVariant[]> {
+    if (variants.length === 0) return [];
+    return db.insert(canonicalMaterialVariants).values(variants).returning();
+  }
+
+  async getCanonicalMaterialVariantByHash(variantHash: string): Promise<CanonicalMaterialVariant | undefined> {
+    const result = await db.select().from(canonicalMaterialVariants).where(eq(canonicalMaterialVariants.variantHash, variantHash)).limit(1);
+    return result[0];
+  }
+
+  async createCanonicalMaterialProperty(property: InsertCanonicalMaterialProperty): Promise<CanonicalMaterialProperty> {
+    const result = await db.insert(canonicalMaterialProperties).values(property).returning();
+    return result[0];
+  }
+
+  async bulkCreateCanonicalMaterialProperties(properties: InsertCanonicalMaterialProperty[]): Promise<CanonicalMaterialProperty[]> {
+    if (properties.length === 0) return [];
+    return db.insert(canonicalMaterialProperties).values(properties).returning();
+  }
+
+  async createSimulationRun(run: InsertSimulationRun): Promise<SimulationRun> {
+    const result = await db.insert(simulationRuns).values(run).returning();
+    return result[0];
+  }
+
+  async createManufacturabilityScore(score: InsertManufacturabilityScore): Promise<ManufacturabilityScore> {
+    const result = await db.insert(manufacturabilityScores).values(score).returning();
     return result[0];
   }
 }

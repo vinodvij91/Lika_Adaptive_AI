@@ -36,6 +36,16 @@ export const variantGeneratedByEnum = pgEnum("variant_generated_by", ["human", "
 export const processingJobStatusEnum = pgEnum("processing_job_status", ["queued", "dispatched", "running", "succeeded", "failed", "cancelled", "paused"]);
 export const processingJobTypeEnum = pgEnum("processing_job_type", ["property_prediction", "simulation", "variant_generation", "optimization", "screening", "aggregation"]);
 
+export const canonicalMoleculeSourceEnum = pgEnum("canonical_molecule_source", ["import", "built_in", "vendor", "generated"]);
+export const canonicalAssayOutcomeEnum = pgEnum("canonical_assay_outcome", ["active", "inactive", "toxic", "ambiguous"]);
+export const descriptorMethodEnum = pgEnum("descriptor_method", ["rdkit", "mordred", "custom"]);
+export const fingerprintTypeEnum = pgEnum("fingerprint_type", ["morgan", "ecfp4", "maccs", "topological", "custom"]);
+export const targetAssetTypeEnum = pgEnum("target_asset_type", ["pdb", "mmcif", "pocket", "surface", "other"]);
+export const materialPropertyMethodEnum = pgEnum("material_property_method", ["ML", "MD", "DFT", "FEM", "experimental"]);
+export const simulationTypeEnum = pgEnum("simulation_type", ["MD", "DFT", "FEM", "MC", "other"]);
+export const simulationStatusEnum = pgEnum("simulation_status", ["queued", "running", "succeeded", "failed", "cancelled"]);
+export const scaleRiskEnum = pgEnum("scale_risk", ["low", "medium", "high"]);
+
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -1274,3 +1284,187 @@ export interface MaterialsPipelineConfig {
     constraints?: Record<string, unknown>;
   };
 }
+
+export const canonicalMolecules = pgTable("canonical_molecules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id"),
+  name: text("name"),
+  canonicalSmiles: text("canonical_smiles").notNull(),
+  inchikey: text("inchikey").notNull(),
+  inchi: text("inchi"),
+  source: canonicalMoleculeSourceEnum("source").default("import"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_canonical_molecules_inchikey").on(table.inchikey),
+  index("idx_canonical_molecules_company").on(table.companyId),
+]);
+
+export const moleculeDescriptors = pgTable("molecule_descriptors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  moleculeId: varchar("molecule_id").notNull().references(() => canonicalMolecules.id, { onDelete: "cascade" }),
+  mw: real("mw"),
+  logp: real("logp"),
+  tpsa: real("tpsa"),
+  hbd: integer("hbd"),
+  hba: integer("hba"),
+  rotb: integer("rotb"),
+  rings: integer("rings"),
+  computedAt: timestamp("computed_at").defaultNow(),
+  method: descriptorMethodEnum("method").default("rdkit"),
+});
+
+export const moleculeFingerprints = pgTable("molecule_fingerprints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  moleculeId: varchar("molecule_id").notNull().references(() => canonicalMolecules.id, { onDelete: "cascade" }),
+  fpType: fingerprintTypeEnum("fp_type").default("morgan"),
+  fpBits: text("fp_bits"),
+  radius: integer("radius"),
+  nbits: integer("nbits"),
+  computedAt: timestamp("computed_at").defaultNow(),
+});
+
+export const hitLists = pgTable("hit_lists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").references(() => campaigns.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  sourceTool: text("source_tool"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const hitListItems = pgTable("hit_list_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hitListId: varchar("hit_list_id").notNull().references(() => hitLists.id, { onDelete: "cascade" }),
+  moleculeId: varchar("molecule_id").notNull().references(() => canonicalMolecules.id, { onDelete: "cascade" }),
+  score: real("score"),
+  rank: integer("rank"),
+  metadataJson: jsonb("metadata_json"),
+});
+
+export const canonicalAssays = pgTable("canonical_assays", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id"),
+  name: text("name").notNull(),
+  targetId: varchar("target_id").references(() => targets.id),
+  diseaseId: varchar("disease_id"),
+  readoutType: assayReadoutTypeEnum("readout_type").default("IC50"),
+  units: text("units"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const canonicalAssayResults = pgTable("canonical_assay_results", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assayId: varchar("assay_id").notNull().references(() => canonicalAssays.id, { onDelete: "cascade" }),
+  campaignId: varchar("campaign_id").references(() => campaigns.id),
+  moleculeId: varchar("molecule_id").notNull().references(() => canonicalMolecules.id, { onDelete: "cascade" }),
+  concentration: real("concentration"),
+  value: real("value").notNull(),
+  units: text("units"),
+  outcomeLabel: canonicalAssayOutcomeEnum("outcome_label"),
+  metadataJson: jsonb("metadata_json"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const targetAssets = pgTable("target_assets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  targetId: varchar("target_id").notNull().references(() => targets.id, { onDelete: "cascade" }),
+  assetType: targetAssetTypeEnum("asset_type").default("pdb"),
+  uri: text("uri"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const canonicalMaterials = pgTable("canonical_materials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id"),
+  name: text("name"),
+  structureType: materialTypeEnum("structure_type").default("polymer"),
+  canonicalRepresentationJson: jsonb("canonical_representation_json"),
+  materialHash: text("material_hash").notNull(),
+  baseFamily: text("base_family"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_canonical_materials_hash").on(table.materialHash),
+  index("idx_canonical_materials_company").on(table.companyId),
+]);
+
+export const canonicalMaterialVariants = pgTable("canonical_material_variants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  materialId: varchar("material_id").notNull().references(() => canonicalMaterials.id, { onDelete: "cascade" }),
+  variantParamsJson: jsonb("variant_params_json"),
+  variantHash: text("variant_hash"),
+  generatedBy: variantGeneratedByEnum("generated_by").default("human"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_canonical_material_variants_hash").on(table.variantHash),
+]);
+
+export const canonicalMaterialProperties = pgTable("canonical_material_properties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  materialVariantId: varchar("material_variant_id").notNull().references(() => canonicalMaterialVariants.id, { onDelete: "cascade" }),
+  propertyName: text("property_name").notNull(),
+  value: real("value"),
+  units: text("units"),
+  method: materialPropertyMethodEnum("method").default("ML"),
+  confidence: real("confidence"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const simulationRuns = pgTable("simulation_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  materialVariantId: varchar("material_variant_id").notNull().references(() => canonicalMaterialVariants.id, { onDelete: "cascade" }),
+  simulationType: simulationTypeEnum("simulation_type").default("MD"),
+  parametersJson: jsonb("parameters_json"),
+  status: simulationStatusEnum("status").default("queued"),
+  resultsJson: jsonb("results_json"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const manufacturabilityScores = pgTable("manufacturability_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  materialVariantId: varchar("material_variant_id").notNull().references(() => canonicalMaterialVariants.id, { onDelete: "cascade" }),
+  feasibilityScore: real("feasibility_score"),
+  costIndex: real("cost_index"),
+  scaleRisk: scaleRiskEnum("scale_risk").default("medium"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCanonicalMoleculeSchema = createInsertSchema(canonicalMolecules).omit({ id: true, createdAt: true });
+export const insertMoleculeDescriptorSchema = createInsertSchema(moleculeDescriptors).omit({ id: true, computedAt: true });
+export const insertMoleculeFingerprintSchema = createInsertSchema(moleculeFingerprints).omit({ id: true, computedAt: true });
+export const insertHitListSchema = createInsertSchema(hitLists).omit({ id: true, createdAt: true });
+export const insertHitListItemSchema = createInsertSchema(hitListItems).omit({ id: true });
+export const insertCanonicalAssaySchema = createInsertSchema(canonicalAssays).omit({ id: true, createdAt: true });
+export const insertCanonicalAssayResultSchema = createInsertSchema(canonicalAssayResults).omit({ id: true, createdAt: true });
+export const insertTargetAssetSchema = createInsertSchema(targetAssets).omit({ id: true, createdAt: true });
+export const insertCanonicalMaterialSchema = createInsertSchema(canonicalMaterials).omit({ id: true, createdAt: true });
+export const insertCanonicalMaterialVariantSchema = createInsertSchema(canonicalMaterialVariants).omit({ id: true, createdAt: true });
+export const insertCanonicalMaterialPropertySchema = createInsertSchema(canonicalMaterialProperties).omit({ id: true, createdAt: true });
+export const insertSimulationRunSchema = createInsertSchema(simulationRuns).omit({ id: true, createdAt: true });
+export const insertManufacturabilityScoreSchema = createInsertSchema(manufacturabilityScores).omit({ id: true, createdAt: true });
+
+export type InsertCanonicalMolecule = z.infer<typeof insertCanonicalMoleculeSchema>;
+export type CanonicalMolecule = typeof canonicalMolecules.$inferSelect;
+export type InsertMoleculeDescriptor = z.infer<typeof insertMoleculeDescriptorSchema>;
+export type MoleculeDescriptor = typeof moleculeDescriptors.$inferSelect;
+export type InsertMoleculeFingerprint = z.infer<typeof insertMoleculeFingerprintSchema>;
+export type MoleculeFingerprint = typeof moleculeFingerprints.$inferSelect;
+export type InsertHitList = z.infer<typeof insertHitListSchema>;
+export type HitList = typeof hitLists.$inferSelect;
+export type InsertHitListItem = z.infer<typeof insertHitListItemSchema>;
+export type HitListItem = typeof hitListItems.$inferSelect;
+export type InsertCanonicalAssay = z.infer<typeof insertCanonicalAssaySchema>;
+export type CanonicalAssay = typeof canonicalAssays.$inferSelect;
+export type InsertCanonicalAssayResult = z.infer<typeof insertCanonicalAssayResultSchema>;
+export type CanonicalAssayResult = typeof canonicalAssayResults.$inferSelect;
+export type InsertTargetAsset = z.infer<typeof insertTargetAssetSchema>;
+export type TargetAsset = typeof targetAssets.$inferSelect;
+export type InsertCanonicalMaterial = z.infer<typeof insertCanonicalMaterialSchema>;
+export type CanonicalMaterial = typeof canonicalMaterials.$inferSelect;
+export type InsertCanonicalMaterialVariant = z.infer<typeof insertCanonicalMaterialVariantSchema>;
+export type CanonicalMaterialVariant = typeof canonicalMaterialVariants.$inferSelect;
+export type InsertCanonicalMaterialProperty = z.infer<typeof insertCanonicalMaterialPropertySchema>;
+export type CanonicalMaterialProperty = typeof canonicalMaterialProperties.$inferSelect;
+export type InsertSimulationRun = z.infer<typeof insertSimulationRunSchema>;
+export type SimulationRun = typeof simulationRuns.$inferSelect;
+export type InsertManufacturabilityScore = z.infer<typeof insertManufacturabilityScoreSchema>;
+export type ManufacturabilityScore = typeof manufacturabilityScores.$inferSelect;

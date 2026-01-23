@@ -59,6 +59,34 @@ The platform utilizes a full-stack TypeScript architecture. The frontend is buil
 - **materials_campaigns**: Materials discovery campaigns with pipeline configurations
 - **materials_oracle_scores**: Scoring with property breakdown, synthesis feasibility, manufacturing cost
 
+### Internal Normalized Schemas (v1)
+
+The Import Hub converts messy industry formats (CSV/SDF/CIF/etc.) into canonical tables with deduplication and normalization.
+
+#### Drug Discovery Canonical Tables
+- **canonical_molecules**: Deduplicated molecules with inchikey index
+  - `canonical_smiles`: Normalized SMILES (NOT NULL)
+  - `inchikey`: Deduplication key (NOT NULL, indexed)
+  - `source`: Origin (import, built_in, vendor, generated)
+- **molecule_descriptors**: Computed properties (mw, logp, tpsa, hbd, hba, rotb, rings)
+- **molecule_fingerprints**: Morgan/ECFP fingerprints for similarity search
+- **hit_lists/hit_list_items**: Campaign hit lists with ranked molecules
+- **canonical_assays/canonical_assay_results**: Normalized assay data with unit conversion
+
+#### Materials Science Canonical Tables
+- **canonical_materials**: Deduplicated materials with material_hash index
+  - `material_hash`: Deduplication key (NOT NULL, indexed)
+  - `canonical_representation_json`: Normalized structure representation
+- **canonical_material_variants**: Parameterized versions with variant_hash
+- **canonical_material_properties**: Normalized property values with method tracking
+- **simulation_runs**: MD/DFT/FEM simulation tracking
+- **manufacturability_scores**: Feasibility, cost, and scale risk assessments
+
+#### Normalization Rules
+- Drug: Canonicalize SMILES, compute InChIKey, strip salts, merge duplicates
+- Materials: Detect format (CIF/XYZ/POSCAR/BigSMILES), compute material_hash, normalize units
+- Import output contract: counts (inserted/updated/skipped), validation report, normalization summary
+
 ### Enterprise-Scale Processing Infrastructure
 
 #### Scalability Design
