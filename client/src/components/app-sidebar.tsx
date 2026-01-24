@@ -69,6 +69,7 @@ const materialsNavigationItems = [
 ];
 
 const materialsWorkflowItems = [
+  { title: "Lika Agent", url: "/lika-agent", icon: Brain },
   { title: "Property Prediction", url: "/property-prediction", icon: Calculator },
   { title: "Structure-Property", url: "/structure-property", icon: Beaker },
   { title: "Manufacturability", url: "/manufacturability-scoring", icon: Factory },
