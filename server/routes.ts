@@ -3256,6 +3256,9 @@ export async function registerRoutes(
   app.get("/api/integrations/status", requireAuth, async (req, res) => {
     try {
       const { isOpenAIConfigured } = await import("./services/openai-predictions");
+      const { getQuantumIntegrationStatus } = await import("./services/quantum-compute");
+      const quantumStatus = getQuantumIntegrationStatus();
+      
       res.json({
         openai: {
           configured: isOpenAIConfigured(),
@@ -3282,6 +3285,13 @@ export async function registerRoutes(
           status: "public_api",
           capabilities: ["protein_lookup", "sequence_data", "function_annotations"],
           message: "UniProt is a public API - no authentication required",
+        },
+        quantum: {
+          configured: quantumStatus.configured,
+          status: quantumStatus.status,
+          capabilities: ["vqe", "qaoa", "molecular_simulation", "optimization"],
+          message: quantumStatus.message,
+          providers: quantumStatus.providers,
         },
       });
     } catch (error) {
@@ -3496,6 +3506,167 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("3D structure error:", error);
       res.status(500).json({ error: error.message || "Failed to fetch 3D structure" });
+    }
+  });
+
+  // ==================== Lika Agent Endpoints ====================
+
+  app.get("/api/agent/status", requireAuth, async (req, res) => {
+    try {
+      const { isAgentConfigured } = await import("./services/lika-agent");
+      res.json({
+        configured: isAgentConfigured(),
+        status: isAgentConfigured() ? "ready" : "api_key_required",
+        message: isAgentConfigured()
+          ? "Lika Agent is ready to assist with drug discovery workflows"
+          : "Set OPENAI_API_KEY environment variable to enable Lika Agent",
+      });
+    } catch (error) {
+      console.error("Error checking agent status:", error);
+      res.status(500).json({ error: "Failed to check agent status" });
+    }
+  });
+
+  const agentChatSchema = z.object({
+    messages: z.array(z.object({
+      role: z.enum(["user", "assistant"]),
+      content: z.string(),
+    })),
+    moleculeContext: z.object({
+      smiles: z.string().optional(),
+      name: z.string().optional(),
+      molecularWeight: z.number().optional(),
+      logP: z.number().optional(),
+      scores: z.object({
+        oracleScore: z.number().optional(),
+        dockingScore: z.number().optional(),
+        admetScore: z.number().optional(),
+      }).optional(),
+    }).optional(),
+  });
+
+  app.post("/api/agent/chat", requireAuth, async (req, res) => {
+    try {
+      const parseResult = agentChatSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: "Invalid request", details: parseResult.error.flatten() });
+      }
+      
+      const { messages, moleculeContext } = parseResult.data;
+
+      const { chatWithLikaAgent, isAgentConfigured } = await import("./services/lika-agent");
+      
+      if (!isAgentConfigured()) {
+        return res.status(503).json({
+          error: "Lika Agent not configured",
+          message: "Set OPENAI_API_KEY environment variable to enable the AI agent",
+        });
+      }
+
+      const response = await chatWithLikaAgent(messages, moleculeContext);
+      res.json(response);
+    } catch (error: any) {
+      console.error("Lika Agent chat error:", error);
+      res.status(500).json({ error: error.message || "Failed to get agent response" });
+    }
+  });
+
+  app.post("/api/agent/explain", requireAuth, async (req, res) => {
+    try {
+      const { smiles, moleculeName } = req.body;
+      
+      if (!smiles) {
+        return res.status(400).json({ error: "SMILES string is required" });
+      }
+
+      const { explainMolecule, isAgentConfigured } = await import("./services/lika-agent");
+      
+      if (!isAgentConfigured()) {
+        return res.status(503).json({
+          error: "Lika Agent not configured",
+          message: "Set OPENAI_API_KEY environment variable to enable molecule explanations",
+        });
+      }
+
+      const explanation = await explainMolecule(smiles, moleculeName);
+      res.json({ explanation });
+    } catch (error: any) {
+      console.error("Molecule explanation error:", error);
+      res.status(500).json({ error: error.message || "Failed to explain molecule" });
+    }
+  });
+
+  // ==================== Quantum Compute Endpoints ====================
+
+  app.get("/api/quantum/providers", requireAuth, async (req, res) => {
+    try {
+      const { getAvailableProviders } = await import("./services/quantum-compute");
+      const providers = getAvailableProviders();
+      res.json({ providers });
+    } catch (error: any) {
+      console.error("Error fetching quantum providers:", error);
+      res.status(500).json({ error: "Failed to fetch quantum providers" });
+    }
+  });
+
+  app.get("/api/quantum/status", requireAuth, async (req, res) => {
+    try {
+      const { getQuantumIntegrationStatus } = await import("./services/quantum-compute");
+      const status = getQuantumIntegrationStatus();
+      res.json(status);
+    } catch (error: any) {
+      console.error("Error checking quantum status:", error);
+      res.status(500).json({ error: "Failed to check quantum status" });
+    }
+  });
+
+  app.post("/api/quantum/estimate-qubits", requireAuth, async (req, res) => {
+    try {
+      const { smiles, basis } = req.body;
+      if (!smiles) {
+        return res.status(400).json({ error: "SMILES is required" });
+      }
+
+      const { estimateQubitsRequired } = await import("./services/quantum-compute");
+      const qubits = estimateQubitsRequired({ smiles, basis: basis || "sto-3g" });
+      res.json({ smiles, basis: basis || "sto-3g", estimatedQubits: qubits });
+    } catch (error: any) {
+      console.error("Error estimating qubits:", error);
+      res.status(500).json({ error: "Failed to estimate qubits" });
+    }
+  });
+
+  app.post("/api/quantum/submit-job", requireAuth, async (req, res) => {
+    try {
+      const { providerId, jobType, parameters } = req.body;
+      
+      if (!providerId || !jobType) {
+        return res.status(400).json({ error: "providerId and jobType are required" });
+      }
+
+      const { submitQuantumJob } = await import("./services/quantum-compute");
+      const result = await submitQuantumJob(providerId, jobType, parameters || {});
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error submitting quantum job:", error);
+      res.status(500).json({ error: error.message || "Failed to submit quantum job" });
+    }
+  });
+
+  app.post("/api/quantum/vqe-simulation", requireAuth, async (req, res) => {
+    try {
+      const { smiles, basis, maxIterations, optimizer, shots } = req.body;
+      
+      if (!smiles) {
+        return res.status(400).json({ error: "SMILES is required" });
+      }
+
+      const { runVQESimulation } = await import("./services/quantum-compute");
+      const result = await runVQESimulation(smiles, { basis, maxIterations, optimizer, shots });
+      res.json(result);
+    } catch (error: any) {
+      console.error("VQE simulation error:", error);
+      res.status(500).json({ error: error.message || "Failed to run VQE simulation" });
     }
   });
 

@@ -32,6 +32,8 @@ import {
   Beaker,
   ArrowLeftRight,
   Plug,
+  Brain,
+  Atom,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -48,6 +50,7 @@ const drugNavigationItems = [
 ];
 
 const drugWorkflowItems = [
+  { title: "Lika Agent", url: "/lika-agent", icon: Brain },
   { title: "Campaigns", url: "/campaigns", icon: Workflow },
   { title: "Virtual Screening", url: "/campaigns/new", icon: Crosshair },
   { title: "Docking & 3D", url: "/docking", icon: Layers },
@@ -77,6 +80,7 @@ const infrastructureItems = [
   { title: "Compute Nodes", url: "/compute-nodes", icon: Server },
   { title: "Usage", url: "/usage", icon: Activity },
   { title: "Integrations", url: "/integrations", icon: Plug },
+  { title: "Quantum", url: "/quantum", icon: Atom },
 ];
 
 export function AppSidebar() {

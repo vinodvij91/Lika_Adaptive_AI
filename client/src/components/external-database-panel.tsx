@@ -6,18 +6,21 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { 
   Database, 
   ExternalLink, 
   Search, 
   AlertCircle, 
   Activity,
-  FileText
+  FileText,
+  Dna
 } from "lucide-react";
 
 interface ExternalDatabasePanelProps {
   smiles: string;
   moleculeName?: string;
+  targetQuery?: string;
 }
 
 async function fetchChemblData(smiles: string) {
@@ -38,8 +41,18 @@ async function fetchPubchemData(smiles: string) {
   return response.json();
 }
 
-export function ExternalDatabasePanel({ smiles, moleculeName }: ExternalDatabasePanelProps) {
+async function fetchUniprotData(query: string) {
+  const response = await fetch(`/api/lookup/uniprot/search?query=${encodeURIComponent(query)}`, {
+    credentials: "include",
+  });
+  if (response.status === 404) return { results: [], count: 0 };
+  if (!response.ok) throw new Error("Failed to fetch UniProt data");
+  return response.json();
+}
+
+export function ExternalDatabasePanel({ smiles, moleculeName, targetQuery }: ExternalDatabasePanelProps) {
   const [activeTab, setActiveTab] = useState("chembl");
+  const [uniprotQuery, setUniprotQuery] = useState(targetQuery || moleculeName || "");
 
   const { data: chemblData, isLoading: chemblLoading, error: chemblError, refetch: refetchChembl } = useQuery({
     queryKey: ["/api/lookup/chembl/smiles", smiles],
@@ -53,6 +66,14 @@ export function ExternalDatabasePanel({ smiles, moleculeName }: ExternalDatabase
     queryKey: ["/api/lookup/pubchem/smiles", smiles],
     queryFn: () => fetchPubchemData(smiles),
     enabled: activeTab === "pubchem",
+    staleTime: 1000 * 60 * 10,
+    retry: 1,
+  });
+
+  const { data: uniprotData, isLoading: uniprotLoading, error: uniprotError, refetch: refetchUniprot } = useQuery({
+    queryKey: ["/api/lookup/uniprot/search", uniprotQuery],
+    queryFn: () => fetchUniprotData(uniprotQuery),
+    enabled: activeTab === "uniprot" && uniprotQuery.length >= 2,
     staleTime: 1000 * 60 * 10,
     retry: 1,
   });
@@ -75,6 +96,9 @@ export function ExternalDatabasePanel({ smiles, moleculeName }: ExternalDatabase
             </TabsTrigger>
             <TabsTrigger value="pubchem" className="flex-1 text-xs" data-testid="tab-pubchem">
               PubChem
+            </TabsTrigger>
+            <TabsTrigger value="uniprot" className="flex-1 text-xs" data-testid="tab-uniprot">
+              UniProt
             </TabsTrigger>
           </TabsList>
 
@@ -253,6 +277,114 @@ export function ExternalDatabasePanel({ smiles, moleculeName }: ExternalDatabase
                       </div>
                     </div>
                   )}
+                </div>
+              </ScrollArea>
+            )}
+          </TabsContent>
+
+          <TabsContent value="uniprot" className="mt-0">
+            <div className="mb-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Search proteins (e.g., COX-2, BACE1)"
+                  value={uniprotQuery}
+                  onChange={(e) => setUniprotQuery(e.target.value)}
+                  className="text-xs"
+                  data-testid="input-uniprot-search"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => refetchUniprot()}
+                  disabled={uniprotQuery.length < 2}
+                  data-testid="button-search-uniprot"
+                >
+                  <Search className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+            {uniprotLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            ) : uniprotError ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                <p className="text-sm">Failed to search UniProt</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => refetchUniprot()} data-testid="button-retry-uniprot">
+                  Retry
+                </Button>
+              </div>
+            ) : !uniprotData || uniprotData.count === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <Dna className="h-8 w-8 mx-auto mb-2" />
+                <p className="text-sm">
+                  {uniprotQuery.length < 2 ? "Enter a search term to find proteins" : "No proteins found"}
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="h-64">
+                <div className="space-y-3">
+                  {uniprotData.results.map((protein: any, i: number) => (
+                    <div key={i} className="bg-muted/30 p-3 rounded-lg border border-border/50" data-testid={`card-uniprot-protein-${i}`}>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate" data-testid={`text-protein-name-${i}`}>{protein.proteinName || protein.entryName}</div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <span className="font-mono" data-testid={`text-protein-accession-${i}`}>{protein.accession}</span>
+                            {protein.geneName && (
+                              <Badge variant="outline" className="text-[10px]">{protein.geneName}</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <a 
+                          href={`https://www.uniprot.org/uniprotkb/${protein.accession}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button variant="outline" size="sm" data-testid={`button-view-uniprot-${protein.accession}`}>
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </a>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-1 text-xs mb-2">
+                        <div className="bg-muted/50 p-1.5 rounded">
+                          <span className="text-muted-foreground">Organism: </span>
+                          <span className="font-medium">{protein.organism || "N/A"}</span>
+                        </div>
+                        <div className="bg-muted/50 p-1.5 rounded">
+                          <span className="text-muted-foreground">Length: </span>
+                          <span className="font-medium">{protein.sequenceLength || "N/A"} aa</span>
+                        </div>
+                      </div>
+
+                      {protein.function && (
+                        <div className="text-xs text-muted-foreground line-clamp-2">
+                          {protein.function}
+                        </div>
+                      )}
+
+                      {protein.pdbStructures && protein.pdbStructures.length > 0 && (
+                        <div className="flex gap-1 mt-2 flex-wrap">
+                          {protein.pdbStructures.slice(0, 3).map((pdb: string, j: number) => (
+                            <a
+                              key={j}
+                              href={`https://www.rcsb.org/structure/${pdb}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Badge variant="secondary" className="text-[10px] cursor-pointer hover-elevate">
+                                PDB: {pdb}
+                              </Badge>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </ScrollArea>
             )}

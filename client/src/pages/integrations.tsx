@@ -15,8 +15,10 @@ import {
   FileText,
   Zap,
   Settings,
-  Key
+  Key,
+  Atom
 } from "lucide-react";
+import { Link } from "wouter";
 
 interface IntegrationStatus {
   openai: {
@@ -34,6 +36,12 @@ interface IntegrationStatus {
   uniprot: {
     configured: boolean;
     capabilities: string[];
+  };
+  quantum: {
+    configured: boolean;
+    capabilities: string[];
+    status: string;
+    providers?: { available: number; total: number };
   };
 }
 
@@ -94,6 +102,21 @@ export default function IntegrationsPage() {
       capabilities: status?.uniprot.capabilities || [],
       configured: status?.uniprot.configured || false,
       requiresKey: false,
+    },
+    {
+      id: "quantum",
+      name: "Quantum Compute",
+      icon: Atom,
+      color: "text-fuchsia-500",
+      bgColor: "from-fuchsia-500/20 to-purple-500/10",
+      borderColor: "border-fuchsia-500/30",
+      description: "Quantum simulation for molecular energy calculations using VQE and QAOA algorithms. Supports multiple quantum providers.",
+      externalUrl: null,
+      internalUrl: "/quantum",
+      capabilities: status?.quantum?.capabilities || [],
+      configured: status?.quantum?.configured || false,
+      requiresKey: false,
+      providerInfo: status?.quantum?.providers,
     },
   ];
 
@@ -189,12 +212,20 @@ export default function IntegrationsPage() {
                     )}
 
                     <div className="flex items-center gap-2">
-                      <a href={integration.externalUrl} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="sm" data-testid={`button-view-${integration.id}`}>
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          Visit {integration.name.split(" ")[0]}
-                        </Button>
-                      </a>
+                      {integration.externalUrl ? (
+                        <a href={integration.externalUrl} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm" data-testid={`button-view-${integration.id}`}>
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            Visit {integration.name.split(" ")[0]}
+                          </Button>
+                        </a>
+                      ) : integration.internalUrl ? (
+                        <Link href={integration.internalUrl}>
+                          <Button variant="outline" size="sm" data-testid={`button-open-${integration.id}`}>
+                            Open {integration.name.split(" ")[0]}
+                          </Button>
+                        </Link>
+                      ) : null}
                       {integration.requiresKey && !integration.configured && (
                         <Button variant="ghost" size="sm" data-testid={`button-configure-${integration.id}`}>
                           <Settings className="h-3 w-3 mr-1" />

@@ -52,6 +52,8 @@ import ImportHubPage from "@/pages/import-hub";
 import ImportWizardPage from "@/pages/import-wizard";
 import ImportHistoryPage from "@/pages/import-history";
 import IntegrationsPage from "@/pages/integrations";
+import LikaAgentPage from "@/pages/lika-agent";
+import QuantumComputePage from "@/pages/quantum-compute";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -116,6 +118,8 @@ function AuthenticatedRoutes() {
         <Route path="/import/history" component={ImportHistoryPage} />
         <Route path="/import/:domain/:importType" component={ImportWizardPage} />
         <Route path="/integrations" component={IntegrationsPage} />
+        <Route path="/lika-agent" component={LikaAgentPage} />
+        <Route path="/quantum" component={QuantumComputePage} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>
