@@ -144,7 +144,7 @@ export function ExternalDatabasePanel({ smiles, moleculeName, targetQuery }: Ext
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="bg-muted/50 p-2 rounded">
                       <div className="text-muted-foreground">MW</div>
-                      <div className="font-medium">{chemblData.molecularWeight?.toFixed(2) || "N/A"}</div>
+                      <div className="font-medium">{chemblData.molecularWeight ? Number(chemblData.molecularWeight).toFixed(2) : "N/A"}</div>
                     </div>
                     <div className="bg-muted/50 p-2 rounded">
                       <div className="text-muted-foreground">Max Phase</div>
@@ -175,7 +175,7 @@ export function ExternalDatabasePanel({ smiles, moleculeName, targetQuery }: Ext
                             <div className="flex items-center justify-between">
                               <span className="font-medium truncate flex-1">{act.targetPrefName}</span>
                               <Badge variant="outline" className="text-[10px] ml-2">
-                                {act.activityType}: {act.value?.toFixed(2)} {act.units}
+                                {act.activityType}: {act.value ? Number(act.value).toFixed(2) : "N/A"} {act.units}
                               </Badge>
                             </div>
                           </div>
@@ -230,19 +230,19 @@ export function ExternalDatabasePanel({ smiles, moleculeName, targetQuery }: Ext
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="bg-muted/50 p-2 rounded">
                       <div className="text-muted-foreground">MW</div>
-                      <div className="font-medium">{pubchemData.molecularWeight?.toFixed(2)}</div>
+                      <div className="font-medium">{pubchemData.molecularWeight ? Number(pubchemData.molecularWeight).toFixed(2) : "N/A"}</div>
                     </div>
                     <div className="bg-muted/50 p-2 rounded">
                       <div className="text-muted-foreground">XLogP</div>
-                      <div className="font-medium">{pubchemData.xlogp?.toFixed(2) || "N/A"}</div>
+                      <div className="font-medium">{pubchemData.xlogp ? Number(pubchemData.xlogp).toFixed(2) : "N/A"}</div>
                     </div>
                     <div className="bg-muted/50 p-2 rounded">
                       <div className="text-muted-foreground">TPSA</div>
-                      <div className="font-medium">{pubchemData.tpsa?.toFixed(1) || "N/A"} A²</div>
+                      <div className="font-medium">{pubchemData.tpsa ? Number(pubchemData.tpsa).toFixed(1) : "N/A"} A²</div>
                     </div>
                     <div className="bg-muted/50 p-2 rounded">
                       <div className="text-muted-foreground">Complexity</div>
-                      <div className="font-medium">{pubchemData.complexity?.toFixed(0)}</div>
+                      <div className="font-medium">{pubchemData.complexity ? Number(pubchemData.complexity).toFixed(0) : "N/A"}</div>
                     </div>
                     <div className="bg-muted/50 p-2 rounded">
                       <div className="text-muted-foreground">HBD</div>
