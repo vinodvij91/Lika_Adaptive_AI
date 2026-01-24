@@ -117,7 +117,7 @@ export function ExternalDatabasePanel({ smiles, moleculeName, targetQuery }: Ext
                   Retry
                 </Button>
               </div>
-            ) : chemblData === null ? (
+            ) : !chemblData ? (
               <div className="text-center py-4 text-muted-foreground">
                 <Search className="h-8 w-8 mx-auto mb-2" />
                 <p className="text-sm">Not found in ChEMBL database</p>
@@ -203,7 +203,7 @@ export function ExternalDatabasePanel({ smiles, moleculeName, targetQuery }: Ext
                   Retry
                 </Button>
               </div>
-            ) : pubchemData === null ? (
+            ) : !pubchemData ? (
               <div className="text-center py-4 text-muted-foreground">
                 <Search className="h-8 w-8 mx-auto mb-2" />
                 <p className="text-sm">Not found in PubChem database</p>
