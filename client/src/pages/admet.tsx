@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Beaker, Activity, Shield, Zap, TrendingUp, FlaskConical, ArrowRight } from "lucide-react";
+import { Beaker, Activity, Shield, Zap, TrendingUp, FlaskConical, ArrowRight, Droplets } from "lucide-react";
 
 export default function AdmetPage() {
   const admetCategories = [
@@ -27,6 +27,14 @@ export default function AdmetPage() {
       color: "from-amber-500 to-orange-500",
       bgColor: "bg-amber-500",
       stats: "15 properties",
+    },
+    {
+      title: "Excretion",
+      description: "Renal clearance, half-life, total clearance, biliary excretion",
+      icon: Droplets,
+      color: "from-purple-500 to-violet-500",
+      bgColor: "bg-purple-500",
+      stats: "6 properties",
     },
     {
       title: "Toxicity",
@@ -56,12 +64,12 @@ export default function AdmetPage() {
               </div>
               <div className="flex items-center gap-2 text-sm text-amber-100">
                 <Zap className="h-4 w-4" />
-                <span>45+ pharmacokinetic and toxicity endpoints</span>
+                <span>51+ pharmacokinetic and toxicity endpoints</span>
               </div>
             </div>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
             {admetCategories.map((category) => (
               <Card key={category.title} className="group cursor-pointer border-0 shadow-lg hover:shadow-xl transition-all overflow-hidden">
                 <CardContent className="p-0">
