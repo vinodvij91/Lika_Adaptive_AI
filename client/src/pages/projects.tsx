@@ -103,7 +103,7 @@ export default function ProjectsPage() {
                 <DialogHeader>
                   <DialogTitle>Create New Project</DialogTitle>
                   <DialogDescription>
-                    Create a new drug discovery project to organize campaigns and molecules.
+                    A long-running scientific program that defines your disease or materials objective.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -273,7 +273,7 @@ export default function ProjectsPage() {
                   <p className="text-muted-foreground mb-6 max-w-sm">
                     {search
                       ? "No projects match your search. Try a different term."
-                      : "Get started by creating your first drug discovery project."}
+                      : "A project is a long-running scientific program that defines your disease or materials objective."}
                   </p>
                   {!search && (
                     <Button onClick={() => setDialogOpen(true)} className="gap-2">

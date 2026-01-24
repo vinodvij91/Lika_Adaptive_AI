@@ -186,7 +186,7 @@ export default function CampaignsPage() {
                   <p className="text-muted-foreground mb-6 max-w-sm">
                     {search || statusFilter !== "all"
                       ? "No campaigns match your filters."
-                      : "Create your first campaign to start screening molecules."}
+                      : "A campaign is a specific computational experiment run against your project's data and targets."}
                   </p>
                   {!search && statusFilter === "all" && (
                     <Link href="/campaigns/new">
