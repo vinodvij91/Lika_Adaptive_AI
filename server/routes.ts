@@ -202,6 +202,27 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/diseases", requireAuth, async (_req, res) => {
+    try {
+      const diseases = await storage.getDiseases();
+      res.json(diseases);
+    } catch (error) {
+      console.error("Error fetching diseases:", error);
+      res.status(500).json({ error: "Failed to fetch diseases" });
+    }
+  });
+
+  app.get("/api/targets-with-diseases", requireAuth, async (req, res) => {
+    try {
+      const disease = req.query.disease as string | undefined;
+      const targets = await storage.getTargetsWithDiseases(disease);
+      res.json(targets);
+    } catch (error) {
+      console.error("Error fetching targets with diseases:", error);
+      res.status(500).json({ error: "Failed to fetch targets" });
+    }
+  });
+
   app.get("/api/targets/:id/details", requireAuth, async (req, res) => {
     try {
       const target = await storage.getTarget(req.params.id);

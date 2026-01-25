@@ -46,6 +46,7 @@ import {
   pipelineTemplates,
   pipelineTemplateTargets,
   compoundAssets,
+  diseaseTargetMappings,
   type Project,
   type InsertProject,
   type Target,
@@ -217,6 +218,8 @@ export interface IStorage {
   createTarget(target: InsertTarget): Promise<Target>;
   updateTarget(id: string, target: Partial<InsertTarget>): Promise<Target | undefined>;
   deleteTarget(id: string): Promise<void>;
+  getDiseases(): Promise<{ disease: string; count: number }[]>;
+  getTargetsWithDiseases(disease?: string): Promise<(Target & { diseases: string[] })[]>;
 
   getMolecules(): Promise<Molecule[]>;
   getMolecule(id: string): Promise<Molecule | undefined>;
@@ -569,6 +572,58 @@ export class DatabaseStorage implements IStorage {
 
   async getTargets(): Promise<Target[]> {
     return db.select().from(targets).orderBy(desc(targets.createdAt));
+  }
+
+  async getDiseases(): Promise<{ disease: string; count: number }[]> {
+    const result = await db
+      .select({
+        disease: diseaseTargetMappings.disease,
+        count: count(diseaseTargetMappings.id),
+      })
+      .from(diseaseTargetMappings)
+      .groupBy(diseaseTargetMappings.disease)
+      .orderBy(desc(count(diseaseTargetMappings.id)));
+    return result.map(r => ({ disease: r.disease, count: Number(r.count) }));
+  }
+
+  async getTargetsWithDiseases(disease?: string): Promise<(Target & { diseases: string[] })[]> {
+    let targetIds: string[] = [];
+    
+    if (disease) {
+      const mappings = await db
+        .select({ targetId: diseaseTargetMappings.targetId })
+        .from(diseaseTargetMappings)
+        .where(eq(diseaseTargetMappings.disease, disease));
+      targetIds = mappings.map(m => m.targetId);
+      if (targetIds.length === 0) return [];
+    }
+    
+    const targetsData = disease && targetIds.length > 0
+      ? await db.select().from(targets).where(inArray(targets.id, targetIds)).orderBy(desc(targets.createdAt)).limit(500)
+      : await db.select().from(targets).orderBy(desc(targets.createdAt)).limit(500);
+    
+    const targetIdsList = targetsData.map(t => t.id);
+    if (targetIdsList.length === 0) return [];
+    
+    const allMappings = await db
+      .select()
+      .from(diseaseTargetMappings)
+      .where(inArray(diseaseTargetMappings.targetId, targetIdsList));
+    
+    const diseaseMap = new Map<string, string[]>();
+    for (const m of allMappings) {
+      if (!diseaseMap.has(m.targetId)) {
+        diseaseMap.set(m.targetId, []);
+      }
+      if (!diseaseMap.get(m.targetId)!.includes(m.disease)) {
+        diseaseMap.get(m.targetId)!.push(m.disease);
+      }
+    }
+    
+    return targetsData.map(t => ({
+      ...t,
+      diseases: diseaseMap.get(t.id) || [],
+    }));
   }
 
   async getTarget(id: string): Promise<Target | undefined> {

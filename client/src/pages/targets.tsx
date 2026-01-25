@@ -42,16 +42,32 @@ import {
   ArrowRight,
   CheckCircle,
   XCircle,
+  Filter,
 } from "lucide-react";
 import type { Target as TargetType } from "@shared/schema";
 
+type TargetWithDiseases = TargetType & { diseases: string[] };
+
 export default function TargetsPage() {
   const [search, setSearch] = useState("");
+  const [diseaseFilter, setDiseaseFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: targets, isLoading } = useQuery<TargetType[]>({
-    queryKey: ["/api/targets"],
+  const { data: diseases } = useQuery<{ disease: string; count: number }[]>({
+    queryKey: ["/api/diseases"],
+  });
+
+  const { data: targets, isLoading } = useQuery<TargetWithDiseases[]>({
+    queryKey: ["/api/targets-with-diseases", diseaseFilter],
+    queryFn: async () => {
+      const url = diseaseFilter && diseaseFilter !== "all" 
+        ? `/api/targets-with-diseases?disease=${encodeURIComponent(diseaseFilter)}`
+        : "/api/targets-with-diseases";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch targets");
+      return res.json();
+    },
   });
 
   const createMutation = useMutation({
@@ -65,7 +81,7 @@ export default function TargetsPage() {
       return res.json();
     },
     onSuccess: (target) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/targets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/targets-with-diseases"] });
       setDialogOpen(false);
       toast({ title: "Target created", description: `${target.name} has been added.` });
     },
@@ -77,7 +93,9 @@ export default function TargetsPage() {
   const filteredTargets = targets?.filter(
     (t) =>
       t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.uniprotId?.toLowerCase().includes(search.toLowerCase())
+      t.uniprotId?.toLowerCase().includes(search.toLowerCase()) ||
+      t.geneName?.toLowerCase().includes(search.toLowerCase()) ||
+      t.organism?.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -172,39 +190,68 @@ export default function TargetsPage() {
 
       <main className="flex-1 overflow-auto p-6">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search targets..."
+                placeholder="Search by name, gene, organism..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
                 data-testid="input-search-targets"
               />
             </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={diseaseFilter} onValueChange={setDiseaseFilter}>
+                <SelectTrigger className="w-[200px]" data-testid="select-disease-filter">
+                  <SelectValue placeholder="Filter by disease" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Diseases</SelectItem>
+                  {diseases?.slice(0, 50).map((d) => (
+                    <SelectItem key={d.disease} value={d.disease}>
+                      {d.disease} ({d.count})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {targets && (
+              <Badge variant="outline" className="no-default-hover-elevate no-default-active-elevate">
+                {targets.length.toLocaleString()} targets
+              </Badge>
+            )}
           </div>
 
           {isLoading ? (
             <Card>
-              <CardContent className="p-0">
+              <CardContent className="p-0 overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
+                      <TableHead>Protein Name</TableHead>
+                      <TableHead>Gene</TableHead>
                       <TableHead>UniProt ID</TableHead>
-                      <TableHead>Has Structure</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead className="w-[100px]"></TableHead>
+                      <TableHead>Organism</TableHead>
+                      <TableHead>Disease(s)</TableHead>
+                      <TableHead>SMILES</TableHead>
+                      <TableHead>Seq Length</TableHead>
+                      <TableHead>Structures</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {[1, 2, 3].map((i) => (
                       <TableRow key={i}>
-                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-5 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-8" /></TableCell>
                         <TableCell><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
                       </TableRow>
                     ))}
@@ -214,15 +261,19 @@ export default function TargetsPage() {
             </Card>
           ) : filteredTargets && filteredTargets.length > 0 ? (
             <Card>
-              <CardContent className="p-0">
+              <CardContent className="p-0 overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
+                      <TableHead>Protein Name</TableHead>
+                      <TableHead>Gene</TableHead>
                       <TableHead>UniProt ID</TableHead>
-                      <TableHead>Has Structure</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead className="w-[100px]"></TableHead>
+                      <TableHead>Organism</TableHead>
+                      <TableHead>Disease(s)</TableHead>
+                      <TableHead>SMILES</TableHead>
+                      <TableHead>Seq Length</TableHead>
+                      <TableHead>Structures</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -230,29 +281,66 @@ export default function TargetsPage() {
                       <TableRow key={target.id} data-testid={`row-target-${target.id}`}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-md bg-chart-3/10 flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-md bg-chart-3/10 flex items-center justify-center flex-shrink-0">
                               <Target className="h-4 w-4 text-chart-3" />
                             </div>
-                            <span className="font-medium">{target.name}</span>
+                            <span className="font-medium text-sm max-w-[200px] truncate" title={target.name}>
+                              {target.name}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <code className="text-sm bg-muted px-2 py-0.5 rounded">
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                            {target.geneName || "-"}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
                             {target.uniprotId || "-"}
                           </code>
                         </TableCell>
                         <TableCell>
-                          {target.hasStructure ? (
-                            <CheckCircle className="h-5 w-5 text-emerald-500" />
+                          <span className="text-xs text-muted-foreground max-w-[100px] truncate block" title={target.organism || ""}>
+                            {target.organism || "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {target.diseases && target.diseases.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 max-w-[150px]" title={target.diseases.join(", ")}>
+                              <Badge variant="secondary" className="text-xs no-default-hover-elevate no-default-active-elevate">
+                                {target.diseases[0]}
+                              </Badge>
+                              {target.diseases.length > 1 && (
+                                <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
+                                  +{target.diseases.length - 1}
+                                </Badge>
+                              )}
+                            </div>
                           ) : (
-                            <XCircle className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </TableCell>
                         <TableCell>
-                          {target.structureSource && (
-                            <Badge variant="outline" className="capitalize no-default-hover-elevate no-default-active-elevate">
-                              {target.structureSource.replace("_", " ")}
+                          {target.smiles ? (
+                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded max-w-[100px] truncate block" title={target.smiles}>
+                              {target.smiles.length > 15 ? target.smiles.slice(0, 15) + "..." : target.smiles}
+                            </code>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs">
+                            {target.sequenceLength ? target.sequenceLength.toLocaleString() : "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {target.hasStructure ? (
+                            <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
+                              {target.numStructures || 1}
                             </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">0</span>
                           )}
                         </TableCell>
                         <TableCell>
