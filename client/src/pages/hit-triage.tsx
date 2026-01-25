@@ -640,7 +640,7 @@ export default function HitTriagePage() {
                     </TableCell>
                     <TableCell>
                       <code className="text-xs font-mono bg-muted px-1 py-0.5 rounded max-w-[120px] truncate block">
-                        {hit.smiles.length > 25 ? hit.smiles.slice(0, 25) + "..." : hit.smiles}
+                        {hit.smiles ? (hit.smiles.length > 25 ? hit.smiles.slice(0, 25) + "..." : hit.smiles) : "-"}
                       </code>
                     </TableCell>
                     <TableCell>
