@@ -3670,5 +3670,300 @@ export async function registerRoutes(
     }
   });
 
+  // ========================================
+  // Pipeline Jobs API
+  // ========================================
+
+  // Launch a new pipeline job
+  app.post("/api/pipeline/launch", requireAuth, async (req, res) => {
+    try {
+      const { pipelineConfigSchema } = await import("@shared/schema");
+      const config = pipelineConfigSchema.parse(req.body);
+      
+      // Find best compute node based on requirements
+      const nodes = await storage.getComputeNodes();
+      let selectedNode = nodes.find(n => n.id === config.preferredNodeId);
+      
+      if (!selectedNode && config.useGpu) {
+        selectedNode = nodes.find(n => n.gpuType !== "none" && n.status === "active");
+      }
+      if (!selectedNode) {
+        selectedNode = nodes.find(n => n.status === "active");
+      }
+      
+      // Create processing job
+      const job = await storage.createProcessingJob({
+        type: config.jobType as any,
+        status: "queued",
+        priority: 0,
+        campaignId: config.campaignId || null,
+        computeNodeId: selectedNode?.id || null,
+        itemsTotal: config.moleculeIds?.length || 0,
+        itemsCompleted: 0,
+        progressPercent: 0,
+        inputPayload: config as any,
+        maxRetries: 3,
+      });
+      
+      // Create initial job event
+      await storage.createProcessingJobEvent({
+        jobId: job.id,
+        eventType: "created",
+        payload: { config, selectedNode: selectedNode?.name || "default" },
+      });
+      
+      res.json({
+        jobId: job.id,
+        status: job.status,
+        computeNode: selectedNode?.name || "default",
+        message: `Pipeline job ${config.name} queued successfully`,
+      });
+    } catch (error: any) {
+      console.error("Error launching pipeline:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid pipeline configuration", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to launch pipeline" });
+    }
+  });
+
+  // Get pipeline job status
+  app.get("/api/pipeline/jobs/:jobId", requireAuth, async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const job = await storage.getProcessingJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      const artifacts = await storage.getJobArtifacts(jobId);
+      const events = await storage.getProcessingJobEvents(jobId);
+      
+      res.json({
+        ...job,
+        artifacts,
+        recentEvents: events.slice(-10),
+      });
+    } catch (error: any) {
+      console.error("Error fetching pipeline job:", error);
+      res.status(500).json({ error: "Failed to fetch job status" });
+    }
+  });
+
+  // List all pipeline jobs
+  app.get("/api/pipeline/jobs", requireAuth, async (req, res) => {
+    try {
+      const { type, status, limit = "50" } = req.query;
+      const result = await storage.getProcessingJobs({
+        type: type as string,
+        status: status as string,
+        limit: parseInt(limit as string),
+      });
+      
+      res.json({ jobs: result.jobs, total: result.total });
+    } catch (error: any) {
+      console.error("Error listing pipeline jobs:", error);
+      res.status(500).json({ error: "Failed to list jobs" });
+    }
+  });
+
+  // Cancel a pipeline job
+  app.post("/api/pipeline/jobs/:jobId/cancel", requireAuth, async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const job = await storage.getProcessingJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      if (job.status === "succeeded" || job.status === "failed" || job.status === "cancelled") {
+        return res.status(400).json({ error: "Job already completed or cancelled" });
+      }
+      
+      await storage.updateProcessingJob(jobId, { status: "cancelled" });
+      await storage.createProcessingJobEvent({
+        jobId,
+        eventType: "cancelled",
+        payload: { cancelledBy: "user", timestamp: new Date().toISOString() },
+      });
+      
+      res.json({ message: "Job cancelled successfully" });
+    } catch (error: any) {
+      console.error("Error cancelling job:", error);
+      res.status(500).json({ error: "Failed to cancel job" });
+    }
+  });
+
+  // Retry a failed pipeline job
+  app.post("/api/pipeline/jobs/:jobId/retry", requireAuth, async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const job = await storage.getProcessingJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      if (job.status !== "failed") {
+        return res.status(400).json({ error: "Can only retry failed jobs" });
+      }
+      
+      await storage.updateProcessingJob(jobId, {
+        status: "queued",
+        retryCount: (job.retryCount || 0) + 1,
+        errorMessage: null,
+      });
+      
+      await storage.createProcessingJobEvent({
+        jobId,
+        eventType: "retry",
+        payload: { retryCount: (job.retryCount || 0) + 1 },
+      });
+      
+      res.json({ message: "Job queued for retry" });
+    } catch (error: any) {
+      console.error("Error retrying job:", error);
+      res.status(500).json({ error: "Failed to retry job" });
+    }
+  });
+
+  // Update job progress (for compute workers)
+  app.patch("/api/pipeline/jobs/:jobId/progress", requireAuth, async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const { itemsCompleted, status, errorMessage, checkpointData } = req.body;
+      
+      const job = await storage.getProcessingJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      const updates: any = { heartbeatAt: new Date() };
+      
+      if (itemsCompleted !== undefined) {
+        updates.itemsCompleted = itemsCompleted;
+        updates.progressPercent = job.itemsTotal ? (itemsCompleted / job.itemsTotal) * 100 : 0;
+      }
+      
+      if (status) {
+        updates.status = status;
+        if (status === "running" && !job.startedAt) {
+          updates.startedAt = new Date();
+        }
+        if (status === "succeeded" || status === "failed") {
+          updates.completedAt = new Date();
+        }
+      }
+      
+      if (errorMessage) updates.errorMessage = errorMessage;
+      if (checkpointData) updates.checkpointData = checkpointData;
+      
+      await storage.updateProcessingJob(jobId, updates);
+      
+      res.json({ message: "Progress updated" });
+    } catch (error: any) {
+      console.error("Error updating job progress:", error);
+      res.status(500).json({ error: "Failed to update progress" });
+    }
+  });
+
+  // Upload job artifact
+  app.post("/api/pipeline/jobs/:jobId/artifacts", requireAuth, async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const { name, artifactType, uri, mimeType, summaryJson, domain = "drug" } = req.body;
+      
+      const job = await storage.getProcessingJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      const artifact = await storage.createJobArtifact({
+        jobId,
+        name,
+        artifactType,
+        uri,
+        mimeType,
+        summaryJson,
+        domain,
+        campaignId: job.campaignId,
+        materialsCampaignId: job.materialsCampaignId,
+      });
+      
+      await storage.createProcessingJobEvent({
+        jobId,
+        eventType: "artifact_created",
+        payload: { artifactId: artifact.id, name, type: artifactType },
+      });
+      
+      res.json(artifact);
+    } catch (error: any) {
+      console.error("Error creating artifact:", error);
+      res.status(500).json({ error: "Failed to create artifact" });
+    }
+  });
+
+  // Get compute nodes for pipeline routing
+  app.get("/api/pipeline/compute-nodes", requireAuth, async (req, res) => {
+    try {
+      const { purpose, gpuRequired } = req.query;
+      const nodes = await storage.getComputeNodes();
+      
+      let filtered = nodes.filter(n => n.status === "active");
+      
+      if (purpose) {
+        filtered = filtered.filter(n => n.purpose === purpose || n.purpose === "general");
+      }
+      
+      if (gpuRequired === "true") {
+        filtered = filtered.filter(n => n.gpuType !== "none");
+      }
+      
+      res.json({
+        nodes: filtered.map(n => ({
+          id: n.id,
+          name: n.name,
+          provider: n.provider,
+          gpuType: n.gpuType,
+          tier: n.tier,
+          purpose: n.purpose,
+          status: n.status,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Error fetching compute nodes:", error);
+      res.status(500).json({ error: "Failed to fetch compute nodes" });
+    }
+  });
+
+  // Get pipeline statistics
+  app.get("/api/pipeline/stats", requireAuth, async (req, res) => {
+    try {
+      const result = await storage.getProcessingJobs({ limit: 1000 });
+      const jobs = result.jobs;
+      
+      const stats = {
+        total: jobs.length,
+        queued: jobs.filter((j: any) => j.status === "queued").length,
+        running: jobs.filter((j: any) => j.status === "running").length,
+        succeeded: jobs.filter((j: any) => j.status === "succeeded").length,
+        failed: jobs.filter((j: any) => j.status === "failed").length,
+        cancelled: jobs.filter((j: any) => j.status === "cancelled").length,
+        byType: {} as Record<string, number>,
+      };
+      
+      for (const job of jobs) {
+        stats.byType[job.type] = (stats.byType[job.type] || 0) + 1;
+      }
+      
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Error fetching pipeline stats:", error);
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
   return httpServer;
 }

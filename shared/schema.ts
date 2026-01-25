@@ -34,7 +34,7 @@ export const materialTypeEnum = pgEnum("material_type", ["polymer", "crystal", "
 export const materialPropertySourceEnum = pgEnum("material_property_source", ["ml", "simulation", "experiment"]);
 export const variantGeneratedByEnum = pgEnum("variant_generated_by", ["human", "ml", "genetic", "quantum"]);
 export const processingJobStatusEnum = pgEnum("processing_job_status", ["queued", "dispatched", "running", "succeeded", "failed", "cancelled", "paused"]);
-export const processingJobTypeEnum = pgEnum("processing_job_type", ["property_prediction", "simulation", "variant_generation", "optimization", "screening", "aggregation"]);
+export const processingJobTypeEnum = pgEnum("processing_job_type", ["property_prediction", "simulation", "variant_generation", "optimization", "screening", "aggregation", "docking", "fingerprint_generation", "ml_training", "distributed_prediction", "full_pipeline"]);
 
 export const canonicalMoleculeSourceEnum = pgEnum("canonical_molecule_source", ["import", "built_in", "vendor", "generated"]);
 export const canonicalAssayOutcomeEnum = pgEnum("canonical_assay_outcome", ["active", "inactive", "toxic", "ambiguous"]);
@@ -1515,3 +1515,76 @@ export type InsertSimulationRun = z.infer<typeof insertSimulationRunSchema>;
 export type SimulationRun = typeof simulationRuns.$inferSelect;
 export type InsertManufacturabilityScore = z.infer<typeof insertManufacturabilityScoreSchema>;
 export type ManufacturabilityScore = typeof manufacturabilityScores.$inferSelect;
+
+// Pipeline Configuration Types
+export const pipelineConfigSchema = z.object({
+  // General settings
+  name: z.string().min(1),
+  description: z.string().optional(),
+  jobType: z.enum(["docking", "fingerprint_generation", "ml_training", "distributed_prediction", "full_pipeline"]),
+  
+  // Compute settings
+  useGpu: z.boolean().default(true),
+  useRapids: z.boolean().default(false),
+  useMixedPrecision: z.boolean().default(true),
+  preferredNodeId: z.string().optional(),
+  
+  // Dask distributed settings
+  nWorkers: z.number().min(1).max(64).default(4),
+  threadsPerWorker: z.number().min(1).max(8).default(2),
+  memoryPerWorker: z.string().default("8GB"),
+  clusterAddress: z.string().optional(),
+  
+  // Docking settings
+  docking: z.object({
+    vinaExecutable: z.string().default("vina"),
+    exhaustiveness: z.number().min(1).max(32).default(8),
+    numModes: z.number().min(1).max(20).default(9),
+    parallelJobs: z.number().min(1).max(32).default(4),
+    boxSize: z.tuple([z.number(), z.number(), z.number()]).default([20, 20, 20]),
+    targetId: z.string().optional(),
+    bindingSiteCenter: z.tuple([z.number(), z.number(), z.number()]).optional(),
+  }).optional(),
+  
+  // Fingerprint settings
+  fingerprint: z.object({
+    type: z.enum(["morgan", "ecfp4", "maccs", "topological"]).default("morgan"),
+    radius: z.number().min(1).max(4).default(2),
+    nBits: z.number().min(512).max(4096).default(2048),
+  }).optional(),
+  
+  // ML model settings
+  mlModel: z.object({
+    type: z.enum(["neural_network", "random_forest", "xgboost", "rapids_rf"]).default("neural_network"),
+    epochs: z.number().min(1).max(500).default(50),
+    batchSize: z.number().min(32).max(65536).default(20000),
+    learningRate: z.number().min(0.0001).max(0.1).default(0.001),
+    hiddenDims: z.array(z.number()).default([1024, 512, 256, 128]),
+  }).optional(),
+  
+  // Input data
+  campaignId: z.string().optional(),
+  moleculeIds: z.array(z.string()).optional(),
+  smilesFile: z.string().optional(),
+});
+
+export type ComputePipelineConfig = z.infer<typeof pipelineConfigSchema>;
+
+export const pipelineJobResultSchema = z.object({
+  jobId: z.string(),
+  status: z.enum(["queued", "dispatched", "running", "succeeded", "failed", "cancelled", "paused"]),
+  progress: z.number().min(0).max(100),
+  itemsTotal: z.number(),
+  itemsCompleted: z.number(),
+  startedAt: z.string().optional(),
+  completedAt: z.string().optional(),
+  computeNodeId: z.string().optional(),
+  artifacts: z.array(z.object({
+    name: z.string(),
+    type: z.string(),
+    uri: z.string(),
+  })).optional(),
+  errorMessage: z.string().optional(),
+});
+
+export type PipelineJobResult = z.infer<typeof pipelineJobResultSchema>;
