@@ -207,9 +207,9 @@ export default function TargetsPage() {
                 <SelectTrigger className="w-[200px]" data-testid="select-disease-filter">
                   <SelectValue placeholder="Filter by disease" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]">
                   <SelectItem value="all">All Diseases</SelectItem>
-                  {diseases?.slice(0, 50).map((d) => (
+                  {diseases?.map((d) => (
                     <SelectItem key={d.disease} value={d.disease}>
                       {d.disease} ({d.count})
                     </SelectItem>
