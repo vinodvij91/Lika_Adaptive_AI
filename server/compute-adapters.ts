@@ -125,6 +125,15 @@ export class SshComputeAdapter implements ComputeAdapter {
         username,
         readyTimeout: 30000,
         keepaliveInterval: 10000,
+        debug: (msg: string) => {
+          if (msg.includes("error") || msg.includes("fail") || msg.includes("auth")) {
+            console.log(`[SSH-DEBUG] ${msg}`);
+          }
+        },
+        algorithms: {
+          serverHostKey: ['ssh-ed25519', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'rsa-sha2-512', 'rsa-sha2-256', 'ssh-rsa'],
+        },
+        tryKeyboard: true,
       };
 
       const nodePassword = node.provider === "hetzner" 
@@ -162,7 +171,16 @@ export class SshComputeAdapter implements ComputeAdapter {
 
       conn.on("error", (err) => {
         console.error(`[SSH] Connection error to ${host}:`, err.message);
+        if (err.message.includes("handshake") || err.message.includes("parse")) {
+          console.error(`[SSH] This may be due to an encrypted Ed25519 key. Consider using an unencrypted key or RSA format.`);
+        }
         reject(err);
+      });
+      
+      conn.on("keyboard-interactive", (name: string, instructions: string, _: string, prompts: any[], finish: (responses: string[]) => void) => {
+        console.log(`[SSH] Keyboard-interactive auth requested: ${prompts.length} prompts`);
+        const responses = prompts.map(() => process.env.SSH_KEY_PASSPHRASE || "");
+        finish(responses);
       });
 
       try {
