@@ -25,6 +25,9 @@ export const gpuTypeEnum = pgEnum("gpu_type", ["none", "T4", "A40", "A100", "H10
 export const gpuTierEnum = pgEnum("gpu_tier", ["shared-low", "shared-mid", "shared-high", "dedicated-A100", "dedicated-H100", "dedicated-H200", "enterprise"]);
 export const modalityEnum = pgEnum("modality", ["small_molecule", "fragment", "protac", "peptide", "other"]);
 export const assayTypeEnum = pgEnum("assay_type", ["binding", "functional", "in_vivo", "pk", "admet", "other"]);
+export const assayCategoryEnum = pgEnum("assay_category", ["target_engagement", "functional_cellular", "adme_pk", "safety_selectivity", "advanced_in_vivo"]);
+export const assaySourceEnum = pgEnum("assay_source", ["experimental", "predicted", "literature"]);
+export const assayDirectionEnum = pgEnum("assay_direction", ["lower_is_better", "higher_is_better"]);
 export const assayOutcomeEnum = pgEnum("assay_outcome", ["active", "inactive", "toxic", "no_effect", "inconclusive"]);
 export const orgRoleEnum = pgEnum("org_role", ["admin", "member", "viewer"]);
 export const assetTypeEnum = pgEnum("asset_type", ["smiles_library", "pipeline_template", "program"]);
@@ -421,24 +424,53 @@ export const assayReadoutTypeEnum = pgEnum("assay_readout_type", ["IC50", "EC50"
 export const assays = pgTable("assays", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
   targetId: varchar("target_id").references(() => targets.id, { onDelete: "set null" }),
   diseaseId: varchar("disease_id"),
   companyId: varchar("company_id"),
   type: assayTypeEnum("type").default("binding"),
+  category: assayCategoryEnum("category").default("target_engagement"),
   readoutType: assayReadoutTypeEnum("readout_type").default("IC50"),
   units: text("units"),
+  direction: assayDirectionEnum("direction").default("lower_is_better"),
+  source: assaySourceEnum("source").default("predicted"),
   description: text("description"),
   estimatedCost: real("estimated_cost"),
   estimatedDurationDays: real("estimated_duration_days"),
+  isDefault: boolean("is_default").default(false),
+  isPredicted: boolean("is_predicted").default(true),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_assays_project").on(table.projectId),
+  index("idx_assays_target").on(table.targetId),
+  index("idx_assays_category").on(table.category),
+]);
 
 export const assaysRelations = relations(assays, ({ one, many }) => ({
+  project: one(projects, { fields: [assays.projectId], references: [projects.id] }),
   target: one(targets, { fields: [assays.targetId], references: [targets.id] }),
   results: many(assayResults),
   recommendations: many(experimentRecommendations),
+  assayTargets: many(assayTargets),
+}));
+
+export const assayTargets = pgTable("assay_targets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assayId: varchar("assay_id").notNull().references(() => assays.id, { onDelete: "cascade" }),
+  targetId: varchar("target_id").notNull().references(() => targets.id, { onDelete: "cascade" }),
+  weight: real("weight").default(1.0),
+  role: text("role").default("primary"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_assay_targets_assay").on(table.assayId),
+  index("idx_assay_targets_target").on(table.targetId),
+]);
+
+export const assayTargetsRelations = relations(assayTargets, ({ one }) => ({
+  assay: one(assays, { fields: [assayTargets.assayId], references: [assays.id] }),
+  target: one(targets, { fields: [assayTargets.targetId], references: [targets.id] }),
 }));
 
 export const experimentRecommendations = pgTable("experiment_recommendations", {
@@ -466,14 +498,18 @@ export const assayResults = pgTable("assay_results", {
   concentration: real("concentration"),
   value: real("value").notNull(),
   units: text("units"),
+  source: assaySourceEnum("source").default("predicted"),
+  confidence: real("confidence").default(0.5),
   outcomeLabel: assayOutcomeEnum("outcome_label"),
   replicateId: text("replicate_id"),
+  notes: text("notes"),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_assay_results_assay").on(table.assayId),
   index("idx_assay_results_molecule").on(table.moleculeId),
   index("idx_assay_results_campaign").on(table.campaignId),
+  index("idx_assay_results_source").on(table.source),
 ]);
 
 export const assayResultsRelations = relations(assayResults, ({ one }) => ({
@@ -556,6 +592,7 @@ export const insertDiseaseContextSignalSchema = createInsertSchema(diseaseContex
 export const insertProgramSchema = createInsertSchema(programs).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOracleVersionSchema = createInsertSchema(oracleVersions).omit({ id: true, createdAt: true });
 export const insertAssaySchema = createInsertSchema(assays).omit({ id: true, createdAt: true });
+export const insertAssayTargetSchema = createInsertSchema(assayTargets).omit({ id: true, createdAt: true });
 export const insertExperimentRecommendationSchema = createInsertSchema(experimentRecommendations).omit({ id: true, createdAt: true });
 export const insertAssayResultSchema = createInsertSchema(assayResults).omit({ id: true, createdAt: true });
 export const insertLiteratureAnnotationSchema = createInsertSchema(literatureAnnotations).omit({ id: true, createdAt: true });
@@ -599,6 +636,8 @@ export type OracleVersion = typeof oracleVersions.$inferSelect;
 export type InsertOracleVersion = z.infer<typeof insertOracleVersionSchema>;
 export type Assay = typeof assays.$inferSelect;
 export type InsertAssay = z.infer<typeof insertAssaySchema>;
+export type AssayTarget = typeof assayTargets.$inferSelect;
+export type InsertAssayTarget = z.infer<typeof insertAssayTargetSchema>;
 export type ExperimentRecommendation = typeof experimentRecommendations.$inferSelect;
 export type InsertExperimentRecommendation = z.infer<typeof insertExperimentRecommendationSchema>;
 export type AssayResult = typeof assayResults.$inferSelect;

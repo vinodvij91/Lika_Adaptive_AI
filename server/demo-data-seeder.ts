@@ -239,11 +239,20 @@ const DEMO_TARGETS = [
 ];
 
 const DEMO_ASSAYS = [
-  { name: "COX-2 IC50 Binding Assay", type: "binding" as const, readoutType: "IC50" as const, units: "nM" },
-  { name: "BACE1 Enzymatic Activity", type: "functional" as const, readoutType: "IC50" as const, units: "nM" },
-  { name: "TNF-alpha Cell Viability", type: "functional" as const, readoutType: "percent_inhibition" as const, units: "%" },
-  { name: "D2R Binding Displacement", type: "binding" as const, readoutType: "Ki" as const, units: "nM" },
-  { name: "JAK2 Kinase Inhibition", type: "functional" as const, readoutType: "IC50" as const, units: "nM" },
+  { name: "BACE1 Inhibition", type: "binding" as const, readoutType: "IC50" as const, units: "nM", category: "target_engagement" as const, direction: "lower_is_better" as const, description: "Beta-secretase 1 enzyme inhibition for Alzheimer's disease" },
+  { name: "Tau Aggregation", type: "functional" as const, readoutType: "percent_inhibition" as const, units: "%", category: "target_engagement" as const, direction: "higher_is_better" as const, description: "Tau protein aggregation inhibition assay" },
+  { name: "Neuroinflammation Markers", type: "functional" as const, readoutType: "percent_inhibition" as const, units: "%", category: "functional_cellular" as const, direction: "higher_is_better" as const, description: "IL-6, TNF-alpha neuroinflammation panel" },
+  { name: "BBB Permeability", type: "pk" as const, readoutType: "percent_inhibition" as const, units: "%", category: "adme_pk" as const, direction: "higher_is_better" as const, description: "Blood-brain barrier penetration assay (PAMPA-BBB)" },
+  { name: "hERG Inhibition", type: "admet" as const, readoutType: "IC50" as const, units: "uM", category: "safety_selectivity" as const, direction: "higher_is_better" as const, description: "Cardiac safety - hERG channel inhibition" },
+  { name: "GSK-3beta Inhibition", type: "binding" as const, readoutType: "IC50" as const, units: "nM", category: "target_engagement" as const, direction: "lower_is_better" as const, description: "Glycogen synthase kinase 3 beta inhibition" },
+  { name: "AChE Inhibition", type: "binding" as const, readoutType: "IC50" as const, units: "nM", category: "target_engagement" as const, direction: "lower_is_better" as const, description: "Acetylcholinesterase inhibition assay" },
+  { name: "Microsomal Stability", type: "pk" as const, readoutType: "percent_inhibition" as const, units: "%", category: "adme_pk" as const, direction: "higher_is_better" as const, description: "Human liver microsomal stability (t1/2)" },
+  { name: "CYP3A4 Inhibition", type: "admet" as const, readoutType: "IC50" as const, units: "uM", category: "adme_pk" as const, direction: "higher_is_better" as const, description: "Cytochrome P450 3A4 inhibition panel" },
+  { name: "Off-Target Selectivity Panel", type: "binding" as const, readoutType: "percent_inhibition" as const, units: "%", category: "safety_selectivity" as const, direction: "lower_is_better" as const, description: "GPCR, ion channel, and kinase selectivity panel" },
+  { name: "Cell Viability (MTT)", type: "functional" as const, readoutType: "percent_inhibition" as const, units: "%", category: "functional_cellular" as const, direction: "higher_is_better" as const, description: "General cytotoxicity assay in neuronal cells" },
+  { name: "Amyloid-beta Binding", type: "binding" as const, readoutType: "Kd" as const, units: "nM", category: "target_engagement" as const, direction: "lower_is_better" as const, description: "Amyloid-beta peptide binding affinity" },
+  { name: "PK Mouse Brain Exposure", type: "pk" as const, readoutType: "percent_inhibition" as const, units: "ng/g", category: "advanced_in_vivo" as const, direction: "higher_is_better" as const, description: "Pharmacokinetics - brain tissue concentration at 2h post-dose" },
+  { name: "Morris Water Maze Efficacy", type: "efficacy" as const, readoutType: "percent_inhibition" as const, units: "%", category: "advanced_in_vivo" as const, direction: "higher_is_better" as const, description: "Cognitive improvement in transgenic AD mouse model" },
 ];
 
 const MATERIAL_TYPES = ["polymer", "crystal", "composite", "catalyst", "coating", "membrane"] as const;
@@ -459,12 +468,17 @@ export async function seedDemoData(): Promise<void> {
 
     const demoAssays = await db.insert(assays).values(
       DEMO_ASSAYS.map((a, idx) => ({
-        name: `[Demo] ${a.name}`,
+        name: `[Predicted] ${a.name}`,
         targetId: demoTargets[idx % demoTargets.length].id,
         type: a.type,
+        category: a.category,
         readoutType: a.readoutType,
         units: a.units,
-        description: `Demo assay for ${a.name}`,
+        direction: a.direction,
+        source: "predicted" as const,
+        isPredicted: true,
+        isDefault: true,
+        description: a.description,
       }))
     ).returning();
 
@@ -508,6 +522,8 @@ export async function seedDemoData(): Promise<void> {
           moleculeId: mol.id,
           value,
           units: assay.units,
+          source: "predicted" as const,
+          confidence: Math.random() * 0.4 + 0.6,
           outcomeLabel: value < 100 ? "active" as const : value > 1000 ? "inactive" as const : "active" as const,
         });
       }

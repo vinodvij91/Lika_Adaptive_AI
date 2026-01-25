@@ -1554,10 +1554,12 @@ export async function registerRoutes(
 
   app.get("/api/assays", requireAuth, async (req, res) => {
     try {
-      const { targetId, companyId } = req.query;
-      const filters: { targetId?: string; companyId?: string } = {};
+      const { targetId, companyId, projectId, category } = req.query;
+      const filters: { targetId?: string; companyId?: string; projectId?: string; category?: string } = {};
       if (targetId) filters.targetId = targetId as string;
       if (companyId) filters.companyId = companyId as string;
+      if (projectId) filters.projectId = projectId as string;
+      if (category) filters.category = category as string;
       const assaysList = await storage.getAssays(Object.keys(filters).length > 0 ? filters : undefined);
       res.json(assaysList);
     } catch (error) {
@@ -1618,7 +1620,7 @@ export async function registerRoutes(
 
   app.get("/api/assays/:id/details", requireAuth, async (req, res) => {
     try {
-      const assay = await storage.getAssayWithResultsCount(req.params.id);
+      const assay = await storage.getAssayWithDetails(req.params.id);
       if (!assay) {
         return res.status(404).json({ error: "Assay not found" });
       }
@@ -1698,9 +1700,12 @@ export async function registerRoutes(
             moleculeId,
             value,
             units: row.units || assay.units,
+            source: row.source || "experimental",
+            confidence: row.confidence ? parseFloat(row.confidence) : 1.0,
             concentration: row.concentration ? parseFloat(row.concentration) : null,
             outcomeLabel: row.outcome_label || null,
             replicateId: row.replicate_id || null,
+            notes: row.notes || null,
             metadata: Object.keys(extraFields).length > 0 ? extraFields : null,
           });
           
@@ -2375,6 +2380,181 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error rejecting recommendation:", error);
       res.status(500).json({ error: "Failed to reject recommendation" });
+    }
+  });
+
+  app.get("/api/agent/campaigns/:campaignId/assay-analysis", async (req, res) => {
+    try {
+      const multiTargetData = await storage.getMultiTargetSar(req.params.campaignId);
+      const assaysList = await storage.getAssays();
+      
+      const conflicts: { moleculeId: string; targetName: string; predictedScore: number; experimentalValue: number; conflictType: string }[] = [];
+      const sarCliffs: { moleculeId: string; neighborId: string; targetName: string; activityDiff: number }[] = [];
+      const missingAssays: { category: string; suggestion: string }[] = [];
+      const tradeoffs: { moleculeId: string; goodTargets: string[]; poorTargets: string[] }[] = [];
+      
+      const moleculeScoresMap = new Map<string, Map<string, number>>();
+      
+      for (const mol of multiTargetData.molecules) {
+        const goodTargets: string[] = [];
+        const poorTargets: string[] = [];
+        const targetScoresForMol = new Map<string, number>();
+        
+        for (const ts of mol.targetScores) {
+          if (ts.predictedScore !== null && ts.experimentalValue !== null) {
+            const predNormalized = ts.predictedScore;
+            const expNormalized = Math.min(1, Math.max(0, 1 - (ts.experimentalValue / 1000)));
+            const diff = Math.abs(predNormalized - expNormalized);
+            
+            if (diff > 0.3) {
+              conflicts.push({
+                moleculeId: mol.id,
+                targetName: ts.targetName,
+                predictedScore: ts.predictedScore,
+                experimentalValue: ts.experimentalValue,
+                conflictType: predNormalized > expNormalized ? "overpredicted" : "underpredicted",
+              });
+            }
+          }
+          
+          const effectiveScore = ts.experimentalValue !== null 
+            ? 1 - (ts.experimentalValue / 1000)
+            : ts.predictedScore ?? 0;
+          
+          targetScoresForMol.set(ts.targetId, effectiveScore);
+          
+          if (effectiveScore > 0.7) {
+            goodTargets.push(ts.targetName);
+          } else if (effectiveScore < 0.3 && !ts.safetyFlag) {
+            poorTargets.push(ts.targetName);
+          }
+        }
+        
+        moleculeScoresMap.set(mol.id, targetScoresForMol);
+        
+        if (goodTargets.length > 0 && poorTargets.length > 0) {
+          tradeoffs.push({ moleculeId: mol.id, goodTargets, poorTargets });
+        }
+      }
+      
+      const sortedMolecules = [...multiTargetData.molecules].sort((a, b) => 
+        (b.compositeScore ?? 0) - (a.compositeScore ?? 0)
+      );
+      
+      for (let i = 0; i < sortedMolecules.length; i++) {
+        const mol = sortedMolecules[i];
+        const molScores = moleculeScoresMap.get(mol.id);
+        if (!molScores) continue;
+        
+        for (let j = i + 1; j < Math.min(i + 10, sortedMolecules.length); j++) {
+          const neighbor = sortedMolecules[j];
+          const neighborScores = moleculeScoresMap.get(neighbor.id);
+          if (!neighborScores) continue;
+          
+          for (const [targetId, score] of molScores) {
+            const neighborScore = neighborScores.get(targetId);
+            if (neighborScore !== undefined) {
+              const activityDiff = Math.abs(score - neighborScore);
+              if (activityDiff > 0.5) {
+                const target = multiTargetData.targets.find(t => t.id === targetId);
+                sarCliffs.push({
+                  moleculeId: mol.id,
+                  neighborId: neighbor.id,
+                  targetName: target?.name || targetId,
+                  activityDiff,
+                });
+              }
+            }
+          }
+        }
+      }
+      
+      const hasTargetEngagement = assaysList.some(a => a.category === "target_engagement");
+      const hasFunctionalCellular = assaysList.some(a => a.category === "functional_cellular");
+      const hasAdmePk = assaysList.some(a => a.category === "adme_pk");
+      const hasSafety = assaysList.some(a => a.category === "safety_selectivity");
+      const hasAdvancedInVivo = assaysList.some(a => a.category === "advanced_in_vivo");
+      
+      if (!hasTargetEngagement) {
+        missingAssays.push({ category: "target_engagement", suggestion: "Add IC50/EC50 binding assays for primary targets" });
+      }
+      if (!hasFunctionalCellular) {
+        missingAssays.push({ category: "functional_cellular", suggestion: "Add cell viability and functional cellular assays" });
+      }
+      if (!hasAdmePk) {
+        missingAssays.push({ category: "adme_pk", suggestion: "Add microsomal stability, CYP inhibition, and BBB permeability assays" });
+      }
+      if (!hasSafety) {
+        missingAssays.push({ category: "safety_selectivity", suggestion: "Add hERG and off-target selectivity panels" });
+      }
+      if (!hasAdvancedInVivo) {
+        missingAssays.push({ category: "advanced_in_vivo", suggestion: "Add in vivo PK and efficacy studies for lead candidates" });
+      }
+      
+      res.json({
+        conflicts,
+        sarCliffs,
+        tradeoffs,
+        missingAssays,
+        summary: {
+          totalMolecules: multiTargetData.molecules.length,
+          moleculesWithConflicts: conflicts.length,
+          moleculesWithTradeoffs: tradeoffs.length,
+          sarCliffsDetected: sarCliffs.length,
+          assayCoverage: {
+            targetEngagement: hasTargetEngagement,
+            functionalCellular: hasFunctionalCellular,
+            admePk: hasAdmePk,
+            safety: hasSafety,
+            advancedInVivo: hasAdvancedInVivo,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error analyzing assay data:", error);
+      res.status(500).json({ error: "Failed to analyze assay data" });
+    }
+  });
+
+  app.post("/api/agent/campaigns/:campaignId/suggest-assays", async (req, res) => {
+    try {
+      const { topMoleculeCount = 10, targetIds } = req.body;
+      const multiTargetData = await storage.getMultiTargetSar(req.params.campaignId);
+      
+      const topMolecules = multiTargetData.molecules
+        .sort((a, b) => (b.compositeScore ?? 0) - (a.compositeScore ?? 0))
+        .slice(0, topMoleculeCount);
+      
+      const suggestions = [];
+      
+      for (const target of multiTargetData.targets) {
+        if (targetIds && !targetIds.includes(target.id)) continue;
+        
+        const moleculesWithoutAssay = topMolecules.filter(mol => {
+          const ts = mol.targetScores.find(t => t.targetId === target.id);
+          return ts && ts.experimentalValue === null;
+        });
+        
+        if (moleculesWithoutAssay.length > 0) {
+          suggestions.push({
+            targetId: target.id,
+            targetName: target.name,
+            targetRole: target.role,
+            moleculeIds: moleculesWithoutAssay.map(m => m.id),
+            suggestedAssays: [
+              target.role === "safety" ? "hERG inhibition assay" : "IC50 binding assay",
+              "Cell viability assay",
+            ],
+            priority: target.role === "primary" ? "high" : target.role === "safety" ? "medium" : "low",
+            rationale: `${moleculesWithoutAssay.length} top-scoring molecules lack experimental validation for ${target.name}`,
+          });
+        }
+      }
+      
+      res.json({ suggestions });
+    } catch (error) {
+      console.error("Error suggesting assays:", error);
+      res.status(500).json({ error: "Failed to suggest assays" });
     }
   });
 

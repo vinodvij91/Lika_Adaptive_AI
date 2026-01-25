@@ -27,6 +27,7 @@ import {
   programs,
   oracleVersions,
   assays,
+  assayTargets,
   experimentRecommendations,
   assayResults,
   literatureAnnotations,
@@ -360,12 +361,15 @@ export interface IStorage {
   getOracleVersion(id: string): Promise<OracleVersion | undefined>;
   createOracleVersion(version: InsertOracleVersion): Promise<OracleVersion>;
 
-  getAssays(filters?: { targetId?: string; companyId?: string }): Promise<Assay[]>;
+  getAssays(filters?: { targetId?: string; companyId?: string; projectId?: string; category?: string }): Promise<Assay[]>;
   getAssay(id: string): Promise<Assay | undefined>;
+  getAssayWithDetails(id: string): Promise<(Assay & { resultsCount: number; targets: { targetId: string; targetName: string; weight: number; role: string }[] }) | undefined>;
   getAssayWithResultsCount(id: string): Promise<(Assay & { resultsCount: number }) | undefined>;
   createAssay(assay: InsertAssay): Promise<Assay>;
+  createAssayWithTargets(assay: InsertAssay, targetMappings: { targetId: string; weight: number; role: string }[]): Promise<Assay>;
   updateAssay(id: string, assay: Partial<InsertAssay>): Promise<Assay | undefined>;
   deleteAssay(id: string): Promise<void>;
+  getAssayTargets(assayId: string): Promise<{ targetId: string; targetName: string; weight: number; role: string }[]>;
 
   getExperimentRecommendations(campaignId: string): Promise<ExperimentRecommendation[]>;
   createExperimentRecommendation(rec: InsertExperimentRecommendation): Promise<ExperimentRecommendation>;
@@ -1413,10 +1417,12 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getAssays(filters?: { targetId?: string; companyId?: string }): Promise<Assay[]> {
+  async getAssays(filters?: { targetId?: string; companyId?: string; projectId?: string; category?: string }): Promise<Assay[]> {
     const conditions = [];
     if (filters?.targetId) conditions.push(eq(assays.targetId, filters.targetId));
     if (filters?.companyId) conditions.push(eq(assays.companyId, filters.companyId));
+    if (filters?.projectId) conditions.push(eq(assays.projectId, filters.projectId));
+    if (filters?.category) conditions.push(eq(assays.category, filters.category as any));
     
     if (conditions.length === 0) {
       return db.select().from(assays).orderBy(desc(assays.createdAt));
@@ -1439,9 +1445,54 @@ export class DatabaseStorage implements IStorage {
     return { ...assay, resultsCount };
   }
 
+  async getAssayWithDetails(id: string): Promise<(Assay & { resultsCount: number; targets: { targetId: string; targetName: string; weight: number; role: string }[] }) | undefined> {
+    const assay = await this.getAssayWithResultsCount(id);
+    if (!assay) return undefined;
+    
+    const targetMappings = await this.getAssayTargets(id);
+    return { ...assay, targets: targetMappings };
+  }
+
+  async getAssayTargets(assayId: string): Promise<{ targetId: string; targetName: string; weight: number; role: string }[]> {
+    const result = await db
+      .select({
+        targetId: assayTargets.targetId,
+        targetName: targets.name,
+        weight: assayTargets.weight,
+        role: assayTargets.role,
+      })
+      .from(assayTargets)
+      .innerJoin(targets, eq(assayTargets.targetId, targets.id))
+      .where(eq(assayTargets.assayId, assayId));
+    
+    return result.map(r => ({
+      targetId: r.targetId,
+      targetName: r.targetName,
+      weight: r.weight ?? 1.0,
+      role: r.role ?? 'primary',
+    }));
+  }
+
   async createAssay(assay: InsertAssay): Promise<Assay> {
     const result = await db.insert(assays).values(assay).returning();
     return result[0];
+  }
+
+  async createAssayWithTargets(assay: InsertAssay, targetMappings: { targetId: string; weight: number; role: string }[]): Promise<Assay> {
+    const createdAssay = await this.createAssay(assay);
+    
+    if (targetMappings.length > 0) {
+      await db.insert(assayTargets).values(
+        targetMappings.map(tm => ({
+          assayId: createdAssay.id,
+          targetId: tm.targetId,
+          weight: tm.weight,
+          role: tm.role,
+        }))
+      );
+    }
+    
+    return createdAssay;
   }
 
   async updateAssay(id: string, assay: Partial<InsertAssay>): Promise<Assay | undefined> {

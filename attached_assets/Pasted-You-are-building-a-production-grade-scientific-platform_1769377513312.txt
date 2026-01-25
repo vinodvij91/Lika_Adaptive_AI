@@ -1,0 +1,203 @@
+You are building a production-grade scientific platform called **Lika Sciences**, used for
+AI-driven **drug discovery** and **materials science discovery**.
+
+Your task is to implement a **complete Assays system** that integrates with:
+- Projects
+- Campaigns
+- Multi-Target SAR
+- AI agents for scientific reasoning
+
+The platform must follow **pharma and materials R&D industry standards** and feel
+enterprise-grade, not academic.
+
+--------------------------------
+CORE PLATFORM MODEL (DO NOT CHANGE)
+--------------------------------
+
+• Project = long-lived scientific program (disease or materials goal)
+• Campaign = single computational execution (screening, docking, optimization)
+• Assays belong to Projects and are referenced by Campaigns
+• Campaigns generate predictions; Assays validate or contradict them
+
+--------------------------------
+ASSAY SYSTEM OBJECTIVES
+--------------------------------
+
+Build an Assays framework that:
+1. Represents real-world experimental assays
+2. Supports multi-target programs
+3. Integrates with SAR, scoring, and dashboards
+4. Works even before wet-lab data exists
+5. Is readable and usable by AI agents
+6. Feeds learning back into the platform
+
+--------------------------------
+ASSAY CATEGORIES (MANDATORY)
+--------------------------------
+
+Implement assays grouped into the following categories:
+
+1. Target Engagement Assays
+   - Enzyme inhibition (IC50 / EC50)
+   - Binding affinity (Kd, Ki)
+   - SPR / BLI
+   - Radioligand binding
+
+2. Functional / Cellular Assays
+   - Cell viability
+   - Reporter gene assays
+   - Pathway modulation
+   - Toxicity (MTT, LDH)
+
+3. ADME / PK Assays
+   - Microsomal stability
+   - CYP inhibition
+   - hERG
+   - BBB permeability
+   - Plasma protein binding
+
+4. Safety / Selectivity Panels
+   - Off-target panels
+   - Kinase panels
+   - GPCR panels
+
+5. Advanced / In Vivo (schema-ready only)
+   - PK exposure
+   - Efficacy models
+   - Biomarkers
+
+--------------------------------
+MULTI-TARGET SUPPORT (CRITICAL)
+--------------------------------
+
+• One assay can map to multiple targets
+• One molecule can have multiple assay results
+• Targets must support weights (primary / secondary / safety)
+• Support assay panels (e.g. Neuroinflammation Panel)
+
+--------------------------------
+NORMALIZED INTERNAL ASSAY SCHEMA
+--------------------------------
+
+All assays must normalize into this structure:
+
+{
+  assay_id: string,
+  project_id: string,
+  molecule_id: string,
+  targets: string[],
+  assay_category: string,
+  assay_name: string,
+  readout: {
+    value: number,
+    unit: string,
+    direction: "lower_is_better" | "higher_is_better"
+  },
+  source: "experimental" | "predicted" | "literature",
+  confidence: number,
+  date: string,
+  notes: string
+}
+
+--------------------------------
+CSV UPLOAD & VALIDATION
+--------------------------------
+
+Build an Assay Upload UI that:
+• Accepts CSV files
+• Shows required columns inline
+• Auto-maps common column names
+• Validates units and ranges
+• Detects target names automatically
+• Flags conflicts and duplicates
+
+Expected CSV format:
+
+molecule_id, assay_name, target, value, unit, confidence, source
+
+--------------------------------
+INTEGRATION WITH MULTI-TARGET SAR
+--------------------------------
+
+Assay data must:
+• Override predictions when present
+• Blend with predictions when partial
+• Update composite and target-level scores
+• Appear in:
+  - SAR Matrix
+  - Radar plots
+  - Trade-off views
+
+Support view modes:
+• Predicted
+• Assay-Validated
+• Blended (confidence-weighted)
+
+--------------------------------
+AI AGENT CAPABILITIES
+--------------------------------
+
+Expose hooks so AI agents can:
+1. Detect prediction–assay conflicts
+2. Flag SAR cliffs
+3. Explain multi-target trade-offs
+4. Recommend next campaigns
+5. Suggest missing assays
+6. Identify data quality issues
+7. Generate scientific summaries for users
+
+Agents must reason scientifically, not just statistically.
+
+--------------------------------
+DEFAULT ASSAYS (OUT-OF-THE-BOX)
+--------------------------------
+
+Provide default predicted assay panels for demonstration:
+
+Example: Alzheimer’s
+• BACE1 inhibition
+• Tau aggregation
+• Neuroinflammation markers
+• BBB permeability
+• hERG risk
+
+Clearly label defaults as:
+"Predicted / Proxy – for early exploration only"
+
+--------------------------------
+UI BEHAVIOR
+--------------------------------
+
+• The Assays tab must never feel empty
+• If no assays exist, explain what assays are
+• Provide CTAs:
+  - Upload Assay Data
+  - Enable Predicted Assays
+  - Link Public Data
+• Clearly label predicted vs experimental data
+
+--------------------------------
+QUALITY & SAFETY RULES
+--------------------------------
+
+• Never imply assays are clinical results
+• Always label data source
+• Maintain auditability
+• Be investor- and regulator-safe
+
+--------------------------------
+OUTPUT
+--------------------------------
+
+Generate:
+• Assay data models
+• API routes
+• CSV upload logic
+• Multi-target SAR integration
+• AI agent hooks
+• UI copy and empty states
+
+Everything must be modular, extensible, and future-proof.
+
+Footer text (always visible):
+"By Nyew Research"

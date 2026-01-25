@@ -40,20 +40,34 @@ import type { Assay } from "@shared/schema";
 import { useState } from "react";
 
 type AssayTypeValue = "binding" | "functional" | "in_vivo" | "pk" | "admet" | "other";
+type AssayCategoryValue = "target_engagement" | "functional_cellular" | "adme_pk" | "safety_selectivity" | "advanced_in_vivo";
 type AssayReadoutValue = "IC50" | "EC50" | "percent_inhibition" | "AUC" | "Ki" | "Kd" | "other";
 
 const assayTypes: AssayTypeValue[] = ["binding", "functional", "in_vivo", "pk", "admet", "other"];
+const assayCategories: AssayCategoryValue[] = ["target_engagement", "functional_cellular", "adme_pk", "safety_selectivity", "advanced_in_vivo"];
 const readoutTypes: AssayReadoutValue[] = ["IC50", "EC50", "percent_inhibition", "AUC", "Ki", "Kd", "other"];
+
+const categoryLabels: Record<AssayCategoryValue, { label: string; description: string }> = {
+  target_engagement: { label: "Target Engagement", description: "IC50, EC50, binding affinity assays" },
+  functional_cellular: { label: "Functional / Cellular", description: "Cell viability, reporter genes, pathway modulation" },
+  adme_pk: { label: "ADME / PK", description: "Microsomal stability, CYP inhibition, BBB permeability" },
+  safety_selectivity: { label: "Safety / Selectivity", description: "Off-target panels, kinase panels, hERG" },
+  advanced_in_vivo: { label: "Advanced / In Vivo", description: "PK exposure, efficacy models, biomarkers" },
+};
 
 const assayFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   type: z.enum(["binding", "functional", "in_vivo", "pk", "admet", "other"]),
+  category: z.enum(["target_engagement", "functional_cellular", "adme_pk", "safety_selectivity", "advanced_in_vivo"]),
   readoutType: z.enum(["IC50", "EC50", "percent_inhibition", "AUC", "Ki", "Kd", "other"]),
   units: z.string().min(1, "Units are required"),
+  direction: z.enum(["lower_is_better", "higher_is_better"]).optional(),
+  source: z.enum(["experimental", "predicted", "literature"]).optional(),
   estimatedCost: z.coerce.number().min(0).optional(),
   estimatedDurationDays: z.coerce.number().min(0).optional(),
   targetId: z.string().optional(),
+  projectId: z.string().optional(),
   companyId: z.string().optional(),
   diseaseId: z.string().optional(),
 });
@@ -72,9 +86,18 @@ const typeLabels: Record<AssayTypeValue, { label: string; color: string }> = {
 export default function AssaysPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const { data: assays, isLoading } = useQuery<Assay[]>({
-    queryKey: ["/api/assays"],
+    queryKey: ["/api/assays", categoryFilter !== "all" ? { category: categoryFilter } : null],
+    queryFn: async () => {
+      const url = categoryFilter !== "all" 
+        ? `/api/assays?category=${categoryFilter}` 
+        : "/api/assays";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch assays");
+      return res.json();
+    },
   });
 
   const form = useForm<AssayFormValues>({
@@ -83,8 +106,11 @@ export default function AssaysPage() {
       name: "",
       description: "",
       type: "binding",
+      category: "target_engagement",
       readoutType: "IC50",
       units: "nM",
+      direction: "lower_is_better",
+      source: "predicted",
       estimatedCost: undefined,
       estimatedDurationDays: undefined,
     },
@@ -240,6 +266,30 @@ export default function AssaysPage() {
                 </div>
                 <FormField
                   control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-assay-category">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {assayCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {categoryLabels[cat].label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="units"
                   render={({ field }) => (
                     <FormItem>
@@ -329,18 +379,58 @@ export default function AssaysPage() {
         </Dialog>
       </div>
 
+      <div className="flex items-center gap-2 flex-wrap" data-testid="category-filter">
+        <Button 
+          variant={categoryFilter === "all" ? "default" : "outline"} 
+          size="sm"
+          onClick={() => setCategoryFilter("all")}
+        >
+          All
+        </Button>
+        {assayCategories.map((cat) => (
+          <Button
+            key={cat}
+            variant={categoryFilter === cat ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCategoryFilter(cat)}
+          >
+            {categoryLabels[cat].label}
+          </Button>
+        ))}
+      </div>
+
       {(!assays || assays.length === 0) ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FlaskConical className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No assays defined yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Create your first assay to start tracking wet-lab experimental validation
+            <h3 className="text-lg font-medium mb-2">
+              {categoryFilter === "all" ? "No assays defined yet" : `No ${categoryLabels[categoryFilter as AssayCategoryValue]?.label} assays`}
+            </h3>
+            <div className="text-muted-foreground text-center mb-6 max-w-lg space-y-4">
+              <p>
+                Assays are experimental tests that validate computational predictions. 
+                They bridge the gap between in-silico modeling and real-world drug behavior.
+              </p>
+              <div className="text-left bg-muted/50 rounded-lg p-4 text-sm">
+                <p className="font-medium mb-2">Assay Categories:</p>
+                <ul className="space-y-1">
+                  <li><strong>Target Engagement:</strong> IC50, EC50, binding affinity (Kd, Ki)</li>
+                  <li><strong>Functional / Cellular:</strong> Cell viability, reporter genes, toxicity</li>
+                  <li><strong>ADME / PK:</strong> Microsomal stability, CYP inhibition, BBB permeability</li>
+                  <li><strong>Safety / Selectivity:</strong> Off-target panels, kinase panels, hERG</li>
+                  <li><strong>Advanced / In Vivo:</strong> PK exposure, efficacy models, biomarkers</li>
+                </ul>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={() => setIsDialogOpen(true)} data-testid="button-create-first-assay">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Assay
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4 italic">
+              Predicted assays are available for early exploration. Upload experimental data to validate predictions.
             </p>
-            <Button onClick={() => setIsDialogOpen(true)} data-testid="button-create-first-assay">
-              <Plus className="mr-2 h-4 w-4" />
-              Create First Assay
-            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -362,6 +452,16 @@ export default function AssaysPage() {
                         </Badge>
                       )}
                       <Badge variant="outline">{assay.readoutType}</Badge>
+                      {(assay as any).isPredicted && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-300">
+                          Predicted
+                        </Badge>
+                      )}
+                      {(assay as any).source === "experimental" && (
+                        <Badge variant="outline" className="text-green-600 border-green-300">
+                          Experimental
+                        </Badge>
+                      )}
                     </CardDescription>
                   </div>
                   <Button
