@@ -77,12 +77,24 @@ export class SshComputeAdapter implements ComputeAdapter {
         keepaliveInterval: 10000,
       };
 
-      if (privateKey) {
-        config.privateKey = privateKey;
-      } else if (process.env.SSH_PASSWORD) {
-        config.password = process.env.SSH_PASSWORD;
+      const nodePassword = node.provider === "hetzner" 
+        ? process.env.HETZNER_SSH_PASSWORD 
+        : process.env.SSH_PASSWORD;
+      
+      if (nodePassword) {
+        config.password = nodePassword;
+        console.log(`[SSH] Using password authentication for ${node.name}`);
+      } else if (privateKey) {
+        try {
+          config.privateKey = privateKey;
+          console.log(`[SSH] Using private key authentication for ${node.name}`);
+        } catch (keyErr: any) {
+          console.error(`[SSH] Private key parse error:`, keyErr.message);
+          reject(new Error(`Cannot parse SSH private key for node ${node.name}`));
+          return;
+        }
       } else {
-        reject(new Error(`No SSH credentials configured for node ${node.name}. Set SSH_PRIVATE_KEY or SSH_PASSWORD.`));
+        reject(new Error(`No SSH credentials configured for node ${node.name}. Set HETZNER_SSH_PASSWORD or SSH_PRIVATE_KEY.`));
         return;
       }
 
@@ -229,11 +241,29 @@ export class SshComputeAdapter implements ComputeAdapter {
     try {
       const conn = await this.createConnection(node);
       const fs = await import("fs");
+      const path = await import("path");
+      
+      const remoteDir = path.dirname(remotePath);
+      
+      await new Promise<void>((resolve, reject) => {
+        conn.exec(`mkdir -p ${remoteDir}`, (err, stream) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          stream.on("close", () => resolve());
+          stream.on("error", reject);
+          stream.on("data", () => {});
+          stream.stderr.on("data", () => {});
+        });
+      });
+      console.log(`[SSH] Created remote directory: ${remoteDir}`);
       
       return new Promise((resolve) => {
         conn.sftp((err, sftp) => {
           if (err) {
             conn.end();
+            console.error(`[SSH] SFTP error:`, err.message);
             resolve(false);
             return;
           }
@@ -242,11 +272,13 @@ export class SshComputeAdapter implements ComputeAdapter {
           const writeStream = sftp.createWriteStream(remotePath);
 
           writeStream.on("close", () => {
+            console.log(`[SSH] Uploaded ${localPath} to ${remotePath}`);
             conn.end();
             resolve(true);
           });
 
-          writeStream.on("error", () => {
+          writeStream.on("error", (uploadErr: any) => {
+            console.error(`[SSH] Upload error:`, uploadErr.message);
             conn.end();
             resolve(false);
           });
@@ -254,7 +286,8 @@ export class SshComputeAdapter implements ComputeAdapter {
           readStream.pipe(writeStream);
         });
       });
-    } catch {
+    } catch (err: any) {
+      console.error(`[SSH] uploadFile error:`, err.message);
       return false;
     }
   }
