@@ -3369,6 +3369,147 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== BioNemo AI Predictions ====================
+
+  app.get("/api/bionemo/status", requireAuth, async (req, res) => {
+    try {
+      const { isBioNemoConfigured } = await import("./services/bionemo");
+      res.json({ 
+        configured: isBioNemoConfigured(),
+        provider: "NVIDIA BioNemo",
+        capabilities: ["property_prediction", "molecule_generation", "embeddings", "docking"]
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/bionemo/predict/properties", requireAuth, async (req, res) => {
+    try {
+      const { smiles } = req.body;
+      if (!smiles || typeof smiles !== "string") {
+        return res.status(400).json({ error: "SMILES string is required" });
+      }
+
+      const { bionemoService, isBioNemoConfigured } = await import("./services/bionemo");
+      
+      if (!isBioNemoConfigured()) {
+        return res.status(503).json({ 
+          error: "BioNemo not configured",
+          message: "Set BIONEMO_API_KEY environment variable to enable BioNemo predictions"
+        });
+      }
+
+      const prediction = await bionemoService.predictMoleculeProperties(smiles);
+      res.json(prediction);
+    } catch (error: any) {
+      console.error("BioNemo property prediction error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate prediction" });
+    }
+  });
+
+  app.post("/api/bionemo/predict/batch", requireAuth, async (req, res) => {
+    try {
+      const { smilesList } = req.body;
+      if (!smilesList || !Array.isArray(smilesList)) {
+        return res.status(400).json({ error: "smilesList array is required" });
+      }
+
+      const { bionemoService, isBioNemoConfigured } = await import("./services/bionemo");
+      
+      if (!isBioNemoConfigured()) {
+        return res.status(503).json({ 
+          error: "BioNemo not configured",
+          message: "Set BIONEMO_API_KEY environment variable to enable BioNemo predictions"
+        });
+      }
+
+      const predictions = await bionemoService.batchPredictProperties(smilesList);
+      res.json({ predictions, count: predictions.length });
+    } catch (error: any) {
+      console.error("BioNemo batch prediction error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate predictions" });
+    }
+  });
+
+  app.post("/api/bionemo/predict/docking", requireAuth, async (req, res) => {
+    try {
+      const { smiles, targetSequence } = req.body;
+      if (!smiles || typeof smiles !== "string") {
+        return res.status(400).json({ error: "SMILES string is required" });
+      }
+
+      const { bionemoService, isBioNemoConfigured } = await import("./services/bionemo");
+      
+      if (!isBioNemoConfigured()) {
+        return res.status(503).json({ 
+          error: "BioNemo not configured",
+          message: "Set BIONEMO_API_KEY environment variable to enable BioNemo predictions"
+        });
+      }
+
+      const prediction = await bionemoService.predictDocking(smiles, targetSequence);
+      res.json(prediction);
+    } catch (error: any) {
+      console.error("BioNemo docking prediction error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate docking prediction" });
+    }
+  });
+
+  app.post("/api/bionemo/generate", requireAuth, async (req, res) => {
+    try {
+      const { smiles, propertyName, numMolecules, minimize, minSimilarity } = req.body;
+      if (!smiles || typeof smiles !== "string") {
+        return res.status(400).json({ error: "SMILES string is required" });
+      }
+
+      const { bionemoService, isBioNemoConfigured } = await import("./services/bionemo");
+      
+      if (!isBioNemoConfigured()) {
+        return res.status(503).json({ 
+          error: "BioNemo not configured",
+          message: "Set BIONEMO_API_KEY environment variable to enable BioNemo molecule generation"
+        });
+      }
+
+      const result = await bionemoService.generateOptimizedMolecules({
+        smiles,
+        propertyName: propertyName || "QED",
+        numMolecules: numMolecules || 5,
+        minimize: minimize || false,
+        minSimilarity: minSimilarity || 0.4,
+      });
+      res.json(result);
+    } catch (error: any) {
+      console.error("BioNemo molecule generation error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate molecules" });
+    }
+  });
+
+  app.post("/api/bionemo/embeddings", requireAuth, async (req, res) => {
+    try {
+      const { smilesList } = req.body;
+      if (!smilesList || !Array.isArray(smilesList)) {
+        return res.status(400).json({ error: "smilesList array is required" });
+      }
+
+      const { bionemoService, isBioNemoConfigured } = await import("./services/bionemo");
+      
+      if (!isBioNemoConfigured()) {
+        return res.status(503).json({ 
+          error: "BioNemo not configured",
+          message: "Set BIONEMO_API_KEY environment variable to enable BioNemo embeddings"
+        });
+      }
+
+      const result = await bionemoService.getEmbeddings(smilesList);
+      res.json(result);
+    } catch (error: any) {
+      console.error("BioNemo embeddings error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate embeddings" });
+    }
+  });
+
   // ==================== External Database Lookup Endpoints ====================
 
   app.get("/api/lookup/chembl/smiles", requireAuth, async (req, res) => {

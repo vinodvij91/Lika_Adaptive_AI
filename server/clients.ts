@@ -41,7 +41,33 @@ const sampleSmiles = [
 ];
 
 export class BioNemoClient {
+  private async useLiveAPI(): Promise<boolean> {
+    try {
+      const { isBioNemoConfigured } = await import("./services/bionemo");
+      return isBioNemoConfigured();
+    } catch {
+      return false;
+    }
+  }
+
   async generateMolecules(seedSmiles?: string[], n = 50): Promise<GeneratedMolecule[]> {
+    if (await this.useLiveAPI()) {
+      try {
+        const { bionemoService } = await import("./services/bionemo");
+        const seed = seedSmiles?.[0] || sampleSmiles[0];
+        const result = await bionemoService.generateOptimizedMolecules({
+          smiles: seed,
+          numMolecules: Math.min(n, 10),
+          propertyName: "QED",
+          minSimilarity: 0.3,
+        });
+        console.log(`[BioNemo] Generated ${result.molecules.length} molecules via live API`);
+        return result.molecules.map(m => ({ smiles: m.smiles }));
+      } catch (error) {
+        console.error("[BioNemo] Live API failed, falling back to simulation:", error);
+      }
+    }
+    
     await this.simulateDelay(1000, 3000);
     
     const generated: GeneratedMolecule[] = [];
@@ -58,6 +84,36 @@ export class BioNemoClient {
   }
 
   async predictDocking(moleculeIds: string[], targetId: string): Promise<DockingResult[]> {
+    if (await this.useLiveAPI()) {
+      try {
+        const { bionemoService } = await import("./services/bionemo");
+        const { storage } = await import("./storage");
+        
+        let targetSequence: string | undefined;
+        if (targetId && targetId !== "default") {
+          const target = await storage.getTarget(targetId);
+          targetSequence = target?.sequence || undefined;
+        }
+        
+        const results: DockingResult[] = [];
+        for (const moleculeId of moleculeIds) {
+          const molecule = await storage.getMolecule(moleculeId);
+          if (molecule?.smiles) {
+            const docking = await bionemoService.predictDocking(molecule.smiles, targetSequence);
+            results.push({
+              moleculeId,
+              score: Math.abs(docking.bindingAffinity) / 15,
+              pose: "bionemo_pose",
+            });
+          }
+        }
+        console.log(`[BioNemo] Docking predictions for ${results.length} molecules via live API (target: ${targetId})`);
+        return results;
+      } catch (error) {
+        console.error("[BioNemo] Live docking API failed, falling back to simulation:", error);
+      }
+    }
+    
     await this.simulateDelay(500, 2000);
     
     return moleculeIds.map((moleculeId) => ({

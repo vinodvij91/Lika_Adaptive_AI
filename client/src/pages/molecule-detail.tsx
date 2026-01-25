@@ -23,6 +23,7 @@ import type { Molecule, MoleculeScore, AssayResult } from "@shared/schema";
 import { MoleculeStructureViewer } from "@/components/molecule-structure-viewer";
 import { ExternalDatabasePanel } from "@/components/external-database-panel";
 import { AIPredictionsPanel } from "@/components/ai-predictions-panel";
+import { BioNemoPredictions } from "@/components/bionemo-predictions";
 
 type MoleculeWithDetails = Molecule & {
   scores: MoleculeScore[];
@@ -132,6 +133,12 @@ export default function MoleculeDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      <BioNemoPredictions 
+        smiles={molecule.smiles} 
+        moleculeName={molecule.name || undefined}
+        showDocking={true}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
