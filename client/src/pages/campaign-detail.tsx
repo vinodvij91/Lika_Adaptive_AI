@@ -269,6 +269,52 @@ export default function CampaignDetailPage() {
             </CardContent>
           </Card>
 
+          {campaign.status === "completed" && (
+            <Card className="bg-primary/5 border-primary/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                  Pipeline Complete - Next Steps
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Your screening campaign has completed. Here's the recommended workflow to advance your hit compounds:
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="p-3 bg-background rounded-md border">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded">1</span>
+                      <span className="text-sm font-medium">Review Hit Candidates</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Examine top-scored molecules by Oracle score in the Hit Candidates tab</p>
+                  </div>
+                  <div className="p-3 bg-background rounded-md border">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded">2</span>
+                      <span className="text-sm font-medium">Analyze SAR Patterns</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Use SAR and Multi-Target tabs to identify structure-activity relationships</p>
+                  </div>
+                  <div className="p-3 bg-background rounded-md border">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded">3</span>
+                      <span className="text-sm font-medium">Hit Triage</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Use the Hit Triage tool to prioritize compounds for synthesis and validation</p>
+                  </div>
+                  <div className="p-3 bg-background rounded-md border">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded">4</span>
+                      <span className="text-sm font-medium">Validate & Iterate</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Order synthesis, run assays, then update campaign with experimental data</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Tabs defaultValue="molecules" className="space-y-4">
             <TabsList>
               <TabsTrigger value="molecules" className="gap-2" data-testid="tab-molecules">

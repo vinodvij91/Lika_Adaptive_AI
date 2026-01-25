@@ -31,6 +31,7 @@ import {
   Activity,
   BarChart3,
 } from "lucide-react";
+import { generateMoleculeName } from "@/lib/utils";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -148,9 +149,9 @@ function RadarSarView({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All (Average)</SelectItem>
-            {molecules.slice(0, 50).map(mol => (
+            {molecules.slice(0, 50).map((mol, idx) => (
               <SelectItem key={mol.id} value={mol.id}>
-                {mol.smiles.slice(0, 25)}...
+                {generateMoleculeName(mol.smiles, mol.id, idx)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -499,7 +500,7 @@ function MoleculeMatrix({
             {molecules.slice(0, 100).map(mol => (
               <TableRow key={mol.id}>
                 <TableCell className="font-mono text-xs sticky left-0 bg-background max-w-[150px] truncate">
-                  {mol.smiles.slice(0, 20)}...
+                  {generateMoleculeName(mol.smiles, mol.id)}
                 </TableCell>
                 <TableCell className="text-center tabular-nums text-xs">
                   {mol.compositeScore?.toFixed(1) ?? "-"}
@@ -601,6 +602,30 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
   
   return (
     <div className="space-y-6">
+      <Card className="bg-primary/5 border-primary/20">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-primary/10 rounded-md shrink-0">
+              <Target className="h-5 w-5 text-primary" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="font-medium text-sm">Understanding Multi-Target SAR</h4>
+              <p className="text-sm text-muted-foreground">
+                This analysis helps identify molecules with balanced activity across multiple therapeutic targets. 
+                <strong className="text-foreground"> Balanced compounds</strong> (bottom-left quadrant in Trade-Off view) 
+                show good activity against both primary and secondary targets while avoiding safety liabilities.
+              </p>
+              <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground">
+                <span><strong>Radar:</strong> Compare activity profiles across all targets</span>
+                <span><strong>Trade-Off:</strong> Visualize selectivity between target pairs</span>
+                <span><strong>Series:</strong> Group molecules by chemical scaffold</span>
+                <span><strong>Matrix:</strong> Full scoring data for all molecule-target pairs</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">

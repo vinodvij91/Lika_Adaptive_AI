@@ -64,6 +64,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { generateMoleculeName } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -627,7 +628,7 @@ export default function HitTriagePage() {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <span className="font-medium">{hit.moleculeName || `MOL-${hit.moleculeId}`}</span>
+                        <span className="font-medium">{hit.moleculeName || generateMoleculeName(hit.smiles, String(hit.moleculeId))}</span>
                         {hit.ipRiskFlag && (
                           <Tooltip>
                             <TooltipTrigger>

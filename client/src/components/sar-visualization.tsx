@@ -35,6 +35,7 @@ import {
   Activity,
   Layers,
 } from "lucide-react";
+import { generateMoleculeName } from "@/lib/utils";
 import {
   ResponsiveContainer,
   ScatterChart,
@@ -164,7 +165,7 @@ function SeriesDetailDialog({
   const scatterData = series.molecules.map((mol, idx) => ({
     x: idx + 1,
     y: Math.random() * 100,
-    name: mol.name || `MOL-${mol.id}`,
+    name: mol.name || generateMoleculeName(mol.smiles, String(mol.id), idx),
     smiles: mol.smiles,
   }));
 
@@ -193,7 +194,7 @@ function SeriesDetailDialog({
                     data-testid={`button-select-molecule-${mol.id}`}
                   >
                     <FlaskConical className="h-3 w-3 mr-2 shrink-0" />
-                    <span className="truncate">{mol.name || `MOL-${mol.id}`}</span>
+                    <span className="truncate">{mol.name || generateMoleculeName(mol.smiles, String(mol.id))}</span>
                   </Button>
                 ))}
               </div>
@@ -210,7 +211,7 @@ function SeriesDetailDialog({
               ) : moleculeDetails ? (
                 <>
                   <div>
-                    <h4 className="font-medium mb-2">Selected: {moleculeDetails.molecule.name || `MOL-${moleculeDetails.molecule.id}`}</h4>
+                    <h4 className="font-medium mb-2">Selected: {moleculeDetails.molecule.name || generateMoleculeName(moleculeDetails.molecule.smiles, String(moleculeDetails.molecule.id))}</h4>
                     <code className="text-xs bg-muted px-2 py-1 rounded block truncate">
                       {moleculeDetails.molecule.smiles}
                     </code>
