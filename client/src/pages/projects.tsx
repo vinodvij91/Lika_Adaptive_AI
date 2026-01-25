@@ -50,7 +50,35 @@ export default function ProjectsPage() {
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [projectName, setProjectName] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
+  const [selectedDiseaseArea, setSelectedDiseaseArea] = useState<DiseaseArea>("CNS");
   const { toast } = useToast();
+
+  const generateDefaultDescription = (name: string, area: DiseaseArea) => {
+    if (!name.trim()) return "";
+    return `A comprehensive ${area} research program focused on ${name.trim()}. This project aims to identify novel therapeutic targets, validate lead compounds, and advance promising candidates through the drug discovery pipeline.`;
+  };
+
+  const handleNameChange = (name: string) => {
+    setProjectName(name);
+    if (!projectDescription || projectDescription === generateDefaultDescription(projectName, selectedDiseaseArea)) {
+      setProjectDescription(generateDefaultDescription(name, selectedDiseaseArea));
+    }
+  };
+
+  const handleDiseaseAreaChange = (area: DiseaseArea) => {
+    setSelectedDiseaseArea(area);
+    if (!projectDescription || projectDescription === generateDefaultDescription(projectName, selectedDiseaseArea)) {
+      setProjectDescription(generateDefaultDescription(projectName, area));
+    }
+  };
+
+  const resetForm = () => {
+    setProjectName("");
+    setProjectDescription("");
+    setSelectedDiseaseArea("CNS");
+  };
 
   const { data: projects, isLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -78,11 +106,10 @@ export default function ProjectsPage() {
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
     createMutation.mutate({
-      name: formData.get("name") as string,
-      description: formData.get("description") as string || undefined,
-      diseaseArea: formData.get("diseaseArea") as DiseaseArea || undefined,
+      name: projectName,
+      description: projectDescription || undefined,
+      diseaseArea: selectedDiseaseArea,
     });
   };
 
@@ -91,7 +118,7 @@ export default function ProjectsPage() {
       <PageHeader
         breadcrumbs={[{ label: "Projects" }]}
         actions={
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="gap-2" data-testid="button-new-project">
                 <Plus className="h-4 w-4" />
@@ -113,6 +140,8 @@ export default function ProjectsPage() {
                       id="name"
                       name="name"
                       placeholder="e.g., Alzheimer's Disease Program"
+                      value={projectName}
+                      onChange={(e) => handleNameChange(e.target.value)}
                       required
                       data-testid="input-project-name"
                     />
@@ -123,13 +152,15 @@ export default function ProjectsPage() {
                       id="description"
                       name="description"
                       placeholder="Describe the project goals and scope..."
+                      value={projectDescription}
+                      onChange={(e) => setProjectDescription(e.target.value)}
                       rows={3}
                       data-testid="input-project-description"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="diseaseArea">Disease Area</Label>
-                    <Select name="diseaseArea" defaultValue="Other">
+                    <Select value={selectedDiseaseArea} onValueChange={(v) => handleDiseaseAreaChange(v as DiseaseArea)}>
                       <SelectTrigger data-testid="select-disease-area">
                         <SelectValue placeholder="Select disease area" />
                       </SelectTrigger>
@@ -147,7 +178,7 @@ export default function ProjectsPage() {
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending} data-testid="button-create-project">
+                  <Button type="submit" disabled={createMutation.isPending || !projectName.trim()} data-testid="button-create-project">
                     {createMutation.isPending ? "Creating..." : "Create Project"}
                   </Button>
                 </DialogFooter>
