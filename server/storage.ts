@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, or, desc, sql, count, avg, sum } from "drizzle-orm";
+import { eq, and, or, desc, sql, count, avg, sum, inArray } from "drizzle-orm";
 import {
   projects,
   targets,
@@ -1710,12 +1710,12 @@ export class DatabaseStorage implements IStorage {
     const moleculesData = await db
       .select()
       .from(molecules)
-      .where(sql`${molecules.id} = ANY(${moleculeIds})`);
+      .where(inArray(molecules.id, moleculeIds));
 
     const assayResultsData = await db
       .select()
       .from(assayResults)
-      .where(sql`${assayResults.moleculeId} = ANY(${moleculeIds})`);
+      .where(inArray(assayResults.moleculeId, moleculeIds));
 
     const moleculeScoreMap = new Map(scoresData.map(s => [s.moleculeId, s]));
     const moleculeAssayMap = new Map<string, typeof assayResultsData>();
@@ -1841,8 +1841,10 @@ export class DatabaseStorage implements IStorage {
       return { molecules: [], targets: [], series: [] };
     }
 
-    const molIds = Array.from(new Set(scores.map(s => s.moleculeId)));
-    const molsData = await db.select().from(molecules).where(sql`${molecules.id} = ANY(${molIds})`);
+    const molIds = Array.from(new Set(scores.map(s => s.moleculeId).filter((id): id is string => id !== null)));
+    const molsData = molIds.length > 0 
+      ? await db.select().from(molecules).where(inArray(molecules.id, molIds))
+      : [];
 
     const panelData = await db.select().from(assayPanels).where(eq(assayPanels.campaignId, campaignId));
     const panelTargets: { id: string; name: string; role: string }[] = [];
