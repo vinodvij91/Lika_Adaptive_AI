@@ -33,18 +33,45 @@ export interface ComputeAdapter {
   downloadFile?(node: ComputeNode, remotePath: string, localPath: string): Promise<boolean>;
 }
 
+function formatPrivateKey(key: string | undefined): string | null {
+  if (!key) return null;
+  
+  let formattedKey = key;
+  
+  // Check if key is base64 encoded (doesn't start with -----)
+  if (!key.startsWith('-----')) {
+    try {
+      // Try to decode from base64
+      formattedKey = Buffer.from(key, 'base64').toString('utf8');
+      console.log(`[SSH] Decoded base64 private key, starts with: ${formattedKey.substring(0, 30)}...`);
+    } catch (e) {
+      console.log(`[SSH] Key is not base64 encoded, using as-is`);
+    }
+  }
+  
+  // Replace escaped newlines with actual newlines
+  formattedKey = formattedKey.replace(/\\n/g, '\n');
+  
+  // Ensure key ends with a newline
+  if (!formattedKey.endsWith('\n')) {
+    formattedKey += '\n';
+  }
+  
+  return formattedKey;
+}
+
 async function getSshPrivateKey(node: ComputeNode): Promise<string | null> {
   if (!node.sshConfigId) {
-    return process.env.SSH_PRIVATE_KEY || null;
+    return formatPrivateKey(process.env.SSH_PRIVATE_KEY);
   }
   
   const sshConfig = await storage.getSshConfig(node.sshConfigId);
   if (sshConfig) {
     const secretKey = `SSH_KEY_${sshConfig.id}`;
-    return process.env[secretKey] || process.env.SSH_PRIVATE_KEY || null;
+    return formatPrivateKey(process.env[secretKey]) || formatPrivateKey(process.env.SSH_PRIVATE_KEY);
   }
   
-  return process.env.SSH_PRIVATE_KEY || null;
+  return formatPrivateKey(process.env.SSH_PRIVATE_KEY);
 }
 
 export class SshComputeAdapter implements ComputeAdapter {
@@ -108,7 +135,15 @@ export class SshComputeAdapter implements ComputeAdapter {
         reject(err);
       });
 
-      conn.connect(config);
+      try {
+        conn.connect(config);
+      } catch (connectErr: any) {
+        console.error(`[SSH] Connection failed:`, connectErr.message);
+        if (connectErr.message.includes('privateKey')) {
+          console.error(`[SSH] Private key format issue. Key starts with: ${privateKey?.substring(0, 40)}...`);
+        }
+        reject(connectErr);
+      }
     });
   }
 
