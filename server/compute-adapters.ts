@@ -114,7 +114,14 @@ export class SshComputeAdapter implements ComputeAdapter {
       } else if (privateKey) {
         try {
           config.privateKey = privateKey;
-          console.log(`[SSH] Using private key authentication for ${node.name}`);
+          // Check if passphrase is available for encrypted keys
+          const passphrase = process.env.SSH_KEY_PASSPHRASE;
+          if (passphrase) {
+            config.passphrase = passphrase;
+            console.log(`[SSH] Using private key with passphrase for ${node.name}`);
+          } else {
+            console.log(`[SSH] Using private key authentication for ${node.name}`);
+          }
         } catch (keyErr: any) {
           console.error(`[SSH] Private key parse error:`, keyErr.message);
           reject(new Error(`Cannot parse SSH private key for node ${node.name}`));
