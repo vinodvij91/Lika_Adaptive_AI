@@ -3,6 +3,7 @@
 Production-Grade Drug Discovery Pipeline
 With Distributed Computing, GPU Acceleration, and Molecular Docking
 """
+from __future__ import annotations
 
 import pandas as pd
 import numpy as np
@@ -112,29 +113,32 @@ class Compound:
     docking_scores: Optional[Dict] = None
 
 
-class MixedPrecisionNN(nn.Module):
-    """Neural Network with Mixed Precision Training Support"""
-    
-    def __init__(self, input_dim, hidden_dims=[1024, 512, 256, 128]):
-        super(MixedPrecisionNN, self).__init__()
+if PYTORCH_AVAILABLE:
+    class MixedPrecisionNN(nn.Module):
+        """Neural Network with Mixed Precision Training Support"""
         
-        layers = []
-        prev_dim = input_dim
+        def __init__(self, input_dim, hidden_dims=[1024, 512, 256, 128]):
+            super(MixedPrecisionNN, self).__init__()
+            
+            layers = []
+            prev_dim = input_dim
+            
+            for hidden_dim in hidden_dims:
+                layers.append(nn.Linear(prev_dim, hidden_dim))
+                layers.append(nn.BatchNorm1d(hidden_dim))
+                layers.append(nn.ReLU())
+                layers.append(nn.Dropout(0.3))
+                prev_dim = hidden_dim
+            
+            layers.append(nn.Linear(prev_dim, 1))
+            layers.append(nn.Sigmoid())
+            
+            self.network = nn.Sequential(*layers)
         
-        for hidden_dim in hidden_dims:
-            layers.append(nn.Linear(prev_dim, hidden_dim))
-            layers.append(nn.BatchNorm1d(hidden_dim))
-            layers.append(nn.ReLU())
-            layers.append(nn.Dropout(0.3))
-            prev_dim = hidden_dim
-        
-        layers.append(nn.Linear(prev_dim, 1))
-        layers.append(nn.Sigmoid())
-        
-        self.network = nn.Sequential(*layers)
-    
-    def forward(self, x):
-        return self.network(x)
+        def forward(self, x):
+            return self.network(x)
+else:
+    MixedPrecisionNN = None
 
 
 class MolecularDocking:

@@ -1250,6 +1250,41 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/compute/run-command", requireAuth, async (req, res) => {
+    try {
+      const { nodeId, command } = req.body;
+      if (!nodeId || !command) {
+        return res.status(400).json({ error: "nodeId and command are required" });
+      }
+      
+      const node = await storage.getComputeNode(nodeId);
+      if (!node) {
+        return res.status(404).json({ error: "Compute node not found" });
+      }
+      
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+      
+      const job = {
+        id: `cmd-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000,
+      };
+      
+      const result = await adapter.runJob(node, job as any);
+      res.json({ 
+        success: result.success,
+        output: result.output,
+        error: result.error,
+        exitCode: result.exitCode
+      });
+    } catch (error: any) {
+      console.error("Error running command:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============================================
   // USER SSH KEYS ENDPOINTS
   // ============================================
