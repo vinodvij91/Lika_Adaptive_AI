@@ -11,6 +11,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { GlobalFooter } from "@/components/global-footer";
+import { AIAssistant } from "@/components/ai-assistant";
 
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
@@ -74,6 +75,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           <GlobalFooter />
         </div>
       </div>
+      <AIAssistant />
     </SidebarProvider>
   );
 }

@@ -2451,7 +2451,7 @@ export async function registerRoutes(
           const neighborScores = moleculeScoresMap.get(neighbor.id);
           if (!neighborScores) continue;
           
-          for (const [targetId, score] of molScores) {
+          Array.from(molScores.entries()).forEach(([targetId, score]) => {
             const neighborScore = neighborScores.get(targetId);
             if (neighborScore !== undefined) {
               const activityDiff = Math.abs(score - neighborScore);
@@ -2465,7 +2465,7 @@ export async function registerRoutes(
                 });
               }
             }
-          }
+          });
         }
       }
       
@@ -4304,6 +4304,75 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error fetching pipeline stats:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  app.post("/api/ai-assistant/chat", requireAuth, async (req, res) => {
+    try {
+      const { message, pageContext, history = [] } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const OpenAI = (await import("openai")).default;
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const systemPrompt = `You are Lika, an AI assistant for the Lika Sciences Platform - a drug discovery and materials science research platform.
+
+Current page context: ${pageContext || "General platform usage"}
+
+Your role is to:
+1. Explain features and concepts on the current page
+2. Guide users through drug discovery and materials science workflows
+3. Explain scientific terminology (SMILES notation, assays, targets, docking, ADMET, etc.)
+4. Help users understand data visualizations and metrics
+5. Provide best practices for research campaigns
+
+Be concise but thorough. Use scientific terminology appropriately but explain it when needed.
+For drug discovery: Explain concepts like IC50, binding affinity, SMILES, SAR, ADMET, BBB permeability, hERG inhibition, etc.
+For materials science: Explain polymers, crystals, composites, tensile strength, glass transition, etc.`;
+
+      const chatHistory = history.map((m: { role: string; content: string }) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4.1-nano",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...chatHistory,
+          { role: "user", content: message },
+        ],
+        stream: true,
+        max_tokens: 1024,
+      });
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) {
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
+      }
+
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.end();
+    } catch (error: any) {
+      console.error("AI Assistant error:", error);
+      if (res.headersSent) {
+        res.write(`data: ${JSON.stringify({ error: "Failed to process request" })}\n\n`);
+        res.end();
+      } else {
+        res.status(500).json({ error: "Failed to process request" });
+      }
     }
   });
 
