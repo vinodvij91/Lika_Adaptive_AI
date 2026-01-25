@@ -102,9 +102,19 @@ export default function CampaignNewPage() {
     queryKey: ["/api/projects"],
   });
 
-  const { data: targets } = useQuery<TargetType[]>({
-    queryKey: ["/api/targets"],
+  const { data: targetsWithDiseases } = useQuery<(TargetType & { diseases: string[] })[]>({
+    queryKey: ["/api/targets-with-diseases"],
   });
+
+  const { data: diseases } = useQuery<{ disease: string; count: number }[]>({
+    queryKey: ["/api/diseases"],
+  });
+
+  const [targetDiseaseFilter, setTargetDiseaseFilter] = useState<string>("all");
+
+  const filteredTargets = targetsWithDiseases?.filter(t => 
+    targetDiseaseFilter === "all" || (t.diseases && t.diseases.includes(targetDiseaseFilter))
+  ) || [];
 
   const { data: libraries } = useQuery<CuratedLibrary[]>({
     queryKey: ["/api/libraries"],
@@ -465,13 +475,28 @@ export default function CampaignNewPage() {
                       </div>
                     )}
                     
-                    {targets && targets.length > 0 && (
+                    {targetsWithDiseases && targetsWithDiseases.length > 0 && (
                       <div className="space-y-3">
-                        {templateTargets.length > 0 && (
-                          <h4 className="text-sm font-medium text-muted-foreground">Additional Targets (from database)</h4>
-                        )}
-                        <div className="space-y-2">
-                          {targets.map((target) => (
+                        <div className="flex items-center justify-between gap-4">
+                          <h4 className="text-sm font-medium text-muted-foreground">
+                            {templateTargets.length > 0 ? "Additional Targets (from database)" : "Select from database"}
+                          </h4>
+                          <Select value={targetDiseaseFilter} onValueChange={setTargetDiseaseFilter}>
+                            <SelectTrigger className="w-[200px]" data-testid="select-target-disease-filter">
+                              <SelectValue placeholder="Filter by disease" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[300px]">
+                              <SelectItem value="all">All Diseases</SelectItem>
+                              {diseases?.slice().sort((a, b) => a.disease.localeCompare(b.disease)).map((d) => (
+                                <SelectItem key={d.disease} value={d.disease}>
+                                  {d.disease} ({d.count})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                          {filteredTargets.map((target) => (
                             <div
                               key={target.id}
                               className={`flex items-center gap-3 p-3 rounded-md cursor-pointer transition-colors ${
@@ -489,19 +514,30 @@ export default function CampaignNewPage() {
                               <div className="w-9 h-9 rounded-md bg-chart-3/10 flex items-center justify-center">
                                 <Target className="h-4 w-4 text-chart-3" />
                               </div>
-                              <div>
+                              <div className="flex-1 min-w-0">
                                 <p className="font-medium">{target.name}</p>
                                 <p className="text-sm text-muted-foreground">
                                   {target.uniprotId || "No UniProt ID"}
+                                  {target.diseases && target.diseases.length > 0 && (
+                                    <span className="ml-2 text-xs">
+                                      {target.diseases.slice(0, 2).join(", ")}
+                                      {target.diseases.length > 2 && ` +${target.diseases.length - 2}`}
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                             </div>
                           ))}
+                          {filteredTargets.length === 0 && targetDiseaseFilter !== "all" && (
+                            <p className="text-muted-foreground text-center py-4 text-sm">
+                              No targets found for {targetDiseaseFilter}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}
                     
-                    {!targets?.length && !templateTargets.length && (
+                    {!targetsWithDiseases?.length && !templateTargets.length && (
                       <p className="text-muted-foreground text-center py-8">
                         No targets available. Add targets first.
                       </p>
