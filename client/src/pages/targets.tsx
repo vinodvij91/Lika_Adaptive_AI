@@ -209,7 +209,7 @@ export default function TargetsPage() {
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   <SelectItem value="all">All Diseases</SelectItem>
-                  {diseases?.map((d) => (
+                  {diseases?.slice().sort((a, b) => a.disease.localeCompare(b.disease)).map((d) => (
                     <SelectItem key={d.disease} value={d.disease}>
                       {d.disease} ({d.count})
                     </SelectItem>
