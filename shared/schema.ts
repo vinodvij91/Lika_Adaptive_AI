@@ -21,7 +21,7 @@ export const computeProviderEnum = pgEnum("compute_provider", ["hetzner", "vast"
 export const computePurposeEnum = pgEnum("compute_purpose", ["ml", "bionemo", "docking", "quantum", "agents", "general"]);
 export const computeStatusEnum = pgEnum("compute_status", ["active", "offline", "degraded"]);
 export const connectionTypeEnum = pgEnum("connection_type", ["ssh", "cloud_api"]);
-export const gpuTypeEnum = pgEnum("gpu_type", ["none", "T4", "A40", "A100", "H100", "H200", "MI300", "other"]);
+export const gpuTypeEnum = pgEnum("gpu_type", ["none", "T4", "A40", "A100", "H100", "H200", "MI300", "RTX3090", "RTX4090", "other"]);
 export const gpuTierEnum = pgEnum("gpu_tier", ["shared-low", "shared-mid", "shared-high", "dedicated-A100", "dedicated-H100", "dedicated-H200", "enterprise"]);
 export const modalityEnum = pgEnum("modality", ["small_molecule", "fragment", "protac", "peptide", "other"]);
 export const assayTypeEnum = pgEnum("assay_type", ["binding", "functional", "in_vivo", "pk", "admet", "other"]);
@@ -678,7 +678,7 @@ export type ComputeNode = typeof computeNodes.$inferSelect;
 export type InsertComputeNode = z.infer<typeof insertComputeNodeSchema>;
 
 export type ConnectionType = "ssh" | "cloud_api";
-export type GpuType = "none" | "T4" | "A40" | "A100" | "H100" | "H200" | "MI300" | "other";
+export type GpuType = "none" | "T4" | "A40" | "A100" | "H100" | "H200" | "MI300" | "RTX3090" | "RTX4090" | "other";
 export type GpuTier = "shared-low" | "shared-mid" | "shared-high" | "dedicated-A100" | "dedicated-H100" | "dedicated-H200" | "enterprise";
 export type ComputeProvider = "hetzner" | "vast" | "onprem" | "aws" | "azure" | "gcp" | "other";
 

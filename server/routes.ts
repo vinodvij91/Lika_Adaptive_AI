@@ -1058,6 +1058,199 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // COMPUTE EXECUTION ENDPOINTS
+  // ============================================
+
+  app.get("/api/compute/health", requireAuth, async (req, res) => {
+    try {
+      const { computeExecutor } = await import("./compute-executor");
+      const healthMap = await computeExecutor.checkNodeHealth();
+      const results: Record<string, boolean> = {};
+      healthMap.forEach((healthy, nodeId) => {
+        results[nodeId] = healthy;
+      });
+      res.json({ health: results });
+    } catch (error: any) {
+      console.error("Error checking compute health:", error);
+      res.status(500).json({ error: "Failed to check compute health" });
+    }
+  });
+
+  app.get("/api/compute/capacity", requireAuth, async (req, res) => {
+    try {
+      const { computeExecutor } = await import("./compute-executor");
+      const capacity = await computeExecutor.getAvailableCapacity();
+      res.json(capacity);
+    } catch (error: any) {
+      console.error("Error getting compute capacity:", error);
+      res.status(500).json({ error: "Failed to get compute capacity" });
+    }
+  });
+
+  app.post("/api/compute/execute", requireAuth, async (req, res) => {
+    try {
+      const { jobId, params, sync = false } = req.body;
+      
+      if (!jobId) {
+        return res.status(400).json({ error: "jobId is required" });
+      }
+      
+      const job = await storage.getProcessingJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Processing job not found" });
+      }
+      
+      const { computeExecutor } = await import("./compute-executor");
+      
+      await storage.updateProcessingJob(jobId, { status: "running", startedAt: new Date() });
+      await storage.createProcessingJobEvent({
+        jobId,
+        eventType: "started",
+        payload: { startedAt: new Date().toISOString() },
+      });
+      
+      const executeJob = async () => {
+        const result = await computeExecutor.executePipelineJob(job, params || job.inputPayload || {});
+        
+        if (result.success) {
+          await storage.updateProcessingJob(jobId, {
+            status: "succeeded",
+            completedAt: new Date(),
+            progressPercent: 100,
+            outputPayload: result.outputData,
+          });
+          await storage.createProcessingJobEvent({
+            jobId,
+            eventType: "completed",
+            payload: {
+              steps: result.steps.map(s => ({ name: s.stepName, success: s.success, duration: s.durationSeconds })),
+              cpuTimeSeconds: result.totalCpuTimeSeconds,
+              gpuTimeSeconds: result.totalGpuTimeSeconds,
+            },
+          });
+        } else {
+          await storage.updateProcessingJob(jobId, {
+            status: "failed",
+            completedAt: new Date(),
+            errorMessage: result.error,
+          });
+          await storage.createProcessingJobEvent({
+            jobId,
+            eventType: "failed",
+            payload: { error: result.error, steps: result.steps },
+          });
+        }
+        
+        return result;
+      };
+      
+      if (sync) {
+        const result = await executeJob();
+        res.json(result);
+      } else {
+        executeJob().catch(err => {
+          console.error(`[Compute] Background job ${jobId} failed:`, err);
+          storage.updateProcessingJob(jobId, {
+            status: "failed",
+            completedAt: new Date(),
+            errorMessage: err.message,
+          });
+        });
+        
+        res.status(202).json({
+          message: "Job execution started",
+          jobId,
+          status: "running",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error executing compute job:", error);
+      res.status(500).json({ error: "Failed to execute compute job", details: error.message });
+    }
+  });
+
+  app.post("/api/compute/pipeline", requireAuth, async (req, res) => {
+    try {
+      const { campaignId, moleculeIds, targetId } = req.body;
+      
+      if (!campaignId || !moleculeIds?.length) {
+        return res.status(400).json({ error: "campaignId and moleculeIds are required" });
+      }
+      
+      const campaign = await storage.getCampaign(campaignId);
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      
+      const { computeExecutor } = await import("./compute-executor");
+      
+      const processingJob = await storage.createProcessingJob({
+        type: "full_pipeline",
+        status: "running",
+        priority: 0,
+        campaignId,
+        itemsTotal: moleculeIds.length,
+        itemsCompleted: 0,
+        progressPercent: 0,
+        inputPayload: { moleculeIds, targetId },
+        maxRetries: 3,
+      });
+      
+      await storage.createProcessingJobEvent({
+        jobId: processingJob.id,
+        eventType: "started",
+        payload: { moleculeCount: moleculeIds.length, targetId },
+      });
+      
+      computeExecutor.executeFullPipeline(campaignId, moleculeIds, targetId)
+        .then(async (result) => {
+          if (result.success) {
+            await storage.updateProcessingJob(processingJob.id, {
+              status: "succeeded",
+              completedAt: new Date(),
+              progressPercent: 100,
+              outputPayload: result.outputData,
+            });
+          } else {
+            await storage.updateProcessingJob(processingJob.id, {
+              status: "failed",
+              completedAt: new Date(),
+              errorMessage: result.error,
+            });
+          }
+        })
+        .catch(async (err) => {
+          await storage.updateProcessingJob(processingJob.id, {
+            status: "failed",
+            completedAt: new Date(),
+            errorMessage: err.message,
+          });
+        });
+      
+      res.status(202).json({
+        message: "Pipeline execution started",
+        jobId: processingJob.id,
+        moleculeCount: moleculeIds.length,
+      });
+    } catch (error: any) {
+      console.error("Error starting pipeline:", error);
+      res.status(500).json({ error: "Failed to start pipeline" });
+    }
+  });
+
+  app.post("/api/compute/setup", requireAuth, async (req, res) => {
+    try {
+      const { setupDefaultComputeNodes } = await import("./compute-executor");
+      await setupDefaultComputeNodes();
+      const nodes = await storage.getComputeNodes();
+      res.json({ message: "Compute nodes setup complete", nodes });
+    } catch (error: any) {
+      console.error("Error setting up compute nodes:", error);
+      res.status(500).json({ error: "Failed to setup compute nodes" });
+    }
+  });
+
+  // ============================================
   // USER SSH KEYS ENDPOINTS
   // ============================================
 

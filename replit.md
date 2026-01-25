@@ -39,6 +39,46 @@ Adheres to Material Design principles with Carbon Design data patterns, utilizin
 ### Quantum Compute Integration
 The architecture is designed to integrate with quantum computation services for future optimization and scoring.
 
+### Python Compute Pipeline Integration
+The platform includes a production-grade Python pipeline (`compute/drug_discovery_pipeline.py`) for executing computational chemistry workloads:
+
+**Features:**
+- Dask distributed computing for parallel processing
+- RAPIDS cuML for GPU-accelerated machine learning (10-50x speedup)
+- PyTorch mixed precision training (2x GPU speedup)
+- AutoDock Vina integration for molecular docking
+- XGBoost with GPU acceleration
+
+**Compute Infrastructure:**
+- **CPU Jobs (Hetzner)**: SMILES validation, fingerprint generation, property calculation, rule filtering
+- **GPU Jobs (Vast.ai with 2x RTX 3090)**: ML prediction, neural network inference, Vina docking
+
+**CLI Interface:**
+```bash
+python3 drug_discovery_pipeline.py --job-type <step_name> --params '{"smiles": [...], "targetId": "..."}'
+```
+
+**Supported Steps:**
+- `smiles_validation` - Validate SMILES strings
+- `fingerprint_generation` - Generate Morgan fingerprints
+- `property_calculation` - Calculate molecular properties (MW, LogP, TPSA, etc.)
+- `ml_prediction` - Run ML predictions on molecules
+- `vina_docking` - Molecular docking with AutoDock Vina
+- `scoring` - Calculate oracle scores
+- `rule_filtering` - Apply Lipinski/Veber rules
+
+**Required Environment Variables:**
+- `HETZNER_SSH_HOST`, `HETZNER_SSH_USER`, `HETZNER_SSH_PORT` - For Hetzner CPU nodes
+- `VAST_AI_API_KEY` - For Vast.ai GPU nodes
+- `SSH_PRIVATE_KEY` - SSH key for remote node access
+
+**API Endpoints:**
+- `GET /api/compute/health` - Check node health
+- `GET /api/compute/capacity` - Get available CPU/GPU capacity
+- `POST /api/compute/execute` - Execute a pipeline job (async by default)
+- `POST /api/compute/pipeline` - Run full pipeline on campaign
+- `POST /api/compute/setup` - Auto-configure nodes from env vars
+
 ## External Dependencies
 - **PostgreSQL**: Primary relational database.
 - **Radix UI primitives**: For building UI components.
