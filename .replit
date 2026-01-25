@@ -40,3 +40,10 @@ waitForPort = 5000
 
 [agent]
 integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:2.0.0", "javascript_openai_ai_integrations:2.0.0"]
+
+[userenv]
+
+[userenv.shared]
+HETZNER_SSH_HOST = "157.180.69.32"
+HETZNER_SSH_USER = "root"
+HETZNER_SSH_PORT = "22"
