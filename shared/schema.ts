@@ -87,7 +87,24 @@ export const targets = pgTable("targets", {
   structureSource: structureSourceEnum("structure_source"),
   isDemo: boolean("is_demo").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  geneName: text("gene_name"),
+  organism: text("organism"),
+  chemblId: text("chembl_id"),
+  smiles: text("smiles"),
+  sequenceLength: integer("sequence_length"),
+  numStructures: integer("num_structures"),
 });
+
+export const diseaseTargetMappings = pgTable("disease_target_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  targetId: varchar("target_id").notNull().references(() => targets.id, { onDelete: "cascade" }),
+  disease: text("disease").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const diseaseTargetMappingsRelations = relations(diseaseTargetMappings, ({ one }) => ({
+  target: one(targets, { fields: [diseaseTargetMappings.targetId], references: [targets.id] }),
+}));
 
 export const targetVariants = pgTable("target_variants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
