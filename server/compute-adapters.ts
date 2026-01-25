@@ -1,6 +1,7 @@
 import type { ComputeNode, ComputeProvider, ConnectionType } from "@shared/schema";
 import { Client as SshClient } from "ssh2";
 import { storage } from "./storage";
+import sshpk from "sshpk";
 
 export interface ComputeJob {
   id: string;
@@ -38,24 +39,46 @@ function formatPrivateKey(key: string | undefined): string | null {
   
   let formattedKey = key;
   
+  // Replace escaped newlines with actual newlines first
+  formattedKey = formattedKey.replace(/\\n/g, '\n');
+  
   // Check if key is base64 encoded (doesn't start with -----)
-  if (!key.startsWith('-----')) {
+  if (!formattedKey.startsWith('-----')) {
     try {
       // Try to decode from base64
-      formattedKey = Buffer.from(key, 'base64').toString('utf8');
-      console.log(`[SSH] Decoded base64 private key, starts with: ${formattedKey.substring(0, 30)}...`);
+      const keyBuffer = Buffer.from(formattedKey, 'base64');
+      const decoded = keyBuffer.toString('utf8');
+      
+      // Check if the decoded content looks like text (OpenSSH key header)
+      if (decoded.includes('openssh-key-v1')) {
+        // It's raw binary OpenSSH key, wrap it with proper PEM headers
+        const base64Key = keyBuffer.toString('base64');
+        const chunkedKey = base64Key.match(/.{1,70}/g)?.join('\n') || base64Key;
+        formattedKey = `-----BEGIN OPENSSH PRIVATE KEY-----\n${chunkedKey}\n-----END OPENSSH PRIVATE KEY-----\n`;
+        console.log(`[SSH] Wrapped raw OpenSSH key with PEM headers`);
+      } else if (decoded.startsWith('-----')) {
+        // It was base64-encoded PEM text
+        formattedKey = decoded;
+        console.log(`[SSH] Decoded base64 PEM key`);
+      } else {
+        // Unknown format, might be raw binary - try wrapping as OpenSSH
+        const base64Key = keyBuffer.toString('base64');
+        const chunkedKey = base64Key.match(/.{1,70}/g)?.join('\n') || base64Key;
+        formattedKey = `-----BEGIN OPENSSH PRIVATE KEY-----\n${chunkedKey}\n-----END OPENSSH PRIVATE KEY-----\n`;
+        console.log(`[SSH] Wrapped binary key with PEM headers`);
+      }
     } catch (e) {
       console.log(`[SSH] Key is not base64 encoded, using as-is`);
     }
   }
   
-  // Replace escaped newlines with actual newlines
-  formattedKey = formattedKey.replace(/\\n/g, '\n');
-  
   // Ensure key ends with a newline
   if (!formattedKey.endsWith('\n')) {
     formattedKey += '\n';
   }
+  
+  console.log(`[SSH] Final key format starts with: ${formattedKey.substring(0, 50)}...`);
+  console.log(`[SSH] Key length: ${formattedKey.length} chars`);
   
   return formattedKey;
 }
@@ -498,7 +521,8 @@ export class VastAiComputeAdapter implements ComputeAdapter {
         instanceInfo = await this.apiRequest(`/instances/${instanceId}`);
       }
       
-      const sshHost = instanceInfo.public_ipaddr || instanceInfo.ssh_host;
+      // Prefer ssh_host (proxy like ssh6.vast.ai) over public_ipaddr for proper SSH routing
+      const sshHost = instanceInfo.ssh_host || instanceInfo.public_ipaddr;
       const sshPort = instanceInfo.ssh_port || instanceInfo.ports?.["22/tcp"]?.[0]?.HostPort || 22;
 
       if (!sshHost) {
