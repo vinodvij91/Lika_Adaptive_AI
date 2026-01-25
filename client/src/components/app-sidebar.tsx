@@ -28,6 +28,7 @@ import {
   Calculator,
   Factory,
   Upload,
+  Rocket,
   Crosshair,
   Beaker,
   ArrowLeftRight,
@@ -79,6 +80,7 @@ const materialsWorkflowItems = [
 
 const infrastructureItems = [
   { title: "Compute Nodes", url: "/compute-nodes", icon: Server },
+  { title: "Pipeline Launcher", url: "/pipeline", icon: Rocket },
   { title: "Usage", url: "/usage", icon: Activity },
   { title: "Integrations", url: "/integrations", icon: Plug },
   { title: "Quantum", url: "/quantum", icon: Atom },
