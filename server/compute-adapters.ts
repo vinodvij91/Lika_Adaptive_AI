@@ -37,13 +37,38 @@ export interface ComputeAdapter {
 function formatPrivateKey(key: string | undefined): string | null {
   if (!key) return null;
   
-  let formattedKey = key;
+  let formattedKey = key.trim();
   
   // Replace escaped newlines with actual newlines first
   formattedKey = formattedKey.replace(/\\n/g, '\n');
   
+  // Fix common issue: key pasted as single line with spaces instead of newlines
+  // Pattern: -----BEGIN...KEY----- <base64> -----END...KEY-----
+  if (formattedKey.includes('-----BEGIN') && formattedKey.includes('-----END')) {
+    // Check if it's all on one line (no real newlines except possibly at ends)
+    const lines = formattedKey.split('\n').filter(l => l.trim());
+    if (lines.length === 1) {
+      // Single line key - need to reformat
+      const beginMatch = formattedKey.match(/(-----BEGIN [A-Z ]+ KEY-----)/);
+      const endMatch = formattedKey.match(/(-----END [A-Z ]+ KEY-----)/);
+      if (beginMatch && endMatch) {
+        const beginHeader = beginMatch[1];
+        const endHeader = endMatch[1];
+        // Extract the base64 content between headers
+        const startIdx = formattedKey.indexOf(beginHeader) + beginHeader.length;
+        const endIdx = formattedKey.indexOf(endHeader);
+        let base64Content = formattedKey.substring(startIdx, endIdx).trim();
+        // Remove any spaces that might be in the base64
+        base64Content = base64Content.replace(/\s+/g, '');
+        // Chunk the base64 content into 70-char lines
+        const chunkedKey = base64Content.match(/.{1,70}/g)?.join('\n') || base64Content;
+        formattedKey = `${beginHeader}\n${chunkedKey}\n${endHeader}\n`;
+        console.log(`[SSH] Reformatted single-line PEM key with proper line breaks`);
+      }
+    }
+  }
   // Check if key is base64 encoded (doesn't start with -----)
-  if (!formattedKey.startsWith('-----')) {
+  else if (!formattedKey.startsWith('-----')) {
     try {
       // Try to decode from base64
       const keyBuffer = Buffer.from(formattedKey, 'base64');
@@ -77,8 +102,10 @@ function formatPrivateKey(key: string | undefined): string | null {
     formattedKey += '\n';
   }
   
-  console.log(`[SSH] Final key format starts with: ${formattedKey.substring(0, 50)}...`);
-  console.log(`[SSH] Key length: ${formattedKey.length} chars`);
+  // Log first 50 chars but show actual newlines
+  const logPreview = formattedKey.substring(0, 80).replace(/\n/g, '\\n');
+  console.log(`[SSH] Final key format: ${logPreview}...`);
+  console.log(`[SSH] Key length: ${formattedKey.length} chars, lines: ${formattedKey.split('\n').length}`);
   
   return formattedKey;
 }
