@@ -125,6 +125,7 @@ function AuthenticatedRoutes() {
         <Route path="/lika-agent" component={LikaAgentPage} />
         <Route path="/quantum" component={QuantumComputePage} />
         <Route path="/pipeline" component={PipelineLauncherPage} />
+        <Route path="/use-cases" component={UseCasesPage} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>
