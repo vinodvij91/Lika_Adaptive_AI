@@ -160,6 +160,15 @@ except ImportError:
     DSCRIBE_AVAILABLE = False
     print("○ DScribe not available - install with: pip install dscribe")
 
+# Materials Project API (official client)
+try:
+    from mp_api.client import MPRester
+    MP_API_AVAILABLE = True
+    print("✓ Materials Project API available")
+except ImportError:
+    MP_API_AVAILABLE = False
+    print("○ Materials Project API not available - install with: pip install mp-api")
+
 # Quantum computing (optional)
 try:
     from qiskit import QuantumCircuit, Aer, execute
@@ -1101,12 +1110,18 @@ class SynthesisRoute:
 
 
 # ============================================================================
-# MATERIALS PROJECT API INTEGRATION
+# MATERIALS PROJECT API INTEGRATION (using official mp-api package)
 # ============================================================================
 
 class MaterialsProjectLoader:
     """
-    Load training data from Materials Project API for ML model training
+    Load training data from Materials Project database using official mp-api package
+    Access 150,000+ calculated materials properties
+    
+    Uses MPRester client for efficient API access with methods:
+    - summary.search() for general material queries
+    - insertion_electrodes.search() for battery data
+    - get_entries_in_chemsys() for phase diagrams
     
     Features:
     - Load training data for any property (band_gap, formation_energy, etc.)
@@ -1116,271 +1131,370 @@ class MaterialsProjectLoader:
     - Application-specific loaders (solar, thermoelectric, superconductor)
     - Phase diagram generation for stability analysis
     
+    Output Schema:
+        All application-specific loaders return consistent enriched dicts:
+        {
+            'material': Material,       # Material dataclass object
+            'material_id': str,         # Materials Project ID
+            'composition': str,         # Chemical formula
+            'properties': Dict,         # Property values (e.g., band_gap, voltage)
+            **metadata                  # Application-specific metadata
+        }
+        
+        Note: load_training_data returns (List[Material], np.array) for ML 
+        training compatibility, as ML models require property arrays.
+    
     Usage:
         mp_loader = MaterialsProjectLoader(api_key='your-key')
+        
+        # For ML training:
         materials, band_gaps = mp_loader.load_training_data(
             property_name='band_gap',
             n_materials=5000,
             additional_criteria={'band_gap': (1.0, 3.0)}
         )
+        
+        # For application-specific loading (returns enriched dicts):
+        solar_materials = mp_loader.load_solar_materials(n_materials=1000)
+        # Each result: {material, material_id, composition, properties, ...}
     """
     
-    API_BASE_URL = "https://api.materialsproject.org"
-    
     # Property name mappings from user-friendly to MP API fields
+    # Format: 'user_field': 'api_field.nested_attr' for nested access
     PROPERTY_MAPPINGS = {
         'band_gap': 'band_gap',
         'formation_energy': 'formation_energy_per_atom',
+        'formation_energy_per_atom': 'formation_energy_per_atom',
         'energy_above_hull': 'energy_above_hull',
         'density': 'density',
         'volume': 'volume',
         'total_magnetization': 'total_magnetization',
-        'ordering': 'ordering',
         'is_stable': 'is_stable',
         'is_metal': 'is_metal',
-        'symmetry': 'symmetry',
         'space_group': 'symmetry.symbol',
         'crystal_system': 'symmetry.crystal_system',
+        'symmetry_symbol': 'symmetry.symbol',
         'bulk_modulus': 'bulk_modulus.vrh',
+        'bulk_modulus_voigt': 'bulk_modulus.voigt',
+        'bulk_modulus_reuss': 'bulk_modulus.reuss',
         'shear_modulus': 'shear_modulus.vrh',
-        'elastic_tensor': 'elasticity.elastic_tensor',
-        'piezoelectric_modulus': 'piezoelectric_modulus',
-        'dielectric_constant': 'dielectric.e_electronic',
+        'shear_modulus_voigt': 'shear_modulus.voigt',
+        'shear_modulus_reuss': 'shear_modulus.reuss',
+        'dielectric_constant': 'dielectric.e_total',
+        'dielectric_electronic': 'dielectric.e_electronic',
+        'piezoelectric_modulus': 'piezoelectric.e_ij_max',
     }
     
-    # Application-specific property sets
-    SOLAR_PROPERTIES = ['band_gap', 'dielectric_constant', 'formation_energy', 'is_stable']
-    THERMOELECTRIC_PROPERTIES = ['band_gap', 'formation_energy', 'density', 'is_stable']
-    SUPERCONDUCTOR_PROPERTIES = ['formation_energy', 'density', 'is_stable', 'symmetry']
-    BATTERY_PROPERTIES = ['formation_energy', 'is_stable', 'volume', 'density']
+    @staticmethod
+    def _extract_property(doc, api_field: str):
+        """
+        Extract property value from mp-api document, handling dotted nested paths.
+        
+        Args:
+            doc: mp-api document object
+            api_field: Field path (e.g., 'band_gap' or 'bulk_modulus.vrh')
+            
+        Returns:
+            Extracted value or None if not found
+        """
+        # Handle dotted paths (e.g., 'bulk_modulus.vrh')
+        parts = api_field.split('.')
+        value = doc
+        
+        for part in parts:
+            if value is None:
+                return None
+            value = getattr(value, part, None)
+        
+        return value
+    
+    @staticmethod
+    def _build_enriched_dict(
+        material: 'Material',
+        properties: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Build a consistent enriched dict from a Material object.
+        
+        All loaders should use this helper to ensure consistent output schema.
+        
+        Args:
+            material: Material object
+            properties: Dict of property name -> value
+            metadata: Additional metadata (application, notes, etc.)
+            
+        Returns:
+            Enriched dict with consistent schema:
+            {
+                'material': Material,
+                'material_id': str,
+                'composition': str,
+                'properties': {...},
+                **metadata
+            }
+        """
+        result = {
+            'material': material,
+            'material_id': material.material_id or '',
+            'composition': material.composition,
+            'properties': properties or {},
+        }
+        if metadata:
+            result.update(metadata)
+        return result
     
     def __init__(self, api_key: Optional[str] = None):
         """
-        Initialize Materials Project loader
+        Initialize Materials Project client using official mp-api package
         
         Args:
             api_key: Materials Project API key (get from https://materialsproject.org/api)
                     If not provided, will try to load from MP_API_KEY environment variable
         """
         self.api_key = api_key or os.environ.get('MP_API_KEY')
+        
         if not self.api_key:
-            print("Warning: No Materials Project API key provided. Set MP_API_KEY env var or pass api_key parameter.")
-        
-        self._session = None
-        self._cache = {}
-    
-    def _get_session(self):
-        """Get or create HTTP session with API key"""
-        if self._session is None:
-            try:
-                import requests
-                self._session = requests.Session()
-                self._session.headers.update({
-                    'X-API-KEY': self.api_key,
-                    'accept': 'application/json'
-                })
-            except ImportError:
-                raise ImportError("requests library required for Materials Project API. Install with: pip install requests")
-        return self._session
-    
-    def _query_api(self, endpoint: str, params: Dict = None, method: str = 'GET') -> Dict:
-        """
-        Query Materials Project API
-        
-        Args:
-            endpoint: API endpoint path
-            params: Query parameters
-            method: HTTP method
-            
-        Returns:
-            API response as dictionary
-        """
-        import requests
-        
-        session = self._get_session()
-        url = f"{self.API_BASE_URL}/{endpoint}"
-        
-        try:
-            if method == 'GET':
-                response = session.get(url, params=params, timeout=60)
-            else:
-                response = session.post(url, json=params, timeout=60)
-            
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"API request failed: {e}")
-            return {'data': [], 'error': str(e)}
+            print("Warning: No Materials Project API key provided")
+            print("Set MP_API_KEY environment variable or pass api_key parameter")
+            print("Get key from: https://materialsproject.org/api")
+            self.client = None
+        elif MP_API_AVAILABLE:
+            self.client = MPRester(self.api_key)
+            print("Connected to Materials Project via official mp-api")
+        else:
+            self.client = None
+            print("Materials Project API not available - install with: pip install mp-api")
     
     def load_training_data(
         self,
         property_name: str,
-        n_materials: int = 5000,
+        n_materials: int = 10000,
         elements: Optional[List[str]] = None,
-        exclude_elements: Optional[List[str]] = None,
         additional_criteria: Optional[Dict] = None,
         include_structures: bool = True
-    ) -> Tuple[List[Dict], List[float]]:
+    ) -> Tuple[List, np.ndarray]:
         """
-        Load training data for any property from Materials Project
+        Load materials and property values for training using MPRester
         
         Args:
-            property_name: Property to load (band_gap, formation_energy, etc.)
-            n_materials: Maximum number of materials to load
-            elements: List of elements to include (e.g., ['Li', 'Fe', 'O'])
-            exclude_elements: Elements to exclude
-            additional_criteria: Additional filter criteria (e.g., {'band_gap': (1.0, 3.0)})
+            property_name: Property to load (e.g., 'band_gap', 'formation_energy_per_atom')
+            n_materials: Maximum number of materials
+            elements: Filter by elements (e.g., ['Li', 'Fe', 'O'])
+            additional_criteria: Additional search criteria
             include_structures: Whether to include crystal structures
             
         Returns:
-            Tuple of (materials list, property values list)
+            (materials_list, property_values)
         """
-        # Map property name to API field
-        api_property = self.PROPERTY_MAPPINGS.get(property_name, property_name)
+        if not self.client:
+            print("Error: Materials Project client not initialized")
+            return [], np.array([])
         
-        # Build query fields
-        fields = ['material_id', 'formula_pretty', 'composition', api_property]
+        # Map property name to API field (may be dotted like 'bulk_modulus.vrh')
+        api_property = self.PROPERTY_MAPPINGS.get(property_name, property_name)
+        # Get root field for API request (e.g., 'bulk_modulus' from 'bulk_modulus.vrh')
+        api_root_field = api_property.split('.')[0]
+        
+        print(f"\nLoading {property_name} ({api_property}) data from Materials Project...")
+        
+        # Build query criteria
+        criteria = additional_criteria.copy() if additional_criteria else {}
+        if elements:
+            criteria['elements'] = elements
+        
+        # Build field list (use root field for API request)
+        fields = ['material_id', 'formula_pretty', api_root_field]
         if include_structures:
             fields.append('structure')
         
-        # Build query parameters
-        params = {
-            'fields': ','.join(fields),
-            '_limit': min(n_materials, 1000),  # API pagination limit
-            '_all_fields': 'false'
-        }
-        
-        # Add element filters
-        if elements:
-            params['elements'] = ','.join(elements)
-        if exclude_elements:
-            params['exclude_elements'] = ','.join(exclude_elements)
-        
-        # Add property range filters
-        if additional_criteria:
-            for prop, value in additional_criteria.items():
-                prop_field = self.PROPERTY_MAPPINGS.get(prop, prop)
-                if isinstance(value, tuple) and len(value) == 2:
-                    params[f'{prop_field}_min'] = value[0]
-                    params[f'{prop_field}_max'] = value[1]
-                else:
-                    params[prop_field] = value
-        
-        # Fetch data with pagination
-        materials = []
-        property_values = []
-        offset = 0
-        
-        while len(materials) < n_materials:
-            params['_skip'] = offset
-            response = self._query_api('materials/summary/', params)
+        try:
+            # Use MPRester summary.search() - the official API method
+            docs = self.client.summary.search(
+                **criteria,
+                fields=fields,
+                num_chunks=10,
+                chunk_size=1000
+            )
             
-            data = response.get('data', [])
-            if not data:
-                break
+            materials = []
+            property_values = []
             
-            for entry in data:
-                if len(materials) >= n_materials:
-                    break
-                    
-                prop_value = entry.get(api_property)
+            for doc in docs[:n_materials]:
+                mat_id = doc.material_id
+                composition = doc.formula_pretty
+                prop_value = self._extract_property(doc, api_property)
+                
                 if prop_value is not None:
-                    material_data = {
-                        'material_id': entry.get('material_id'),
-                        'formula': entry.get('formula_pretty'),
-                        'composition': entry.get('composition', {}),
-                    }
-                    if include_structures and 'structure' in entry:
-                        material_data['structure'] = entry['structure']
+                    material = Material(
+                        composition=composition,
+                        structure=doc.structure if include_structures and hasattr(doc, 'structure') else None,
+                        material_id=str(mat_id),
+                        source='Materials Project'
+                    )
                     
-                    materials.append(material_data)
-                    property_values.append(float(prop_value))
+                    materials.append(material)
+                    property_values.append(prop_value)
             
-            offset += len(data)
-            if len(data) < params['_limit']:
-                break
-        
-        print(f"Loaded {len(materials)} materials with {property_name} values")
-        return materials, property_values
+            print(f"Loaded {len(materials)} materials with {property_name} data")
+            return materials, np.array(property_values)
+            
+        except Exception as e:
+            print(f"Error loading from Materials Project: {e}")
+            return [], np.array([])
     
     def load_battery_data(
         self,
-        n_materials: int = 2000,
+        n_materials: int = 5000,
         working_ion: str = 'Li',
         min_capacity: Optional[float] = None,
-        max_voltage: Optional[float] = None,
-        electrode_type: str = 'cathode'
-    ) -> Dict[str, Any]:
+        max_voltage: Optional[float] = None
+    ) -> List[Dict]:
         """
-        Load battery electrode materials with electrochemical properties
+        Load battery-specific data using MPRester insertion_electrodes endpoint
         
         Args:
             n_materials: Maximum number of materials
             working_ion: Working ion (Li, Na, K, Mg, Ca, etc.)
             min_capacity: Minimum gravimetric capacity (mAh/g)
             max_voltage: Maximum voltage vs working ion
-            electrode_type: 'cathode' or 'anode'
             
         Returns:
-            Dictionary with battery data including voltages, capacities, and structures
+            List of enriched dicts with battery electrode data (consistent schema)
         """
-        params = {
-            'working_ion': working_ion,
-            'fields': 'battery_id,material_ids,formula,average_voltage,capacity_grav,capacity_vol,energy_grav,energy_vol,working_ion',
-            '_limit': min(n_materials, 500)
-        }
+        if not self.client:
+            print("Error: Materials Project client not initialized")
+            return []
         
-        if min_capacity:
-            params['capacity_grav_min'] = min_capacity
-        if max_voltage:
-            params['average_voltage_max'] = max_voltage
+        print(f"\nLoading {working_ion}-ion battery materials from Materials Project...")
         
-        # Query insertion electrode endpoints
-        response = self._query_api('insertion_electrodes/', params)
-        data = response.get('data', [])
-        
-        battery_data = {
-            'electrodes': [],
-            'working_ion': working_ion,
-            'electrode_type': electrode_type,
-            'summary': {
-                'count': len(data),
-                'avg_voltage': 0.0,
-                'avg_capacity': 0.0,
-                'max_capacity': 0.0,
-                'max_energy': 0.0
-            }
-        }
-        
-        voltages = []
-        capacities = []
-        
-        for entry in data:
-            electrode = {
-                'battery_id': entry.get('battery_id'),
-                'material_ids': entry.get('material_ids', []),
-                'formula': entry.get('formula'),
-                'average_voltage': entry.get('average_voltage'),
-                'capacity_grav': entry.get('capacity_grav'),  # mAh/g
-                'capacity_vol': entry.get('capacity_vol'),    # mAh/cm³
-                'energy_grav': entry.get('energy_grav'),      # Wh/kg
-                'energy_vol': entry.get('energy_vol'),        # Wh/L
-            }
-            battery_data['electrodes'].append(electrode)
+        try:
+            # Use MPRester insertion_electrodes.search()
+            battery_docs = self.client.insertion_electrodes.search(
+                working_ion=working_ion,
+                fields=['material_id', 'formula_pretty', 'average_voltage', 
+                       'max_voltage', 'capacity_grav', 'energy_grav'],
+                num_chunks=5
+            )
             
-            if electrode['average_voltage']:
-                voltages.append(electrode['average_voltage'])
-            if electrode['capacity_grav']:
-                capacities.append(electrode['capacity_grav'])
+            materials = []
+            voltages = []
+            capacities = []
+            
+            for doc in battery_docs[:n_materials]:
+                # Apply filters
+                if min_capacity and doc.capacity_grav and doc.capacity_grav < min_capacity:
+                    continue
+                if max_voltage and doc.average_voltage and doc.average_voltage > max_voltage:
+                    continue
+                
+                # Create Material object for consistency
+                mat_obj = Material(
+                    composition=doc.formula_pretty,
+                    material_id=str(doc.material_id)
+                )
+                
+                mat_data = self._build_enriched_dict(
+                    material=mat_obj,
+                    properties={
+                        'voltage': doc.average_voltage,
+                        'max_voltage': doc.max_voltage,
+                        'capacity': doc.capacity_grav,
+                        'energy_density': doc.energy_grav
+                    },
+                    metadata={
+                        'working_ion': working_ion,
+                        'application': 'battery'
+                    }
+                )
+                
+                materials.append(mat_data)
+                if doc.average_voltage:
+                    voltages.append(doc.average_voltage)
+                if doc.capacity_grav:
+                    capacities.append(doc.capacity_grav)
+            
+            print(f"Loaded {len(materials)} {working_ion}-ion battery materials")
+            return materials
+            
+        except Exception as e:
+            print(f"Error loading battery data: {e}")
+            return []
+    
+    def load_by_application(self, application: str, n_materials: int = 5000) -> List[Dict]:
+        """
+        Load materials for specific applications
         
-        if voltages:
-            battery_data['summary']['avg_voltage'] = np.mean(voltages)
-        if capacities:
-            battery_data['summary']['avg_capacity'] = np.mean(capacities)
-            battery_data['summary']['max_capacity'] = max(capacities)
+        Args:
+            application: 'battery', 'solar', 'thermoelectric', 'catalyst', 'superconductor'
+            n_materials: Maximum number of materials
+            
+        Returns:
+            List of enriched dicts with 'material' key containing Material object
+        """
+        if application == 'battery':
+            return self.load_battery_data(n_materials)
         
-        print(f"Loaded {len(data)} battery electrodes for {working_ion}-ion")
-        return battery_data
+        elif application == 'solar':
+            return self.load_solar_materials(n_materials=n_materials)
+        
+        elif application == 'thermoelectric':
+            return self.load_thermoelectric_materials(n_materials=n_materials)
+        
+        elif application == 'superconductor':
+            return self.load_superconductor_candidates(n_materials=n_materials)
+        
+        elif application == 'catalyst':
+            # Transition metal compounds
+            elements = ['Pt', 'Pd', 'Ni', 'Co', 'Fe', 'Mo', 'W', 'Ru', 'Rh']
+            materials, props = self.load_training_data(
+                'formation_energy_per_atom',
+                n_materials=n_materials,
+                elements=elements
+            )
+            return [self._build_enriched_dict(
+                material=mat,
+                properties={'formation_energy': prop},
+                metadata={'application': 'catalyst'}
+            ) for mat, prop in zip(materials, props)]
+        
+        else:
+            print(f"Unknown application: {application}")
+            return []
+    
+    def get_phase_diagram(self, elements: List[str]) -> Optional[Any]:
+        """
+        Get phase diagram for element system using MPRester
+        
+        Args:
+            elements: List of elements (e.g., ['Li', 'Fe', 'P', 'O'])
+            
+        Returns:
+            PhaseDiagram object or None if unavailable
+        """
+        if not self.client:
+            return None
+        
+        if not PYMATGEN_AVAILABLE:
+            print("Pymatgen required for phase diagram generation")
+            return None
+        
+        print(f"\nRetrieving phase diagram for {'-'.join(elements)}...")
+        
+        try:
+            # Use MPRester get_entries_in_chemsys() for phase diagram
+            entries = self.client.get_entries_in_chemsys(elements)
+            
+            # Create phase diagram using pymatgen
+            from pymatgen.analysis.phase_diagram import PhaseDiagram
+            pd = PhaseDiagram(entries)
+            
+            print(f"Phase diagram created with {len(entries)} phases")
+            return pd
+            
+        except Exception as e:
+            print(f"Error creating phase diagram: {e}")
+            return None
     
     def load_solar_materials(
         self,
@@ -1390,9 +1504,6 @@ class MaterialsProjectLoader:
     ) -> List[Dict]:
         """
         Load materials suitable for solar absorber applications
-        
-        Optimal band gap for solar: ~1.1-1.7 eV (Shockley-Queisser limit)
-        Extended range: 1.0-2.5 eV for various applications
         
         Args:
             n_materials: Maximum number of materials
@@ -1413,34 +1524,31 @@ class MaterialsProjectLoader:
             include_structures=True
         )
         
-        # Enrich with solar-relevant properties
+        # Enrich with solar-relevant properties using consistent helper
         solar_materials = []
         for mat, bg in zip(materials, band_gaps):
-            solar_mat = {
-                **mat,
-                'band_gap': bg,
-                'solar_efficiency_estimate': self._estimate_solar_efficiency(bg),
-                'application_notes': self._get_solar_application_notes(bg)
-            }
+            solar_mat = self._build_enriched_dict(
+                material=mat,
+                properties={'band_gap': bg},
+                metadata={
+                    'solar_efficiency_estimate': self._estimate_solar_efficiency(bg),
+                    'application_notes': self._get_solar_application_notes(bg),
+                    'application': 'solar'
+                }
+            )
             solar_materials.append(solar_mat)
         
-        # Sort by estimated efficiency
         solar_materials.sort(key=lambda x: x['solar_efficiency_estimate'], reverse=True)
-        
         print(f"Loaded {len(solar_materials)} solar absorber candidates")
         return solar_materials
     
     def _estimate_solar_efficiency(self, band_gap: float) -> float:
         """Estimate theoretical solar efficiency from band gap using Shockley-Queisser limit"""
-        # Simplified SQ limit approximation
-        # Peak efficiency ~33% at 1.34 eV
         optimal_bg = 1.34
         if band_gap < 0.5 or band_gap > 3.5:
             return 0.0
-        
-        # Gaussian-like approximation around optimal
         efficiency = 0.33 * np.exp(-((band_gap - optimal_bg) ** 2) / 0.5)
-        return round(efficiency * 100, 1)  # Return as percentage
+        return round(efficiency * 100, 1)
     
     def _get_solar_application_notes(self, band_gap: float) -> str:
         """Get application notes based on band gap"""
@@ -1464,11 +1572,6 @@ class MaterialsProjectLoader:
         """
         Load materials suitable for thermoelectric applications
         
-        Good thermoelectrics typically have:
-        - Narrow band gaps (0.1-1.0 eV)
-        - Heavy elements (high atomic mass)
-        - Complex crystal structures
-        
         Args:
             n_materials: Maximum number of materials
             band_gap_range: (min, max) band gap in eV
@@ -1478,8 +1581,6 @@ class MaterialsProjectLoader:
             List of thermoelectric material candidates
         """
         criteria = {'band_gap': band_gap_range}
-        
-        # Heavy element set for thermoelectrics
         heavy_elements_list = ['Bi', 'Pb', 'Te', 'Sb', 'Sn', 'Se', 'Ag', 'Cu', 'Ge', 'In']
         
         materials, band_gaps = self.load_training_data(
@@ -1492,11 +1593,14 @@ class MaterialsProjectLoader:
         
         thermoelectric_materials = []
         for mat, bg in zip(materials, band_gaps):
-            te_mat = {
-                **mat,
-                'band_gap': bg,
-                'te_score': self._estimate_te_potential(mat, bg),
-            }
+            te_mat = self._build_enriched_dict(
+                material=mat,
+                properties={'band_gap': bg},
+                metadata={
+                    'te_score': self._estimate_te_potential(mat, bg),
+                    'application': 'thermoelectric'
+                }
+            )
             thermoelectric_materials.append(te_mat)
         
         # Sort by TE score
@@ -1505,7 +1609,7 @@ class MaterialsProjectLoader:
         print(f"Loaded {len(thermoelectric_materials)} thermoelectric candidates")
         return thermoelectric_materials
     
-    def _estimate_te_potential(self, material: Dict, band_gap: float) -> float:
+    def _estimate_te_potential(self, material, band_gap: float) -> float:
         """Estimate thermoelectric potential score"""
         score = 0.0
         
@@ -1517,9 +1621,10 @@ class MaterialsProjectLoader:
         
         # Heavy elements bonus
         heavy = ['Bi', 'Pb', 'Te', 'Sb', 'Sn', 'Se']
-        composition = material.get('composition', {})
+        # Handle both Material objects and dicts
+        formula = material.composition if hasattr(material, 'composition') else str(material.get('formula', ''))
         for elem in heavy:
-            if elem in str(material.get('formula', '')):
+            if elem in formula:
                 score += 10
         
         return min(score, 100)
@@ -1562,19 +1667,24 @@ class MaterialsProjectLoader:
         
         sc_candidates = []
         for mat in materials:
-            sc_mat = {
-                **mat,
-                'sc_type': self._classify_sc_type(mat),
-                'sc_potential_notes': self._get_sc_notes(mat)
-            }
+            sc_mat = self._build_enriched_dict(
+                material=mat,
+                properties={},
+                metadata={
+                    'sc_type': self._classify_sc_type(mat),
+                    'sc_potential_notes': self._get_sc_notes(mat),
+                    'application': 'superconductor'
+                }
+            )
             sc_candidates.append(sc_mat)
         
         print(f"Loaded {len(sc_candidates)} superconductor candidates")
         return sc_candidates
     
-    def _classify_sc_type(self, material: Dict) -> str:
+    def _classify_sc_type(self, material) -> str:
         """Classify superconductor type based on composition"""
-        formula = material.get('formula', '')
+        # Handle both Material objects and dicts
+        formula = material.composition if hasattr(material, 'composition') else str(material.get('formula', ''))
         if 'Cu' in formula and 'O' in formula:
             return 'cuprate'
         elif 'Fe' in formula and ('As' in formula or 'Se' in formula):
@@ -1586,7 +1696,7 @@ class MaterialsProjectLoader:
         else:
             return 'other'
     
-    def _get_sc_notes(self, material: Dict) -> str:
+    def _get_sc_notes(self, material) -> str:
         """Get superconductor notes"""
         sc_type = self._classify_sc_type(material)
         notes = {
@@ -1598,171 +1708,9 @@ class MaterialsProjectLoader:
         }
         return notes.get(sc_type, '')
     
-    def get_phase_diagram(
-        self,
-        elements: List[str],
-        include_unstable: bool = False
-    ) -> Dict[str, Any]:
-        """
-        Generate phase diagram for a given set of elements
-        
-        Args:
-            elements: List of elements (e.g., ['Li', 'Fe', 'P', 'O'])
-            include_unstable: Include unstable phases in the diagram
-            
-        Returns:
-            Phase diagram data including stable phases and hull energies
-        """
-        if not PYMATGEN_AVAILABLE:
-            return {
-                'error': 'Pymatgen required for phase diagram generation',
-                'elements': elements
-            }
-        
-        # Query all phases in the element system
-        elements_str = '-'.join(sorted(elements))
-        
-        params = {
-            'chemsys': elements_str,
-            'fields': 'material_id,formula_pretty,formation_energy_per_atom,energy_above_hull,composition,is_stable',
-            '_limit': 500
-        }
-        
-        response = self._query_api('materials/summary/', params)
-        data = response.get('data', [])
-        
-        # Build phase diagram data
-        phases = []
-        stable_phases = []
-        
-        for entry in data:
-            phase = {
-                'material_id': entry.get('material_id'),
-                'formula': entry.get('formula_pretty'),
-                'formation_energy': entry.get('formation_energy_per_atom'),
-                'energy_above_hull': entry.get('energy_above_hull'),
-                'is_stable': entry.get('is_stable', False)
-            }
-            
-            if include_unstable or phase['is_stable']:
-                phases.append(phase)
-            
-            if phase['is_stable']:
-                stable_phases.append(phase)
-        
-        phase_diagram = {
-            'elements': elements,
-            'chemsys': elements_str,
-            'total_phases': len(data),
-            'stable_phases': stable_phases,
-            'all_phases': phases if include_unstable else stable_phases,
-            'phase_count': len(phases),
-            'stable_count': len(stable_phases)
-        }
-        
-        print(f"Generated phase diagram for {elements_str}: {len(stable_phases)} stable phases")
-        return phase_diagram
-    
-    def bulk_query_properties(
-        self,
-        material_ids: List[str],
-        properties: List[str]
-    ) -> Dict[str, Dict]:
-        """
-        Efficiently query multiple properties for a list of material IDs
-        
-        Args:
-            material_ids: List of Materials Project material IDs (e.g., ['mp-1234', 'mp-5678'])
-            properties: List of properties to retrieve
-            
-        Returns:
-            Dictionary mapping material_id to property values
-        """
-        # Map property names
-        fields = ['material_id', 'formula_pretty']
-        for prop in properties:
-            api_prop = self.PROPERTY_MAPPINGS.get(prop, prop)
-            fields.append(api_prop)
-        
-        results = {}
-        
-        # Batch queries for efficiency
-        batch_size = 100
-        for i in range(0, len(material_ids), batch_size):
-            batch_ids = material_ids[i:i + batch_size]
-            
-            params = {
-                'material_ids': ','.join(batch_ids),
-                'fields': ','.join(fields)
-            }
-            
-            response = self._query_api('materials/summary/', params)
-            
-            for entry in response.get('data', []):
-                mat_id = entry.get('material_id')
-                results[mat_id] = {
-                    'formula': entry.get('formula_pretty'),
-                    'properties': {}
-                }
-                for prop in properties:
-                    api_prop = self.PROPERTY_MAPPINGS.get(prop, prop)
-                    results[mat_id]['properties'][prop] = entry.get(api_prop)
-        
-        print(f"Retrieved properties for {len(results)} materials")
-        return results
-    
-    def get_structure_by_id(self, material_id: str) -> Optional[Dict]:
-        """
-        Get crystal structure for a specific material ID
-        
-        Args:
-            material_id: Materials Project ID (e.g., 'mp-1234')
-            
-        Returns:
-            Structure data or None if not found
-        """
-        params = {
-            'material_ids': material_id,
-            'fields': 'material_id,formula_pretty,structure,symmetry'
-        }
-        
-        response = self._query_api('materials/summary/', params)
-        data = response.get('data', [])
-        
-        if data:
-            return data[0]
-        return None
-    
-    def search_by_formula(
-        self,
-        formula: str,
-        anonymous: bool = False
-    ) -> List[Dict]:
-        """
-        Search materials by formula
-        
-        Args:
-            formula: Chemical formula (e.g., 'LiFePO4', 'ABC2' for anonymous)
-            anonymous: Use anonymous formula matching
-            
-        Returns:
-            List of matching materials
-        """
-        params = {
-            'fields': 'material_id,formula_pretty,formation_energy_per_atom,band_gap,is_stable'
-        }
-        
-        if anonymous:
-            params['formula_anonymous'] = formula
-        else:
-            params['formula'] = formula
-        
-        response = self._query_api('materials/summary/', params)
-        return response.get('data', [])
-    
     def to_training_dataframe(
         self,
-        materials: List[Dict],
+        materials: List[Material],
         property_values: List[float],
         property_name: str
     ) -> pd.DataFrame:
@@ -1770,32 +1718,375 @@ class MaterialsProjectLoader:
         Convert loaded materials to a pandas DataFrame for ML training
         
         Args:
-            materials: List of material dictionaries
+            materials: List of Material objects
             property_values: List of target property values
             property_name: Name of the target property
             
         Returns:
-            DataFrame with material_id, formula, composition features, and target property
+            DataFrame with material_id, formula, and target property
         """
         rows = []
         for mat, value in zip(materials, property_values):
             row = {
-                'material_id': mat.get('material_id'),
-                'formula': mat.get('formula'),
+                'material_id': mat.material_id,
+                'formula': mat.composition,
                 property_name: value
             }
-            
-            # Extract composition as features
-            composition = mat.get('composition', {})
-            for elem, frac in composition.items():
-                row[f'elem_{elem}'] = frac
-            
             rows.append(row)
         
         df = pd.DataFrame(rows)
-        df = df.fillna(0)  # Fill missing element columns with 0
-        
         return df
+
+
+# ============================================================================
+# DFT CALCULATORS (VASP & Quantum ESPRESSO)
+# ============================================================================
+
+class VASPCalculator:
+    """
+    VASP (Vienna Ab initio Simulation Package) calculator
+    Industry standard for materials DFT calculations
+    
+    Requires:
+    - VASP executable (vasp_std, vasp_gam, vasp_ncl)
+    - POTCAR files in VASP_PP_PATH directory
+    """
+    
+    def __init__(self, 
+                 vasp_cmd: str = 'vasp_std',
+                 potcar_dir: Optional[str] = None,
+                 nprocs: int = 16):
+        """
+        Args:
+            vasp_cmd: VASP executable ('vasp_std', 'vasp_gam', 'vasp_ncl')
+            potcar_dir: Directory containing POTCAR files
+            nprocs: Number of MPI processes
+        """
+        import tempfile
+        self.vasp_cmd = vasp_cmd
+        self.potcar_dir = potcar_dir or os.environ.get('VASP_PP_PATH')
+        self.nprocs = nprocs
+        
+        if not self.potcar_dir:
+            print("Warning: VASP POTCAR directory not set")
+            print("Set VASP_PP_PATH environment variable")
+    
+    def setup_calculation(self, 
+                         material: Material,
+                         calc_type: str = 'relax') -> Dict:
+        """
+        Setup VASP calculation input parameters
+        
+        Args:
+            material: Material to calculate
+            calc_type: 'relax', 'static', 'band', 'dos'
+        
+        Returns:
+            VASP input configuration dictionary
+        """
+        if not material.structure or not PYMATGEN_AVAILABLE:
+            return {}
+        
+        structure = material.structure
+        
+        # INCAR settings based on calculation type
+        if calc_type == 'relax':
+            incar = {
+                'PREC': 'Accurate',
+                'ENCUT': 520,
+                'EDIFF': 1e-5,
+                'IBRION': 2,  # CG relaxation
+                'ISIF': 3,    # Relax cell + ions
+                'NSW': 200,   # Max ionic steps
+                'LWAVE': False,
+                'LCHARG': False
+            }
+        
+        elif calc_type == 'static':
+            incar = {
+                'PREC': 'Accurate',
+                'ENCUT': 520,
+                'EDIFF': 1e-6,
+                'ISMEAR': -5,  # Tetrahedron method
+                'LORBIT': 11,  # DOSCAR with local DOS
+                'LWAVE': True,
+                'LCHARG': True
+            }
+        
+        elif calc_type == 'band':
+            incar = {
+                'PREC': 'Accurate',
+                'ENCUT': 520,
+                'EDIFF': 1e-6,
+                'ISMEAR': 0,
+                'SIGMA': 0.05,
+                'ICHARG': 11,  # Read from CHGCAR
+                'LWAVE': False,
+                'LCHARG': False
+            }
+        
+        elif calc_type == 'dos':
+            incar = {
+                'PREC': 'Accurate',
+                'ENCUT': 520,
+                'EDIFF': 1e-6,
+                'ISMEAR': -5,
+                'NEDOS': 2001,
+                'LORBIT': 11
+            }
+        else:
+            incar = {'PREC': 'Accurate', 'ENCUT': 520}
+        
+        return {
+            'structure': structure,
+            'incar': incar,
+            'calc_type': calc_type
+        }
+    
+    def run_calculation(self, 
+                       material: Material,
+                       calc_type: str = 'relax',
+                       workdir: Optional[str] = None) -> Dict:
+        """
+        Run VASP calculation
+        
+        Args:
+            material: Material to calculate
+            calc_type: Calculation type
+            workdir: Working directory (creates temp if None)
+        
+        Returns:
+            Results dictionary with energy, forces, band gap
+        """
+        import tempfile
+        
+        if not ASE_AVAILABLE:
+            return {'error': 'ASE not available'}
+        
+        # Create working directory
+        if workdir is None:
+            workdir = tempfile.mkdtemp(prefix='vasp_')
+        os.makedirs(workdir, exist_ok=True)
+        
+        print(f"\n[VASP] Running {calc_type} calculation for {material.composition}")
+        print(f"  Working directory: {workdir}")
+        
+        # Setup calculation
+        config = self.setup_calculation(material, calc_type)
+        if not config:
+            return {'error': 'Failed to setup calculation'}
+        
+        # Convert Pymatgen Structure to ASE Atoms
+        structure = config['structure']
+        atoms = self._structure_to_atoms(structure)
+        
+        try:
+            from ase.calculators.vasp import Vasp
+            from ase.optimize import LBFGS
+            
+            # Setup VASP calculator
+            calc = Vasp(
+                directory=workdir,
+                command=f'mpirun -np {self.nprocs} {self.vasp_cmd}',
+                **config['incar']
+            )
+            
+            atoms.calc = calc
+            
+            # Run calculation
+            if calc_type == 'relax':
+                opt = LBFGS(atoms, trajectory=f'{workdir}/relax.traj')
+                opt.run(fmax=0.01)
+            
+            # Get results
+            energy = atoms.get_potential_energy()
+            forces = atoms.get_forces()
+            
+            results = {
+                'status': 'completed',
+                'energy': energy,
+                'energy_per_atom': energy / len(atoms),
+                'forces': forces.tolist(),
+                'final_structure': atoms,
+                'workdir': workdir
+            }
+            
+            # Get band gap if available
+            if calc_type in ['static', 'band', 'dos']:
+                results['band_gap'] = self._extract_band_gap(workdir)
+            
+            print(f"  VASP calculation completed")
+            print(f"  Energy: {energy:.4f} eV")
+            
+            return results
+            
+        except Exception as e:
+            print(f"Error running VASP: {e}")
+            return {'error': str(e), 'workdir': workdir}
+    
+    def _structure_to_atoms(self, structure) -> Any:
+        """Convert Pymatgen Structure to ASE Atoms"""
+        from ase import Atoms
+        atoms = Atoms(
+            symbols=[str(site.specie) for site in structure],
+            positions=structure.cart_coords,
+            cell=structure.lattice.matrix,
+            pbc=True
+        )
+        return atoms
+    
+    def _extract_band_gap(self, workdir: str) -> Optional[float]:
+        """Extract band gap from VASP output"""
+        try:
+            from pymatgen.io.vasp.outputs import Vasprun
+            vasprun = Vasprun(f"{workdir}/vasprun.xml")
+            band_gap = vasprun.get_band_structure().get_band_gap()['energy']
+            return band_gap
+        except:
+            return None
+
+
+class QuantumESPRESSOCalculator:
+    """
+    Quantum ESPRESSO calculator
+    Open-source DFT code, alternative to VASP
+    
+    Requires:
+    - pw.x executable (Quantum ESPRESSO)
+    - Pseudopotentials in ESPRESSO_PSEUDO directory
+    """
+    
+    def __init__(self, 
+                 pw_cmd: str = 'pw.x',
+                 pseudo_dir: Optional[str] = None,
+                 nprocs: int = 16):
+        """
+        Args:
+            pw_cmd: Quantum ESPRESSO pw.x executable
+            pseudo_dir: Directory containing pseudopotentials
+            nprocs: Number of MPI processes
+        """
+        self.pw_cmd = pw_cmd
+        self.pseudo_dir = pseudo_dir or os.environ.get('ESPRESSO_PSEUDO')
+        self.nprocs = nprocs
+        
+        if not self.pseudo_dir:
+            print("Warning: Quantum ESPRESSO pseudopotential directory not set")
+            print("Set ESPRESSO_PSEUDO environment variable")
+    
+    def run_calculation(self,
+                       material: Material,
+                       calc_type: str = 'scf',
+                       workdir: Optional[str] = None) -> Dict:
+        """
+        Run Quantum ESPRESSO calculation
+        
+        Args:
+            material: Material to calculate
+            calc_type: 'scf', 'relax', 'vc-relax', 'bands', 'nscf'
+        
+        Returns:
+            Results dictionary
+        """
+        import tempfile
+        
+        if not ASE_AVAILABLE:
+            return {'error': 'ASE not available'}
+        
+        if workdir is None:
+            workdir = tempfile.mkdtemp(prefix='qe_')
+        os.makedirs(workdir, exist_ok=True)
+        
+        print(f"\n[QE] Running {calc_type} calculation for {material.composition}")
+        
+        # Convert structure
+        if not material.structure:
+            return {'error': 'No structure available'}
+        
+        structure = material.structure
+        atoms = self._structure_to_atoms(structure)
+        
+        # Setup calculator
+        input_data = {
+            'control': {
+                'calculation': calc_type,
+                'pseudo_dir': self.pseudo_dir,
+                'outdir': workdir,
+                'prefix': material.material_id or 'pwscf'
+            },
+            'system': {
+                'ecutwfc': 60,  # Ry
+                'ecutrho': 480,
+                'occupations': 'smearing',
+                'smearing': 'gaussian',
+                'degauss': 0.02
+            },
+            'electrons': {
+                'conv_thr': 1e-8,
+                'mixing_beta': 0.7
+            }
+        }
+        
+        if calc_type in ['relax', 'vc-relax']:
+            input_data['ions'] = {
+                'ion_dynamics': 'bfgs'
+            }
+        
+        if calc_type == 'vc-relax':
+            input_data['cell'] = {
+                'cell_dynamics': 'bfgs'
+            }
+        
+        try:
+            from ase.calculators.espresso import Espresso
+            
+            calc = Espresso(
+                command=f'mpirun -np {self.nprocs} {self.pw_cmd} -in PREFIX.pwi > PREFIX.pwo',
+                input_data=input_data,
+                pseudopotentials=self._get_pseudopotentials(atoms),
+                kpts=(4, 4, 4)
+            )
+            
+            atoms.calc = calc
+            
+            energy = atoms.get_potential_energy()
+            forces = atoms.get_forces()
+            
+            results = {
+                'status': 'completed',
+                'energy': energy,
+                'forces': forces.tolist(),
+                'final_structure': atoms,
+                'workdir': workdir
+            }
+            
+            print(f"  QE calculation completed")
+            print(f"  Energy: {energy:.4f} eV")
+            
+            return results
+            
+        except Exception as e:
+            print(f"Error running Quantum ESPRESSO: {e}")
+            return {'error': str(e)}
+    
+    def _structure_to_atoms(self, structure) -> Any:
+        """Convert Pymatgen Structure to ASE Atoms"""
+        from ase import Atoms
+        atoms = Atoms(
+            symbols=[str(site.specie) for site in structure],
+            positions=structure.cart_coords,
+            cell=structure.lattice.matrix,
+            pbc=True
+        )
+        return atoms
+    
+    def _get_pseudopotentials(self, atoms) -> Dict:
+        """Get pseudopotential files for each element"""
+        # Simplified - in production, map elements to specific PP files
+        pseudos = {}
+        for symbol in set(atoms.get_chemical_symbols()):
+            pseudos[symbol] = f"{symbol}.UPF"
+        return pseudos
 
 
 # ============================================================================
@@ -2889,6 +3180,364 @@ class StructuralMaterialsDesigner(MaterialsDiscoveryPipeline):
             n_candidates=3000,
             screen_top_n=50
         )
+
+
+# ============================================================================
+# SPECIALIZED DISCOVERY WORKFLOWS
+# ============================================================================
+
+class SuperconductorDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discover novel superconducting materials
+    Focus on high-Tc superconductors using Materials Project data and DFT validation
+    """
+    
+    def __init__(self, use_gpu: bool = True, n_workers: int = None, mp_api_key: str = None):
+        super().__init__(use_gpu, n_workers)
+        self.mp_loader = MaterialsProjectLoader(mp_api_key)
+        self.vasp_calc = VASPCalculator()
+    
+    def discover_high_tc_materials(self, 
+                                  target_tc: float = 77,  # Liquid N2 temperature
+                                  n_candidates: int = 5000) -> pd.DataFrame:
+        """
+        Discover high-Tc superconductor candidates
+        
+        Strategy:
+        1. Generate compositions with known SC elements
+        2. Predict electronic structure (metallic, small gap)
+        3. Check for favorable phonon properties
+        4. DFT validation of top candidates
+        
+        Args:
+            target_tc: Target critical temperature in K
+            n_candidates: Number of candidates to generate
+            
+        Returns:
+            DataFrame of superconductor candidates ranked by promise
+        """
+        print("\n" + "="*70)
+        print("SUPERCONDUCTOR DISCOVERY WORKFLOW")
+        print("="*70)
+        print(f"Target Tc: {target_tc} K (liquid nitrogen temperature)")
+        
+        # Step 1: Generate candidates with SC-favorable elements
+        print("\n[1/5] Generating candidates...")
+        sc_elements = [
+            # Cuprates
+            'Y', 'La', 'Ba', 'Sr', 'Ca', 'Cu', 'O',
+            # Iron-based
+            'Fe', 'As', 'Se', 'Te', 'P',
+            # MgB2-type
+            'Mg', 'B', 'Al', 'C',
+            # A15/Chevrel
+            'Nb', 'V', 'Ti', 'Mo', 'Pb', 'S'
+        ]
+        
+        compositions = self.generator.generate_compositions(
+            target_properties={'band_gap': 0.0},  # Metallic
+            n_candidates=n_candidates,
+            elements=sc_elements
+        )
+        
+        materials = [Material(composition=comp, material_id=f"SC_{i:06d}",
+                            tags=['superconductor_candidate'])
+                    for i, comp in enumerate(compositions)]
+        
+        # Step 2: Load training data from Materials Project
+        print("\n[2/5] Loading SC training data from Materials Project...")
+        training_materials = self.mp_loader.load_by_application('superconductor', n_materials=2000)
+        
+        # Step 3: Predict electronic properties
+        print("\n[3/5] Predicting electronic properties...")
+        predictions = self.property_predictor.batch_predict(materials)
+        
+        # Step 4: Filter for metallic or small-gap semiconductors
+        print("\n[4/5] Filtering for SC-favorable properties...")
+        candidates = []
+        for mat, pred in zip(materials, predictions):
+            # Criteria for SC screening
+            if pred.band_gap is not None and pred.band_gap < 0.1:  # Metallic or very small gap
+                if pred.formation_energy is not None and pred.formation_energy < 0:  # Stable
+                    candidates.append((mat, pred))
+        
+        print(f"  Filtered to {len(candidates)} promising candidates")
+        
+        # Step 5: DFT validation of top 20
+        print("\n[5/5] DFT validation of top candidates...")
+        top_candidates = candidates[:20]
+        
+        dft_results = []
+        for mat, pred in top_candidates:
+            result = self.vasp_calc.run_calculation(mat, calc_type='static')
+            if result.get('status') == 'completed':
+                dft_results.append({
+                    'material_id': mat.material_id,
+                    'composition': mat.composition,
+                    'predicted_band_gap': pred.band_gap,
+                    'dft_energy': result.get('energy_per_atom'),
+                    'dft_band_gap': result.get('band_gap'),
+                    'sc_score': self._calculate_sc_score(mat, pred, result)
+                })
+        
+        df = pd.DataFrame(dft_results) if dft_results else pd.DataFrame()
+        if not df.empty:
+            df = df.sort_values('sc_score', ascending=False)
+        
+        print(f"\n  Superconductor discovery complete!")
+        if not df.empty:
+            print(f"  Top candidates:")
+            print(df.head(10))
+        
+        return df
+    
+    def _calculate_sc_score(self, material, prediction, dft_result) -> float:
+        """Calculate superconductor promise score"""
+        score = 0.5
+        
+        # Metallic behavior
+        if dft_result.get('dft_band_gap') is not None:
+            if dft_result['dft_band_gap'] < 0.05:
+                score += 0.3
+        
+        # Stability
+        if dft_result.get('dft_energy') is not None:
+            if dft_result['dft_energy'] < -2.0:
+                score += 0.2
+        
+        return score
+
+
+class CatalystDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discover novel catalytic materials
+    Focus on hydrogen evolution, oxygen reduction, CO2 reduction
+    """
+    
+    def __init__(self, use_gpu: bool = True, n_workers: int = None, mp_api_key: str = None):
+        super().__init__(use_gpu, n_workers)
+        self.mp_loader = MaterialsProjectLoader(mp_api_key)
+    
+    def discover_her_catalysts(self, n_candidates: int = 5000) -> pd.DataFrame:
+        """
+        Discover Hydrogen Evolution Reaction (HER) catalysts
+        
+        Target: Materials with d-band center near Fermi level
+        
+        Args:
+            n_candidates: Number of candidates to generate
+            
+        Returns:
+            DataFrame of HER catalyst candidates
+        """
+        print("\n" + "="*70)
+        print("HER CATALYST DISCOVERY")
+        print("="*70)
+        
+        # Transition metals and combinations
+        her_elements = ['Pt', 'Pd', 'Ni', 'Co', 'Fe', 'Mo', 'W', 'S', 'Se', 'N', 'C']
+        
+        compositions = self.generator.generate_compositions(
+            target_properties={'work_function': 5.0},  # Optimal for HER
+            n_candidates=n_candidates,
+            elements=her_elements
+        )
+        
+        materials = [Material(composition=comp, material_id=f"HER_{i:06d}",
+                            tags=['HER_catalyst'])
+                    for i, comp in enumerate(compositions)]
+        
+        # Predict properties
+        predictions = self.property_predictor.batch_predict(materials)
+        
+        # Rank by HER activity descriptors
+        results = []
+        for mat, pred in zip(materials, predictions):
+            her_score = self._calculate_her_score(pred)
+            results.append({
+                'material_id': mat.material_id,
+                'composition': mat.composition,
+                'work_function': pred.work_function,
+                'her_score': her_score
+            })
+        
+        df = pd.DataFrame(results)
+        df = df.sort_values('her_score', ascending=False)
+        
+        print(f"\n  HER catalyst discovery complete")
+        print(df.head(10))
+        
+        return df
+    
+    def discover_orr_catalysts(self, n_candidates: int = 5000) -> pd.DataFrame:
+        """
+        Discover Oxygen Reduction Reaction (ORR) catalysts
+        For fuel cells and metal-air batteries
+        
+        Args:
+            n_candidates: Number of candidates to generate
+            
+        Returns:
+            DataFrame of ORR catalyst candidates
+        """
+        print("\n" + "="*70)
+        print("ORR CATALYST DISCOVERY")
+        print("="*70)
+        
+        orr_elements = ['Pt', 'Pd', 'Fe', 'Co', 'Ni', 'Mn', 'N', 'C', 'O']
+        
+        compositions = self.generator.generate_compositions(
+            target_properties={},
+            n_candidates=n_candidates,
+            elements=orr_elements
+        )
+        
+        materials = [Material(composition=comp, material_id=f"ORR_{i:06d}",
+                            tags=['ORR_catalyst'])
+                    for i, comp in enumerate(compositions)]
+        
+        predictions = self.property_predictor.batch_predict(materials)
+        
+        results = []
+        for mat, pred in zip(materials, predictions):
+            orr_score = self._calculate_orr_score(pred)
+            results.append({
+                'material_id': mat.material_id,
+                'composition': mat.composition,
+                'orr_score': orr_score
+            })
+        
+        df = pd.DataFrame(results)
+        df = df.sort_values('orr_score', ascending=False)
+        
+        print(f"\n  ORR catalyst discovery complete")
+        return df
+    
+    def _calculate_her_score(self, prediction) -> float:
+        """Calculate HER activity score"""
+        score = 0.5
+        if prediction.work_function:
+            # Optimal work function ~4.5-5.5 eV
+            if 4.5 <= prediction.work_function <= 5.5:
+                score += 0.4
+        return score
+    
+    def _calculate_orr_score(self, prediction) -> float:
+        """Calculate ORR activity score"""
+        # Placeholder - in production, use d-band center and oxygen binding energy
+        return 0.7
+
+
+class ThermoelectricDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discover novel thermoelectric materials
+    High ZT = (S²σT)/κ where S=Seebeck, σ=conductivity, κ=thermal conductivity
+    """
+    
+    def __init__(self, use_gpu: bool = True, n_workers: int = None, mp_api_key: str = None):
+        super().__init__(use_gpu, n_workers)
+        self.mp_loader = MaterialsProjectLoader(mp_api_key)
+    
+    def discover_high_zt_materials(self, 
+                                  target_zt: float = 2.0,
+                                  temperature: float = 300,
+                                  n_candidates: int = 5000) -> pd.DataFrame:
+        """
+        Discover high-ZT thermoelectric materials
+        
+        Strategy:
+        1. Band gap 0.1-0.6 eV (optimal for thermoelectrics)
+        2. Heavy elements (low thermal conductivity)
+        3. Complex crystal structure (phonon scattering)
+        
+        Args:
+            target_zt: Target ZT value (ZT > 1 is good, > 2 is excellent)
+            temperature: Operating temperature in K
+            n_candidates: Number of candidates to generate
+            
+        Returns:
+            DataFrame of thermoelectric candidates
+        """
+        print("\n" + "="*70)
+        print("THERMOELECTRIC DISCOVERY")
+        print("="*70)
+        print(f"Target ZT > {target_zt} at {temperature}K")
+        
+        # Heavy elements favorable for thermoelectrics
+        te_elements = ['Bi', 'Sb', 'Te', 'Se', 'Pb', 'Sn', 'Ge', 'Ag', 'Cu', 'In', 'Ga']
+        
+        # Step 1: Generate candidates
+        print("\n[1/4] Generating candidates with favorable elements...")
+        compositions = self.generator.generate_compositions(
+            target_properties={'band_gap': 0.25},  # Narrow gap target
+            n_candidates=n_candidates,
+            elements=te_elements
+        )
+        
+        materials = [Material(composition=comp, material_id=f"TE_{i:06d}",
+                            tags=['thermoelectric_candidate'])
+                    for i, comp in enumerate(compositions)]
+        
+        # Step 2: Load training data
+        print("\n[2/4] Loading thermoelectric training data...")
+        training_materials = self.mp_loader.load_thermoelectric_materials(n_materials=1000)
+        
+        # Step 3: Predict properties
+        print("\n[3/4] Predicting properties...")
+        predictions = self.property_predictor.batch_predict(materials)
+        
+        # Step 4: Score and rank
+        print("\n[4/4] Scoring and ranking candidates...")
+        results = []
+        for mat, pred in zip(materials, predictions):
+            zt_score = self._calculate_zt_score(pred, temperature)
+            results.append({
+                'material_id': mat.material_id,
+                'composition': mat.composition,
+                'band_gap': pred.band_gap,
+                'estimated_zt': zt_score,
+                'application': self._get_te_application(temperature)
+            })
+        
+        df = pd.DataFrame(results)
+        df = df.sort_values('estimated_zt', ascending=False)
+        
+        # Filter to high-ZT candidates
+        high_zt = df[df['estimated_zt'] > target_zt * 0.5]  # 50% of target as threshold
+        
+        print(f"\n  Thermoelectric discovery complete!")
+        print(f"  Candidates with estimated ZT > {target_zt * 0.5:.1f}: {len(high_zt)}")
+        print(df.head(10))
+        
+        return df
+    
+    def _calculate_zt_score(self, prediction, temperature: float) -> float:
+        """Estimate ZT score from predicted properties"""
+        zt = 0.5  # Base estimate
+        
+        # Optimal band gap for thermoelectrics (0.1-0.5 eV)
+        if prediction.band_gap is not None:
+            if 0.1 <= prediction.band_gap <= 0.5:
+                zt += 1.0
+            elif 0.05 <= prediction.band_gap <= 0.8:
+                zt += 0.5
+        
+        # Temperature factor (higher T generally means higher ZT)
+        if temperature > 300:
+            zt *= (temperature / 300) ** 0.3
+        
+        return min(zt, 3.0)  # Cap at realistic maximum
+    
+    def _get_te_application(self, temperature: float) -> str:
+        """Get thermoelectric application based on temperature range"""
+        if temperature < 400:
+            return "Near-room-temperature waste heat recovery"
+        elif temperature < 700:
+            return "Medium-temperature industrial applications"
+        elif temperature < 1000:
+            return "High-temperature power generation"
+        else:
+            return "Extreme-temperature specialized applications"
 
 
 # ============================================================================

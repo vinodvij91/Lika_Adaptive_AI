@@ -98,6 +98,25 @@ The platform includes a comprehensive Materials Science pipeline (`compute/mater
 - `PhotovoltaicMaterialsDesigner` - Solar absorber discovery (band gap optimization)
 - `StructuralMaterialsDesigner` - High-strength alloy discovery (modulus, density)
 
+**Specialized Discovery Workflows:**
+- `SuperconductorDiscovery` - High-Tc superconductor discovery with DFT validation (cuprates, iron-based, hydrides)
+- `CatalystDiscovery` - HER and ORR catalyst discovery for fuel cells and electrolyzers
+- `ThermoelectricDiscovery` - High-ZT thermoelectric materials discovery
+
+**DFT Calculators:**
+- `VASPCalculator` - VASP integration for DFT calculations (relax, static, band, dos)
+- `QuantumESPRESSOCalculator` - Quantum ESPRESSO integration for open-source DFT
+
+**Materials Project API (Official mp-api Package):**
+The pipeline now uses the official `mp-api` package with `MPRester` client for robust API access:
+```python
+from mp_api.client import MPRester
+mpr = MPRester(api_key)
+docs = mpr.summary.search(elements=['Li', 'Fe'], band_gap=(1.0, 2.0))
+battery_data = mpr.insertion_electrodes.search(working_ion='Li')
+phase_diagram = mpr.get_entries_in_chemsys(['Li', 'Fe', 'O'])
+```
+
 **CLI Interface:**
 ```bash
 python3 materials_science_pipeline.py --job-type <step_name> --params '{"materials": [...], "target_properties": {...}}'
@@ -153,12 +172,15 @@ python3 materials_science_pipeline.py --job-type <step_name> --params '{"materia
 
 **Required Environment Variables:**
 - `MP_API_KEY` - Materials Project API key (get from https://materialsproject.org/api)
+- `VASP_PP_PATH` - Directory containing VASP POTCAR files (for DFT calculations)
+- `ESPRESSO_PSEUDO` - Directory containing Quantum ESPRESSO pseudopotentials
 
 **Required Python Packages (on compute nodes):**
 - `pymatgen` - Crystal structure analysis
+- `mp-api` - Official Materials Project API client
 - `torch` + `torch-geometric` - GNN and neural networks
 - `dscribe` - SOAP descriptors
-- `ase` - Atomistic simulations
+- `ase` - Atomistic simulations (with VASP and Espresso calculators)
 - `dask` + `distributed` - Parallel computing
 - `qiskit` (optional) - Quantum simulations
 
