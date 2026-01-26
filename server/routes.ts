@@ -5369,6 +5369,11 @@ print(json.dumps({
         admetScore: z.number().optional(),
       }).optional(),
     }).optional(),
+    pageContext: z.object({
+      path: z.string(),
+      domain: z.enum(["drug_discovery", "materials_science", "both"]).optional(),
+      additionalData: z.record(z.unknown()).optional(),
+    }).optional(),
   });
 
   app.post("/api/agent/chat", requireAuth, async (req, res) => {
@@ -5378,7 +5383,7 @@ print(json.dumps({
         return res.status(400).json({ error: "Invalid request", details: parseResult.error.flatten() });
       }
       
-      const { messages, moleculeContext } = parseResult.data;
+      const { messages, moleculeContext, pageContext } = parseResult.data;
 
       const { chatWithLikaAgent, isAgentConfigured } = await import("./services/lika-agent");
       
@@ -5389,7 +5394,7 @@ print(json.dumps({
         });
       }
 
-      const response = await chatWithLikaAgent(messages, moleculeContext);
+      const response = await chatWithLikaAgent(messages, moleculeContext, pageContext);
       res.json(response);
     } catch (error: any) {
       console.error("Lika Agent chat error:", error);

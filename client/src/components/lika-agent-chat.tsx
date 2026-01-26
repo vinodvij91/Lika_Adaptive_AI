@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +19,8 @@ import {
   Check,
   Lightbulb,
   FlaskConical,
-  Beaker
+  Beaker,
+  Atom
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import ReactMarkdown from "react-markdown";
@@ -47,10 +49,22 @@ interface LikaAgentChatProps {
   className?: string;
 }
 
-const QUICK_PROMPTS = [
+const DRUG_DISCOVERY_PROMPTS = [
   { label: "Analyze SMILES", prompt: "Analyze the current molecule's drug-likeness and suggest optimizations", icon: FlaskConical },
   { label: "ADMET Profile", prompt: "What ADMET concerns should I investigate for this compound?", icon: Beaker },
   { label: "Next Steps", prompt: "What are the recommended next steps in the drug discovery workflow?", icon: Lightbulb },
+];
+
+const MATERIALS_SCIENCE_PROMPTS = [
+  { label: "Property Prediction", prompt: "What properties can I predict for materials on this page?", icon: Atom },
+  { label: "Discovery Workflows", prompt: "What materials discovery workflows are available and how do I use them?", icon: FlaskConical },
+  { label: "Next Steps", prompt: "What are the recommended next steps for materials discovery?", icon: Lightbulb },
+];
+
+const GENERAL_PROMPTS = [
+  { label: "Page Help", prompt: "What can I do on this page and how do I use its features?", icon: Lightbulb },
+  { label: "Workflows", prompt: "What workflows are available in the LIKA platform?", icon: FlaskConical },
+  { label: "Get Started", prompt: "How do I get started with this platform?", icon: Beaker },
 ];
 
 export function LikaAgentChat({ moleculeContext, onClose, className }: LikaAgentChatProps) {
@@ -59,6 +73,15 @@ export function LikaAgentChat({ moleculeContext, onClose, className }: LikaAgent
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [location] = useLocation();
+
+  // Determine domain based on current page
+  const isMaterialsPage = location.includes("materials") || location.includes("property-") || location.includes("structure-") || location.includes("manufacturability") || location.includes("quantum");
+  const isDrugPage = location.includes("drug") || location.includes("molecule") || location.includes("docking") || location.includes("admet") || location.includes("assay") || location.includes("campaign") || location.includes("target") || location.includes("hit-");
+  const currentDomain = isMaterialsPage ? "materials_science" : isDrugPage ? "drug_discovery" : "both";
+  
+  // Select appropriate quick prompts based on domain
+  const QUICK_PROMPTS = isMaterialsPage ? MATERIALS_SCIENCE_PROMPTS : isDrugPage ? DRUG_DISCOVERY_PROMPTS : GENERAL_PROMPTS;
 
   const { data: agentStatus } = useQuery<{ configured: boolean; status: string; message: string }>({
     queryKey: ["/api/agent/status"],
@@ -78,6 +101,10 @@ export function LikaAgentChat({ moleculeContext, onClose, className }: LikaAgent
       const response = await apiRequest("POST", "/api/agent/chat", {
         messages: newMessages,
         moleculeContext,
+        pageContext: {
+          path: location,
+          domain: currentDomain,
+        },
       });
       return response.json();
     },
@@ -186,9 +213,15 @@ export function LikaAgentChat({ moleculeContext, onClose, className }: LikaAgent
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center border border-violet-500/30 mb-4">
               <Sparkles className="h-8 w-8 text-violet-400" />
             </div>
-            <h3 className="font-medium mb-2">Drug Discovery Assistant</h3>
+            <h3 className="font-medium mb-2">
+              {isMaterialsPage ? "Materials Science Assistant" : isDrugPage ? "Drug Discovery Assistant" : "LIKA Sciences Assistant"}
+            </h3>
             <p className="text-sm text-muted-foreground text-center mb-6 max-w-sm">
-              Ask me about molecules, SMILES analysis, SAR interpretation, ADMET profiling, or workflow recommendations.
+              {isMaterialsPage 
+                ? "Ask me about materials discovery, property prediction, synthesis planning, or available workflows for batteries, solar, catalysts, and more."
+                : isDrugPage
+                ? "Ask me about molecules, SMILES analysis, SAR interpretation, ADMET profiling, or workflow recommendations."
+                : "Ask me about drug discovery, materials science, page features, or how to use the platform."}
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
               {QUICK_PROMPTS.map((prompt, i) => {

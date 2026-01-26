@@ -4,10 +4,312 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const LIKA_AGENT_SYSTEM_PROMPT = `You are Lika Agent, an agentic AI orchestrator for a drug discovery platform.
+// Comprehensive page knowledge for LIKA Agent
+const PAGE_KNOWLEDGE: Record<string, { title: string; domain: string; description: string; capabilities: string[]; quickActions: string[] }> = {
+  // Drug Discovery Pages
+  "/dashboard-drug": {
+    title: "Drug Discovery Dashboard",
+    domain: "drug_discovery",
+    description: "Central command for drug discovery projects showing active campaigns, molecule counts, hit rates, and key metrics.",
+    capabilities: [
+      "View active research campaigns and their status",
+      "Monitor molecule screening progress",
+      "Track hit rates and scoring metrics",
+      "Access quick links to key workflows"
+    ],
+    quickActions: ["Launch new campaign", "View top hits", "Check ADMET profiles"]
+  },
+  "/campaigns": {
+    title: "Research Campaigns",
+    domain: "drug_discovery",
+    description: "Manage drug discovery campaigns for targets like EGFR, BRAF, kinases. Each campaign contains molecules, assays, and scoring data.",
+    capabilities: [
+      "Create new screening campaigns",
+      "Track campaign progress and milestones",
+      "View molecule registrations per campaign",
+      "Compare campaign performance metrics"
+    ],
+    quickActions: ["Create campaign", "Import molecules", "Run scoring pipeline"]
+  },
+  "/targets": {
+    title: "Target Management",
+    domain: "drug_discovery",
+    description: "Manage drug targets (proteins, receptors, enzymes). Define binding sites, PDB structures, and target validation data.",
+    capabilities: [
+      "Register new drug targets",
+      "Upload PDB structures for docking",
+      "Define binding site coordinates",
+      "Link targets to disease indications"
+    ],
+    quickActions: ["Add target", "Upload PDB", "Configure docking box"]
+  },
+  "/molecules": {
+    title: "Molecule Registry",
+    domain: "drug_discovery",
+    description: "Central registry for all small molecules with SMILES, properties, and activity data.",
+    capabilities: [
+      "Browse and search molecules by structure/properties",
+      "View calculated properties (MW, LogP, TPSA, HBD/HBA)",
+      "Check oracle scores and docking results",
+      "Identify structural alerts and liabilities"
+    ],
+    quickActions: ["Search by SMILES", "Filter by properties", "Export hits"]
+  },
+  "/libraries": {
+    title: "Compound Libraries",
+    domain: "drug_discovery",
+    description: "Curated compound libraries for screening: FDA-approved drugs, natural products, kinase inhibitors, fragment libraries.",
+    capabilities: [
+      "Access pre-built screening libraries",
+      "Create custom compound collections",
+      "Compare library diversity",
+      "Export for virtual screening"
+    ],
+    quickActions: ["Browse libraries", "Create collection", "Start screen"]
+  },
+  "/docking": {
+    title: "Molecular Docking",
+    domain: "drug_discovery",
+    description: "AutoDock Vina integration for structure-based virtual screening. Configure docking boxes, run GPU-accelerated docking.",
+    capabilities: [
+      "Configure docking parameters (exhaustiveness, box size)",
+      "Run batch docking on molecule sets",
+      "Visualize docking poses",
+      "Analyze binding interactions"
+    ],
+    quickActions: ["Set up docking job", "View best poses", "Analyze contacts"]
+  },
+  "/admet": {
+    title: "ADMET Profiling",
+    domain: "drug_discovery",
+    description: "Predict absorption, distribution, metabolism, excretion, and toxicity properties for drug candidates.",
+    capabilities: [
+      "Run ADMET predictions on molecules",
+      "Identify metabolic liabilities",
+      "Check hERG and CYP inhibition risk",
+      "Assess oral bioavailability potential"
+    ],
+    quickActions: ["Run ADMET", "Check hERG risk", "View metabolism"]
+  },
+  "/hit-triage": {
+    title: "Hit Triage",
+    domain: "drug_discovery",
+    description: "Evaluate and prioritize screening hits using multi-parameter optimization and medicinal chemistry filters.",
+    capabilities: [
+      "Apply Lipinski/Veber/CNS filters",
+      "Score compounds by weighted criteria",
+      "Identify PAINS and false positives",
+      "Generate triaged hit lists"
+    ],
+    quickActions: ["Apply filters", "Rank hits", "Export shortlist"]
+  },
+  "/assays": {
+    title: "Assay Management",
+    domain: "drug_discovery",
+    description: "Track biochemical and cellular assays. Record IC50, EC50, Ki values and assay conditions.",
+    capabilities: [
+      "Define assay protocols and conditions",
+      "Import assay results (IC50, EC50, Ki)",
+      "Perform SAR analysis across assays",
+      "Generate dose-response curves"
+    ],
+    quickActions: ["Add assay", "Import results", "Analyze SAR"]
+  },
+  "/import-hub": {
+    title: "Import Hub",
+    domain: "both",
+    description: "Batch import molecules (SMILES, SDF) or materials with automatic validation and duplicate detection.",
+    capabilities: [
+      "Import SMILES files with validation",
+      "Upload SDF/MOL files",
+      "Detect and handle duplicates",
+      "Map custom property columns"
+    ],
+    quickActions: ["Upload file", "Validate SMILES", "Check duplicates"]
+  },
+  "/pipeline": {
+    title: "Pipeline Launcher",
+    domain: "both",
+    description: "Launch high-throughput compute pipelines for both drug discovery (docking, ML) and materials science (property prediction, synthesis planning).",
+    capabilities: [
+      "Configure and launch Drug Discovery pipelines (docking, fingerprints, ML, ADMET)",
+      "Configure and launch Materials Science pipelines (battery, solar, superconductor, catalyst, thermoelectric, PFAS replacement, aerospace, biomedical, semiconductor, construction, transparent conductor, magnets, electrolytes, water purification, carbon capture)",
+      "Monitor job queue and progress",
+      "View compute node allocation"
+    ],
+    quickActions: ["Launch pipeline", "View queue", "Check nodes"]
+  },
+  // Materials Science Pages
+  "/dashboard-materials": {
+    title: "Materials Science Dashboard",
+    domain: "materials_science",
+    description: "Central command for materials discovery showing active programs, material counts, and discovery metrics.",
+    capabilities: [
+      "View active materials programs",
+      "Monitor discovery campaign progress",
+      "Track property predictions",
+      "Access materials science workflows"
+    ],
+    quickActions: ["New program", "View top materials", "Run predictions"]
+  },
+  "/materials-campaigns": {
+    title: "Materials Campaigns",
+    domain: "materials_science",
+    description: "Manage materials discovery campaigns targeting specific applications: batteries, solar cells, catalysts, superconductors, etc.",
+    capabilities: [
+      "Create discovery campaigns for specific applications",
+      "Track materials screening progress",
+      "Configure target properties and constraints",
+      "Compare campaign results"
+    ],
+    quickActions: ["Create campaign", "Import materials", "Run discovery"]
+  },
+  "/materials-library": {
+    title: "Materials Library",
+    domain: "materials_science",
+    description: "Central registry for materials: compositions, crystal structures, polymers, composites with predicted properties.",
+    capabilities: [
+      "Browse materials by composition and structure",
+      "View predicted properties (band gap, modulus, conductivity)",
+      "Search by formula or elements",
+      "Access Materials Project data"
+    ],
+    quickActions: ["Search materials", "Add material", "Query MP"]
+  },
+  "/property-prediction": {
+    title: "Property Prediction",
+    domain: "materials_science",
+    description: "ML-based property prediction using GNN, Magpie descriptors, and multi-task neural networks.",
+    capabilities: [
+      "Predict band gap, formation energy, bulk modulus",
+      "Generate Magpie compositional descriptors",
+      "Run GNN predictions for crystals",
+      "Batch predict on material libraries"
+    ],
+    quickActions: ["Predict properties", "Generate descriptors", "Run GNN"]
+  },
+  "/manufacturability-scoring": {
+    title: "Manufacturability Scoring",
+    domain: "materials_science",
+    description: "Assess synthesis feasibility, precursor availability, and manufacturing complexity for materials.",
+    capabilities: [
+      "Score synthesis feasibility",
+      "Check precursor availability",
+      "Estimate production costs",
+      "Generate synthesis routes"
+    ],
+    quickActions: ["Score feasibility", "Plan synthesis", "Check precursors"]
+  },
+  "/structure-property": {
+    title: "Structure-Property Relationships",
+    domain: "materials_science",
+    description: "Analyze correlations between material structure and properties. Visualize trends and optimize compositions.",
+    capabilities: [
+      "Visualize structure-property correlations",
+      "Identify composition-property trends",
+      "Optimize material compositions",
+      "Compare structural families"
+    ],
+    quickActions: ["Plot correlations", "Optimize", "Compare families"]
+  },
+  "/property-pipelines": {
+    title: "Property Pipelines",
+    domain: "materials_science",
+    description: "Configure automated workflows for materials characterization and property calculation.",
+    capabilities: [
+      "Set up automated property calculation",
+      "Configure DFT workflows",
+      "Schedule batch predictions",
+      "Monitor pipeline execution"
+    ],
+    quickActions: ["Create pipeline", "Run DFT", "Schedule batch"]
+  },
+  "/quantum-compute": {
+    title: "Quantum Compute",
+    domain: "materials_science",
+    description: "Quantum computing integration for materials optimization and electronic structure calculations.",
+    capabilities: [
+      "Run VQE for electronic structure",
+      "QAOA for materials optimization",
+      "Quantum chemistry simulations",
+      "Compare quantum vs classical results"
+    ],
+    quickActions: ["Submit quantum job", "View results", "Compare methods"]
+  },
+  "/compute-nodes": {
+    title: "Compute Nodes",
+    domain: "both",
+    description: "Manage multi-provider compute infrastructure: Hetzner (CPU), Vast.ai (GPU with 2x RTX 3090), cloud providers.",
+    capabilities: [
+      "Configure compute nodes by provider",
+      "Monitor node health and capacity",
+      "Allocate nodes to jobs",
+      "Track GPU/CPU utilization"
+    ],
+    quickActions: ["Add node", "Check health", "View capacity"]
+  },
+  "/lika-agent": {
+    title: "LIKA Agent",
+    domain: "both",
+    description: "AI-powered assistant for drug discovery and materials science questions. Can analyze molecules, interpret results, and guide workflows.",
+    capabilities: [
+      "Answer questions about molecules and materials",
+      "Interpret screening results",
+      "Suggest next steps in workflows",
+      "Explain scientific concepts"
+    ],
+    quickActions: ["Ask question", "Analyze data", "Get recommendations"]
+  }
+};
+
+const LIKA_AGENT_SYSTEM_PROMPT = `You are Lika Agent, an expert AI orchestrator for LIKA Sciences - a dual-domain platform for Drug Discovery AND Materials Science.
 
 GOAL
-Help users explore small-molecule drug discovery workflows by reasoning over chemical inputs, orchestrating scientific tools, and producing clear, actionable outputs. You are NOT the physics/ML engine. You do not "pretend" to dock, simulate, or predict. You coordinate the platform's tools and interpret their outputs.
+Help users explore drug discovery and materials science workflows by reasoning over chemical/material inputs, orchestrating scientific tools, and producing clear, actionable outputs. You are NOT the physics/ML engine. You do not "pretend" to dock, simulate, or predict. You coordinate the platform's tools and interpret their outputs.
+
+THE LIKA SCIENCES PLATFORM
+LIKA Sciences is an enterprise platform with two main domains:
+
+1. DRUG DISCOVERY DOMAIN
+   - Campaigns: Organize screening efforts by target (EGFR, BRAF, kinases)
+   - Molecules: Central registry with SMILES, properties, oracle scores
+   - Targets: Protein targets with PDB structures and binding sites
+   - Docking: AutoDock Vina for structure-based virtual screening
+   - ADMET: Absorption, Distribution, Metabolism, Excretion, Toxicity predictions
+   - Hit Triage: Multi-parameter optimization and medicinal chemistry filters
+   - Assays: IC50, EC50, Ki tracking and SAR analysis
+   - Libraries: Curated compound collections (FDA drugs, natural products, fragments)
+
+2. MATERIALS SCIENCE DOMAIN
+   - Materials Library: Compositions, crystals, polymers, composites
+   - Property Prediction: GNN, Magpie descriptors, multi-task neural networks
+   - Manufacturability: Synthesis feasibility, precursor availability, cost estimation
+   - Structure-Property: Correlation analysis and composition optimization
+   - Materials Project Integration: Access to MP database via official mp-api
+   - DFT Calculators: VASP and Quantum ESPRESSO integration
+
+3. MATERIALS SCIENCE DISCOVERY WORKFLOWS (15 specialized pipelines)
+   - Battery Materials: Cathode/anode discovery for Li-ion and solid-state
+   - Photovoltaic: Solar absorber discovery with band gap optimization
+   - Superconductor: High-Tc discovery with DFT validation
+   - Catalyst: HER/ORR catalyst discovery for fuel cells
+   - Thermoelectric: High-ZT materials discovery
+   - PFAS Replacement: Fluorine-free alternatives (EPA compliant)
+   - Aerospace: Lightweight alloys and composites (Ti-Al, SiC)
+   - Biomedical: Biocompatible implants with bone matching
+   - Wide-Gap Semiconductor: SiC/GaN alternatives for power electronics
+   - Sustainable Construction: Low-carbon cement alternatives
+   - Transparent Conductor: ITO-free electrodes (graphene, AgNW)
+   - Rare-Earth-Free Magnets: RE-free permanent magnets for EVs
+   - Solid Electrolyte: Solid-state battery electrolytes (LGPS, LLZO)
+   - Water Purification: Membrane materials for desalination
+   - Carbon Capture: DAC and flue gas CO2 sorbents (MOFs, zeolites)
+
+4. COMPUTE INFRASTRUCTURE
+   - Hetzner: CPU nodes for validation, fingerprints, property calculation
+   - Vast.ai: GPU nodes (2x RTX 3090) for ML, docking, GNN prediction
+   - Pipeline Launcher: Configure and launch high-throughput jobs
+   - Dask Distributed: Parallel processing with mixed precision
 
 WHAT YOU ARE GOOD AT (YOUR ROLE)
 1) Reasoning + orchestration:
@@ -137,9 +439,39 @@ export interface MoleculeContext {
   };
 }
 
+export interface PageContext {
+  path: string;
+  domain?: "drug_discovery" | "materials_science" | "both";
+  additionalData?: Record<string, unknown>;
+}
+
+function getPageContextPrompt(pageContext?: PageContext): string {
+  if (!pageContext?.path) return "";
+  
+  const pageInfo = PAGE_KNOWLEDGE[pageContext.path];
+  if (!pageInfo) {
+    return `\n\nCURRENT PAGE: ${pageContext.path}
+The user is currently on this page. Provide contextually relevant assistance.`;
+  }
+  
+  return `\n\nCURRENT PAGE CONTEXT:
+PAGE: ${pageInfo.title}
+DOMAIN: ${pageInfo.domain === "drug_discovery" ? "Drug Discovery" : pageInfo.domain === "materials_science" ? "Materials Science" : "Both Domains"}
+DESCRIPTION: ${pageInfo.description}
+
+WHAT THE USER CAN DO ON THIS PAGE:
+${pageInfo.capabilities.map(c => `- ${c}`).join("\n")}
+
+QUICK ACTIONS AVAILABLE:
+${pageInfo.quickActions.map(a => `- ${a}`).join("\n")}
+
+When answering, be aware of the current page context and provide relevant guidance for what the user can accomplish here. Suggest appropriate next steps based on the page capabilities.`;
+}
+
 export async function chatWithLikaAgent(
   messages: ChatMessage[],
-  moleculeContext?: MoleculeContext
+  moleculeContext?: MoleculeContext,
+  pageContext?: PageContext
 ): Promise<AgentResponse> {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OpenAI API key not configured. Please add OPENAI_API_KEY to enable Lika Agent.");
@@ -147,6 +479,10 @@ export async function chatWithLikaAgent(
 
   let systemPrompt = LIKA_AGENT_SYSTEM_PROMPT;
   
+  // Add page context
+  systemPrompt += getPageContextPrompt(pageContext);
+  
+  // Add molecule context for drug discovery
   if (moleculeContext) {
     systemPrompt += `\n\nCURRENT MOLECULE CONTEXT:
 - SMILES: ${moleculeContext.smiles || "Not provided"}
