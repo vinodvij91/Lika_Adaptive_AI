@@ -566,9 +566,10 @@ export class VastAiComputeAdapter implements ComputeAdapter {
         instanceInfo = await this.apiRequest(`/instances/${instanceId}`);
       }
       
+      // Use node's configured SSH settings if available, otherwise fall back to API info
       // Prefer ssh_host (proxy like ssh6.vast.ai) over public_ipaddr for proper SSH routing
-      const sshHost = instanceInfo.ssh_host || instanceInfo.public_ipaddr;
-      const sshPort = instanceInfo.ssh_port || instanceInfo.ports?.["22/tcp"]?.[0]?.HostPort || 22;
+      const sshHost = node.sshHost || instanceInfo.ssh_host || instanceInfo.public_ipaddr;
+      const sshPort = node.sshPort || instanceInfo.ssh_port || instanceInfo.ports?.["22/tcp"]?.[0]?.HostPort || 22;
 
       if (!sshHost) {
         return {
@@ -577,6 +578,8 @@ export class VastAiComputeAdapter implements ComputeAdapter {
         };
       }
 
+      console.log(`[VastAiAdapter] Using SSH: ${sshHost}:${sshPort}`);
+      
       const sshAdapter = new SshComputeAdapter("vast");
       const sshNode: ComputeNode = {
         ...node,
