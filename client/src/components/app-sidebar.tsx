@@ -35,6 +35,7 @@ import {
   Plug,
   Brain,
   Atom,
+  Dna,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -82,6 +83,7 @@ const materialsWorkflowItems = [
 const infrastructureItems = [
   { title: "Compute Nodes", url: "/compute-nodes", icon: Server },
   { title: "Pipeline Launcher", url: "/pipeline", icon: Rocket },
+  { title: "BioNeMo AI", url: "/bionemo", icon: Dna },
   { title: "Usage", url: "/usage", icon: Activity },
   { title: "Integrations", url: "/integrations", icon: Plug },
   { title: "Quantum", url: "/quantum", icon: Atom },

@@ -57,6 +57,7 @@ import LikaAgentPage from "@/pages/lika-agent";
 import QuantumComputePage from "@/pages/quantum-compute";
 import PipelineLauncherPage from "@/pages/pipeline-launcher";
 import UseCasesPage from "@/pages/use-cases";
+import BioNemoPage from "@/pages/bionemo";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -127,6 +128,7 @@ function AuthenticatedRoutes() {
         <Route path="/quantum" component={QuantumComputePage} />
         <Route path="/pipeline" component={PipelineLauncherPage} />
         <Route path="/use-cases" component={UseCasesPage} />
+        <Route path="/bionemo" component={BioNemoPage} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>
