@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useDomain, type DiscoveryDomain } from "@/contexts/domain-context";
+import { LikaLogoLeafGradient } from "@/components/lika-logo";
 
 const drugNavigationItems = [
   { title: "Dashboard", url: "/dashboard/drug", icon: LayoutDashboard },
@@ -122,21 +123,33 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link href={isDrugDomain ? "/dashboard/drug" : "/dashboard/materials"}>
-          <div className="flex items-center gap-2 cursor-pointer">
-            <div className={`w-9 h-9 rounded-md flex items-center justify-center ${
-              isDrugDomain ? "bg-sidebar-primary" : "bg-chart-2"
-            }`}>
-              {isDrugDomain ? (
-                <FlaskConical className="h-5 w-5 text-sidebar-primary-foreground" />
-              ) : (
-                <Hexagon className="h-5 w-5 text-white" />
-              )}
+          <div className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative">
+              <div className={`absolute inset-0 rounded-xl blur-md opacity-60 ${
+                isDrugDomain 
+                  ? "bg-gradient-to-br from-cyan-500 to-teal-600" 
+                  : "bg-gradient-to-br from-emerald-500 to-amber-500"
+              }`} />
+              <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${
+                isDrugDomain 
+                  ? "bg-gradient-to-br from-cyan-500 via-teal-500 to-emerald-600" 
+                  : "bg-gradient-to-br from-emerald-500 via-teal-500 to-amber-500"
+              }`}>
+                <LikaLogoLeafGradient size={26} className="drop-shadow-sm" />
+              </div>
             </div>
-            <div>
-              <span className="font-semibold text-sidebar-foreground">Lika Sciences</span>
-              <p className="text-xs text-muted-foreground">
-                {isDrugDomain ? "Drug Discovery" : "Materials Science"}
-              </p>
+            <div className="flex flex-col">
+              <span className="font-bold text-sm tracking-wide text-sidebar-foreground group-hover:text-primary transition-colors">
+                Lika Sciences
+              </span>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${
+                  isDrugDomain ? "bg-cyan-500" : "bg-emerald-500"
+                }`} />
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  {isDrugDomain ? "Drug Discovery" : "Materials Science"}
+                </span>
+              </div>
             </div>
           </div>
         </Link>
