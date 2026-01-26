@@ -1741,6 +1741,385 @@ print(json.dumps({
     }
   });
 
+  // Magpie descriptors endpoint
+  app.post("/api/compute/materials/magpie", requireAuth, async (req, res) => {
+    try {
+      const { materials, nodeId } = req.body;
+      
+      if (!materials || !Array.isArray(materials) || materials.length === 0) {
+        return res.status(400).json({ error: "materials array is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ materials });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type magpie_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-magpie-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 120000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Magpie descriptors failed" });
+      }
+    } catch (error: any) {
+      console.error("Magpie descriptors error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // SOAP descriptors endpoint
+  app.post("/api/compute/materials/soap", requireAuth, async (req, res) => {
+    try {
+      const { materials, nodeId } = req.body;
+      
+      if (!materials || !Array.isArray(materials) || materials.length === 0) {
+        return res.status(400).json({ error: "materials array is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ materials });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type soap_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-soap-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 180000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "SOAP descriptors failed" });
+      }
+    } catch (error: any) {
+      console.error("SOAP descriptors error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // GNN prediction endpoint
+  app.post("/api/compute/materials/gnn", requireAuth, async (req, res) => {
+    try {
+      const { materials, nodeId } = req.body;
+      
+      if (!materials || !Array.isArray(materials) || materials.length === 0) {
+        return res.status(400).json({ error: "materials array is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ materials });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type gnn_prediction --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-gnn-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "GNN prediction failed" });
+      }
+    } catch (error: any) {
+      console.error("GNN prediction error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Synthesis planning endpoint
+  app.post("/api/compute/materials/synthesis", requireAuth, async (req, res) => {
+    try {
+      const { materials, nodeId } = req.body;
+      
+      if (!materials || !Array.isArray(materials) || materials.length === 0) {
+        return res.status(400).json({ error: "materials array is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ materials });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type synthesis_planning --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-synth-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 120000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Synthesis planning failed" });
+      }
+    } catch (error: any) {
+      console.error("Synthesis planning error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Materials generation endpoint
+  app.post("/api/compute/materials/generate", requireAuth, async (req, res) => {
+    try {
+      const { targetProperties = {}, nCandidates = 100, elements, nodeId } = req.body;
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        target_properties: targetProperties, 
+        n_candidates: nCandidates,
+        elements 
+      });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type materials_generation --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-gen-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 180000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Materials generation failed" });
+      }
+    } catch (error: any) {
+      console.error("Materials generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Element substitution endpoint
+  app.post("/api/compute/materials/substitute", requireAuth, async (req, res) => {
+    try {
+      const { baseComposition, nVariants = 100, nodeId } = req.body;
+      
+      if (!baseComposition) {
+        return res.status(400).json({ error: "baseComposition is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        base_composition: baseComposition, 
+        n_variants: nVariants 
+      });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type element_substitution --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-subst-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 120000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Element substitution failed" });
+      }
+    } catch (error: any) {
+      console.error("Element substitution error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Atomistic simulation endpoint
+  app.post("/api/compute/materials/simulate", requireAuth, async (req, res) => {
+    try {
+      const { materials, simulationType = "optimization", nodeId } = req.body;
+      
+      if (!materials || !Array.isArray(materials) || materials.length === 0) {
+        return res.status(400).json({ error: "materials array is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ materials, simulation_type: simulationType });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type atomistic_simulation --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-sim-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 600000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Atomistic simulation failed" });
+      }
+    } catch (error: any) {
+      console.error("Atomistic simulation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Full discovery pipeline endpoint
+  app.post("/api/compute/materials/discover", requireAuth, async (req, res) => {
+    try {
+      const { targetProperties = {}, nCandidates = 1000, screenTopN = 50, nodeId } = req.body;
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        target_properties: targetProperties, 
+        n_candidates: nCandidates,
+        screen_top_n: screenTopN 
+      });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-discover-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 900000, // 15 minutes for full discovery
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Discovery pipeline failed" });
+      }
+    } catch (error: any) {
+      console.error("Discovery pipeline error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============================================
   // USER SSH KEYS ENDPOINTS
   // ============================================

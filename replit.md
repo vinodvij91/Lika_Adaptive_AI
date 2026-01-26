@@ -79,6 +79,66 @@ python3 drug_discovery_pipeline.py --job-type <step_name> --params '{"smiles": [
 - `POST /api/compute/pipeline` - Run full pipeline on campaign
 - `POST /api/compute/setup` - Auto-configure nodes from env vars
 
+### Materials Science Compute Pipeline
+The platform includes a comprehensive Materials Science pipeline (`compute/materials_science_pipeline.py`) for materials discovery:
+
+**Features:**
+- **Magpie Descriptors**: 145 compositional descriptors based on elemental properties
+- **SOAP Descriptors**: Smooth Overlap of Atomic Positions for structural fingerprinting (via DScribe)
+- **Graph Neural Networks**: Crystal Graph Convolutional Neural Network (CGCNN) and Multi-Property GNN for structure-aware property prediction
+- **Multi-task Neural Networks**: Shared encoder with property-specific heads
+- **GPU Acceleration**: Mixed precision training, batch prediction with PyTorch
+- **Materials Generation**: Compositional sampling with target property optimization
+- **Element Substitution**: Systematic variant generation using substitution rules
+- **Synthesis Planning**: Route suggestions, precursor identification, synthesizability scoring
+- **Atomistic Simulations**: Structure optimization, MD, and band structure via ASE
+
+**Specialized Designers:**
+- `BatteryMaterialsDesigner` - Cathode discovery (voltage, capacity targets)
+- `PhotovoltaicMaterialsDesigner` - Solar absorber discovery (band gap optimization)
+- `StructuralMaterialsDesigner` - High-strength alloy discovery (modulus, density)
+
+**CLI Interface:**
+```bash
+python3 materials_science_pipeline.py --job-type <step_name> --params '{"materials": [...], "target_properties": {...}}'
+```
+
+**Supported Steps:**
+- `structure_validation` - Validate material representations (CIF, formula, SMILES)
+- `magpie_descriptors` - Generate Magpie compositional descriptors
+- `soap_descriptors` - Generate SOAP structural descriptors
+- `gnn_prediction` - GNN-based property prediction for crystals
+- `property_prediction` - Multi-task neural network property prediction
+- `manufacturability_scoring` - Score synthesis feasibility
+- `synthesis_planning` - Generate synthesis routes
+- `batch_screening` - High-throughput property screening
+- `materials_generation` - Generate novel materials with target properties
+- `element_substitution` - Generate variants by element substitution
+- `atomistic_simulation` - Run MD/DFT simulations
+- `full_pipeline` - Complete discovery workflow
+
+**Materials Science API Endpoints:**
+- `POST /api/compute/materials/predict` - Property prediction
+- `POST /api/compute/materials/manufacturability` - Manufacturability scoring
+- `POST /api/compute/materials/screen` - Batch screening
+- `POST /api/compute/materials/validate` - Structure validation
+- `POST /api/compute/materials/magpie` - Magpie descriptors
+- `POST /api/compute/materials/soap` - SOAP descriptors
+- `POST /api/compute/materials/gnn` - GNN prediction
+- `POST /api/compute/materials/synthesis` - Synthesis planning
+- `POST /api/compute/materials/generate` - Materials generation
+- `POST /api/compute/materials/substitute` - Element substitution
+- `POST /api/compute/materials/simulate` - Atomistic simulation
+- `POST /api/compute/materials/discover` - Full discovery pipeline
+
+**Required Python Packages (on compute nodes):**
+- `pymatgen` - Crystal structure analysis
+- `torch` + `torch-geometric` - GNN and neural networks
+- `dscribe` - SOAP descriptors
+- `ase` - Atomistic simulations
+- `dask` + `distributed` - Parallel computing
+- `qiskit` (optional) - Quantum simulations
+
 ## External Dependencies
 - **PostgreSQL**: Primary relational database.
 - **Radix UI primitives**: For building UI components.
