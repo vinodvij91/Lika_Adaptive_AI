@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
@@ -68,13 +68,33 @@ interface PipelineStats {
   byType: Record<string, number>;
 }
 
-const jobTypeOptions = [
+const drugDiscoveryJobs = [
   { value: "docking", label: "Molecular Docking", icon: Target, description: "Run AutoDock Vina docking simulations" },
   { value: "fingerprint_generation", label: "Fingerprint Generation", icon: Layers, description: "Generate ECFP/MACCS molecular fingerprints" },
   { value: "ml_training", label: "ML Model Training", icon: Zap, description: "Train QSAR/ADMET prediction models" },
   { value: "distributed_prediction", label: "Distributed Prediction", icon: Activity, description: "Run predictions on large molecule sets" },
   { value: "full_pipeline", label: "Full Pipeline", icon: Rocket, description: "Complete discovery pipeline with all steps" },
 ];
+
+const materialsJobTypes = [
+  { value: "mat_battery", label: "Battery Materials", icon: Zap, description: "Cathode/anode discovery for Li-ion and solid-state batteries" },
+  { value: "mat_solar", label: "Photovoltaic Materials", icon: Activity, description: "Solar absorber discovery with band gap optimization" },
+  { value: "mat_superconductor", label: "Superconductor Discovery", icon: Zap, description: "High-Tc superconductor discovery with DFT validation" },
+  { value: "mat_catalyst", label: "Catalyst Discovery", icon: Target, description: "HER/ORR catalyst discovery for fuel cells" },
+  { value: "mat_thermoelectric", label: "Thermoelectric Materials", icon: Activity, description: "High-ZT thermoelectric materials discovery" },
+  { value: "mat_pfas_replacement", label: "PFAS Replacement", icon: Layers, description: "Fluorine-free alternatives for coatings (EPA compliant)" },
+  { value: "mat_aerospace", label: "Aerospace Materials", icon: Rocket, description: "Lightweight alloys and composites (Ti-Al, SiC)" },
+  { value: "mat_biomedical", label: "Biomedical Materials", icon: Target, description: "Biocompatible implant materials with bone matching" },
+  { value: "mat_semiconductor", label: "Wide-Gap Semiconductors", icon: Zap, description: "SiC/GaN alternatives for power electronics" },
+  { value: "mat_construction", label: "Sustainable Construction", icon: Layers, description: "Low-carbon cement alternatives (geopolymers)" },
+  { value: "mat_transparent", label: "Transparent Conductors", icon: Activity, description: "ITO-free transparent electrodes (graphene, AgNW)" },
+  { value: "mat_magnet", label: "Rare-Earth-Free Magnets", icon: Target, description: "RE-free permanent magnets for EVs and wind turbines" },
+  { value: "mat_electrolyte", label: "Solid Electrolytes", icon: Zap, description: "Solid-state battery electrolytes (LGPS, LLZO)" },
+  { value: "mat_water", label: "Water Purification", icon: Layers, description: "Membrane materials for desalination and filtration" },
+  { value: "mat_carbon_capture", label: "Carbon Capture", icon: Activity, description: "DAC and flue gas CO2 capture sorbents (MOFs, zeolites)" },
+];
+
+const jobTypeOptions = [...drugDiscoveryJobs, ...materialsJobTypes];
 
 const statusColors: Record<string, { bg: string; text: string; icon: typeof CheckCircle }> = {
   queued: { bg: "bg-blue-500/10", text: "text-blue-500", icon: Clock },
@@ -325,15 +345,29 @@ export default function PipelineLauncherPage() {
                           <SelectTrigger data-testid="select-job-type" className="mt-1.5">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            {jobTypeOptions.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                <div className="flex items-center gap-2">
-                                  <opt.icon className="h-4 w-4 text-muted-foreground" />
-                                  <span>{opt.label}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
+                          <SelectContent className="max-h-80">
+                            <SelectGroup>
+                              <SelectLabel className="text-orange-600 font-semibold">Drug Discovery</SelectLabel>
+                              {drugDiscoveryJobs.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  <div className="flex items-center gap-2">
+                                    <opt.icon className="h-4 w-4 text-muted-foreground" />
+                                    <span>{opt.label}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                            <SelectGroup>
+                              <SelectLabel className="text-teal-600 font-semibold">Materials Science</SelectLabel>
+                              {materialsJobTypes.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  <div className="flex items-center gap-2">
+                                    <opt.icon className="h-4 w-4 text-muted-foreground" />
+                                    <span>{opt.label}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground mt-1">
