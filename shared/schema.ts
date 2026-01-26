@@ -33,7 +33,13 @@ export const orgRoleEnum = pgEnum("org_role", ["admin", "member", "viewer"]);
 export const assetTypeEnum = pgEnum("asset_type", ["smiles_library", "pipeline_template", "program"]);
 export const sharePermissionEnum = pgEnum("share_permission", ["read", "fork"]);
 export const discoveryDomainEnum = pgEnum("discovery_domain", ["drug", "materials"]);
-export const materialTypeEnum = pgEnum("material_type", ["polymer", "crystal", "composite", "surface", "membrane", "catalyst", "coating"]);
+export const materialTypeEnum = pgEnum("material_type", [
+  "polymer", "crystal", "composite", "surface", "membrane", "catalyst", "coating",
+  "thin_film", "doped_semiconductor", "binary_oxide", "binary_chalcogenide", "binary_pnictide",
+  "binary_alloy", "ternary_alloy", "high_entropy_alloy", "perovskite", "double_perovskite",
+  "battery_cathode", "battery_anode", "solid_electrolyte", "spinel", "mxene_2d", "tmd_2d",
+  "homopolymer", "copolymer", "2d_material"
+]);
 export const materialPropertySourceEnum = pgEnum("material_property_source", ["ml", "simulation", "experiment"]);
 export const variantGeneratedByEnum = pgEnum("variant_generated_by", ["human", "ml", "genetic", "quantum"]);
 export const processingJobStatusEnum = pgEnum("processing_job_status", ["queued", "dispatched", "running", "succeeded", "failed", "cancelled", "paused"]);
