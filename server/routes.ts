@@ -5041,7 +5041,21 @@ print(json.dumps({
       res.json({ 
         configured: isBioNemoConfigured(),
         provider: "NVIDIA BioNemo",
-        capabilities: ["property_prediction", "molecule_generation", "embeddings", "docking"]
+        capabilities: [
+          "property_prediction", 
+          "molecule_generation", 
+          "embeddings", 
+          "docking",
+          "genmol_generation",
+          "alphafold2_structure",
+          "spectroscopy_analysis"
+        ],
+        modules: {
+          molmim: { name: "MolMIM", description: "Molecular embeddings & optimization", available: true },
+          genmol: { name: "GenMol", description: "Generative molecular design", available: true },
+          alphafold2: { name: "AlphaFold2", description: "Protein structure prediction", available: true },
+          spectroscopy: { name: "Spectroscopy", description: "FTIR/Raman/NMR/UV-Vis/Mass analysis", available: true }
+        }
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -5171,6 +5185,120 @@ print(json.dumps({
     } catch (error: any) {
       console.error("BioNemo embeddings error:", error);
       res.status(500).json({ error: error.message || "Failed to generate embeddings" });
+    }
+  });
+
+  app.post("/api/bionemo/genmol/generate", requireAuth, async (req, res) => {
+    try {
+      const { smiles, numMolecules, temperature, noise, stepSize, scoring } = req.body;
+      if (!smiles || typeof smiles !== "string") {
+        return res.status(400).json({ error: "SMILES string is required" });
+      }
+
+      const { bionemoService, isBioNemoConfigured } = await import("./services/bionemo");
+      
+      if (!isBioNemoConfigured()) {
+        return res.status(503).json({ 
+          error: "BioNemo not configured",
+          message: "Set BIONEMO_API_KEY environment variable to enable GenMol generation"
+        });
+      }
+
+      const result = await bionemoService.generateWithGenMol({
+        smiles,
+        numMolecules: numMolecules || 5,
+        temperature: temperature || 2.0,
+        noise: noise || 1.0,
+        stepSize: stepSize || 1,
+        scoring: scoring || "QED",
+      });
+      res.json(result);
+    } catch (error: any) {
+      console.error("GenMol generation error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate molecules with GenMol" });
+    }
+  });
+
+  app.post("/api/bionemo/alphafold2/predict", requireAuth, async (req, res) => {
+    try {
+      const { sequences, databases } = req.body;
+      if (!sequences || !Array.isArray(sequences) || sequences.length === 0) {
+        return res.status(400).json({ error: "Protein sequences array is required" });
+      }
+
+      const { bionemoService, isBioNemoConfigured } = await import("./services/bionemo");
+      
+      if (!isBioNemoConfigured()) {
+        return res.status(503).json({ 
+          error: "BioNemo not configured",
+          message: "Set BIONEMO_API_KEY environment variable to enable AlphaFold2 predictions"
+        });
+      }
+
+      const result = await bionemoService.predictStructureAlphaFold2({
+        sequences,
+        databases: databases || ["uniref90", "mgnify", "small_bfd"],
+      });
+      res.json(result);
+    } catch (error: any) {
+      console.error("AlphaFold2 prediction error:", error);
+      res.status(500).json({ error: error.message || "Failed to predict protein structure" });
+    }
+  });
+
+  app.post("/api/bionemo/spectroscopy/analyze", requireAuth, async (req, res) => {
+    try {
+      const { type, peaks, metadata } = req.body;
+      if (!type || !peaks || !Array.isArray(peaks)) {
+        return res.status(400).json({ error: "Spectroscopy type and peaks array are required" });
+      }
+
+      const validTypes = ["FTIR", "Raman", "NMR", "UV-Vis", "Mass"];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ error: `Invalid spectroscopy type. Must be one of: ${validTypes.join(", ")}` });
+      }
+
+      const { bionemoService } = await import("./services/bionemo");
+      
+      const result = bionemoService.analyzeSpectroscopy({
+        type,
+        peaks,
+        metadata: metadata || {},
+      });
+      res.json(result);
+    } catch (error: any) {
+      console.error("Spectroscopy analysis error:", error);
+      res.status(500).json({ error: error.message || "Failed to analyze spectroscopy data" });
+    }
+  });
+
+  app.post("/api/bionemo/spectroscopy/parse", requireAuth, async (req, res) => {
+    try {
+      const { content, type } = req.body;
+      if (!content || typeof content !== "string") {
+        return res.status(400).json({ error: "File content is required" });
+      }
+      if (!type) {
+        return res.status(400).json({ error: "Spectroscopy type is required" });
+      }
+
+      const validTypes = ["FTIR", "Raman", "NMR", "UV-Vis", "Mass"];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ error: `Invalid spectroscopy type. Must be one of: ${validTypes.join(", ")}` });
+      }
+
+      const { bionemoService } = await import("./services/bionemo");
+      
+      const parsedData = bionemoService.parseSpectroscopyFile(content, type);
+      const analysis = bionemoService.analyzeSpectroscopy(parsedData);
+      
+      res.json({
+        parsedData,
+        analysis,
+      });
+    } catch (error: any) {
+      console.error("Spectroscopy parse error:", error);
+      res.status(500).json({ error: error.message || "Failed to parse spectroscopy file" });
     }
   });
 
