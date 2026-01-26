@@ -131,6 +131,29 @@ python3 materials_science_pipeline.py --job-type <step_name> --params '{"materia
 - `POST /api/compute/materials/simulate` - Atomistic simulation
 - `POST /api/compute/materials/discover` - Full discovery pipeline
 
+**Materials Project API Integration Endpoints:**
+- `POST /api/compute/materials/mp/training-data` - Load training data for any property
+- `POST /api/compute/materials/mp/battery` - Load battery electrode data (Li, Na, K ion)
+- `POST /api/compute/materials/mp/solar` - Load solar absorber candidates
+- `POST /api/compute/materials/mp/thermoelectric` - Load thermoelectric materials
+- `POST /api/compute/materials/mp/superconductor` - Load superconductor candidates
+- `POST /api/compute/materials/mp/phase-diagram` - Generate phase diagrams
+- `POST /api/compute/materials/mp/bulk-query` - Bulk property queries
+- `POST /api/compute/materials/mp/search` - Search by formula
+
+**Materials Project CLI Steps:**
+- `mp_load_training_data` - Load training data for ML models
+- `mp_load_battery_data` - Load battery electrode materials
+- `mp_load_solar_materials` - Load solar absorber candidates
+- `mp_load_thermoelectric_materials` - Load thermoelectric materials
+- `mp_load_superconductor_candidates` - Load superconductor candidates
+- `mp_get_phase_diagram` - Generate phase diagrams
+- `mp_bulk_query` - Bulk property queries
+- `mp_search_formula` - Search by formula
+
+**Required Environment Variables:**
+- `MP_API_KEY` - Materials Project API key (get from https://materialsproject.org/api)
+
 **Required Python Packages (on compute nodes):**
 - `pymatgen` - Crystal structure analysis
 - `torch` + `torch-geometric` - GNN and neural networks

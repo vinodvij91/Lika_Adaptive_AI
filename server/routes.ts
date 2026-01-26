@@ -2121,6 +2121,427 @@ print(json.dumps({
   });
 
   // ============================================
+  // MATERIALS PROJECT API INTEGRATION
+  // ============================================
+
+  // Load training data from Materials Project
+  app.post("/api/compute/materials/mp/training-data", requireAuth, async (req, res) => {
+    try {
+      const { 
+        propertyName = "band_gap", 
+        nMaterials = 1000, 
+        elements, 
+        excludeElements, 
+        additionalCriteria,
+        includeStructures = true,
+        nodeId 
+      } = req.body;
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        property_name: propertyName, 
+        n_materials: nMaterials,
+        elements,
+        exclude_elements: excludeElements,
+        additional_criteria: additionalCriteria,
+        include_structures: includeStructures
+      });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_load_training_data --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mp-training-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "MP training data load failed" });
+      }
+    } catch (error: any) {
+      console.error("MP training data error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Load battery electrode data from Materials Project
+  app.post("/api/compute/materials/mp/battery", requireAuth, async (req, res) => {
+    try {
+      const { 
+        nMaterials = 2000, 
+        workingIon = "Li", 
+        minCapacity, 
+        maxVoltage,
+        electrodeType = "cathode",
+        nodeId 
+      } = req.body;
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        n_materials: nMaterials, 
+        working_ion: workingIon,
+        min_capacity: minCapacity,
+        max_voltage: maxVoltage,
+        electrode_type: electrodeType
+      });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_load_battery_data --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mp-battery-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "MP battery data load failed" });
+      }
+    } catch (error: any) {
+      console.error("MP battery data error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Load solar absorber materials from Materials Project
+  app.post("/api/compute/materials/mp/solar", requireAuth, async (req, res) => {
+    try {
+      const { 
+        nMaterials = 1000, 
+        bandGapRange = [1.0, 2.5], 
+        stableOnly = true,
+        nodeId 
+      } = req.body;
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        n_materials: nMaterials, 
+        band_gap_range: bandGapRange,
+        stable_only: stableOnly
+      });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_load_solar_materials --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mp-solar-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "MP solar materials load failed" });
+      }
+    } catch (error: any) {
+      console.error("MP solar materials error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Load thermoelectric materials from Materials Project
+  app.post("/api/compute/materials/mp/thermoelectric", requireAuth, async (req, res) => {
+    try {
+      const { 
+        nMaterials = 1000, 
+        bandGapRange = [0.1, 1.0], 
+        heavyElements = true,
+        nodeId 
+      } = req.body;
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        n_materials: nMaterials, 
+        band_gap_range: bandGapRange,
+        heavy_elements: heavyElements
+      });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_load_thermoelectric_materials --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mp-thermoelectric-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "MP thermoelectric materials load failed" });
+      }
+    } catch (error: any) {
+      console.error("MP thermoelectric materials error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Load superconductor candidates from Materials Project
+  app.post("/api/compute/materials/mp/superconductor", requireAuth, async (req, res) => {
+    try {
+      const { 
+        nMaterials = 500, 
+        includeCuprates = true, 
+        includeIronBased = true,
+        nodeId 
+      } = req.body;
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        n_materials: nMaterials, 
+        include_cuprates: includeCuprates,
+        include_iron_based: includeIronBased
+      });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_load_superconductor_candidates --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mp-superconductor-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "MP superconductor candidates load failed" });
+      }
+    } catch (error: any) {
+      console.error("MP superconductor candidates error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get phase diagram from Materials Project
+  app.post("/api/compute/materials/mp/phase-diagram", requireAuth, async (req, res) => {
+    try {
+      const { elements, includeUnstable = false, nodeId } = req.body;
+
+      if (!elements || !Array.isArray(elements) || elements.length < 2) {
+        return res.status(400).json({ error: "At least 2 elements required for phase diagram" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        elements, 
+        include_unstable: includeUnstable
+      });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_get_phase_diagram --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mp-phase-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "MP phase diagram generation failed" });
+      }
+    } catch (error: any) {
+      console.error("MP phase diagram error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Bulk query properties from Materials Project
+  app.post("/api/compute/materials/mp/bulk-query", requireAuth, async (req, res) => {
+    try {
+      const { materialIds, properties = ["band_gap", "formation_energy"], nodeId } = req.body;
+
+      if (!materialIds || !Array.isArray(materialIds) || materialIds.length === 0) {
+        return res.status(400).json({ error: "materialIds array is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        material_ids: materialIds, 
+        properties
+      });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_bulk_query --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mp-bulk-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "MP bulk query failed" });
+      }
+    } catch (error: any) {
+      console.error("MP bulk query error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Search materials by formula from Materials Project
+  app.post("/api/compute/materials/mp/search", requireAuth, async (req, res) => {
+    try {
+      const { formula, anonymous = false, nodeId } = req.body;
+
+      if (!formula) {
+        return res.status(400).json({ error: "formula is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ formula, anonymous });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_search_formula --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mp-search-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 120000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "MP search failed" });
+      }
+    } catch (error: any) {
+      console.error("MP search error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================
   // USER SSH KEYS ENDPOINTS
   // ============================================
 
