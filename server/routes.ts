@@ -1555,6 +1555,192 @@ print(json.dumps({
     }
   });
 
+  // ==================== Materials Science Compute ====================
+
+  app.post("/api/compute/materials/predict", requireAuth, async (req, res) => {
+    try {
+      const { materials, properties = ["all"], nodeId } = req.body;
+      
+      if (!materials || !Array.isArray(materials) || materials.length === 0) {
+        return res.status(400).json({ error: "materials array is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ materials, properties });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type property_prediction --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-pred-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 120000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Property prediction failed" });
+      }
+    } catch (error: any) {
+      console.error("Materials prediction error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/compute/materials/manufacturability", requireAuth, async (req, res) => {
+    try {
+      const { materials, nodeId } = req.body;
+      
+      if (!materials || !Array.isArray(materials) || materials.length === 0) {
+        return res.status(400).json({ error: "materials array is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ materials });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type manufacturability_scoring --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-manuf-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 120000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Manufacturability scoring failed" });
+      }
+    } catch (error: any) {
+      console.error("Manufacturability scoring error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/compute/materials/screen", requireAuth, async (req, res) => {
+    try {
+      const { materials, targetProperties = {}, nodeId } = req.body;
+      
+      if (!materials || !Array.isArray(materials) || materials.length === 0) {
+        return res.status(400).json({ error: "materials array is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ materials, target_properties: targetProperties });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type batch_screening --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-screen-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Batch screening failed" });
+      }
+    } catch (error: any) {
+      console.error("Batch screening error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/compute/materials/validate", requireAuth, async (req, res) => {
+    try {
+      const { materials, nodeId } = req.body;
+      
+      if (!materials || !Array.isArray(materials) || materials.length === 0) {
+        return res.status(400).json({ error: "materials array is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ materials });
+      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type structure_validation --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `mat-val-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 60000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Validation failed" });
+      }
+    } catch (error: any) {
+      console.error("Materials validation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============================================
   // USER SSH KEYS ENDPOINTS
   // ============================================

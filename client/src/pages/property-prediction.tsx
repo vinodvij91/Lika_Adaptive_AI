@@ -1,162 +1,135 @@
-import { useState, useMemo } from "react";
-import { PageHeader } from "@/components/page-header";
-import { ResultsPanel } from "@/components/results-panel";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Calculator,
   Zap,
   Activity,
   Play,
-  CheckCircle,
-  Clock,
-  Filter,
-  BarChart3,
-  Cpu,
+  CheckCircle2,
+  Hexagon,
   Atom,
   Layers,
-  Box,
-  Download,
+  Loader2,
+  Factory,
+  TrendingUp,
+  ThermometerSun,
+  Gauge,
+  Sparkles,
+  FlaskConical,
 } from "lucide-react";
 
-function formatNumber(num: number): string {
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + "M";
-  } else if (num >= 1000) {
-    return (num / 1000).toFixed(0) + "K";
-  }
-  return num.toLocaleString();
-}
-
-function seededRandom(seed: number): number {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
-
-type PredictionMethod = "ml" | "md" | "dft" | "fem" | "hybrid";
-
-interface PropertyPrediction {
-  id: string;
-  name: string;
+interface PropertyResult {
+  property_name: string;
   value: number;
   unit: string;
   confidence: number;
+  method: string;
   percentile: number;
-  method: PredictionMethod;
-  computeTime: string;
 }
 
-interface BatchJob {
-  id: string;
-  property: string;
-  method: PredictionMethod;
-  total: number;
-  completed: number;
-  status: "running" | "completed" | "queued";
-  startTime: string;
-  eta?: string;
+interface MaterialPredictionResult {
+  material_id: string;
+  material_type: string;
+  descriptors: Record<string, number>;
+  properties: PropertyResult[];
 }
 
-const METHOD_LABELS: Record<PredictionMethod, string> = {
-  ml: "ML Model",
-  md: "MD Simulation",
-  dft: "DFT Calculation",
-  fem: "FEM Analysis",
-  hybrid: "Hybrid Pipeline",
+interface ManufacturabilityResult {
+  material_id: string;
+  material_type: string;
+  overall_score: number;
+  synthesis_feasibility: number;
+  cost_factor: number;
+  scalability: number;
+  environmental_score: number;
+  complexity: number;
+  recommendations: string[];
+}
+
+const DEMO_POLYMERS = [
+  { name: "Polyethylene (PE)", type: "polymer", smiles: "CC" },
+  { name: "Polystyrene (PS)", type: "polymer", smiles: "c1ccccc1CC" },
+  { name: "PMMA", type: "polymer", smiles: "CC(C)(C(=O)OC)C" },
+  { name: "Nylon-6", type: "polymer", smiles: "NCCCCCC(=O)O" },
+  { name: "PET", type: "polymer", smiles: "c1ccc(C(=O)OCCO)cc1" },
+  { name: "Polyimide", type: "polymer", smiles: "c1cc2c(cc1)C(=O)NC2=O" },
+];
+
+const DEMO_CRYSTALS = [
+  { name: "Iron Oxide", type: "crystal", formula: "Fe2O3" },
+  { name: "Silicon Dioxide", type: "crystal", formula: "SiO2" },
+  { name: "Titanium Dioxide", type: "crystal", formula: "TiO2" },
+  { name: "Aluminum Oxide", type: "crystal", formula: "Al2O3" },
+  { name: "Zinc Oxide", type: "crystal", formula: "ZnO" },
+  { name: "Copper Oxide", type: "crystal", formula: "CuO" },
+];
+
+const PROPERTY_ICONS: Record<string, any> = {
+  thermal_conductivity: ThermometerSun,
+  tensile_strength: Gauge,
+  youngs_modulus: Activity,
+  density: Hexagon,
+  glass_transition: ThermometerSun,
+  bandgap: Zap,
 };
 
-const METHOD_COLORS: Record<PredictionMethod, string> = {
-  ml: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
-  md: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30",
-  dft: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
-  fem: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30",
-  hybrid: "bg-primary/10 text-primary border-primary/30",
+const PROPERTY_COLORS: Record<string, string> = {
+  thermal_conductivity: "from-orange-500 to-red-500",
+  tensile_strength: "from-blue-500 to-indigo-500",
+  youngs_modulus: "from-violet-500 to-purple-500",
+  density: "from-emerald-500 to-teal-500",
+  glass_transition: "from-amber-500 to-orange-500",
+  bandgap: "from-cyan-500 to-blue-500",
 };
 
-function generateMockPredictions(count: number): PropertyPrediction[] {
-  const properties = [
-    { name: "Thermal Conductivity", unit: "W/(m·K)", range: [0.1, 400] },
-    { name: "Tensile Strength", unit: "MPa", range: [10, 1500] },
-    { name: "Glass Transition", unit: "°C", range: [-50, 350] },
-    { name: "Ionic Conductivity", unit: "S/cm", range: [1e-8, 1e-1] },
-    { name: "Young's Modulus", unit: "GPa", range: [0.5, 300] },
-    { name: "Thermal Stability", unit: "°C", range: [100, 600] },
-    { name: "Dielectric Constant", unit: "ε", range: [2, 100] },
-    { name: "Density", unit: "g/cm³", range: [0.9, 8.5] },
-  ];
-  const methods: PredictionMethod[] = ["ml", "md", "dft", "fem", "hybrid"];
-
-  return Array.from({ length: count }, (_, i) => {
-    const prop = properties[i % properties.length];
-    const seed = i * 137;
-    const value = prop.range[0] + seededRandom(seed) * (prop.range[1] - prop.range[0]);
-    return {
-      id: `pred-${i}`,
-      name: prop.name,
-      value: prop.name === "Ionic Conductivity" ? value : Math.round(value * 100) / 100,
-      unit: prop.unit,
-      confidence: 0.7 + seededRandom(seed + 1) * 0.25,
-      percentile: Math.round(seededRandom(seed + 2) * 100),
-      method: methods[Math.floor(seededRandom(seed + 3) * methods.length)],
-      computeTime: `${(0.1 + seededRandom(seed + 4) * 5).toFixed(1)}s`,
-    };
-  });
-}
-
-function generateMockBatchJobs(): BatchJob[] {
-  return [
-    { id: "job-1", property: "Thermal Conductivity", method: "ml", total: 420000, completed: 387500, status: "running", startTime: "2h 14m ago", eta: "23m" },
-    { id: "job-2", property: "Tensile Strength", method: "hybrid", total: 420000, completed: 420000, status: "completed", startTime: "4h 02m ago" },
-    { id: "job-3", property: "Glass Transition", method: "md", total: 85000, completed: 12400, status: "running", startTime: "38m ago", eta: "2h 45m" },
-    { id: "job-4", property: "Ionic Conductivity", method: "dft", total: 50000, completed: 0, status: "queued", startTime: "Queued" },
-  ];
-}
-
-interface PropertyCardProps {
-  prediction: PropertyPrediction;
-}
-
-function PropertyCard({ prediction }: PropertyCardProps) {
-  const formatValue = (val: number, name: string) => {
-    if (name === "Ionic Conductivity") {
-      return val.toExponential(2);
-    }
-    return val.toLocaleString();
+function PropertyCard({ prop }: { prop: PropertyResult }) {
+  const Icon = PROPERTY_ICONS[prop.property_name] || Calculator;
+  const gradient = PROPERTY_COLORS[prop.property_name] || "from-gray-500 to-gray-600";
+  
+  const formatName = (name: string) => {
+    return name.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
   };
 
   return (
-    <Card className="hover-elevate" data-testid={`card-property-${prediction.id}`}>
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="font-medium text-sm">{prediction.name}</div>
-          <Badge variant="outline" className={`text-xs ${METHOD_COLORS[prediction.method]}`}>
-            {METHOD_LABELS[prediction.method]}
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+      <div className={`h-1 bg-gradient-to-r ${gradient}`} />
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center text-white`}>
+              <Icon className="h-4 w-4" />
+            </div>
+            <span className="font-medium text-sm">{formatName(prop.property_name)}</span>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {prop.method.toUpperCase()}
           </Badge>
         </div>
-
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold font-mono">{formatValue(prediction.value, prediction.name)}</span>
-          <span className="text-sm text-muted-foreground">{prediction.unit}</span>
+        
+        <div className="flex items-baseline gap-2 mb-3">
+          <span className="text-2xl font-bold font-mono">
+            {typeof prop.value === "number" ? prop.value.toFixed(2) : prop.value}
+          </span>
+          <span className="text-sm text-muted-foreground">{prop.unit}</span>
         </div>
-
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="p-2 rounded-md bg-muted/50">
-            <div className="text-sm font-mono font-medium">{Math.round(prediction.confidence * 100)}%</div>
+        
+        <div className="grid grid-cols-2 gap-2">
+          <div className="p-2 rounded bg-muted/50 text-center">
+            <div className="text-sm font-mono font-medium">{Math.round(prop.confidence * 100)}%</div>
             <div className="text-xs text-muted-foreground">Confidence</div>
           </div>
-          <div className="p-2 rounded-md bg-muted/50">
-            <div className="text-sm font-mono font-medium">P{prediction.percentile}</div>
+          <div className="p-2 rounded bg-muted/50 text-center">
+            <div className="text-sm font-mono font-medium">P{Math.round(prop.percentile)}</div>
             <div className="text-xs text-muted-foreground">Percentile</div>
-          </div>
-          <div className="p-2 rounded-md bg-muted/50">
-            <div className="text-sm font-mono font-medium">{prediction.computeTime}</div>
-            <div className="text-xs text-muted-foreground">Compute</div>
           </div>
         </div>
       </CardContent>
@@ -164,294 +137,384 @@ function PropertyCard({ prediction }: PropertyCardProps) {
   );
 }
 
-interface BatchJobCardProps {
-  job: BatchJob;
-}
-
-function BatchJobCard({ job }: BatchJobCardProps) {
-  const progress = Math.round((job.completed / job.total) * 100);
-
-  const statusColors = {
-    running: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-    completed: "bg-green-500/10 text-green-600 dark:text-green-400",
-    queued: "bg-muted text-muted-foreground",
-  };
-
+function ManufacturabilityCard({ result }: { result: ManufacturabilityResult }) {
+  const scoreColor = result.overall_score >= 0.8 ? "text-emerald-600" : 
+                     result.overall_score >= 0.6 ? "text-amber-600" : "text-red-600";
+  
   return (
-    <div className="p-4 rounded-lg border bg-card" data-testid={`card-batch-job-${job.id}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-md flex items-center justify-center ${statusColors[job.status]}`}>
-            {job.status === "running" && <Activity className="h-4 w-4 animate-pulse" />}
-            {job.status === "completed" && <CheckCircle className="h-4 w-4" />}
-            {job.status === "queued" && <Clock className="h-4 w-4" />}
-          </div>
+    <Card className="shadow-lg">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Factory className="h-5 w-5 text-violet-500" />
+          Manufacturability Assessment
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-violet-500/5 to-purple-500/5 border">
           <div>
-            <div className="font-medium">{job.property}</div>
-            <div className="text-xs text-muted-foreground flex items-center gap-2">
-              <Badge variant="outline" className={`text-xs ${METHOD_COLORS[job.method]}`}>
-                {METHOD_LABELS[job.method]}
-              </Badge>
-              <span>{job.startTime}</span>
-            </div>
+            <p className="text-sm text-muted-foreground">Overall Score</p>
+            <p className={`text-4xl font-bold ${scoreColor}`}>
+              {(result.overall_score * 100).toFixed(0)}%
+            </p>
+          </div>
+          <div className="w-24 h-24 relative">
+            <svg className="w-full h-full transform -rotate-90">
+              <circle cx="48" cy="48" r="40" fill="none" stroke="currentColor" className="text-muted/20" strokeWidth="8" />
+              <circle 
+                cx="48" cy="48" r="40" fill="none" stroke="currentColor" 
+                className={scoreColor.replace("text-", "stroke-")}
+                strokeWidth="8" 
+                strokeDasharray={`${result.overall_score * 251} 251`}
+                strokeLinecap="round"
+              />
+            </svg>
           </div>
         </div>
-        <div className="text-right">
-          <div className="font-mono text-sm font-medium">{formatNumber(job.completed)} / {formatNumber(job.total)}</div>
-          {job.eta && <div className="text-xs text-muted-foreground">ETA: {job.eta}</div>}
+        
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-lg border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">Synthesis</span>
+              <span className="text-sm font-mono font-medium">{(result.synthesis_feasibility * 100).toFixed(0)}%</span>
+            </div>
+            <Progress value={result.synthesis_feasibility * 100} className="h-2" />
+          </div>
+          <div className="p-3 rounded-lg border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">Cost Factor</span>
+              <span className="text-sm font-mono font-medium">{(result.cost_factor * 100).toFixed(0)}%</span>
+            </div>
+            <Progress value={result.cost_factor * 100} className="h-2" />
+          </div>
+          <div className="p-3 rounded-lg border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">Scalability</span>
+              <span className="text-sm font-mono font-medium">{(result.scalability * 100).toFixed(0)}%</span>
+            </div>
+            <Progress value={result.scalability * 100} className="h-2" />
+          </div>
+          <div className="p-3 rounded-lg border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">Environmental</span>
+              <span className="text-sm font-mono font-medium">{(result.environmental_score * 100).toFixed(0)}%</span>
+            </div>
+            <Progress value={result.environmental_score * 100} className="h-2" />
+          </div>
         </div>
-      </div>
-      <Progress value={progress} className="h-2" />
-    </div>
+        
+        {result.recommendations.length > 0 && (
+          <div className="p-3 rounded-lg bg-muted/30">
+            <p className="text-sm font-medium mb-2">Recommendations</p>
+            <ul className="space-y-1">
+              {result.recommendations.map((rec, i) => (
+                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  {rec}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
 export default function PropertyPredictionPage() {
-  const [selectedScale, setSelectedScale] = useState<string>("molecular");
-  const [selectedMethod, setSelectedMethod] = useState<PredictionMethod>("ml");
-  const [variantCount, setVariantCount] = useState<number>(420000);
-  const [topPercentile, setTopPercentile] = useState<number[]>([100]);
-  const [showOnlyHighConfidence, setShowOnlyHighConfidence] = useState(false);
+  const [materialType, setMaterialType] = useState<"polymer" | "crystal">("polymer");
+  const [inputText, setInputText] = useState("");
+  const [activeTab, setActiveTab] = useState("predict");
+  const [results, setResults] = useState<MaterialPredictionResult[]>([]);
+  const [manufResults, setManufResults] = useState<ManufacturabilityResult[]>([]);
+  const [selectedMaterial, setSelectedMaterial] = useState<MaterialPredictionResult | null>(null);
 
-  const predictions = useMemo(() => generateMockPredictions(16), []);
-  const batchJobs = useMemo(() => generateMockBatchJobs(), []);
+  const { data: computeNodes } = useQuery<any[]>({
+    queryKey: ["/api/compute-nodes"],
+  });
 
-  const todayPredictions = 847000;
-  const avgThroughput = 12400;
+  const onlineNodes = computeNodes?.filter((n) => n.status === "active") || [];
 
-  const filteredPredictions = useMemo(() => {
-    let result = predictions;
-    if (topPercentile[0] < 100) {
-      result = result.filter(p => p.percentile >= (100 - topPercentile[0]));
+  const predictMutation = useMutation({
+    mutationFn: async (materials: any[]) => {
+      const res = await apiRequest("POST", "/api/compute/materials/predict", { materials });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.results) {
+        setResults(data.results);
+        if (data.results.length > 0) {
+          setSelectedMaterial(data.results[0]);
+        }
+      }
+    },
+  });
+
+  const manufacturabilityMutation = useMutation({
+    mutationFn: async (materials: any[]) => {
+      const res = await apiRequest("POST", "/api/compute/materials/manufacturability", { materials });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.results) {
+        setManufResults(data.results);
+      }
+    },
+  });
+
+  const handlePredict = async () => {
+    let materials: any[] = [];
+    
+    if (inputText.trim()) {
+      const lines = inputText.split("\n").filter(l => l.trim());
+      materials = lines.map(line => {
+        if (materialType === "polymer") {
+          return { type: "polymer", smiles: line.trim() };
+        } else {
+          return { type: "crystal", formula: line.trim() };
+        }
+      });
+    } else {
+      materials = materialType === "polymer" 
+        ? DEMO_POLYMERS.slice(0, 4).map(p => ({ type: p.type, smiles: p.smiles }))
+        : DEMO_CRYSTALS.slice(0, 4).map(c => ({ type: c.type, formula: c.formula }));
     }
-    if (showOnlyHighConfidence) {
-      result = result.filter(p => p.confidence >= 0.9);
-    }
-    return result;
-  }, [predictions, topPercentile, showOnlyHighConfidence]);
+    
+    setResults([]);
+    setManufResults([]);
+    await predictMutation.mutateAsync(materials);
+    await manufacturabilityMutation.mutateAsync(materials);
+  };
 
-  const completedJobs = batchJobs.filter(j => j.status === "completed").length;
-  const runningJobs = batchJobs.filter(j => j.status === "running").length;
+  const isLoading = predictMutation.isPending || manufacturabilityMutation.isPending;
 
   return (
-    <div className="flex flex-col h-full">
-      <PageHeader
-        breadcrumbs={[{ label: "Property Prediction Engine" }]}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" data-testid="button-export">
-              <Download className="h-4 w-4 mr-2" />
-              Export Results
-            </Button>
-            <Button data-testid="button-new-prediction">
-              <Calculator className="h-4 w-4 mr-2" />
-              New Prediction
-            </Button>
-          </div>
-        }
-      />
-
-      <main className="flex-1 overflow-auto p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 p-6 rounded-lg border border-primary/20">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/30">
-                <Calculator className="h-6 w-6 text-primary" />
+    <div className="flex flex-col h-full bg-gradient-to-br from-background via-background to-emerald-500/5">
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-7xl mx-auto px-8 py-10 space-y-6">
+          <header className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 p-8 text-white shadow-xl">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zMCAxNWwtMTMuMDkgNy41djE1TDMwIDQ1bDEzLjA5LTcuNXYtMTVMMzAgMTV6IiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4xNSkiIHN0cm9rZS13aWR0aD0iMiIvPjwvZz48L3N2Zz4=')] opacity-40" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  <Calculator className="h-7 w-7" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold">Property Prediction Engine</h1>
+                  <p className="text-emerald-100">ML-powered material property predictions with manufacturability scoring</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-semibold mb-1">Property Prediction Engine</h2>
-                <p className="text-muted-foreground">
-                  Calculate material properties at scale using <strong className="text-foreground">ML models</strong>,
-                  <strong className="text-foreground"> physics-based simulations</strong> (MD, DFT, FEM), 
-                  and <strong className="text-foreground">hybrid pipelines</strong>.
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold font-mono text-primary">{formatNumber(todayPredictions)}</div>
-                <div className="text-sm text-muted-foreground">predictions today</div>
+              <div className="flex flex-wrap items-center gap-3 text-sm text-emerald-100">
+                {onlineNodes.length > 0 ? (
+                  <Badge variant="outline" className="bg-emerald-500/20 text-white border-emerald-400/50 gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {onlineNodes.length} Compute Node{onlineNodes.length !== 1 ? "s" : ""} Online
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-amber-500/20 text-white border-amber-400/50">
+                    No compute nodes available
+                  </Badge>
+                )}
+                <Badge variant="outline" className="bg-white/20 text-white border-white/30 gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Thermal, Mechanical, Electrical
+                </Badge>
               </div>
             </div>
-          </div>
+          </header>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold font-mono">{formatNumber(variantCount)}</div>
-                <div className="text-xs text-muted-foreground">Variants Selected</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold font-mono text-green-600 dark:text-green-400">{formatNumber(avgThroughput)}/hr</div>
-                <div className="text-xs text-muted-foreground">Avg Throughput</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold font-mono">{runningJobs}</div>
-                <div className="text-xs text-muted-foreground">Running Jobs</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold font-mono text-primary">{completedJobs}</div>
-                <div className="text-xs text-muted-foreground">Completed Today</div>
-              </CardContent>
-            </Card>
-          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-4">
+              <Card className="shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FlaskConical className="h-5 w-5 text-emerald-500" />
+                    Input Materials
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="predict" data-testid="tab-predict">
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Properties
+                      </TabsTrigger>
+                      <TabsTrigger value="screen" data-testid="tab-screen">
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                        Screen
+                      </TabsTrigger>
+                    </TabsList>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Cpu className="h-5 w-5" />
-                Prediction Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Representation Scale</Label>
-                  <Select value={selectedScale} onValueChange={setSelectedScale}>
-                    <SelectTrigger data-testid="select-scale">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="molecular">
-                        <div className="flex items-center gap-2">
-                          <Atom className="h-4 w-4" />
-                          Molecular / Repeat Unit
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="chain">
-                        <div className="flex items-center gap-2">
-                          <Layers className="h-4 w-4" />
-                          Chain / Lattice
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="bulk">
-                        <div className="flex items-center gap-2">
-                          <Box className="h-4 w-4" />
-                          Bulk / Effective
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="multi">
-                        <div className="flex items-center gap-2">
-                          <Zap className="h-4 w-4" />
-                          Multi-Scale (All)
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Prediction Method</Label>
-                  <Select value={selectedMethod} onValueChange={(v) => setSelectedMethod(v as PredictionMethod)}>
-                    <SelectTrigger data-testid="select-method">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ml">ML Model (Fast)</SelectItem>
-                      <SelectItem value="md">MD Simulation</SelectItem>
-                      <SelectItem value="dft">DFT Calculation</SelectItem>
-                      <SelectItem value="fem">FEM Analysis</SelectItem>
-                      <SelectItem value="hybrid">Hybrid Pipeline</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Target Properties</Label>
-                  <Select defaultValue="all">
-                    <SelectTrigger data-testid="select-properties">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Properties (8)</SelectItem>
-                      <SelectItem value="thermal">Thermal Properties</SelectItem>
-                      <SelectItem value="mechanical">Mechanical Properties</SelectItem>
-                      <SelectItem value="electrical">Electrical Properties</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t">
-                <div className="text-sm text-muted-foreground">
-                  Ready to predict <strong>{formatNumber(variantCount)}</strong> variants using <strong>{METHOD_LABELS[selectedMethod]}</strong>
-                </div>
-                <Button data-testid="button-run-prediction">
-                  <Play className="h-4 w-4 mr-2" />
-                  Run Prediction
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                    <TabsContent value="predict" className="space-y-4 mt-4">
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">Material Type</Label>
+                        <Select value={materialType} onValueChange={(v) => setMaterialType(v as any)}>
+                          <SelectTrigger data-testid="select-material-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="polymer">
+                              <div className="flex items-center gap-2">
+                                <Layers className="h-4 w-4" />
+                                Polymer (SMILES)
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="crystal">
+                              <div className="flex items-center gap-2">
+                                <Atom className="h-4 w-4" />
+                                Crystal (Formula)
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">
+                          {materialType === "polymer" ? "SMILES (one per line)" : "Formulas (one per line)"}
+                        </Label>
+                        <Textarea
+                          className="h-28 font-mono text-sm"
+                          placeholder={materialType === "polymer" 
+                            ? "CC\nc1ccccc1CC\nCC(C)(C(=O)OC)C" 
+                            : "Fe2O3\nSiO2\nTiO2"}
+                          value={inputText}
+                          onChange={(e) => setInputText(e.target.value)}
+                          data-testid="input-materials"
+                        />
+                      </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Batch Processing Queue
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {batchJobs.map(job => (
-                <BatchJobCard key={job.id} job={job} />
-              ))}
-            </CardContent>
-          </Card>
+                      <Button
+                        className="w-full gap-2 bg-gradient-to-r from-emerald-500 to-teal-500"
+                        onClick={handlePredict}
+                        disabled={isLoading || onlineNodes.length === 0}
+                        data-testid="button-run-prediction"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                        Run Property Prediction
+                      </Button>
+                    </TabsContent>
 
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Prediction Results
-            </h3>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm text-muted-foreground">Top</Label>
-                <Slider
-                  value={topPercentile}
-                  onValueChange={setTopPercentile}
-                  max={100}
-                  min={1}
-                  step={1}
-                  className="w-24"
-                />
-                <span className="text-sm font-mono w-10">{topPercentile[0]}%</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={showOnlyHighConfidence}
-                  onCheckedChange={setShowOnlyHighConfidence}
-                  data-testid="switch-high-confidence"
-                />
-                <Label className="text-sm">High confidence only</Label>
-              </div>
-              <Button variant="outline" size="sm" data-testid="button-filter">
-                <Filter className="h-4 w-4 mr-2" />
-                More Filters
-              </Button>
+                    <TabsContent value="screen" className="space-y-4 mt-4">
+                      <p className="text-sm text-muted-foreground">
+                        Batch screening mode for high-throughput discovery with target property constraints.
+                      </p>
+                      <Button
+                        className="w-full gap-2"
+                        variant="outline"
+                        disabled
+                        data-testid="button-batch-screen"
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                        Coming Soon
+                      </Button>
+                    </TabsContent>
+                  </Tabs>
+
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-2">Demo Materials:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {(materialType === "polymer" ? DEMO_POLYMERS : DEMO_CRYSTALS).slice(0, 4).map((mat) => (
+                        <Button
+                          key={mat.name}
+                          size="sm"
+                          variant="outline"
+                          className="text-xs"
+                          onClick={() => setInputText(
+                            materialType === "polymer" 
+                              ? (mat as any).smiles 
+                              : (mat as any).formula
+                          )}
+                          data-testid={`button-demo-${mat.name.toLowerCase().replace(/\s/g, "-")}`}
+                        >
+                          {mat.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {results.length > 0 && (
+                <Card className="shadow-lg">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Hexagon className="h-5 w-5 text-emerald-500" />
+                        Materials
+                      </span>
+                      <Badge variant="secondary" className="font-mono">
+                        {results.length}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-[300px] overflow-auto">
+                      {results.map((mat, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                            selectedMaterial === mat
+                              ? "bg-emerald-500/10 border-emerald-500"
+                              : "hover:bg-muted/50"
+                          }`}
+                          onClick={() => setSelectedMaterial(mat)}
+                          data-testid={`result-material-${idx}`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <code className="text-xs font-mono truncate max-w-[160px]">
+                              {mat.material_id.slice(0, 12)}...
+                            </code>
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {mat.material_type}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {mat.properties.length} properties predicted
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            <div className="lg:col-span-2 space-y-4">
+              {selectedMaterial && selectedMaterial.properties.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {selectedMaterial.properties.map((prop, idx) => (
+                      <PropertyCard key={idx} prop={prop} />
+                    ))}
+                  </div>
+                  
+                  {manufResults.length > 0 && (
+                    <ManufacturabilityCard 
+                      result={manufResults.find(m => m.material_id === selectedMaterial.material_id) || manufResults[0]} 
+                    />
+                  )}
+                </>
+              ) : (
+                <Card className="shadow-lg">
+                  <CardContent className="p-12 text-center">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 flex items-center justify-center mx-auto mb-5">
+                      <Calculator className="h-9 w-9 text-emerald-500" />
+                    </div>
+                    <p className="font-semibold text-lg mb-2">No predictions yet</p>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      Enter materials (SMILES for polymers, formulas for crystals) and run the prediction pipeline to see property results.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {filteredPredictions.map(prediction => (
-              <PropertyCard key={prediction.id} prediction={prediction} />
-            ))}
-          </div>
-
-          {filteredPredictions.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              No predictions match current filters. Try adjusting the percentile or confidence threshold.
-            </div>
-          )}
-
-          <ResultsPanel
-            materialsCampaignId="demo-campaign"
-            title="Computation Artifacts"
-            collapsible={true}
-            defaultExpanded={false}
-          />
         </div>
-      </main>
+      </div>
     </div>
   );
 }
