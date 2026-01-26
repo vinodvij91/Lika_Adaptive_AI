@@ -343,12 +343,12 @@ export default function PipelineLauncherPage() {
 
                       <div>
                         <Label>Compute Node</Label>
-                        <Select value={config.preferredNodeId} onValueChange={(v) => setConfig({ ...config, preferredNodeId: v })}>
+                        <Select value={config.preferredNodeId || "auto"} onValueChange={(v) => setConfig({ ...config, preferredNodeId: v === "auto" ? "" : v })}>
                           <SelectTrigger data-testid="select-compute-node" className="mt-1.5">
                             <SelectValue placeholder="Auto-select best node" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Auto-select</SelectItem>
+                            <SelectItem value="auto">Auto-select</SelectItem>
                             {nodes.map((node) => (
                               <SelectItem key={node.id} value={node.id}>
                                 <div className="flex items-center gap-2">
