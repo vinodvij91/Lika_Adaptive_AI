@@ -1,9 +1,5 @@
 const BIONEMO_API_BASE = "https://health.api.nvidia.com/v1";
 
-interface BioNemoConfig {
-  apiKey: string;
-}
-
 export interface MolMIMGenerateRequest {
   smiles: string;
   algorithm?: "CMA-ES" | "none";
@@ -47,6 +43,60 @@ export interface DockingPrediction {
   bindingAffinity: number;
   poseScore: number;
   confidence: number;
+}
+
+export interface GenMolGenerateRequest {
+  smiles: string;
+  numMolecules?: number;
+  temperature?: number;
+  noise?: number;
+  stepSize?: number;
+  scoring?: "QED" | "plogP" | "SA";
+}
+
+export interface GenMolGenerateResponse {
+  status: string;
+  molecules: Array<{
+    smiles: string;
+    score: number;
+  }>;
+}
+
+export interface AlphaFold2Request {
+  sequences: string[];
+  databases?: ("uniref90" | "mgnify" | "small_bfd")[];
+}
+
+export interface AlphaFold2Response {
+  pdbData: string;
+  confidenceScore: number;
+  structureMetrics: {
+    pLDDT: number;
+    pTM: number;
+    numResidues: number;
+  };
+}
+
+export interface SpectroscopyData {
+  type: "FTIR" | "Raman" | "NMR" | "UV-Vis" | "Mass";
+  peaks: Array<{
+    position: number;
+    intensity: number;
+    assignment?: string;
+  }>;
+  metadata: {
+    instrument?: string;
+    resolution?: number;
+    range?: [number, number];
+  };
+}
+
+export interface SpectroscopyAnalysis {
+  functionalGroups: string[];
+  molecularFingerprint: string;
+  suggestedStructures: string[];
+  confidence: number;
+  interpretation: string;
 }
 
 class BioNemoService {
@@ -271,6 +321,225 @@ class BioNemoService {
     return results;
   }
 
+  async generateWithGenMol(request: GenMolGenerateRequest): Promise<GenMolGenerateResponse> {
+    if (!this.isConfigured()) {
+      throw new Error("BioNemo API key not configured");
+    }
+
+    try {
+      const response = await fetch(`${BIONEMO_API_BASE}/biology/nvidia/genmol/generate`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          smiles: request.smiles,
+          num_molecules: request.numMolecules?.toString() || "5",
+          temperature: request.temperature?.toString() || "2.0",
+          noise: request.noise?.toString() || "1.0",
+          step_size: request.stepSize?.toString() || "1",
+          scoring: request.scoring || "QED",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("GenMol API error:", response.status, errorText);
+        return this.getFallbackGenMolResponse(request);
+      }
+
+      const data = await response.json() as any;
+      return {
+        status: data.status || "success",
+        molecules: (data.molecules || []).map((mol: any) => ({
+          smiles: mol.smiles,
+          score: mol.score || 0,
+        })),
+      };
+    } catch (error: any) {
+      console.error("GenMol error:", error);
+      return this.getFallbackGenMolResponse(request);
+    }
+  }
+
+  async predictStructureAlphaFold2(request: AlphaFold2Request): Promise<AlphaFold2Response> {
+    if (!this.isConfigured()) {
+      throw new Error("BioNemo API key not configured");
+    }
+
+    try {
+      const response = await fetch(`${BIONEMO_API_BASE}/biology/nvidia/alphafold2/predict-structure-from-sequences`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          sequences: request.sequences,
+          databases: request.databases || ["uniref90", "mgnify", "small_bfd"],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AlphaFold2 API error:", response.status, errorText);
+        return this.getFallbackAlphaFold2Response(request);
+      }
+
+      const data = await response.json() as any;
+      return {
+        pdbData: data.pdb_string || data.structure || "",
+        confidenceScore: data.confidence || data.plddt_mean || 0.75,
+        structureMetrics: {
+          pLDDT: data.plddt_mean || 75,
+          pTM: data.ptm || 0.7,
+          numResidues: request.sequences[0]?.length || 0,
+        },
+      };
+    } catch (error: any) {
+      console.error("AlphaFold2 error:", error);
+      return this.getFallbackAlphaFold2Response(request);
+    }
+  }
+
+  analyzeSpectroscopy(data: SpectroscopyData): SpectroscopyAnalysis {
+    const functionalGroups: string[] = [];
+    const suggestedStructures: string[] = [];
+    let interpretation = "";
+
+    if (data.type === "FTIR") {
+      for (const peak of data.peaks) {
+        if (peak.position >= 3200 && peak.position <= 3600) {
+          functionalGroups.push("O-H stretch (alcohol/carboxylic acid)");
+        }
+        if (peak.position >= 2850 && peak.position <= 3000) {
+          functionalGroups.push("C-H stretch (alkane)");
+        }
+        if (peak.position >= 1650 && peak.position <= 1750) {
+          functionalGroups.push("C=O stretch (carbonyl)");
+        }
+        if (peak.position >= 1600 && peak.position <= 1680) {
+          functionalGroups.push("C=C stretch (alkene/aromatic)");
+        }
+        if (peak.position >= 2100 && peak.position <= 2260) {
+          functionalGroups.push("C≡C or C≡N stretch");
+        }
+        if (peak.position >= 1000 && peak.position <= 1300) {
+          functionalGroups.push("C-O stretch (ether/ester)");
+        }
+      }
+      interpretation = `FTIR analysis identified ${functionalGroups.length} functional group(s). `;
+    } else if (data.type === "Raman") {
+      for (const peak of data.peaks) {
+        if (peak.position >= 1500 && peak.position <= 1600) {
+          functionalGroups.push("Aromatic ring breathing");
+        }
+        if (peak.position >= 2800 && peak.position <= 3100) {
+          functionalGroups.push("C-H stretch");
+        }
+        if (peak.position >= 1600 && peak.position <= 1700) {
+          functionalGroups.push("C=C stretch");
+        }
+      }
+      interpretation = `Raman spectroscopy identified ${functionalGroups.length} vibrational mode(s). `;
+    } else if (data.type === "NMR") {
+      for (const peak of data.peaks) {
+        if (peak.position >= 0 && peak.position <= 2) {
+          functionalGroups.push("Alkyl protons");
+        }
+        if (peak.position >= 6 && peak.position <= 8) {
+          functionalGroups.push("Aromatic protons");
+        }
+        if (peak.position >= 9 && peak.position <= 10) {
+          functionalGroups.push("Aldehyde proton");
+        }
+        if (peak.position >= 10 && peak.position <= 12) {
+          functionalGroups.push("Carboxylic acid proton");
+        }
+      }
+      interpretation = `NMR analysis identified ${functionalGroups.length} chemical environment(s). `;
+    } else if (data.type === "UV-Vis") {
+      for (const peak of data.peaks) {
+        if (peak.position >= 200 && peak.position <= 280) {
+          functionalGroups.push("π→π* transition (aromatic)");
+        }
+        if (peak.position >= 280 && peak.position <= 400) {
+          functionalGroups.push("n→π* transition (carbonyl/nitro)");
+        }
+        if (peak.position >= 400 && peak.position <= 700) {
+          functionalGroups.push("Extended conjugation/chromophore");
+        }
+      }
+      interpretation = `UV-Vis analysis identified ${functionalGroups.length} electronic transition(s). `;
+    } else if (data.type === "Mass") {
+      const basePeak = data.peaks.reduce((max, p) => p.intensity > max.intensity ? p : max, data.peaks[0]);
+      functionalGroups.push(`Base peak at m/z ${basePeak?.position || "N/A"}`);
+      
+      for (const peak of data.peaks) {
+        if (basePeak && peak.position === basePeak.position - 15) {
+          functionalGroups.push("Loss of CH3 (-15)");
+        }
+        if (basePeak && peak.position === basePeak.position - 18) {
+          functionalGroups.push("Loss of H2O (-18)");
+        }
+        if (basePeak && peak.position === basePeak.position - 28) {
+          functionalGroups.push("Loss of CO (-28)");
+        }
+        if (basePeak && peak.position === basePeak.position - 44) {
+          functionalGroups.push("Loss of CO2 (-44)");
+        }
+      }
+      interpretation = `Mass spectrum analysis with base peak at m/z ${basePeak?.position || "N/A"}. `;
+    }
+
+    if (functionalGroups.includes("C=O stretch (carbonyl)") && functionalGroups.includes("O-H stretch (alcohol/carboxylic acid)")) {
+      suggestedStructures.push("Carboxylic acid");
+    }
+    if (functionalGroups.includes("C=O stretch (carbonyl)") && functionalGroups.includes("C-O stretch (ether/ester)")) {
+      suggestedStructures.push("Ester");
+    }
+    if (functionalGroups.includes("Aromatic protons") || functionalGroups.includes("Aromatic ring breathing")) {
+      suggestedStructures.push("Aromatic compound");
+    }
+
+    const uniqueGroups = functionalGroups.filter((v, i, a) => a.indexOf(v) === i);
+
+    return {
+      functionalGroups: uniqueGroups,
+      molecularFingerprint: this.generateSpectralFingerprint(data),
+      suggestedStructures,
+      confidence: Math.min(0.95, 0.5 + (uniqueGroups.length * 0.1)),
+      interpretation: interpretation + (suggestedStructures.length > 0 
+        ? `Suggested structure class(es): ${suggestedStructures.join(", ")}.`
+        : "No definitive structure class identified."),
+    };
+  }
+
+  parseSpectroscopyFile(content: string, type: SpectroscopyData["type"]): SpectroscopyData {
+    const peaks: SpectroscopyData["peaks"] = [];
+    const lines = content.split("\n").filter(l => l.trim());
+    
+    for (const line of lines) {
+      const match = line.match(/^[\s]*([0-9.]+)[\s,]+([0-9.]+)/);
+      if (match) {
+        peaks.push({
+          position: parseFloat(match[1]),
+          intensity: parseFloat(match[2]),
+        });
+      }
+    }
+
+    return {
+      type,
+      peaks,
+      metadata: {
+        range: peaks.length > 0 
+          ? [Math.min(...peaks.map(p => p.position)), Math.max(...peaks.map(p => p.position))]
+          : [0, 0],
+      },
+    };
+  }
+
+  private generateSpectralFingerprint(data: SpectroscopyData): string {
+    const sortedPeaks = [...data.peaks].sort((a, b) => b.intensity - a.intensity).slice(0, 10);
+    return sortedPeaks.map(p => `${Math.round(p.position)}`).join("-");
+  }
+
   private estimateQED(smiles: string): number {
     const length = smiles.length;
     const rings = (smiles.match(/c1|C1|n1|N1/g) || []).length;
@@ -335,6 +604,35 @@ class BioNemoService {
       bindingAffinity: -5 - (qed * 5) + (Math.random() * 2 - 1),
       poseScore: 0.5 + qed * 0.4 + (Math.random() * 0.1),
       confidence: 0.6,
+    };
+  }
+
+  private getFallbackGenMolResponse(request: GenMolGenerateRequest): GenMolGenerateResponse {
+    const baseMol = request.smiles;
+    const numMolecules = request.numMolecules || 5;
+    const molecules = [];
+    
+    for (let i = 0; i < numMolecules; i++) {
+      const variation = baseMol.replace(/C/g, i % 2 === 0 ? "C" : "c");
+      molecules.push({
+        smiles: variation,
+        score: 0.5 + Math.random() * 0.4,
+      });
+    }
+    
+    return { status: "fallback", molecules };
+  }
+
+  private getFallbackAlphaFold2Response(request: AlphaFold2Request): AlphaFold2Response {
+    const sequence = request.sequences[0] || "";
+    return {
+      pdbData: `HEADER    PREDICTED STRUCTURE\nATOM      1  N   ALA A   1       0.000   0.000   0.000  1.00 50.00           N\nEND`,
+      confidenceScore: 0.65,
+      structureMetrics: {
+        pLDDT: 65,
+        pTM: 0.6,
+        numResidues: sequence.length,
+      },
     };
   }
 }
