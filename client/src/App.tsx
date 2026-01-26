@@ -114,6 +114,7 @@ function AuthenticatedRoutes() {
         <Route path="/materials-campaigns" component={MaterialsCampaignsPage} />
         <Route path="/multi-scale-representations" component={MultiScaleRepresentationsPage} />
         <Route path="/materials-library" component={MaterialsLibraryPage} />
+        <Route path="/materials" component={MaterialsRedirect} />
         <Route path="/material-variants" component={MaterialVariantsPage} />
         <Route path="/simulation-runs" component={SimulationRunsPage} />
         <Route path="/property-prediction" component={PropertyPredictionPage} />
@@ -143,6 +144,20 @@ function DashboardRedirect() {
       navigate(`/dashboard/${domain}`, { replace: true });
     }
   }, [domain, navigate]);
+  
+  return (
+    <div className="h-screen flex items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+function MaterialsRedirect() {
+  const [, navigate] = useLocation();
+  
+  useEffect(() => {
+    navigate("/materials-library", { replace: true });
+  }, [navigate]);
   
   return (
     <div className="h-screen flex items-center justify-center bg-background">
