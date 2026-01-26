@@ -56,6 +56,7 @@ import IntegrationsPage from "@/pages/integrations";
 import LikaAgentPage from "@/pages/lika-agent";
 import QuantumComputePage from "@/pages/quantum-compute";
 import PipelineLauncherPage from "@/pages/pipeline-launcher";
+import UseCasesPage from "@/pages/use-cases";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -178,6 +179,7 @@ function Router() {
           <Switch>
             <Route path="/" component={LandingPage} />
             <Route path="/login" component={LoginPage} />
+            <Route path="/use-cases" component={UseCasesPage} />
             <Route>
               <LandingPage />
             </Route>

@@ -46,6 +46,7 @@ export function Navbar() {
           <NavLink href="#features">Features</NavLink>
           <NavLink href="#drug-discovery">Drug Discovery</NavLink>
           <NavLink href="#materials">Materials Science</NavLink>
+          <NavLink href="/use-cases">Use Cases</NavLink>
         </nav>
 
         <div className="flex items-center gap-3">
