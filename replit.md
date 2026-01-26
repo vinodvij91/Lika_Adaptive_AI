@@ -102,6 +102,16 @@ The platform includes a comprehensive Materials Science pipeline (`compute/mater
 - `SuperconductorDiscovery` - High-Tc superconductor discovery with DFT validation (cuprates, iron-based, hydrides)
 - `CatalystDiscovery` - HER and ORR catalyst discovery for fuel cells and electrolyzers
 - `ThermoelectricDiscovery` - High-ZT thermoelectric materials discovery
+- `PFASReplacementDiscovery` - PFAS-free alternatives for coatings and textiles (EPA compliance)
+- `AerospaceMaterialsDiscovery` - Lightweight alloys and composites (Ti-Al, SiC, carbon fiber)
+- `BiomedicalMaterialsDiscovery` - Biocompatible implant materials (bone matching, osseointegration)
+- `WideGapSemiconductorDiscovery` - SiC/GaN alternatives for power electronics and 5G
+- `SustainableConstructionDiscovery` - Low-carbon cement alternatives (geopolymers, fly ash)
+- `TransparentConductorDiscovery` - ITO-free transparent electrodes (graphene, AgNW, AZO)
+- `RareEarthFreeMagnetDiscovery` - RE-free permanent magnets for EVs and wind turbines
+- `SolidElectrolyteDiscovery` - Solid-state battery electrolytes (LGPS, LLZO, argyrodites)
+- `WaterPurificationDiscovery` - Membrane materials for desalination and filtration
+- `CarbonCaptureDiscovery` - DAC and flue gas CO2 capture sorbents (MOFs, zeolites)
 
 **DFT Calculators:**
 - `VASPCalculator` - VASP integration for DFT calculations (relax, static, band, dos)

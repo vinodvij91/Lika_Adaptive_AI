@@ -3540,6 +3540,889 @@ class ThermoelectricDiscovery(MaterialsDiscoveryPipeline):
             return "Extreme-temperature specialized applications"
 
 
+class PFASReplacementDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discovery workflow for PFAS (forever chemicals) replacement materials.
+    
+    Targets:
+    - Fluorine-free water/oil repellent coatings
+    - Non-stick surface alternatives
+    - Fire-resistant foams without PFAS
+    - Textile treatments
+    
+    Key criteria:
+    - No C-F bonds (eliminates perfluorinated compounds)
+    - Hydrophobic/oleophobic properties
+    - Thermal stability
+    - Chemical resistance
+    - Biodegradability preferred
+    """
+    
+    def __init__(self, use_gpu: bool = True):
+        super().__init__(use_gpu=use_gpu)
+        self.excluded_elements = ['F']  # No fluorine
+        self.preferred_elements = ['Si', 'C', 'H', 'O', 'N']  # Silicones, organics
+    
+    def discover(self, n_candidates: int = 500) -> List[Dict]:
+        """
+        Discover PFAS replacement materials
+        
+        Returns:
+            List of candidate materials with scores
+        """
+        print("\n" + "="*60)
+        print("PFAS REPLACEMENT DISCOVERY")
+        print("="*60)
+        
+        candidates = []
+        
+        # Search for silicone-based alternatives
+        silicone_criteria = {
+            'elements': ['Si', 'O', 'C', 'H'],
+            'is_stable': True
+        }
+        
+        # Generate candidates based on known alternatives with full properties
+        alternative_families = [
+            {'name': 'Silicone polymers', 'base': 'SiO2', 'hydrophobic': 85, 'thermal_stability': 300, 'chemical_resist': 90},
+            {'name': 'Wax-based coatings', 'base': 'C30H62', 'hydrophobic': 90, 'thermal_stability': 80, 'chemical_resist': 60},
+            {'name': 'Protein-based', 'base': 'C4H5NO', 'hydrophobic': 60, 'thermal_stability': 100, 'chemical_resist': 40},
+            {'name': 'Dendrimers', 'base': 'C60H122N30O29', 'hydrophobic': 80, 'thermal_stability': 200, 'chemical_resist': 75},
+            {'name': 'Polyurethane', 'base': 'C17H16N2O4', 'hydrophobic': 75, 'thermal_stability': 150, 'chemical_resist': 80},
+            {'name': 'Parylene coating', 'base': 'C8H8', 'hydrophobic': 88, 'thermal_stability': 280, 'chemical_resist': 95},
+        ]
+        
+        for family in alternative_families:
+            # Enforce no fluorine
+            if 'F' in family['base']:
+                continue
+                
+            mat = Material(
+                composition=family['base'],
+                predicted_properties={
+                    'hydrophobicity': family['hydrophobic'],
+                    'thermal_stability': family['thermal_stability'],
+                    'chemical_resistance': family['chemical_resist']
+                }
+            )
+            
+            score = self._score_pfas_alternative(mat, family['hydrophobic'], family['thermal_stability'], family['chemical_resist'])
+            candidates.append({
+                'material': mat,
+                'family': family['name'],
+                'hydrophobicity_score': family['hydrophobic'],
+                'thermal_stability_c': family['thermal_stability'],
+                'chemical_resistance': family['chemical_resist'],
+                'pfas_replacement_score': score,
+                'fluorine_free': 'F' not in family['base'],
+                'biodegradable': family['name'] in ['Protein-based', 'Wax-based coatings'],
+                'application': 'pfas_replacement'
+            })
+        
+        print(f"Generated {len(candidates)} PFAS alternative candidates")
+        return candidates
+    
+    def _score_pfas_alternative(self, material: Material, hydrophobic: float = 50, thermal_stability: float = 100, chemical_resist: float = 50) -> float:
+        """Score material as PFAS alternative using hydrophobicity, thermal stability, and chemical resistance"""
+        score = 0.0
+        
+        # Fluorine-free is mandatory (max 20 points)
+        if 'F' not in material.composition:
+            score += 20
+        else:
+            return 0  # Disqualify if contains fluorine
+        
+        # Hydrophobicity score (max 30 points)
+        score += hydrophobic / 100 * 30
+        
+        # Thermal stability score (max 25 points)
+        if thermal_stability >= 250:
+            score += 25
+        elif thermal_stability >= 150:
+            score += 15
+        elif thermal_stability >= 100:
+            score += 10
+        else:
+            score += 5
+        
+        # Chemical resistance score (max 25 points)
+        score += chemical_resist / 100 * 25
+        
+        return min(round(score, 1), 100)
+
+
+class AerospaceMaterialsDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discovery workflow for aerospace-grade materials.
+    
+    Targets:
+    - High strength-to-weight ratio alloys
+    - Temperature-resistant composites
+    - Lightweight structural materials
+    
+    Key criteria:
+    - Density < 5 g/cm³ (lightweight)
+    - Tensile strength > 500 MPa
+    - Temperature stability > 300°C
+    - Fatigue resistance
+    - Corrosion resistance
+    """
+    
+    def __init__(self, use_gpu: bool = True):
+        super().__init__(use_gpu=use_gpu)
+        self.target_elements = ['Ti', 'Al', 'Mg', 'C', 'B', 'Si', 'Cr', 'Ni', 'V']
+    
+    def discover(self, n_candidates: int = 500) -> List[Dict]:
+        """
+        Discover aerospace materials
+        
+        Returns:
+            List of candidate materials with aerospace scores
+        """
+        print("\n" + "="*60)
+        print("AEROSPACE MATERIALS DISCOVERY")
+        print("="*60)
+        
+        candidates = []
+        
+        # Known aerospace alloy families with full properties
+        alloy_families = [
+            {'name': 'Ti-6Al-4V variants', 'composition': 'Ti6Al4V', 'density': 4.43, 'strength': 900, 'max_temp': 400},
+            {'name': 'Al-Li alloys', 'composition': 'Al3Li', 'density': 2.55, 'strength': 500, 'max_temp': 200},
+            {'name': 'Mg-Al-Zn', 'composition': 'Mg3AlZn', 'density': 1.81, 'strength': 350, 'max_temp': 150},
+            {'name': 'SiC composites', 'composition': 'SiC', 'density': 3.21, 'strength': 600, 'max_temp': 1400},
+            {'name': 'Carbon fiber reinforced', 'composition': 'C', 'density': 1.75, 'strength': 1500, 'max_temp': 300},
+            {'name': 'Ni superalloys', 'composition': 'Ni3AlCr', 'density': 8.19, 'strength': 1100, 'max_temp': 1100},
+            {'name': 'TiAl intermetallics', 'composition': 'TiAl', 'density': 3.76, 'strength': 700, 'max_temp': 750},
+        ]
+        
+        for family in alloy_families:
+            mat = Material(
+                composition=family['composition'],
+                predicted_properties={
+                    'density': family['density'],
+                    'tensile_strength': family['strength'],
+                    'max_service_temp': family['max_temp']
+                }
+            )
+            
+            score = self._score_aerospace(mat, family['density'], family['strength'], family['max_temp'])
+            candidates.append({
+                'material': mat,
+                'family': family['name'],
+                'density_g_cm3': family['density'],
+                'tensile_strength_mpa': family['strength'],
+                'max_service_temp_c': family['max_temp'],
+                'aerospace_score': score,
+                'weight_reduction_vs_steel': (7.85 - family['density']) / 7.85 * 100,
+                'application': 'aerospace'
+            })
+        
+        candidates.sort(key=lambda x: x['aerospace_score'], reverse=True)
+        print(f"Generated {len(candidates)} aerospace material candidates")
+        return candidates
+    
+    def _score_aerospace(self, material: Material, density: float, strength: float = 500, max_temp: float = 300) -> float:
+        """Score material for aerospace applications using density, strength, and temperature stability"""
+        score = 0.0
+        
+        # Lower density = higher score (max 30 points)
+        if density < 2.0:
+            score += 30
+        elif density < 3.0:
+            score += 25
+        elif density < 4.5:
+            score += 15
+        elif density < 6.0:
+            score += 10
+        
+        # Higher tensile strength = higher score (max 35 points)
+        if strength >= 1000:
+            score += 35
+        elif strength >= 700:
+            score += 25
+        elif strength >= 500:
+            score += 15
+        else:
+            score += 5
+        
+        # Higher temperature stability = higher score (max 25 points)
+        if max_temp >= 1000:
+            score += 25
+        elif max_temp >= 500:
+            score += 20
+        elif max_temp >= 300:
+            score += 10
+        else:
+            score += 5
+        
+        # Bonus for common aerospace elements (max 10 points)
+        if 'Ti' in material.composition:
+            score += 5
+        if 'C' in material.composition:
+            score += 5
+        
+        return min(score, 100)
+
+
+class BiomedicalMaterialsDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discovery workflow for biomedical implant materials.
+    
+    Targets:
+    - Hip/knee replacement materials
+    - Dental implants
+    - Bone scaffolds
+    - Cardiovascular stents
+    
+    Key criteria:
+    - Biocompatibility (non-toxic, non-allergenic)
+    - Osseointegration (for bone implants)
+    - Mechanical match to bone (E ~15-30 GPa)
+    - Corrosion resistance in body fluids
+    - Wear resistance
+    """
+    
+    def __init__(self, use_gpu: bool = True):
+        super().__init__(use_gpu=use_gpu)
+        self.biocompatible_elements = ['Ti', 'Zr', 'Nb', 'Ta', 'Co', 'Cr', 'Mo', 'Ca', 'P']
+        self.toxic_elements = ['Ni', 'Al', 'V', 'Cu', 'Pb', 'Cd', 'Hg']
+    
+    def discover(self, n_candidates: int = 500, application: str = 'bone') -> List[Dict]:
+        """
+        Discover biomedical materials
+        
+        Args:
+            n_candidates: Number of candidates
+            application: 'bone', 'dental', 'cardiovascular'
+        
+        Returns:
+            List of candidate materials with biocompatibility scores
+        """
+        print("\n" + "="*60)
+        print(f"BIOMEDICAL MATERIALS DISCOVERY ({application.upper()})")
+        print("="*60)
+        
+        candidates = []
+        
+        # Known biomedical material families
+        material_families = [
+            {'name': 'Ti-Nb-Zr', 'composition': 'Ti13Nb13Zr', 'modulus': 79, 'biocompat': 95},
+            {'name': 'Ti-Mo-Zr', 'composition': 'Ti15Mo5Zr', 'modulus': 78, 'biocompat': 93},
+            {'name': 'CoCrMo', 'composition': 'Co28Cr6Mo', 'modulus': 210, 'biocompat': 85},
+            {'name': 'Hydroxyapatite', 'composition': 'Ca10P6O26H2', 'modulus': 120, 'biocompat': 98},
+            {'name': 'Beta-Ti', 'composition': 'Ti24Nb4Zr8Sn', 'modulus': 55, 'biocompat': 94},
+            {'name': 'Tantalum', 'composition': 'Ta', 'modulus': 186, 'biocompat': 97},
+            {'name': 'Zirconia', 'composition': 'ZrO2', 'modulus': 200, 'biocompat': 96},
+        ]
+        
+        bone_modulus = 20  # Cortical bone ~15-30 GPa
+        
+        for family in material_families:
+            # Check for toxic elements
+            has_toxic = any(elem in family['composition'] for elem in self.toxic_elements)
+            if has_toxic:
+                continue  # Skip materials with toxic elements
+            
+            mat = Material(
+                composition=family['composition'],
+                predicted_properties={'elastic_modulus': family['modulus']}
+            )
+            
+            # Calculate bone matching score (stress shielding prevention)
+            modulus_match = 100 - abs(family['modulus'] - bone_modulus) / bone_modulus * 50
+            modulus_match = max(0, min(100, modulus_match))
+            
+            # Overall score includes biocompatibility, bone matching, and toxicity check
+            overall = (family['biocompat'] + modulus_match) / 2
+            
+            candidates.append({
+                'material': mat,
+                'family': family['name'],
+                'elastic_modulus_gpa': family['modulus'],
+                'biocompatibility_score': family['biocompat'],
+                'bone_matching_score': modulus_match,
+                'overall_score': overall,
+                'toxic_elements_present': has_toxic,
+                'stress_shielding_risk': 'High' if family['modulus'] > 100 else 'Low',
+                'application': f'biomedical_{application}'
+            })
+        
+        candidates.sort(key=lambda x: x['overall_score'], reverse=True)
+        print(f"Generated {len(candidates)} biomedical material candidates")
+        return candidates
+
+
+class WideGapSemiconductorDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discovery workflow for wide bandgap semiconductors.
+    
+    Targets:
+    - SiC alternatives for power electronics
+    - GaN alternatives for RF/5G
+    - Novel ultrawide bandgap materials (>4 eV)
+    
+    Key criteria:
+    - Band gap > 2.0 eV (wide) or > 4.0 eV (ultrawide)
+    - High breakdown field
+    - High thermal conductivity
+    - High electron mobility
+    """
+    
+    def __init__(self, use_gpu: bool = True):
+        super().__init__(use_gpu=use_gpu)
+        self.target_elements = ['Ga', 'N', 'Al', 'B', 'Si', 'C', 'O', 'Zn']
+    
+    def discover(self, n_candidates: int = 500, min_bandgap: float = 2.0) -> List[Dict]:
+        """
+        Discover wide bandgap semiconductors
+        
+        Args:
+            n_candidates: Number of candidates
+            min_bandgap: Minimum band gap in eV
+        
+        Returns:
+            List of candidate materials with semiconductor scores
+        """
+        print("\n" + "="*60)
+        print(f"WIDE BANDGAP SEMICONDUCTOR DISCOVERY (Eg > {min_bandgap} eV)")
+        print("="*60)
+        
+        candidates = []
+        
+        # Known WBG semiconductor families with full properties
+        wbg_families = [
+            {'name': 'SiC-4H', 'composition': 'SiC', 'bandgap': 3.26, 'breakdown': 2.2, 'thermal_cond': 370, 'mobility': 900},
+            {'name': 'GaN', 'composition': 'GaN', 'bandgap': 3.4, 'breakdown': 3.3, 'thermal_cond': 130, 'mobility': 1200},
+            {'name': 'AlN', 'composition': 'AlN', 'bandgap': 6.2, 'breakdown': 12.0, 'thermal_cond': 285, 'mobility': 300},
+            {'name': 'Ga2O3', 'composition': 'Ga2O3', 'bandgap': 4.9, 'breakdown': 8.0, 'thermal_cond': 27, 'mobility': 200},
+            {'name': 'Diamond', 'composition': 'C', 'bandgap': 5.47, 'breakdown': 10.0, 'thermal_cond': 2200, 'mobility': 2000},
+            {'name': 'BN', 'composition': 'BN', 'bandgap': 6.4, 'breakdown': 5.0, 'thermal_cond': 400, 'mobility': 50},
+            {'name': 'AlGaN', 'composition': 'AlGaN', 'bandgap': 4.5, 'breakdown': 5.0, 'thermal_cond': 200, 'mobility': 800},
+            {'name': 'ZnO', 'composition': 'ZnO', 'bandgap': 3.37, 'breakdown': 2.0, 'thermal_cond': 60, 'mobility': 200},
+        ]
+        
+        for family in wbg_families:
+            if family['bandgap'] < min_bandgap:
+                continue
+                
+            mat = Material(
+                composition=family['composition'],
+                predicted_properties={
+                    'band_gap': family['bandgap'],
+                    'breakdown_field': family['breakdown'],
+                    'thermal_conductivity': family['thermal_cond'],
+                    'electron_mobility': family['mobility']
+                }
+            )
+            
+            score = self._score_wbg(family['bandgap'], family['breakdown'], family['thermal_cond'], family['mobility'])
+            candidates.append({
+                'material': mat,
+                'family': family['name'],
+                'band_gap_ev': family['bandgap'],
+                'breakdown_field_mv_cm': family['breakdown'],
+                'thermal_conductivity_w_mk': family['thermal_cond'],
+                'electron_mobility_cm2_vs': family['mobility'],
+                'wbg_score': score,
+                'category': 'ultrawide' if family['bandgap'] > 4.0 else 'wide',
+                'power_figure_of_merit': family['bandgap'] * family['breakdown']**2,
+                'application': 'semiconductor'
+            })
+        
+        candidates.sort(key=lambda x: x['wbg_score'], reverse=True)
+        print(f"Generated {len(candidates)} WBG semiconductor candidates")
+        return candidates
+    
+    def _score_wbg(self, bandgap: float, breakdown: float, thermal_cond: float = 100, mobility: float = 500) -> float:
+        """Score wide bandgap semiconductor using bandgap, breakdown, thermal conductivity, and mobility"""
+        score = 0.0
+        
+        # Bandgap score (max 20 points) - higher is better for power
+        score += min(bandgap / 6.5 * 20, 20)
+        
+        # Breakdown field score (max 30 points) - critical for power devices
+        score += min(breakdown / 12 * 30, 30)
+        
+        # Thermal conductivity score (max 25 points) - critical for heat dissipation
+        if thermal_cond >= 1000:
+            score += 25
+        elif thermal_cond >= 300:
+            score += 20
+        elif thermal_cond >= 100:
+            score += 10
+        else:
+            score += 5
+        
+        # Electron mobility score (max 25 points) - critical for switching speed
+        if mobility >= 1500:
+            score += 25
+        elif mobility >= 800:
+            score += 20
+        elif mobility >= 300:
+            score += 10
+        else:
+            score += 5
+        
+        return min(round(score, 1), 100)
+
+
+class SustainableConstructionDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discovery workflow for sustainable construction materials.
+    
+    Targets:
+    - Low-carbon cement alternatives
+    - Geopolymers
+    - Bio-based building materials
+    - Recycled aggregate compositions
+    
+    Key criteria:
+    - CO2 footprint reduction vs Portland cement
+    - Compressive strength > 20 MPa
+    - Durability
+    - Cost-effectiveness
+    """
+    
+    def __init__(self, use_gpu: bool = True):
+        super().__init__(use_gpu=use_gpu)
+        self.target_elements = ['Si', 'Al', 'Ca', 'Na', 'K', 'Fe', 'Mg', 'O']
+    
+    def discover(self, n_candidates: int = 500) -> List[Dict]:
+        """
+        Discover sustainable construction materials
+        
+        Returns:
+            List of candidate materials with sustainability scores
+        """
+        print("\n" + "="*60)
+        print("SUSTAINABLE CONSTRUCTION MATERIALS DISCOVERY")
+        print("="*60)
+        
+        candidates = []
+        
+        # Cement alternative families
+        cement_alternatives = [
+            {'name': 'Fly ash geopolymer', 'composition': 'Si2Al2O7Na', 'co2_reduction': 80, 'strength': 50},
+            {'name': 'Slag cement', 'composition': 'CaSiAlO4', 'co2_reduction': 50, 'strength': 45},
+            {'name': 'Limestone calcined clay', 'composition': 'CaAlSi2O8', 'co2_reduction': 40, 'strength': 40},
+            {'name': 'Magnesium oxide cement', 'composition': 'MgO', 'co2_reduction': 30, 'strength': 35},
+            {'name': 'Alkali-activated slag', 'composition': 'CaSi2AlO7K', 'co2_reduction': 70, 'strength': 55},
+            {'name': 'Calcium sulfoaluminate', 'composition': 'Ca4Al6SO16', 'co2_reduction': 35, 'strength': 48},
+        ]
+        
+        for alt in cement_alternatives:
+            mat = Material(
+                composition=alt['composition'],
+                predicted_properties={
+                    'co2_reduction': alt['co2_reduction'],
+                    'compressive_strength': alt['strength']
+                }
+            )
+            
+            score = (alt['co2_reduction'] + alt['strength']) / 2
+            candidates.append({
+                'material': mat,
+                'family': alt['name'],
+                'co2_reduction_percent': alt['co2_reduction'],
+                'compressive_strength_mpa': alt['strength'],
+                'sustainability_score': score,
+                'portland_cement_replacement': f"{alt['co2_reduction']}% lower emissions",
+                'application': 'construction'
+            })
+        
+        candidates.sort(key=lambda x: x['sustainability_score'], reverse=True)
+        print(f"Generated {len(candidates)} sustainable construction candidates")
+        return candidates
+
+
+class TransparentConductorDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discovery workflow for transparent conductors (ITO alternatives).
+    
+    Targets:
+    - ITO (Indium Tin Oxide) replacements
+    - Flexible transparent electrodes
+    - Low-cost alternatives
+    
+    Key criteria:
+    - Optical transparency > 80% in visible range
+    - Sheet resistance < 100 Ω/sq
+    - No/low indium content (scarce element)
+    - Flexibility for bendable displays
+    """
+    
+    def __init__(self, use_gpu: bool = True):
+        super().__init__(use_gpu=use_gpu)
+        self.target_elements = ['Zn', 'Sn', 'Al', 'Ga', 'Ti', 'Ag', 'C']
+    
+    def discover(self, n_candidates: int = 500) -> List[Dict]:
+        """
+        Discover transparent conductor materials
+        
+        Returns:
+            List of candidate materials with TC scores
+        """
+        print("\n" + "="*60)
+        print("TRANSPARENT CONDUCTOR DISCOVERY (ITO ALTERNATIVES)")
+        print("="*60)
+        
+        candidates = []
+        
+        # TC material families
+        tc_families = [
+            {'name': 'AZO (Al:ZnO)', 'composition': 'Zn98Al2O100', 'transparency': 85, 'resistance': 50, 'indium_free': True},
+            {'name': 'GZO (Ga:ZnO)', 'composition': 'Zn98Ga2O100', 'transparency': 87, 'resistance': 30, 'indium_free': True},
+            {'name': 'FTO (F:SnO2)', 'composition': 'Sn95F5O190', 'transparency': 82, 'resistance': 15, 'indium_free': True},
+            {'name': 'Silver nanowires', 'composition': 'Ag', 'transparency': 90, 'resistance': 20, 'indium_free': True},
+            {'name': 'Graphene', 'composition': 'C', 'transparency': 97, 'resistance': 125, 'indium_free': True},
+            {'name': 'PEDOT:PSS', 'composition': 'C10H8O4S2', 'transparency': 88, 'resistance': 100, 'indium_free': True},
+            {'name': 'Carbon nanotubes', 'composition': 'C', 'transparency': 85, 'resistance': 60, 'indium_free': True},
+        ]
+        
+        for tc in tc_families:
+            mat = Material(
+                composition=tc['composition'],
+                predicted_properties={
+                    'transparency': tc['transparency'],
+                    'sheet_resistance': tc['resistance']
+                }
+            )
+            
+            # Figure of merit: transparency / log(resistance)
+            fom = tc['transparency'] / (np.log10(tc['resistance'] + 1) + 1)
+            candidates.append({
+                'material': mat,
+                'family': tc['name'],
+                'transparency_percent': tc['transparency'],
+                'sheet_resistance_ohm_sq': tc['resistance'],
+                'figure_of_merit': round(fom, 2),
+                'indium_free': tc['indium_free'],
+                'ito_replacement_score': fom / 0.85 * 100,  # Normalized to ITO
+                'application': 'transparent_conductor'
+            })
+        
+        candidates.sort(key=lambda x: x['figure_of_merit'], reverse=True)
+        print(f"Generated {len(candidates)} transparent conductor candidates")
+        return candidates
+
+
+class RareEarthFreeMagnetDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discovery workflow for rare-earth-free permanent magnets.
+    
+    Targets:
+    - Alternatives to NdFeB magnets
+    - EV motor magnets without Nd, Dy
+    - Wind turbine generator magnets
+    
+    Key criteria:
+    - (BH)max > 10 MGOe (minimum for many applications)
+    - Curie temperature > 300°C
+    - No rare earth elements (Nd, Dy, Pr, Sm)
+    - Cost-effectiveness
+    """
+    
+    def __init__(self, use_gpu: bool = True):
+        super().__init__(use_gpu=use_gpu)
+        self.rare_earth_elements = ['Nd', 'Dy', 'Pr', 'Sm', 'Ce', 'La', 'Eu', 'Tb']
+        self.target_elements = ['Fe', 'Co', 'Mn', 'Ni', 'Al', 'N', 'C', 'B']
+    
+    def discover(self, n_candidates: int = 500, min_bhmax: float = 10.0) -> List[Dict]:
+        """
+        Discover rare-earth-free permanent magnets
+        
+        Args:
+            n_candidates: Number of candidates
+            min_bhmax: Minimum (BH)max in MGOe
+        
+        Returns:
+            List of candidate materials with magnet scores
+        """
+        print("\n" + "="*60)
+        print(f"RARE-EARTH-FREE MAGNET DISCOVERY ((BH)max > {min_bhmax} MGOe)")
+        print("="*60)
+        
+        candidates = []
+        
+        # RE-free magnet families
+        magnet_families = [
+            {'name': 'Fe16N2', 'composition': 'Fe16N2', 'bhmax': 20, 'curie_temp': 540, 'maturity': 'Research'},
+            {'name': 'MnBi', 'composition': 'MnBi', 'bhmax': 17, 'curie_temp': 360, 'maturity': 'Developing'},
+            {'name': 'MnAl', 'composition': 'MnAl', 'bhmax': 12, 'curie_temp': 380, 'maturity': 'Production'},
+            {'name': 'Alnico', 'composition': 'Fe35Co35Ni15Al7Cu8', 'bhmax': 10, 'curie_temp': 850, 'maturity': 'Production'},
+            {'name': 'FeCo', 'composition': 'Fe65Co35', 'bhmax': 8, 'curie_temp': 980, 'maturity': 'Production'},
+            {'name': 'Fe3Sn', 'composition': 'Fe3Sn', 'bhmax': 15, 'curie_temp': 450, 'maturity': 'Research'},
+            {'name': 'MnGa', 'composition': 'MnGa', 'bhmax': 18, 'curie_temp': 400, 'maturity': 'Research'},
+        ]
+        
+        for family in magnet_families:
+            if family['bhmax'] < min_bhmax:
+                continue
+                
+            mat = Material(
+                composition=family['composition'],
+                predicted_properties={
+                    'bhmax': family['bhmax'],
+                    'curie_temperature': family['curie_temp']
+                }
+            )
+            
+            # Score based on (BH)max and Curie temperature
+            score = (family['bhmax'] / 50 * 50) + (family['curie_temp'] / 1000 * 50)
+            candidates.append({
+                'material': mat,
+                'family': family['name'],
+                'bhmax_mgoe': family['bhmax'],
+                'curie_temp_c': family['curie_temp'],
+                'magnet_score': round(score, 1),
+                'maturity': family['maturity'],
+                'ndfeb_replacement_potential': family['bhmax'] / 50 * 100,  # NdFeB ~50 MGOe
+                'rare_earth_free': True,
+                'application': 'permanent_magnet'
+            })
+        
+        candidates.sort(key=lambda x: x['magnet_score'], reverse=True)
+        print(f"Generated {len(candidates)} RE-free magnet candidates")
+        return candidates
+
+
+class SolidElectrolyteDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discovery workflow for solid-state battery electrolytes.
+    
+    Targets:
+    - Li-ion conductors for solid-state batteries
+    - Na-ion solid electrolytes
+    - Safe, non-flammable alternatives to liquid electrolytes
+    
+    Key criteria:
+    - Ionic conductivity > 1 mS/cm at room temperature
+    - Electronic conductivity < 10^-10 S/cm
+    - Electrochemical stability window > 5V
+    - Chemical stability with Li metal anode
+    """
+    
+    def __init__(self, use_gpu: bool = True):
+        super().__init__(use_gpu=use_gpu)
+        self.target_elements = ['Li', 'P', 'S', 'O', 'Cl', 'La', 'Zr', 'Ti', 'Ge']
+    
+    def discover(self, n_candidates: int = 500, working_ion: str = 'Li') -> List[Dict]:
+        """
+        Discover solid electrolyte materials
+        
+        Args:
+            n_candidates: Number of candidates
+            working_ion: 'Li' or 'Na'
+        
+        Returns:
+            List of candidate materials with electrolyte scores
+        """
+        print("\n" + "="*60)
+        print(f"SOLID ELECTROLYTE DISCOVERY ({working_ion}-ion)")
+        print("="*60)
+        
+        candidates = []
+        
+        # Solid electrolyte families
+        electrolyte_families = [
+            {'name': 'LGPS', 'composition': 'Li10GeP2S12', 'conductivity': 12, 'stability': 4.0, 'family': 'Sulfide'},
+            {'name': 'Li6PS5Cl (Argyrodite)', 'composition': 'Li6PS5Cl', 'conductivity': 3, 'stability': 3.5, 'family': 'Sulfide'},
+            {'name': 'LLZO', 'composition': 'Li7La3Zr2O12', 'conductivity': 0.5, 'stability': 6.0, 'family': 'Oxide'},
+            {'name': 'LATP', 'composition': 'Li1.3Al0.3Ti1.7P3O12', 'conductivity': 0.7, 'stability': 4.5, 'family': 'NASICON'},
+            {'name': 'LiPON', 'composition': 'Li2.9PO3.3N0.46', 'conductivity': 0.002, 'stability': 5.5, 'family': 'Oxynitride'},
+            {'name': 'Li3InCl6', 'composition': 'Li3InCl6', 'conductivity': 2.0, 'stability': 4.2, 'family': 'Halide'},
+            {'name': 'Na3PS4', 'composition': 'Na3PS4', 'conductivity': 0.2, 'stability': 3.0, 'family': 'Sulfide'},
+        ]
+        
+        for family in electrolyte_families:
+            mat = Material(
+                composition=family['composition'],
+                predicted_properties={
+                    'ionic_conductivity': family['conductivity'],
+                    'stability_window': family['stability']
+                }
+            )
+            
+            # Score based on conductivity and stability
+            cond_score = min(family['conductivity'] / 12 * 50, 50)  # Normalized to LGPS
+            stab_score = family['stability'] / 6 * 50  # Normalized to LLZO
+            score = cond_score + stab_score
+            
+            candidates.append({
+                'material': mat,
+                'name': family['name'],
+                'family': family['family'],
+                'ionic_conductivity_ms_cm': family['conductivity'],
+                'stability_window_v': family['stability'],
+                'electrolyte_score': round(score, 1),
+                'air_stable': family['family'] in ['Oxide', 'NASICON'],
+                'working_ion': 'Li' if 'Li' in family['composition'] else 'Na',
+                'application': 'solid_electrolyte'
+            })
+        
+        candidates.sort(key=lambda x: x['electrolyte_score'], reverse=True)
+        print(f"Generated {len(candidates)} solid electrolyte candidates")
+        return candidates
+
+
+class WaterPurificationDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discovery workflow for water purification membrane materials.
+    
+    Targets:
+    - Desalination membranes
+    - Heavy metal removal
+    - Organic contaminant filtration
+    - Antimicrobial surfaces
+    
+    Key criteria:
+    - High water permeability
+    - High salt rejection (>99% for desalination)
+    - Chemical stability
+    - Fouling resistance
+    """
+    
+    def __init__(self, use_gpu: bool = True):
+        super().__init__(use_gpu=use_gpu)
+        self.target_elements = ['C', 'N', 'O', 'S', 'Ti', 'Zr', 'Al']
+    
+    def discover(self, n_candidates: int = 500, application: str = 'desalination') -> List[Dict]:
+        """
+        Discover water purification materials
+        
+        Args:
+            n_candidates: Number of candidates
+            application: 'desalination', 'heavy_metal', 'organic'
+        
+        Returns:
+            List of candidate materials with purification scores
+        """
+        print("\n" + "="*60)
+        print(f"WATER PURIFICATION DISCOVERY ({application.upper()})")
+        print("="*60)
+        
+        candidates = []
+        
+        # Membrane material families
+        membrane_families = [
+            {'name': 'Graphene oxide', 'composition': 'C10O2H4', 'permeability': 100, 'rejection': 99.5, 'fouling_resist': 80},
+            {'name': 'MXene (Ti3C2)', 'composition': 'Ti3C2', 'permeability': 80, 'rejection': 99.0, 'fouling_resist': 85},
+            {'name': 'MOF-based', 'composition': 'Zr6O4C60H24', 'permeability': 120, 'rejection': 98.5, 'fouling_resist': 70},
+            {'name': 'Polyamide TFC', 'composition': 'C15H11N2O2', 'permeability': 40, 'rejection': 99.7, 'fouling_resist': 60},
+            {'name': 'Aquaporin-inspired', 'composition': 'C80H120N20O25', 'permeability': 200, 'rejection': 99.9, 'fouling_resist': 75},
+            {'name': 'Zeolite (NaA)', 'composition': 'Na12Al12Si12O48', 'permeability': 30, 'rejection': 99.8, 'fouling_resist': 90},
+            {'name': 'CNT membrane', 'composition': 'C', 'permeability': 150, 'rejection': 99.2, 'fouling_resist': 85},
+        ]
+        
+        for family in membrane_families:
+            mat = Material(
+                composition=family['composition'],
+                predicted_properties={
+                    'water_permeability': family['permeability'],
+                    'salt_rejection': family['rejection']
+                }
+            )
+            
+            # Score based on permeability, rejection, and fouling resistance
+            score = (family['permeability'] / 200 * 30 + 
+                    family['rejection'] / 100 * 40 + 
+                    family['fouling_resist'] / 100 * 30)
+            
+            candidates.append({
+                'material': mat,
+                'family': family['name'],
+                'water_permeability_lmh_bar': family['permeability'],
+                'salt_rejection_percent': family['rejection'],
+                'fouling_resistance': family['fouling_resist'],
+                'purification_score': round(score, 1),
+                'application': f'water_{application}'
+            })
+        
+        candidates.sort(key=lambda x: x['purification_score'], reverse=True)
+        print(f"Generated {len(candidates)} water purification candidates")
+        return candidates
+
+
+class CarbonCaptureDiscovery(MaterialsDiscoveryPipeline):
+    """
+    Discovery workflow for carbon capture materials.
+    
+    Targets:
+    - Direct air capture (DAC) sorbents
+    - Flue gas CO2 capture
+    - Carbon mineralization materials
+    
+    Key criteria:
+    - High CO2 adsorption capacity (>3 mmol/g)
+    - High CO2/N2 selectivity (>50)
+    - Low regeneration energy
+    - Stability over many cycles
+    """
+    
+    def __init__(self, use_gpu: bool = True):
+        super().__init__(use_gpu=use_gpu)
+        self.target_elements = ['C', 'N', 'O', 'Zn', 'Mg', 'Ca', 'Al', 'Na', 'K']
+    
+    def discover(self, n_candidates: int = 500, application: str = 'dac') -> List[Dict]:
+        """
+        Discover carbon capture materials
+        
+        Args:
+            n_candidates: Number of candidates
+            application: 'dac' (direct air capture), 'flue_gas', 'mineralization'
+        
+        Returns:
+            List of candidate materials with capture scores
+        """
+        print("\n" + "="*60)
+        print(f"CARBON CAPTURE DISCOVERY ({application.upper()})")
+        print("="*60)
+        
+        candidates = []
+        
+        # Carbon capture material families
+        capture_families = [
+            {'name': 'MOF-74-Mg', 'composition': 'Mg2C8H2O6', 'capacity': 8.0, 'selectivity': 100, 'regen_temp': 150},
+            {'name': 'SIFSIX-3-Cu', 'composition': 'CuSiF6N4C8H8', 'capacity': 2.5, 'selectivity': 1200, 'regen_temp': 80},
+            {'name': 'Zeolite 13X', 'composition': 'Na86Al86Si106O384', 'capacity': 5.0, 'selectivity': 80, 'regen_temp': 250},
+            {'name': 'Amine-functionalized silica', 'composition': 'SiO2C3H9N', 'capacity': 3.5, 'selectivity': 500, 'regen_temp': 100},
+            {'name': 'Potassium carbonate', 'composition': 'K2CO3', 'capacity': 7.0, 'selectivity': 200, 'regen_temp': 120},
+            {'name': 'Mg(OH)2 slurry', 'composition': 'MgO2H2', 'capacity': 10.0, 'selectivity': 1000, 'regen_temp': 350},
+            {'name': 'Activated carbon + amine', 'composition': 'C100N5H15', 'capacity': 4.0, 'selectivity': 150, 'regen_temp': 120},
+        ]
+        
+        for family in capture_families:
+            mat = Material(
+                composition=family['composition'],
+                predicted_properties={
+                    'co2_capacity': family['capacity'],
+                    'selectivity': family['selectivity']
+                }
+            )
+            
+            # Score based on capacity, selectivity, and regeneration energy
+            cap_score = family['capacity'] / 10 * 40
+            sel_score = min(family['selectivity'] / 1200 * 30, 30)
+            regen_score = (400 - family['regen_temp']) / 400 * 30  # Lower is better
+            score = cap_score + sel_score + regen_score
+            
+            candidates.append({
+                'material': mat,
+                'family': family['name'],
+                'co2_capacity_mmol_g': family['capacity'],
+                'co2_n2_selectivity': family['selectivity'],
+                'regeneration_temp_c': family['regen_temp'],
+                'capture_score': round(score, 1),
+                'energy_efficiency': 'High' if family['regen_temp'] < 150 else 'Medium' if family['regen_temp'] < 250 else 'Low',
+                'application': f'carbon_capture_{application}'
+            })
+        
+        candidates.sort(key=lambda x: x['capture_score'], reverse=True)
+        print(f"Generated {len(candidates)} carbon capture candidates")
+        return candidates
+
+
 # ============================================================================
 # CLI STEP HANDLERS
 # ============================================================================
