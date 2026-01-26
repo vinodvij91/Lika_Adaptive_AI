@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
+import { useDomain } from "@/contexts/domain-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -106,7 +106,13 @@ const MATERIALS_IMPORT_TYPES = [
 
 export default function ImportHub() {
   const [, setLocation] = useLocation();
-  const [domain, setDomain] = useState<"drug" | "materials">("drug");
+  const { domain: globalDomain, setDomain: setGlobalDomain } = useDomain();
+  
+  // Map global domain to local tab value
+  const domain = globalDomain === "materials" ? "materials" : "drug";
+  const setDomain = (val: "drug" | "materials") => {
+    setGlobalDomain(val === "materials" ? "materials" : "drug");
+  };
 
   const importTypes = domain === "drug" ? DRUG_IMPORT_TYPES : MATERIALS_IMPORT_TYPES;
 
