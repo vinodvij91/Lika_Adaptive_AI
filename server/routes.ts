@@ -5302,6 +5302,83 @@ print(json.dumps({
     }
   });
 
+  // ==================== External Data Sync Endpoints (Supabase) ====================
+
+  app.get("/api/external-sync/test-connection", requireAuth, async (req, res) => {
+    try {
+      const { supabaseSyncService } = await import("./services/supabase-sync");
+      const result = await supabaseSyncService.testConnection();
+      res.json(result);
+    } catch (error: any) {
+      console.error("External DB connection test error:", error);
+      res.status(500).json({ success: false, message: error.message || "Connection test failed" });
+    }
+  });
+
+  app.get("/api/external-sync/preview/:tableName", requireAuth, async (req, res) => {
+    try {
+      const { tableName } = req.params;
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      const { supabaseSyncService } = await import("./services/supabase-sync");
+      const result = await supabaseSyncService.getTablePreview(tableName, limit);
+      res.json(result);
+    } catch (error: any) {
+      console.error("External table preview error:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to preview table" });
+    }
+  });
+
+  app.post("/api/external-sync/sync/smiles", requireAuth, async (req, res) => {
+    try {
+      const tableName = req.body.tableName || "SMILES";
+      
+      const { supabaseSyncService } = await import("./services/supabase-sync");
+      const result = await supabaseSyncService.syncSmilesTable(tableName);
+      res.json(result);
+    } catch (error: any) {
+      console.error("SMILES sync error:", error);
+      res.status(500).json({ success: false, table: "SMILES", errors: [error.message] });
+    }
+  });
+
+  app.post("/api/external-sync/sync/material-properties", requireAuth, async (req, res) => {
+    try {
+      const tableName = req.body.tableName || "Material_Properties";
+      
+      const { supabaseSyncService } = await import("./services/supabase-sync");
+      const result = await supabaseSyncService.syncMaterialPropertiesTable(tableName);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Material properties sync error:", error);
+      res.status(500).json({ success: false, table: "Material_Properties", errors: [error.message] });
+    }
+  });
+
+  app.post("/api/external-sync/sync/variants", requireAuth, async (req, res) => {
+    try {
+      const tableName = req.body.tableName || "Variants_Formulations";
+      
+      const { supabaseSyncService } = await import("./services/supabase-sync");
+      const result = await supabaseSyncService.syncVariantsFormulationsTable(tableName);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Variants sync error:", error);
+      res.status(500).json({ success: false, table: "Variants_Formulations", errors: [error.message] });
+    }
+  });
+
+  app.post("/api/external-sync/sync/all", requireAuth, async (req, res) => {
+    try {
+      const { supabaseSyncService } = await import("./services/supabase-sync");
+      const result = await supabaseSyncService.syncAll();
+      res.json(result);
+    } catch (error: any) {
+      console.error("Full sync error:", error);
+      res.status(500).json({ error: error.message || "Failed to sync all tables" });
+    }
+  });
+
   // ==================== External Database Lookup Endpoints ====================
 
   app.get("/api/lookup/chembl/smiles", requireAuth, async (req, res) => {
