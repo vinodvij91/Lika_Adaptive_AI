@@ -75,15 +75,29 @@ export default function MaterialsLibraryPage() {
     }
   };
 
+  // Group related material types for filtering
+  const polymerTypes = ["polymer", "homopolymer", "copolymer"];
+  const crystalTypes = ["crystal", "perovskite", "double_perovskite", "spinel", "binary_oxide", "binary_chalcogenide", "binary_pnictide", "mxene_2d", "tmd_2d", "2d_material"];
+  const compositeTypes = ["composite", "high_entropy_alloy", "binary_alloy", "ternary_alloy"];
+  const electrochemicalTypes = ["battery_cathode", "battery_anode", "solid_electrolyte", "catalyst"];
+  const thinFilmTypes = ["thin_film", "doped_semiconductor", "coating", "membrane"];
+
+  const isPolymer = (type: string) => polymerTypes.includes(type);
+  const isCrystal = (type: string) => crystalTypes.includes(type);
+  const isComposite = (type: string) => compositeTypes.includes(type);
+
   const categories = [
     { label: "Total Materials", value: materials.length, icon: Hexagon, color: "from-emerald-500 to-teal-500", bgColor: "bg-emerald-500", filter: "all" },
-    { label: "Polymers", value: materials.filter(m => m.type === "polymer").length, icon: Layers, color: "from-blue-500 to-cyan-500", bgColor: "bg-blue-500", filter: "polymer" },
-    { label: "Crystals", value: materials.filter(m => m.type === "crystal").length, icon: Atom, color: "from-violet-500 to-purple-500", bgColor: "bg-violet-500", filter: "crystal" },
-    { label: "Composites", value: materials.filter(m => m.type === "composite").length, icon: Box, color: "from-amber-500 to-orange-500", bgColor: "bg-amber-500", filter: "composite" },
+    { label: "Polymers", value: materials.filter(m => isPolymer(m.type)).length, icon: Layers, color: "from-blue-500 to-cyan-500", bgColor: "bg-blue-500", filter: "polymer" },
+    { label: "Crystals", value: materials.filter(m => isCrystal(m.type)).length, icon: Atom, color: "from-violet-500 to-purple-500", bgColor: "bg-violet-500", filter: "crystal" },
+    { label: "Composites/Alloys", value: materials.filter(m => isComposite(m.type)).length, icon: Box, color: "from-amber-500 to-orange-500", bgColor: "bg-amber-500", filter: "composite" },
   ];
 
   const filteredMaterials = materials.filter(m => {
-    if (activeTab !== "all" && m.type !== activeTab) return false;
+    if (activeTab === "polymer" && !isPolymer(m.type)) return false;
+    if (activeTab === "crystal" && !isCrystal(m.type)) return false;
+    if (activeTab === "composite" && !isComposite(m.type)) return false;
+    if (activeTab !== "all" && activeTab !== "polymer" && activeTab !== "crystal" && activeTab !== "composite" && m.type !== activeTab) return false;
     if (searchQuery && !m.name?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
