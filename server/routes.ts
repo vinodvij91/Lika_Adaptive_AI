@@ -1620,10 +1620,9 @@ print(json.dumps({
           { timeout: 120000, encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 }
         );
         
-        const lines = output.trim().split("\n");
-        const jsonLine = lines.find(l => l.startsWith("{"));
-        if (jsonLine) {
-          const parsed = JSON.parse(jsonLine);
+        const jsonMatch = output.match(/\{[\s\S]*"step"[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
           res.json({ ...parsed, nodeUsed: "local" });
         } else {
           res.json({ success: true, output, nodeUsed: "local" });
@@ -1655,10 +1654,9 @@ print(json.dumps({
           { timeout: 120000, encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 }
         );
         
-        const lines = output.trim().split("\n");
-        const jsonLine = lines.find(l => l.startsWith("{"));
-        if (jsonLine) {
-          const parsed = JSON.parse(jsonLine);
+        const jsonMatch = output.match(/\{[\s\S]*"step"[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
           res.json({ ...parsed, nodeUsed: "local" });
         } else {
           res.json({ success: true, output, nodeUsed: "local" });
