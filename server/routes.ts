@@ -101,6 +101,8 @@ export async function registerRoutes(
       const polymerTypes = ["polymer", "homopolymer", "copolymer"];
       const crystalTypes = ["crystal", "perovskite", "double_perovskite", "spinel", "binary_oxide", "binary_chalcogenide", "binary_pnictide", "mxene_2d", "tmd_2d", "2d_material"];
       const compositeTypes = ["composite", "high_entropy_alloy", "binary_alloy", "ternary_alloy"];
+      const thinFilmTypes = ["thin_film", "doped_semiconductor"];
+      const electrochemicalTypes = ["battery_cathode", "battery_anode", "catalyst", "solid_electrolyte", "coating", "membrane"];
       
       const counts = await db.select({ 
         type: materialEntities.type, 
@@ -111,16 +113,27 @@ export async function registerRoutes(
       let polymerCount = 0;
       let crystalCount = 0;
       let compositeCount = 0;
+      let thinFilmCount = 0;
+      let electrochemicalCount = 0;
       
       for (const row of counts) {
         const c = Number(row.count);
         totalCount += c;
         if (polymerTypes.includes(row.type)) polymerCount += c;
-        if (crystalTypes.includes(row.type)) crystalCount += c;
-        if (compositeTypes.includes(row.type)) compositeCount += c;
+        else if (crystalTypes.includes(row.type)) crystalCount += c;
+        else if (compositeTypes.includes(row.type)) compositeCount += c;
+        else if (thinFilmTypes.includes(row.type)) thinFilmCount += c;
+        else if (electrochemicalTypes.includes(row.type)) electrochemicalCount += c;
       }
       
-      res.json({ total: totalCount, polymers: polymerCount, crystals: crystalCount, composites: compositeCount });
+      res.json({ 
+        total: totalCount, 
+        polymers: polymerCount, 
+        crystals: crystalCount, 
+        composites: compositeCount,
+        thinFilms: thinFilmCount,
+        electrochemical: electrochemicalCount
+      });
     } catch (error) {
       console.error("Error fetching material type counts:", error);
       res.status(500).json({ error: "Failed to fetch material type counts" });

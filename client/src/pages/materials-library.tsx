@@ -46,7 +46,7 @@ export default function MaterialsLibraryPage() {
   const materials = materialsResponse?.materials || [];
   const totalMaterials = materialsResponse?.total || 0;
 
-  const { data: typeCounts } = useQuery<{ total: number; polymers: number; crystals: number; composites: number }>({
+  const { data: typeCounts } = useQuery<{ total: number; polymers: number; crystals: number; composites: number; thinFilms: number; electrochemical: number }>({
     queryKey: ["/api/materials/type-counts"],
   });
 
@@ -83,25 +83,30 @@ export default function MaterialsLibraryPage() {
   const polymerTypes = ["polymer", "homopolymer", "copolymer"];
   const crystalTypes = ["crystal", "perovskite", "double_perovskite", "spinel", "binary_oxide", "binary_chalcogenide", "binary_pnictide", "mxene_2d", "tmd_2d", "2d_material"];
   const compositeTypes = ["composite", "high_entropy_alloy", "binary_alloy", "ternary_alloy"];
-  const electrochemicalTypes = ["battery_cathode", "battery_anode", "solid_electrolyte", "catalyst"];
-  const thinFilmTypes = ["thin_film", "doped_semiconductor", "coating", "membrane"];
+  const thinFilmTypes = ["thin_film", "doped_semiconductor"];
+  const electrochemicalTypes = ["battery_cathode", "battery_anode", "solid_electrolyte", "catalyst", "coating", "membrane"];
 
   const isPolymer = (type: string) => polymerTypes.includes(type);
   const isCrystal = (type: string) => crystalTypes.includes(type);
   const isComposite = (type: string) => compositeTypes.includes(type);
+  const isThinFilm = (type: string) => thinFilmTypes.includes(type);
+  const isElectrochemical = (type: string) => electrochemicalTypes.includes(type);
 
   const categories = [
     { label: "Total Materials", value: typeCounts?.total || totalMaterials, icon: Hexagon, color: "from-emerald-500 to-teal-500", bgColor: "bg-emerald-500", filter: "all" },
-    { label: "Polymers", value: typeCounts?.polymers || 0, icon: Layers, color: "from-blue-500 to-cyan-500", bgColor: "bg-blue-500", filter: "polymer" },
-    { label: "Crystals", value: typeCounts?.crystals || 0, icon: Atom, color: "from-violet-500 to-purple-500", bgColor: "bg-violet-500", filter: "crystal" },
     { label: "Composites/Alloys", value: typeCounts?.composites || 0, icon: Box, color: "from-amber-500 to-orange-500", bgColor: "bg-amber-500", filter: "composite" },
+    { label: "Thin Films", value: typeCounts?.thinFilms || 0, icon: Layers, color: "from-pink-500 to-rose-500", bgColor: "bg-pink-500", filter: "thinfilm" },
+    { label: "Crystals", value: typeCounts?.crystals || 0, icon: Atom, color: "from-violet-500 to-purple-500", bgColor: "bg-violet-500", filter: "crystal" },
+    { label: "Polymers", value: typeCounts?.polymers || 0, icon: Hexagon, color: "from-blue-500 to-cyan-500", bgColor: "bg-blue-500", filter: "polymer" },
+    { label: "Electrochemical", value: typeCounts?.electrochemical || 0, icon: Zap, color: "from-yellow-500 to-amber-500", bgColor: "bg-yellow-500", filter: "electrochemical" },
   ];
 
   const filteredMaterials = materials.filter(m => {
     if (activeTab === "polymer" && !isPolymer(m.type)) return false;
     if (activeTab === "crystal" && !isCrystal(m.type)) return false;
     if (activeTab === "composite" && !isComposite(m.type)) return false;
-    if (activeTab !== "all" && activeTab !== "polymer" && activeTab !== "crystal" && activeTab !== "composite" && m.type !== activeTab) return false;
+    if (activeTab === "thinfilm" && !isThinFilm(m.type)) return false;
+    if (activeTab === "electrochemical" && !isElectrochemical(m.type)) return false;
     if (searchQuery && !m.name?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
