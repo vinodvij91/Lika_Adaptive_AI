@@ -65,10 +65,28 @@ class SupabaseSyncService {
 
   private getDigitalOceanPool(): pg.Pool {
     if (!this.digitalOceanPool) {
-      const doUrl = process.env.DIGITALOCEAN_DATABASE_URL;
+      let doUrl = process.env.DIGITALOCEAN_DATABASE_URL;
       if (!doUrl) {
         throw new Error('DIGITALOCEAN_DATABASE_URL environment variable is not set');
       }
+      
+      // Fix URL if it's missing the protocol prefix
+      if (!doUrl.startsWith('postgresql://') && !doUrl.startsWith('postgres://')) {
+        // Check if we have individual connection params
+        const doHost = process.env.DO_HOST || 'db-postgresql-lon1-62284-do-user-13906851-0.i.db.ondigitalocean.com';
+        const doUser = process.env.DO_USER || 'doadmin';
+        const doPass = process.env.DO_PASSWORD || '';
+        const doPort = process.env.DO_PORT || '25060';
+        const doDb = process.env.DO_DATABASE || 'defaultdb';
+        
+        if (doPass) {
+          doUrl = `postgresql://${doUser}:${doPass}@${doHost}:${doPort}/${doDb}?sslmode=require`;
+        } else {
+          // The URL might just be the host, try to use it
+          doUrl = `postgresql://doadmin@${doUrl}:25060/defaultdb?sslmode=require`;
+        }
+      }
+      
       this.digitalOceanPool = new Pool({
         connectionString: doUrl,
         ssl: { rejectUnauthorized: false }
