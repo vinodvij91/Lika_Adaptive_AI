@@ -32,6 +32,11 @@ import {
   Server,
   ChevronDown,
   ChevronUp,
+  Beaker,
+  FlaskConical,
+  Sparkles,
+  TrendingUp,
+  Award,
 } from "lucide-react";
 
 interface PipelineJob {
@@ -181,6 +186,20 @@ export default function PipelineLauncherPage() {
     },
   });
 
+  const simulateMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      return apiRequest("POST", `/api/pipeline/jobs/${jobId}/simulate`);
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Simulation Complete", description: `Found ${data.candidatesFound} candidate materials` });
+      refetchJobs();
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline/stats"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Simulation Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleLaunch = () => {
     if (!config.name.trim()) {
       toast({ title: "Validation Error", description: "Pipeline name is required", variant: "destructive" });
@@ -320,6 +339,10 @@ export default function PipelineLauncherPage() {
                   <TabsTrigger value="compute" className="data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-600">
                     <Server className="h-4 w-4 mr-2" />
                     Compute Nodes ({nodes.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="results" className="data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-600">
+                    <FlaskConical className="h-4 w-4 mr-2" />
+                    Results ({jobs.filter(j => j.status === "succeeded").length})
                   </TabsTrigger>
                 </TabsList>
               </CardHeader>
@@ -740,6 +763,25 @@ export default function PipelineLauncherPage() {
                                   </div>
                                 )}
                                 <div className="flex gap-2">
+                                  {job.status === "queued" && (
+                                    <Button
+                                      size="sm"
+                                      className="bg-gradient-to-r from-emerald-500 to-teal-500"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        simulateMutation.mutate(job.id);
+                                      }}
+                                      disabled={simulateMutation.isPending}
+                                      data-testid={`button-simulate-${job.id}`}
+                                    >
+                                      {simulateMutation.isPending ? (
+                                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                      ) : (
+                                        <Sparkles className="h-4 w-4 mr-1" />
+                                      )}
+                                      Simulate Completion
+                                    </Button>
+                                  )}
                                   {(job.status === "queued" || job.status === "running") && (
                                     <Button
                                       size="sm"
@@ -808,6 +850,115 @@ export default function PipelineLauncherPage() {
                       ))}
                     </div>
                   )}
+                </CardContent>
+              </TabsContent>
+
+              <TabsContent value="results" className="p-0 m-0">
+                <CardContent className="p-0">
+                  {(() => {
+                    const completedJobs = jobs.filter(j => j.status === "succeeded");
+                    if (completedJobs.length === 0) {
+                      return (
+                        <div className="p-12 text-center">
+                          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 flex items-center justify-center mx-auto mb-5">
+                            <FlaskConical className="h-9 w-9 text-emerald-500" />
+                          </div>
+                          <p className="font-semibold text-lg mb-2">No completed pipelines yet</p>
+                          <p className="text-muted-foreground mb-6">Launch a pipeline and simulate completion to see discovered materials</p>
+                          <Button onClick={() => setActiveTab("jobs")} className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-500">
+                            <Activity className="h-4 w-4" />
+                            View Job Queue
+                          </Button>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="divide-y">
+                        {completedJobs.map((job) => {
+                          const output = job.outputPayload as any || {};
+                          const candidates = output.candidates || [];
+                          const jobTypeInfo = jobTypeOptions.find(j => j.value === job.type);
+                          
+                          return (
+                            <div key={job.id} className="p-6 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                    <CheckCircle className="h-6 w-6 text-emerald-500" />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-semibold text-lg">{(job.inputPayload as any)?.name || job.type}</h3>
+                                    <p className="text-sm text-muted-foreground">{jobTypeInfo?.label} - Completed {new Date(job.completedAt || job.createdAt).toLocaleString()}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right">
+                                    <p className="text-2xl font-bold text-emerald-600">{output.candidatesFound || candidates.length}</p>
+                                    <p className="text-xs text-muted-foreground">Candidates Found</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-2xl font-bold">{output.materialsProcessed || job.itemsCompleted}</p>
+                                    <p className="text-xs text-muted-foreground">Materials Screened</p>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {candidates.length > 0 && (
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <Award className="h-4 w-4 text-amber-500" />
+                                    <h4 className="font-medium">Top Discovered Materials</h4>
+                                  </div>
+                                  <div className="grid gap-3">
+                                    {candidates.slice(0, 5).map((candidate: any, idx: number) => (
+                                      <div key={idx} className="bg-muted/30 rounded-lg p-4 flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center font-bold text-amber-600">
+                                          #{idx + 1}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium truncate">{candidate.formula || candidate.name}</p>
+                                          <p className="text-sm text-muted-foreground">{candidate.materialType || "Crystal"}</p>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-4 text-sm">
+                                          {candidate.score && (
+                                            <div className="text-center">
+                                              <p className="font-semibold text-emerald-600">{(candidate.score * 100).toFixed(1)}%</p>
+                                              <p className="text-xs text-muted-foreground">Score</p>
+                                            </div>
+                                          )}
+                                          {candidate.targetProperty && (
+                                            <div className="text-center">
+                                              <p className="font-semibold">{candidate.predictedValue?.toFixed(2) || "N/A"}</p>
+                                              <p className="text-xs text-muted-foreground">{candidate.targetProperty}</p>
+                                            </div>
+                                          )}
+                                          {candidate.confidence && (
+                                            <div className="text-center">
+                                              <p className="font-semibold">{(candidate.confidence * 100).toFixed(0)}%</p>
+                                              <p className="text-xs text-muted-foreground">Confidence</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                        <Badge className="bg-emerald-500/10 text-emerald-600 border-0">
+                                          <TrendingUp className="h-3 w-3 mr-1" />
+                                          Promising
+                                        </Badge>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {candidates.length > 5 && (
+                                    <p className="text-sm text-muted-foreground text-center">
+                                      + {candidates.length - 5} more candidates in full results
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </TabsContent>
             </Tabs>

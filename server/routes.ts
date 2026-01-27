@@ -6118,6 +6118,122 @@ Provide scientific analysis in JSON format.`
     }
   });
 
+  // Simulate job completion with sample results (for demo/testing)
+  app.post("/api/pipeline/jobs/:jobId/simulate", requireAuth, async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const job = await storage.getProcessingJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      if (job.status !== "queued") {
+        return res.status(400).json({ error: "Only queued jobs can be simulated" });
+      }
+      
+      // Generate realistic sample candidates based on job type
+      const jobType = job.type;
+      const materialsProcessed = Math.floor(Math.random() * 10000) + 5000;
+      const candidatesFound = Math.floor(Math.random() * 15) + 5;
+      
+      const sampleCandidates = [];
+      const materialFormulas: Record<string, string[]> = {
+        mat_battery: ["LiCoO2", "LiFePO4", "Li2MnO3", "NaMnO2", "LiNi0.8Co0.1Al0.1O2", "Li3V2(PO4)3"],
+        mat_solar: ["CdTe", "CIGS", "MAPbI3", "FAPbI3", "Cs2AgBiBr6", "Cu2ZnSnS4"],
+        mat_superconductor: ["YBa2Cu3O7", "Bi2Sr2CaCu2O8", "MgB2", "LaH10", "FeSe", "HgBa2Ca2Cu3O8"],
+        mat_catalyst: ["Pt/C", "PtRu/C", "Ni3Fe", "CoP", "MoS2", "RuO2"],
+        mat_thermoelectric: ["Bi2Te3", "PbTe", "SiGe", "SnSe", "Mg2Si", "CoSb3"],
+        mat_pfas_replacement: ["PTFE-free-1", "SiliconeCoat-A", "BioWax-2", "NanoSilica-3", "CeramicBond-X"],
+        mat_aerospace: ["Ti-6Al-4V", "Inconel 718", "Al-Li 2050", "CFRP-T800", "SiC/SiC Composite"],
+        mat_biomedical: ["Ti-6Al-4V ELI", "316L SS", "CoCrMo", "PEEK-CF", "HA-Coated Ti"],
+        mat_semiconductor: ["SiC-4H", "GaN", "Ga2O3", "AlN", "Diamond-CVD"],
+        mat_construction: ["Geopolymer-FA", "LC3-50", "GGBFS-Blend", "RHA-Concrete", "Biite-LowC"],
+        mat_transparent: ["ITO-Alt-1", "AgNW-PET", "Graphene-CVD", "AZO", "FTO"],
+        mat_magnet: ["MnBi", "Fe16N2", "AlNiCo", "Ferrite-Sr", "SmCo-lite"],
+        mat_electrolyte: ["LGPS", "LLZO", "Li3PS4", "Na3Zr2Si2PO12", "Li6PS5Cl"],
+        mat_water: ["GO-Membrane", "MOF-808", "Zeolite-A", "PVA-Composite", "Aquaporin-Bio"],
+        mat_carbon_capture: ["MOF-801", "Zeolite-13X", "Amine-Silica", "SIFSIX-3-Ni", "MIL-101-NH2"],
+      };
+      
+      const targetProperties: Record<string, { property: string; unit: string; range: [number, number] }> = {
+        mat_battery: { property: "Voltage", unit: "V", range: [3.2, 4.5] },
+        mat_solar: { property: "Band Gap", unit: "eV", range: [1.1, 1.8] },
+        mat_superconductor: { property: "Tc", unit: "K", range: [40, 200] },
+        mat_catalyst: { property: "Activity", unit: "mA/cm²", range: [10, 100] },
+        mat_thermoelectric: { property: "ZT", unit: "", range: [1.2, 2.8] },
+        mat_pfas_replacement: { property: "Contact Angle", unit: "°", range: [90, 160] },
+        mat_aerospace: { property: "Strength/Weight", unit: "kN·m/kg", range: [150, 400] },
+        mat_biomedical: { property: "Biocomp. Score", unit: "", range: [0.85, 0.99] },
+        mat_semiconductor: { property: "Band Gap", unit: "eV", range: [2.5, 5.5] },
+        mat_construction: { property: "CO2 Reduction", unit: "%", range: [30, 70] },
+        mat_transparent: { property: "Conductivity", unit: "S/cm", range: [1000, 8000] },
+        mat_magnet: { property: "BHmax", unit: "MGOe", range: [10, 45] },
+        mat_electrolyte: { property: "Ionic Cond.", unit: "mS/cm", range: [1, 25] },
+        mat_water: { property: "Permeability", unit: "L/m²h", range: [50, 200] },
+        mat_carbon_capture: { property: "Capacity", unit: "mmol/g", range: [2, 8] },
+      };
+      
+      const formulas = materialFormulas[jobType] || ["Material-1", "Material-2", "Material-3"];
+      const propInfo = targetProperties[jobType] || { property: "Score", unit: "", range: [0.7, 0.99] };
+      
+      for (let i = 0; i < candidatesFound; i++) {
+        const formula = formulas[i % formulas.length];
+        const score = 0.85 + Math.random() * 0.14;
+        const predictedValue = propInfo.range[0] + Math.random() * (propInfo.range[1] - propInfo.range[0]);
+        
+        sampleCandidates.push({
+          formula,
+          name: formula,
+          materialType: jobType.replace("mat_", "").replace("_", " ").replace(/\b\w/g, c => c.toUpperCase()),
+          score,
+          targetProperty: propInfo.property,
+          predictedValue,
+          unit: propInfo.unit,
+          confidence: 0.7 + Math.random() * 0.28,
+          synthesizable: Math.random() > 0.3,
+        });
+      }
+      
+      // Sort by score descending
+      sampleCandidates.sort((a, b) => b.score - a.score);
+      
+      // Update job to succeeded with output payload
+      await storage.updateProcessingJob(jobId, {
+        status: "succeeded",
+        startedAt: new Date(Date.now() - 120000), // 2 minutes ago
+        completedAt: new Date(),
+        itemsTotal: materialsProcessed,
+        itemsCompleted: materialsProcessed,
+        progressPercent: 100,
+        outputPayload: {
+          materialsProcessed,
+          candidatesFound,
+          candidates: sampleCandidates,
+          processingTimeSeconds: Math.floor(Math.random() * 180) + 60,
+          gpuUtilization: 0.85 + Math.random() * 0.14,
+        },
+      });
+      
+      // Create completion event
+      await storage.createProcessingJobEvent({
+        jobId,
+        eventType: "completed",
+        payload: { candidatesFound, materialsProcessed },
+      });
+      
+      res.json({
+        message: "Job simulation completed successfully",
+        candidatesFound,
+        materialsProcessed,
+        topCandidate: sampleCandidates[0],
+      });
+    } catch (error: any) {
+      console.error("Error simulating job:", error);
+      res.status(500).json({ error: "Failed to simulate job completion" });
+    }
+  });
+
   // Update job progress (for compute workers)
   app.patch("/api/pipeline/jobs/:jobId/progress", requireAuth, async (req, res) => {
     try {
