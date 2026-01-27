@@ -1605,43 +1605,32 @@ print(json.dumps({
 
   app.post("/api/compute/materials/predict", requireAuth, async (req, res) => {
     try {
-      const { materials, properties = ["all"], nodeId } = req.body;
+      const { materials, properties = ["all"] } = req.body;
       
       if (!materials || !Array.isArray(materials) || materials.length === 0) {
         return res.status(400).json({ error: "materials array is required" });
       }
 
-      const nodes = await storage.getComputeNodes();
-      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
-      
-      if (!node) {
-        return res.status(503).json({ error: "No compute nodes available" });
-      }
-
-      const { getComputeAdapter } = await import("./compute-adapters");
-      const adapter = getComputeAdapter(node);
-
+      const { execSync } = await import("child_process");
       const params = JSON.stringify({ materials, properties });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type property_prediction --params '${params.replace(/'/g, "'\\''")}'`;
-
-      const job = {
-        id: `mat-pred-${Date.now()}`,
-        type: "command",
-        command: command,
-        timeout: 120000,
-      };
-
-      const result = await adapter.runJob(node, job as any);
       
-      if (result.success && result.output) {
-        try {
-          const parsed = JSON.parse(result.output.trim());
-          res.json({ ...parsed, nodeUsed: node.name });
-        } catch (e) {
-          res.json({ success: true, output: result.output, nodeUsed: node.name });
+      try {
+        const output = execSync(
+          `cd compute && python3 materials_science_pipeline.py --job-type property_prediction --params '${params.replace(/'/g, "'\\''")}'`,
+          { timeout: 120000, encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 }
+        );
+        
+        const lines = output.trim().split("\n");
+        const jsonLine = lines.find(l => l.startsWith("{"));
+        if (jsonLine) {
+          const parsed = JSON.parse(jsonLine);
+          res.json({ ...parsed, nodeUsed: "local" });
+        } else {
+          res.json({ success: true, output, nodeUsed: "local" });
         }
-      } else {
-        res.status(500).json({ success: false, error: result.error || "Property prediction failed" });
+      } catch (execError: any) {
+        console.error("Pipeline execution error:", execError.message);
+        res.status(500).json({ success: false, error: execError.stderr || execError.message });
       }
     } catch (error: any) {
       console.error("Materials prediction error:", error);
@@ -1651,43 +1640,32 @@ print(json.dumps({
 
   app.post("/api/compute/materials/manufacturability", requireAuth, async (req, res) => {
     try {
-      const { materials, nodeId } = req.body;
+      const { materials } = req.body;
       
       if (!materials || !Array.isArray(materials) || materials.length === 0) {
         return res.status(400).json({ error: "materials array is required" });
       }
 
-      const nodes = await storage.getComputeNodes();
-      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
-      
-      if (!node) {
-        return res.status(503).json({ error: "No compute nodes available" });
-      }
-
-      const { getComputeAdapter } = await import("./compute-adapters");
-      const adapter = getComputeAdapter(node);
-
+      const { execSync } = await import("child_process");
       const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type manufacturability_scoring --params '${params.replace(/'/g, "'\\''")}'`;
-
-      const job = {
-        id: `mat-manuf-${Date.now()}`,
-        type: "command",
-        command: command,
-        timeout: 120000,
-      };
-
-      const result = await adapter.runJob(node, job as any);
       
-      if (result.success && result.output) {
-        try {
-          const parsed = JSON.parse(result.output.trim());
-          res.json({ ...parsed, nodeUsed: node.name });
-        } catch (e) {
-          res.json({ success: true, output: result.output, nodeUsed: node.name });
+      try {
+        const output = execSync(
+          `cd compute && python3 materials_science_pipeline.py --job-type manufacturability_scoring --params '${params.replace(/'/g, "'\\''")}'`,
+          { timeout: 120000, encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 }
+        );
+        
+        const lines = output.trim().split("\n");
+        const jsonLine = lines.find(l => l.startsWith("{"));
+        if (jsonLine) {
+          const parsed = JSON.parse(jsonLine);
+          res.json({ ...parsed, nodeUsed: "local" });
+        } else {
+          res.json({ success: true, output, nodeUsed: "local" });
         }
-      } else {
-        res.status(500).json({ success: false, error: result.error || "Manufacturability scoring failed" });
+      } catch (execError: any) {
+        console.error("Pipeline execution error:", execError.message);
+        res.status(500).json({ success: false, error: execError.stderr || execError.message });
       }
     } catch (error: any) {
       console.error("Manufacturability scoring error:", error);
