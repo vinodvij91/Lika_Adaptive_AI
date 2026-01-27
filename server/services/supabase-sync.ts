@@ -246,7 +246,7 @@ class SupabaseSyncService {
     return result;
   }
 
-  async syncMaterialProperties(tableName: string = 'Materials Property Table'): Promise<SyncResult> {
+  async syncMaterialProperties(tableName: string = 'Materials Property Table', batchSize: number = 1000, maxRecords: number = 10000): Promise<SyncResult> {
     const result: SyncResult = {
       success: true,
       table: tableName,
@@ -258,64 +258,75 @@ class SupabaseSyncService {
 
     try {
       const client = this.getSupabaseClient();
-      
-      const { data: rows, error } = await client
-        .from(tableName)
-        .select('*');
-      
-      if (error) {
-        throw new Error(`Failed to fetch material properties: ${error.message}`);
-      }
-
-      if (!rows || rows.length === 0) {
-        return result;
-      }
-
       const materialMap = new Map<string, string>();
+      let offset = 0;
+      let hasMore = true;
 
-      for (const row of rows as ExternalMaterialPropertiesRow[]) {
-        result.recordsProcessed++;
+      while (hasMore && result.recordsProcessed < maxRecords) {
+        const { data: rows, error } = await client
+          .from(tableName)
+          .select('*')
+          .range(offset, offset + batchSize - 1);
         
-        try {
-          let internalMaterialId = materialMap.get(row.material_id);
-          
-          if (!internalMaterialId) {
-            const existing = await db
-              .select()
-              .from(materialEntities)
-              .where(eq(materialEntities.name, row.material_id))
-              .limit(1);
+        if (error) {
+          throw new Error(`Failed to fetch material properties: ${error.message}`);
+        }
 
-            if (existing.length > 0) {
-              internalMaterialId = existing[0].id;
-            } else {
-              const inserted = await db.insert(materialEntities).values({
-                name: row.material_id,
-                type: 'composite',
-                representation: { category: row.category },
-                baseFamily: row.category,
-                isCurated: true,
-                isDemo: false
-              }).returning({ id: materialEntities.id });
-              
-              internalMaterialId = inserted[0].id;
+        if (!rows || rows.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        for (const row of rows as ExternalMaterialPropertiesRow[]) {
+          if (result.recordsProcessed >= maxRecords) break;
+          result.recordsProcessed++;
+          
+          try {
+            let internalMaterialId = materialMap.get(row.material_id);
+            
+            if (!internalMaterialId) {
+              const existing = await db
+                .select()
+                .from(materialEntities)
+                .where(eq(materialEntities.name, row.material_id))
+                .limit(1);
+
+              if (existing.length > 0) {
+                internalMaterialId = existing[0].id;
+              } else {
+                const inserted = await db.insert(materialEntities).values({
+                  name: row.material_id,
+                  type: 'composite',
+                  representation: { category: row.category },
+                  baseFamily: row.category,
+                  isCurated: true,
+                  isDemo: false
+                }).returning({ id: materialEntities.id });
+                
+                internalMaterialId = inserted[0].id;
+              }
+              materialMap.set(row.material_id, internalMaterialId);
             }
-            materialMap.set(row.material_id, internalMaterialId);
-          }
 
-          await db.insert(materialProperties).values({
-            materialId: internalMaterialId!,
-            propertyName: row.property,
-            value: row.value,
-            units: row.units,
-            source: 'experiment',
-            confidence: 1.0
-          });
-          
-          result.recordsInserted++;
-        } catch (rowError: any) {
-          result.errors.push(`Row error: ${rowError.message}`);
-          result.recordsSkipped++;
+            await db.insert(materialProperties).values({
+              materialId: internalMaterialId!,
+              propertyName: row.property,
+              value: parseFloat(String(row.value)) || 0,
+              units: row.units,
+              source: 'experiment',
+              confidence: 1.0
+            });
+            
+            result.recordsInserted++;
+          } catch (rowError: any) {
+            result.errors.push(`Row error: ${rowError.message}`);
+            result.recordsSkipped++;
+          }
+        }
+
+        offset += batchSize;
+        if (rows.length < batchSize) {
+          hasMore = false;
         }
       }
     } catch (error: any) {
