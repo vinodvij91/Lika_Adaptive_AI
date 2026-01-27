@@ -82,7 +82,7 @@ class SupabaseSyncService {
       if (source === 'supabase') {
         const client = this.getSupabaseClient();
         
-        const { data, error } = await client.from('SMILES').select('*').limit(1);
+        const { data, error } = await client.from('Materials Property Table').select('*').limit(1);
         
         if (error) {
           return {
@@ -95,7 +95,7 @@ class SupabaseSyncService {
         return {
           success: true,
           message: 'Successfully connected to Supabase',
-          tables: ['SMILES', 'Materials Property Table'],
+          tables: ['Materials Property Table'],
           source
         };
       } else {

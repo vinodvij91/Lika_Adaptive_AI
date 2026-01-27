@@ -5334,7 +5334,7 @@ print(json.dumps({
       const source = (req.query.source as 'supabase' | 'digitalocean') || 'supabase';
       
       const { supabaseSyncService } = await import("./services/supabase-sync");
-      const result = await supabaseSyncService.getTablePreview(tableName, limit, source);
+      const result = await supabaseSyncService.previewTable(tableName, limit, source);
       res.json(result);
     } catch (error: any) {
       console.error("External table preview error:", error);
@@ -5347,7 +5347,7 @@ print(json.dumps({
       const tableName = req.body.tableName || "SMILES";
       
       const { supabaseSyncService } = await import("./services/supabase-sync");
-      const result = await supabaseSyncService.syncSmilesTable(tableName);
+      const result = await supabaseSyncService.syncSmiles(tableName);
       res.json(result);
     } catch (error: any) {
       console.error("SMILES sync error:", error);
@@ -5357,14 +5357,14 @@ print(json.dumps({
 
   app.post("/api/external-sync/sync/material-properties", requireAuth, async (req, res) => {
     try {
-      const tableName = req.body.tableName || "Material_Properties";
+      const tableName = req.body.tableName || "Materials Property Table";
       
       const { supabaseSyncService } = await import("./services/supabase-sync");
-      const result = await supabaseSyncService.syncMaterialPropertiesTable(tableName);
+      const result = await supabaseSyncService.syncMaterialProperties(tableName);
       res.json(result);
     } catch (error: any) {
       console.error("Material properties sync error:", error);
-      res.status(500).json({ success: false, table: "Material_Properties", errors: [error.message] });
+      res.status(500).json({ success: false, table: "Materials Property Table", errors: [error.message] });
     }
   });
 
@@ -5374,7 +5374,7 @@ print(json.dumps({
       const source = (req.body.source as 'supabase' | 'digitalocean') || 'digitalocean';
       
       const { supabaseSyncService } = await import("./services/supabase-sync");
-      const result = await supabaseSyncService.syncVariantsFormulationsTable(tableName, source);
+      const result = await supabaseSyncService.syncVariants(tableName, source);
       res.json(result);
     } catch (error: any) {
       console.error("Variants sync error:", error);

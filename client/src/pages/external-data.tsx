@@ -78,7 +78,7 @@ export default function ExternalDataPage() {
 
   const syncMaterialPropertiesMutation = useMutation({
     mutationFn: async (): Promise<SyncResult> => {
-      const res = await apiRequest("POST", "/api/external-sync/sync/material-properties", { tableName: "Material_Properties" });
+      const res = await apiRequest("POST", "/api/external-sync/sync/material-properties", { tableName: "Materials Property Table" });
       return res.json();
     },
     onSuccess: (data: SyncResult) => {
