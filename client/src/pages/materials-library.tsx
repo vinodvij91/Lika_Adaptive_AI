@@ -241,7 +241,7 @@ export default function MaterialsLibraryPage() {
                             {material.isCurated && (
                               <Badge variant="outline" className="text-xs">Curated</Badge>
                             )}
-                            <Link href={`/property-prediction`}>
+                            <Link href={`/property-prediction?smiles=${encodeURIComponent((material.representation as any)?.smiles || '')}&name=${encodeURIComponent(material.name || '')}&type=${material.type}`}>
                               <Button size="sm" variant="outline" className="gap-1">
                                 <Calculator className="h-3 w-3" />
                                 Predict

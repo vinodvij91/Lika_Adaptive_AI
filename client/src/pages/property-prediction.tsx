@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import {
   Calculator,
   Zap,
@@ -25,6 +26,7 @@ import {
   Gauge,
   Sparkles,
   FlaskConical,
+  Eye,
 } from "lucide-react";
 
 interface PropertyResult {
@@ -90,6 +92,172 @@ const PROPERTY_COLORS: Record<string, string> = {
   glass_transition: "from-amber-500 to-orange-500",
   bandgap: "from-cyan-500 to-blue-500",
 };
+
+function MoleculeViewer({ smiles, name }: { smiles: string; name?: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  useEffect(() => {
+    if (!canvasRef.current || !smiles) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    ctx.fillStyle = "hsl(var(--card))";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const atoms: { x: number; y: number; symbol: string; color: string }[] = [];
+    const bonds: { from: number; to: number; order: number }[] = [];
+    
+    const atomColors: Record<string, string> = {
+      C: "#404040",
+      O: "#ff4444",
+      N: "#4444ff",
+      S: "#ffcc00",
+      F: "#00ff00",
+      Cl: "#00cc00",
+      Br: "#aa4400",
+      P: "#ff8800",
+      Si: "#cccccc",
+      default: "#666666"
+    };
+    
+    let currentAtom = 0;
+    let ringStart = -1;
+    const ringStack: number[] = [];
+    let x = 80, y = 120;
+    let angle = 0;
+    const bondLength = 30;
+    
+    const parseSmiles = smiles.replace(/\[|\]/g, "");
+    let i = 0;
+    
+    while (i < parseSmiles.length) {
+      const char = parseSmiles[i];
+      
+      if (/[A-Z]/.test(char)) {
+        let symbol = char;
+        if (i + 1 < parseSmiles.length && /[a-z]/.test(parseSmiles[i + 1])) {
+          symbol += parseSmiles[i + 1];
+          i++;
+        }
+        
+        atoms.push({
+          x: x + (Math.random() - 0.5) * 5,
+          y: y + (Math.random() - 0.5) * 5,
+          symbol,
+          color: atomColors[symbol] || atomColors.default
+        });
+        
+        if (currentAtom > 0) {
+          bonds.push({ from: currentAtom - 1, to: currentAtom, order: 1 });
+        }
+        
+        angle += (Math.random() - 0.5) * 1.2 + 0.5;
+        x += Math.cos(angle) * bondLength;
+        y += Math.sin(angle) * bondLength;
+        
+        if (x < 40) x = 40;
+        if (x > 260) x = 260;
+        if (y < 40) y = 40;
+        if (y > 200) y = 200;
+        
+        currentAtom++;
+      } else if (char === "(") {
+        ringStack.push(currentAtom - 1);
+      } else if (char === ")") {
+        const branchStart = ringStack.pop();
+        if (branchStart !== undefined && atoms[branchStart]) {
+          x = atoms[branchStart].x;
+          y = atoms[branchStart].y;
+        }
+      } else if (char === "1" || char === "2" || char === "3") {
+        if (ringStart === -1) {
+          ringStart = currentAtom - 1;
+        } else {
+          bonds.push({ from: ringStart, to: currentAtom - 1, order: 1 });
+          ringStart = -1;
+        }
+      } else if (char === "=") {
+        if (bonds.length > 0) {
+          bonds[bonds.length - 1].order = 2;
+        }
+      }
+      
+      i++;
+    }
+    
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    
+    bonds.forEach(bond => {
+      const from = atoms[bond.from];
+      const to = atoms[bond.to];
+      if (!from || !to) return;
+      
+      ctx.strokeStyle = "#888888";
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.stroke();
+      
+      if (bond.order === 2) {
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const nx = -dy / len * 4;
+        const ny = dx / len * 4;
+        
+        ctx.beginPath();
+        ctx.moveTo(from.x + nx, from.y + ny);
+        ctx.lineTo(to.x + nx, to.y + ny);
+        ctx.stroke();
+      }
+    });
+    
+    atoms.forEach(atom => {
+      ctx.fillStyle = atom.color;
+      ctx.beginPath();
+      ctx.arc(atom.x, atom.y, atom.symbol === "C" ? 4 : 8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      if (atom.symbol !== "C") {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 10px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(atom.symbol, atom.x, atom.y);
+      }
+    });
+    
+  }, [smiles]);
+
+  if (!smiles) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        <p className="text-sm">No structure to display</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <canvas 
+        ref={canvasRef} 
+        width={300} 
+        height={240}
+        className="rounded-lg border bg-card"
+        data-testid="molecule-canvas"
+      />
+      {name && (
+        <p className="text-sm font-medium text-center">{name}</p>
+      )}
+      <code className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded max-w-full truncate">
+        {smiles}
+      </code>
+    </div>
+  );
+}
 
 function PropertyCard({ prop }: { prop: PropertyResult }) {
   const Icon = PROPERTY_ICONS[prop.property_name] || Calculator;
@@ -221,12 +389,35 @@ function ManufacturabilityCard({ result }: { result: ManufacturabilityResult }) 
 }
 
 export default function PropertyPredictionPage() {
+  const [location] = useLocation();
   const [materialType, setMaterialType] = useState<"polymer" | "crystal">("polymer");
   const [inputText, setInputText] = useState("");
   const [activeTab, setActiveTab] = useState("predict");
   const [results, setResults] = useState<MaterialPredictionResult[]>([]);
   const [manufResults, setManufResults] = useState<ManufacturabilityResult[]>([]);
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialPredictionResult | null>(null);
+  const [currentMaterialName, setCurrentMaterialName] = useState("");
+  const [currentSmiles, setCurrentSmiles] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const smiles = params.get("smiles");
+    const name = params.get("name");
+    const type = params.get("type");
+    
+    if (smiles) {
+      setInputText(smiles);
+      setCurrentSmiles(smiles);
+    }
+    if (name) {
+      setCurrentMaterialName(name);
+    }
+    if (type === "crystal") {
+      setMaterialType("crystal");
+    } else if (type) {
+      setMaterialType("polymer");
+    }
+  }, [location]);
 
   const { data: computeNodes } = useQuery<any[]>({
     queryKey: ["/api/compute-nodes"],
@@ -437,6 +628,23 @@ export default function PropertyPredictionPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {(currentSmiles || inputText) && materialType === "polymer" && (
+                <Card className="shadow-lg">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Eye className="h-5 w-5 text-emerald-500" />
+                      Structure Visualization
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <MoleculeViewer 
+                      smiles={currentSmiles || inputText.split("\n")[0]} 
+                      name={currentMaterialName || undefined}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
               {results.length > 0 && (
                 <Card className="shadow-lg">
