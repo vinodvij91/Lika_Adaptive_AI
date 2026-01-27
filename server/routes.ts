@@ -1622,7 +1622,7 @@ print(json.dumps({
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials, properties });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type property_prediction --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type property_prediction --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-pred-${Date.now()}`,
@@ -1668,7 +1668,7 @@ print(json.dumps({
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type manufacturability_scoring --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type manufacturability_scoring --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-manuf-${Date.now()}`,
@@ -1714,7 +1714,7 @@ print(json.dumps({
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials, target_properties: targetProperties });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type batch_screening --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type batch_screening --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-screen-${Date.now()}`,
@@ -1760,7 +1760,7 @@ print(json.dumps({
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type structure_validation --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type structure_validation --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-val-${Date.now()}`,
@@ -1807,7 +1807,7 @@ print(json.dumps({
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type magpie_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type magpie_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-magpie-${Date.now()}`,
@@ -1854,7 +1854,7 @@ print(json.dumps({
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type soap_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type soap_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-soap-${Date.now()}`,
@@ -1901,7 +1901,7 @@ print(json.dumps({
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type gnn_prediction --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type gnn_prediction --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-gnn-${Date.now()}`,
@@ -1948,7 +1948,7 @@ print(json.dumps({
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type synthesis_planning --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type synthesis_planning --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-synth-${Date.now()}`,
@@ -1995,7 +1995,7 @@ print(json.dumps({
         n_candidates: nCandidates,
         elements 
       });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type materials_generation --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type materials_generation --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-gen-${Date.now()}`,
@@ -2045,7 +2045,7 @@ print(json.dumps({
         base_composition: baseComposition, 
         n_variants: nVariants 
       });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type element_substitution --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type element_substitution --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-subst-${Date.now()}`,
@@ -2092,7 +2092,7 @@ print(json.dumps({
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials, simulation_type: simulationType });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type atomistic_simulation --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type atomistic_simulation --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-sim-${Date.now()}`,
@@ -2139,7 +2139,7 @@ print(json.dumps({
         n_candidates: nCandidates,
         screen_top_n: screenTopN 
       });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-discover-${Date.now()}`,
@@ -2201,7 +2201,7 @@ print(json.dumps({
         additional_criteria: additionalCriteria,
         include_structures: includeStructures
       });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_load_training_data --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_load_training_data --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-training-${Date.now()}`,
@@ -2257,7 +2257,7 @@ print(json.dumps({
         max_voltage: maxVoltage,
         electrode_type: electrodeType
       });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_load_battery_data --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_load_battery_data --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-battery-${Date.now()}`,
@@ -2309,7 +2309,7 @@ print(json.dumps({
         band_gap_range: bandGapRange,
         stable_only: stableOnly
       });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_load_solar_materials --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_load_solar_materials --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-solar-${Date.now()}`,
@@ -2361,7 +2361,7 @@ print(json.dumps({
         band_gap_range: bandGapRange,
         heavy_elements: heavyElements
       });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_load_thermoelectric_materials --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_load_thermoelectric_materials --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-thermoelectric-${Date.now()}`,
@@ -2413,7 +2413,7 @@ print(json.dumps({
         include_cuprates: includeCuprates,
         include_iron_based: includeIronBased
       });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_load_superconductor_candidates --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_load_superconductor_candidates --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-superconductor-${Date.now()}`,
@@ -2463,7 +2463,7 @@ print(json.dumps({
         elements, 
         include_unstable: includeUnstable
       });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_get_phase_diagram --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_get_phase_diagram --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-phase-${Date.now()}`,
@@ -2513,7 +2513,7 @@ print(json.dumps({
         material_ids: materialIds, 
         properties
       });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_bulk_query --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_bulk_query --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-bulk-${Date.now()}`,
@@ -2560,7 +2560,7 @@ print(json.dumps({
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ formula, anonymous });
-      const command = `cd ~/compute 2>/dev/null || true; python3 materials_science_pipeline.py --job-type mp_search_formula --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_search_formula --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-search-${Date.now()}`,
