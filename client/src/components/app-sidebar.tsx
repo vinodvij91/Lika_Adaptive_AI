@@ -36,6 +36,7 @@ import {
   Brain,
   Atom,
   Dna,
+  Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -84,6 +85,7 @@ const infrastructureItems = [
   { title: "Compute Nodes", url: "/compute-nodes", icon: Server },
   { title: "Pipeline Launcher", url: "/pipeline", icon: Rocket },
   { title: "BioNeMo AI", url: "/bionemo", icon: Dna },
+  { title: "External Data", url: "/external-data", icon: Database },
   { title: "Usage", url: "/usage", icon: Activity },
   { title: "Integrations", url: "/integrations", icon: Plug },
   { title: "Quantum", url: "/quantum", icon: Atom },

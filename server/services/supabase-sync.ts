@@ -46,6 +46,7 @@ export interface ExternalVariantsRow {
 
 class SupabaseSyncService {
   private externalPool: pg.Pool | null = null;
+  private digitalOceanPool: pg.Pool | null = null;
 
   private getExternalPool(): pg.Pool {
     if (!this.externalPool) {
@@ -61,9 +62,27 @@ class SupabaseSyncService {
     return this.externalPool;
   }
 
-  async testConnection(): Promise<{ success: boolean; message: string; tables?: string[] }> {
+  private getDigitalOceanPool(): pg.Pool {
+    if (!this.digitalOceanPool) {
+      const doUrl = process.env.DIGITALOCEAN_DATABASE_URL;
+      if (!doUrl) {
+        throw new Error('DIGITALOCEAN_DATABASE_URL environment variable is not set');
+      }
+      this.digitalOceanPool = new Pool({
+        connectionString: doUrl,
+        ssl: { rejectUnauthorized: false }
+      });
+    }
+    return this.digitalOceanPool;
+  }
+
+  private getPoolForSource(source: 'supabase' | 'digitalocean'): pg.Pool {
+    return source === 'digitalocean' ? this.getDigitalOceanPool() : this.getExternalPool();
+  }
+
+  async testConnection(source: 'supabase' | 'digitalocean' = 'supabase'): Promise<{ success: boolean; message: string; tables?: string[]; source: string }> {
     try {
-      const pool = this.getExternalPool();
+      const pool = this.getPoolForSource(source);
       const client = await pool.connect();
       
       const result = await client.query(`
@@ -78,15 +97,23 @@ class SupabaseSyncService {
       const tables = result.rows.map(r => r.table_name);
       return {
         success: true,
-        message: 'Successfully connected to external database',
-        tables
+        message: `Successfully connected to ${source} database`,
+        tables,
+        source
       };
     } catch (error: any) {
       return {
         success: false,
-        message: `Connection failed: ${error.message}`
+        message: `Connection failed: ${error.message}`,
+        source
       };
     }
+  }
+
+  async testAllConnections(): Promise<{ supabase: { success: boolean; message: string; tables?: string[] }; digitalocean: { success: boolean; message: string; tables?: string[] } }> {
+    const supabase = await this.testConnection('supabase');
+    const digitalocean = await this.testConnection('digitalocean');
+    return { supabase, digitalocean };
   }
 
   async syncSmilesTable(tableName: string = 'SMILES'): Promise<SyncResult> {
@@ -189,7 +216,7 @@ class SupabaseSyncService {
             } else {
               const inserted = await db.insert(materialEntities).values({
                 name: row.material_id,
-                type: 'other',
+                type: 'composite',
                 representation: { category: row.category },
                 baseFamily: row.category,
                 isCurated: true,
@@ -224,7 +251,7 @@ class SupabaseSyncService {
     return result;
   }
 
-  async syncVariantsFormulationsTable(tableName: string = 'Variants_Formulations'): Promise<SyncResult> {
+  async syncVariantsFormulationsTable(tableName: string = 'Variants_Formulations', source: 'supabase' | 'digitalocean' = 'digitalocean'): Promise<SyncResult> {
     const result: SyncResult = {
       success: false,
       table: tableName,
@@ -235,7 +262,7 @@ class SupabaseSyncService {
     };
 
     try {
-      const pool = this.getExternalPool();
+      const pool = this.getPoolForSource(source);
       const client = await pool.connect();
       
       const queryResult = await client.query<ExternalVariantsRow>(`SELECT * FROM "${tableName}"`);
@@ -313,9 +340,9 @@ class SupabaseSyncService {
     };
   }
 
-  async getTablePreview(tableName: string, limit: number = 10): Promise<{ success: boolean; data?: any[]; columns?: string[]; error?: string }> {
+  async getTablePreview(tableName: string, limit: number = 10, source: 'supabase' | 'digitalocean' = 'supabase'): Promise<{ success: boolean; data?: any[]; columns?: string[]; error?: string; source: string }> {
     try {
-      const pool = this.getExternalPool();
+      const pool = this.getPoolForSource(source);
       const client = await pool.connect();
       
       const queryResult = await client.query(`SELECT * FROM "${tableName}" LIMIT $1`, [limit]);
@@ -324,12 +351,14 @@ class SupabaseSyncService {
       return {
         success: true,
         data: queryResult.rows,
-        columns: queryResult.fields.map(f => f.name)
+        columns: queryResult.fields.map(f => f.name),
+        source
       };
     } catch (error: any) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
+        source
       };
     }
   }
@@ -338,6 +367,10 @@ class SupabaseSyncService {
     if (this.externalPool) {
       await this.externalPool.end();
       this.externalPool = null;
+    }
+    if (this.digitalOceanPool) {
+      await this.digitalOceanPool.end();
+      this.digitalOceanPool = null;
     }
   }
 }

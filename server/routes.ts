@@ -5306,8 +5306,20 @@ print(json.dumps({
 
   app.get("/api/external-sync/test-connection", requireAuth, async (req, res) => {
     try {
+      const source = (req.query.source as 'supabase' | 'digitalocean') || 'supabase';
       const { supabaseSyncService } = await import("./services/supabase-sync");
-      const result = await supabaseSyncService.testConnection();
+      const result = await supabaseSyncService.testConnection(source);
+      res.json(result);
+    } catch (error: any) {
+      console.error("External DB connection test error:", error);
+      res.status(500).json({ success: false, message: error.message || "Connection test failed" });
+    }
+  });
+
+  app.get("/api/external-sync/test-all-connections", requireAuth, async (req, res) => {
+    try {
+      const { supabaseSyncService } = await import("./services/supabase-sync");
+      const result = await supabaseSyncService.testAllConnections();
       res.json(result);
     } catch (error: any) {
       console.error("External DB connection test error:", error);
@@ -5319,9 +5331,10 @@ print(json.dumps({
     try {
       const { tableName } = req.params;
       const limit = parseInt(req.query.limit as string) || 10;
+      const source = (req.query.source as 'supabase' | 'digitalocean') || 'supabase';
       
       const { supabaseSyncService } = await import("./services/supabase-sync");
-      const result = await supabaseSyncService.getTablePreview(tableName, limit);
+      const result = await supabaseSyncService.getTablePreview(tableName, limit, source);
       res.json(result);
     } catch (error: any) {
       console.error("External table preview error:", error);
@@ -5358,9 +5371,10 @@ print(json.dumps({
   app.post("/api/external-sync/sync/variants", requireAuth, async (req, res) => {
     try {
       const tableName = req.body.tableName || "Variants_Formulations";
+      const source = (req.body.source as 'supabase' | 'digitalocean') || 'digitalocean';
       
       const { supabaseSyncService } = await import("./services/supabase-sync");
-      const result = await supabaseSyncService.syncVariantsFormulationsTable(tableName);
+      const result = await supabaseSyncService.syncVariantsFormulationsTable(tableName, source);
       res.json(result);
     } catch (error: any) {
       console.error("Variants sync error:", error);

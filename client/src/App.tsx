@@ -58,6 +58,7 @@ import QuantumComputePage from "@/pages/quantum-compute";
 import PipelineLauncherPage from "@/pages/pipeline-launcher";
 import UseCasesPage from "@/pages/use-cases";
 import BioNemoPage from "@/pages/bionemo";
+import ExternalDataPage from "@/pages/external-data";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -129,6 +130,7 @@ function AuthenticatedRoutes() {
         <Route path="/pipeline" component={PipelineLauncherPage} />
         <Route path="/use-cases" component={UseCasesPage} />
         <Route path="/bionemo" component={BioNemoPage} />
+        <Route path="/external-data" component={ExternalDataPage} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>
