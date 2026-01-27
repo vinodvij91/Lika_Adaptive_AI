@@ -46,6 +46,7 @@ interface PipelineJob {
   completedAt?: string;
   errorMessage?: string;
   inputPayload?: Record<string, unknown>;
+  outputPayload?: Record<string, unknown>;
 }
 
 interface ComputeNode {
@@ -671,7 +672,7 @@ export default function PipelineLauncherPage() {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                   <div className="bg-muted/30 rounded-lg p-3">
                                     <p className="text-muted-foreground text-xs mb-1">Job Type</p>
-                                    <p className="font-medium">{JOB_TYPES.find(j => j.value === job.type)?.label || job.type}</p>
+                                    <p className="font-medium">{jobTypeOptions.find(j => j.value === job.type)?.label || job.type}</p>
                                   </div>
                                   <div className="bg-muted/30 rounded-lg p-3">
                                     <p className="text-muted-foreground text-xs mb-1">GPU Acceleration</p>
@@ -691,7 +692,7 @@ export default function PipelineLauncherPage() {
                                 <div className="bg-orange-500/5 border border-orange-500/20 rounded-lg p-4">
                                   <p className="text-sm font-medium text-orange-600 mb-2">Materials Discovery Pipeline</p>
                                   <p className="text-sm text-muted-foreground mb-3">
-                                    {JOB_TYPES.find(j => j.value === job.type)?.description || "Processing materials from the database"}
+                                    {jobTypeOptions.find(j => j.value === job.type)?.description || "Processing materials from the database"}
                                   </p>
                                   <div className="grid grid-cols-2 gap-3 text-sm">
                                     <div>
