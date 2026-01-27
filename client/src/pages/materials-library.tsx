@@ -46,6 +46,10 @@ export default function MaterialsLibraryPage() {
   const materials = materialsResponse?.materials || [];
   const totalMaterials = materialsResponse?.total || 0;
 
+  const { data: typeCounts } = useQuery<{ total: number; polymers: number; crystals: number; composites: number }>({
+    queryKey: ["/api/materials/type-counts"],
+  });
+
   const { data: computeNodes } = useQuery<any[]>({
     queryKey: ["/api/compute-nodes"],
   });
@@ -87,10 +91,10 @@ export default function MaterialsLibraryPage() {
   const isComposite = (type: string) => compositeTypes.includes(type);
 
   const categories = [
-    { label: "Total Materials", value: materials.length, icon: Hexagon, color: "from-emerald-500 to-teal-500", bgColor: "bg-emerald-500", filter: "all" },
-    { label: "Polymers", value: materials.filter(m => isPolymer(m.type)).length, icon: Layers, color: "from-blue-500 to-cyan-500", bgColor: "bg-blue-500", filter: "polymer" },
-    { label: "Crystals", value: materials.filter(m => isCrystal(m.type)).length, icon: Atom, color: "from-violet-500 to-purple-500", bgColor: "bg-violet-500", filter: "crystal" },
-    { label: "Composites/Alloys", value: materials.filter(m => isComposite(m.type)).length, icon: Box, color: "from-amber-500 to-orange-500", bgColor: "bg-amber-500", filter: "composite" },
+    { label: "Total Materials", value: typeCounts?.total || totalMaterials, icon: Hexagon, color: "from-emerald-500 to-teal-500", bgColor: "bg-emerald-500", filter: "all" },
+    { label: "Polymers", value: typeCounts?.polymers || 0, icon: Layers, color: "from-blue-500 to-cyan-500", bgColor: "bg-blue-500", filter: "polymer" },
+    { label: "Crystals", value: typeCounts?.crystals || 0, icon: Atom, color: "from-violet-500 to-purple-500", bgColor: "bg-violet-500", filter: "crystal" },
+    { label: "Composites/Alloys", value: typeCounts?.composites || 0, icon: Box, color: "from-amber-500 to-orange-500", bgColor: "bg-amber-500", filter: "composite" },
   ];
 
   const filteredMaterials = materials.filter(m => {

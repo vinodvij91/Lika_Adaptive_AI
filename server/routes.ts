@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { orchestrator } from "./orchestrator";
 import { registerArtifactsFromManifest } from "./artifact-ingestion";
 import { db } from "./db";
-import { eq, count } from "drizzle-orm";
+import { eq, count, sql } from "drizzle-orm";
+import { materialEntities } from "@shared/schema";
 import { z } from "zod";
 import {
   insertProjectSchema,
@@ -91,6 +92,38 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching materials dashboard stats:", error);
       res.status(500).json({ error: "Failed to fetch materials dashboard stats" });
+    }
+  });
+
+  // Material type counts for library display
+  app.get("/api/materials/type-counts", requireAuth, async (req, res) => {
+    try {
+      const polymerTypes = ["polymer", "homopolymer", "copolymer"];
+      const crystalTypes = ["crystal", "perovskite", "double_perovskite", "spinel", "binary_oxide", "binary_chalcogenide", "binary_pnictide", "mxene_2d", "tmd_2d", "2d_material"];
+      const compositeTypes = ["composite", "high_entropy_alloy", "binary_alloy", "ternary_alloy"];
+      
+      const counts = await db.select({ 
+        type: materialEntities.type, 
+        count: sql<number>`count(*)` 
+      }).from(materialEntities).groupBy(materialEntities.type);
+      
+      let totalCount = 0;
+      let polymerCount = 0;
+      let crystalCount = 0;
+      let compositeCount = 0;
+      
+      for (const row of counts) {
+        const c = Number(row.count);
+        totalCount += c;
+        if (polymerTypes.includes(row.type)) polymerCount += c;
+        if (crystalTypes.includes(row.type)) crystalCount += c;
+        if (compositeTypes.includes(row.type)) compositeCount += c;
+      }
+      
+      res.json({ total: totalCount, polymers: polymerCount, crystals: crystalCount, composites: compositeCount });
+    } catch (error) {
+      console.error("Error fetching material type counts:", error);
+      res.status(500).json({ error: "Failed to fetch material type counts" });
     }
   });
 
