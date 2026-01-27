@@ -65,30 +65,23 @@ class SupabaseSyncService {
 
   private getDigitalOceanPool(): pg.Pool {
     if (!this.digitalOceanPool) {
-      let doUrl = process.env.DIGITALOCEAN_DATABASE_URL;
-      if (!doUrl) {
-        throw new Error('DIGITALOCEAN_DATABASE_URL environment variable is not set');
-      }
+      // Use explicit connection params for DigitalOcean
+      const doHost = process.env.DO_HOST || 'db-postgresql-lon1-62284-do-user-13906851-0.i.db.ondigitalocean.com';
+      const doUser = process.env.DO_USER || 'doadmin';
+      const doPass = process.env.DO_PASSWORD || '';
+      const doPort = process.env.DO_PORT || '25060';
+      const doDb = process.env.DO_DATABASE || 'defaultdb';
       
-      // Fix URL if it's missing the protocol prefix
-      if (!doUrl.startsWith('postgresql://') && !doUrl.startsWith('postgres://')) {
-        // Check if we have individual connection params
-        const doHost = process.env.DO_HOST || 'db-postgresql-lon1-62284-do-user-13906851-0.i.db.ondigitalocean.com';
-        const doUser = process.env.DO_USER || 'doadmin';
-        const doPass = process.env.DO_PASSWORD || '';
-        const doPort = process.env.DO_PORT || '25060';
-        const doDb = process.env.DO_DATABASE || 'defaultdb';
-        
-        if (doPass) {
-          doUrl = `postgresql://${doUser}:${doPass}@${doHost}:${doPort}/${doDb}?sslmode=require`;
-        } else {
-          // The URL might just be the host, try to use it
-          doUrl = `postgresql://doadmin@${doUrl}:25060/defaultdb?sslmode=require`;
-        }
+      if (!doPass) {
+        throw new Error('DO_PASSWORD environment variable is required for DigitalOcean connection');
       }
       
       this.digitalOceanPool = new Pool({
-        connectionString: doUrl,
+        host: doHost,
+        port: parseInt(doPort),
+        user: doUser,
+        password: doPass,
+        database: doDb,
         ssl: { rejectUnauthorized: false }
       });
     }
@@ -363,7 +356,7 @@ class SupabaseSyncService {
     return result;
   }
 
-  async syncVariants(tableName: string = 'Variants_Formulations', source: 'supabase' | 'digitalocean' = 'digitalocean'): Promise<SyncResult> {
+  async syncVariants(tableName: string = 'variants_formulations_massive', source: 'supabase' | 'digitalocean' = 'digitalocean', batchSize: number = 1000, maxRecords: number = 50000): Promise<SyncResult> {
     const result: SyncResult = {
       success: true,
       table: tableName,
@@ -374,84 +367,100 @@ class SupabaseSyncService {
     };
 
     try {
-      let rows: ExternalVariantsRow[] = [];
-      
-      if (source === 'supabase') {
-        const client = this.getSupabaseClient();
-        const { data, error } = await client.from(tableName).select('*');
-        if (error) throw new Error(error.message);
-        rows = data || [];
-      } else {
-        const pool = this.getDigitalOceanPool();
-        const poolClient = await pool.connect();
-        try {
-          const queryResult = await poolClient.query(`SELECT * FROM "${tableName}"`);
-          rows = queryResult.rows;
-        } finally {
-          poolClient.release();
-        }
-      }
-
-      if (rows.length === 0) {
-        return result;
-      }
-
+      // Pre-load existing materials
+      const existingMaterials = await db.select({ id: materialEntities.id, name: materialEntities.name }).from(materialEntities);
       const materialMap = new Map<string, string>();
+      for (const mat of existingMaterials) {
+        if (mat.name) materialMap.set(mat.name, mat.id);
+      }
 
-      for (const row of rows) {
-        result.recordsProcessed++;
-        
-        try {
-          const baseMaterialName = row.base_material || row.active_material || 'Unknown Material';
-          let internalMaterialId = materialMap.get(baseMaterialName);
-          
-          if (!internalMaterialId) {
-            const existing = await db
-              .select()
-              .from(materialEntities)
-              .where(eq(materialEntities.name, baseMaterialName))
-              .limit(1);
+      const pool = this.getDigitalOceanPool();
+      const poolClient = await pool.connect();
+      
+      try {
+        let offset = 0;
+        let hasMore = true;
 
-            if (existing.length > 0) {
-              internalMaterialId = existing[0].id;
-            } else {
-              const inserted = await db.insert(materialEntities).values({
+        while (hasMore && result.recordsProcessed < maxRecords) {
+          const queryResult = await poolClient.query(
+            `SELECT * FROM "${tableName}" LIMIT $1 OFFSET $2`,
+            [batchSize, offset]
+          );
+          const rows: ExternalVariantsRow[] = queryResult.rows;
+
+          if (rows.length === 0) {
+            hasMore = false;
+            break;
+          }
+
+          // Collect new materials
+          const newMaterials: { name: string; type: 'composite'; representation: any; baseFamily: string; isCurated: boolean; isDemo: boolean }[] = [];
+          const seenNewMaterials = new Set<string>();
+
+          for (const row of rows) {
+            const baseMaterialName = row.base_material || row.active_material || 'Unknown Material';
+            if (!materialMap.has(baseMaterialName) && !seenNewMaterials.has(baseMaterialName)) {
+              seenNewMaterials.add(baseMaterialName);
+              newMaterials.push({
                 name: baseMaterialName,
-                type: 'composite',
+                type: 'composite' as const,
                 representation: { variant_source: source },
                 baseFamily: row.variant_type || 'formulation',
                 isCurated: true,
                 isDemo: false
-              }).returning({ id: materialEntities.id });
-              
-              internalMaterialId = inserted[0].id;
+              });
             }
-            materialMap.set(baseMaterialName, internalMaterialId);
           }
 
-          const { variant_id, variant_type, base_material, active_material, description, process, processing_method, ...restParams } = row;
+          // Batch insert new materials
+          if (newMaterials.length > 0) {
+            const inserted = await db.insert(materialEntities).values(newMaterials).returning({ id: materialEntities.id, name: materialEntities.name });
+            for (const mat of inserted) {
+              if (mat.name) materialMap.set(mat.name, mat.id);
+            }
+          }
 
-          await db.insert(materialVariants).values({
-            materialId: internalMaterialId!,
-            variantParams: {
-              external_variant_id: variant_id,
-              variant_type: variant_type || 'formulation',
-              base_material,
-              active_material,
-              description,
-              process,
-              processing_method,
-              source: source,
-              ...restParams
-            },
-            generatedBy: 'human'
-          });
+          // Batch insert variants
+          const variantsToInsert = [];
+          for (const row of rows) {
+            if (result.recordsProcessed >= maxRecords) break;
+            result.recordsProcessed++;
+            
+            const baseMaterialName = row.base_material || row.active_material || 'Unknown Material';
+            const materialId = materialMap.get(baseMaterialName);
+            
+            if (materialId) {
+              const { variant_id, variant_type, base_material, active_material, description, process, processing_method, ...restParams } = row;
+              variantsToInsert.push({
+                materialId,
+                variantParams: {
+                  external_variant_id: variant_id,
+                  variant_type: variant_type || 'formulation',
+                  base_material,
+                  active_material,
+                  description,
+                  process,
+                  processing_method,
+                  source,
+                  ...restParams
+                },
+                generatedBy: 'human' as const
+              });
+            }
+          }
 
-          result.recordsInserted++;
-        } catch (rowError: any) {
-          result.errors.push(`Row error: ${rowError.message}`);
-          result.recordsSkipped++;
+          if (variantsToInsert.length > 0) {
+            await db.insert(materialVariants).values(variantsToInsert);
+            result.recordsInserted += variantsToInsert.length;
+          }
+
+          offset += batchSize;
+          if (rows.length < batchSize) {
+            hasMore = false;
+          }
         }
+      } finally {
+        poolClient.release();
       }
     } catch (error: any) {
       result.success = false;
@@ -481,7 +490,7 @@ class SupabaseSyncService {
       })),
       this.syncVariants().catch(e => ({
         success: false,
-        table: 'Variants_Formulations',
+        table: 'variants_formulations_massive',
         recordsProcessed: 0,
         recordsInserted: 0,
         recordsSkipped: 0,

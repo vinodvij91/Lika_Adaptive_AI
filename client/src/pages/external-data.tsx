@@ -99,7 +99,7 @@ export default function ExternalDataPage() {
 
   const syncVariantsMutation = useMutation({
     mutationFn: async (): Promise<SyncResult> => {
-      const res = await apiRequest("POST", "/api/external-sync/sync/variants", { tableName: "Variants_Formulations", source: "digitalocean" });
+      const res = await apiRequest("POST", "/api/external-sync/sync/variants", { tableName: "variants_formulations_massive", source: "digitalocean" });
       return res.json();
     },
     onSuccess: (data: SyncResult) => {

@@ -5370,7 +5370,7 @@ print(json.dumps({
 
   app.post("/api/external-sync/sync/variants", requireAuth, async (req, res) => {
     try {
-      const tableName = req.body.tableName || "Variants_Formulations";
+      const tableName = req.body.tableName || "variants_formulations_massive";
       const source = (req.body.source as 'supabase' | 'digitalocean') || 'digitalocean';
       
       const { supabaseSyncService } = await import("./services/supabase-sync");
@@ -5378,7 +5378,7 @@ print(json.dumps({
       res.json(result);
     } catch (error: any) {
       console.error("Variants sync error:", error);
-      res.status(500).json({ success: false, table: "Variants_Formulations", errors: [error.message] });
+      res.status(500).json({ success: false, table: "variants_formulations_massive", errors: [error.message] });
     }
   });
 
