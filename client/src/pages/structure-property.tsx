@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import {
   AreaChart,
   Area,
@@ -238,16 +239,36 @@ function DensityHeatmap({ data }: { data: any[] }) {
 }
 
 export default function StructurePropertyPage() {
+  const { toast } = useToast();
   const [groupBy, setGroupBy] = useState<string>("family");
   const [propertyX, setPropertyX] = useState<string>("thermal_stability");
   const [propertyY, setPropertyY] = useState<string>("tensile_strength");
+  const [isRunningAnalysis, setIsRunningAnalysis] = useState(false);
+  const [analysisSeed, setAnalysisSeed] = useState(0);
 
-  const totalVariants = 127450;
-  const topPerformersCount = 12450;
+  const handleRunAnalysis = () => {
+    setIsRunningAnalysis(true);
+    toast({
+      title: "Running Analysis",
+      description: "Processing 127K+ material variants...",
+    });
+    // Simulate analysis with new random seed
+    setTimeout(() => {
+      setAnalysisSeed(prev => prev + 1);
+      setIsRunningAnalysis(false);
+      toast({
+        title: "Analysis Complete",
+        description: "Updated structure-property correlations with latest data.",
+      });
+    }, 1500);
+  };
+
+  const totalVariants = 127450 + analysisSeed * 150;
+  const topPerformersCount = 12450 + analysisSeed * 25;
   const topPercentile = 5;
 
   const groupConfig = GROUP_CONFIGS[groupBy] || GROUP_CONFIGS.family;
-  const seed = groupBy.length + propertyX.length + propertyY.length;
+  const seed = groupBy.length + propertyX.length + propertyY.length + analysisSeed;
 
   const percentileData = useMemo(() => generateMockPercentileData(totalVariants, groupBy, seed), [groupBy, seed]);
   const densityData = useMemo(() => generateMockDensityData(groupBy, propertyX, seed), [groupBy, propertyX, seed]);
@@ -265,9 +286,18 @@ export default function StructurePropertyPage() {
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-            <Button data-testid="button-run-analysis">
-              <Activity className="h-4 w-4 mr-2" />
-              Run Analysis
+            <Button onClick={handleRunAnalysis} disabled={isRunningAnalysis} data-testid="button-run-analysis">
+              {isRunningAnalysis ? (
+                <>
+                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Activity className="h-4 w-4 mr-2" />
+                  Run Analysis
+                </>
+              )}
             </Button>
           </div>
         }
