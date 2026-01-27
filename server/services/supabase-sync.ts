@@ -246,7 +246,7 @@ class SupabaseSyncService {
     return result;
   }
 
-  async syncMaterialProperties(tableName: string = 'Materials Property Table', batchSize: number = 1000, maxRecords: number = 10000): Promise<SyncResult> {
+  async syncMaterialProperties(tableName: string = 'Materials Property Table', batchSize: number = 1000, maxRecords: number = 600000): Promise<SyncResult> {
     const result: SyncResult = {
       success: true,
       table: tableName,
@@ -258,7 +258,14 @@ class SupabaseSyncService {
 
     try {
       const client = this.getSupabaseClient();
+      
+      // Pre-load all existing materials for fast lookup
+      const existingMaterials = await db.select({ id: materialEntities.id, name: materialEntities.name }).from(materialEntities);
       const materialMap = new Map<string, string>();
+      for (const mat of existingMaterials) {
+        if (mat.name) materialMap.set(mat.name, mat.id);
+      }
+      
       let offset = 0;
       let hasMore = true;
 
@@ -277,51 +284,52 @@ class SupabaseSyncService {
           break;
         }
 
+        // Collect new materials to insert in batch
+        const newMaterials: { name: string; type: 'composite'; representation: any; baseFamily: string; isCurated: boolean; isDemo: boolean }[] = [];
+        const seenNewMaterials = new Set<string>();
+        
         for (const row of rows as ExternalMaterialPropertiesRow[]) {
-          if (result.recordsProcessed >= maxRecords) break;
+          if (!materialMap.has(row.material_id) && !seenNewMaterials.has(row.material_id)) {
+            seenNewMaterials.add(row.material_id);
+            newMaterials.push({
+              name: row.material_id,
+              type: 'composite' as const,
+              representation: { category: row.category },
+              baseFamily: row.category,
+              isCurated: true,
+              isDemo: false
+            });
+          }
+        }
+        
+        // Batch insert new materials
+        if (newMaterials.length > 0) {
+          const inserted = await db.insert(materialEntities).values(newMaterials).returning({ id: materialEntities.id, name: materialEntities.name });
+          for (const mat of inserted) {
+            if (mat.name) materialMap.set(mat.name, mat.id);
+          }
+        }
+
+        // Batch insert properties
+        const propertiesToInsert = [];
+        for (const row of rows as ExternalMaterialPropertiesRow[]) {
           result.recordsProcessed++;
-          
-          try {
-            let internalMaterialId = materialMap.get(row.material_id);
-            
-            if (!internalMaterialId) {
-              const existing = await db
-                .select()
-                .from(materialEntities)
-                .where(eq(materialEntities.name, row.material_id))
-                .limit(1);
-
-              if (existing.length > 0) {
-                internalMaterialId = existing[0].id;
-              } else {
-                const inserted = await db.insert(materialEntities).values({
-                  name: row.material_id,
-                  type: 'composite',
-                  representation: { category: row.category },
-                  baseFamily: row.category,
-                  isCurated: true,
-                  isDemo: false
-                }).returning({ id: materialEntities.id });
-                
-                internalMaterialId = inserted[0].id;
-              }
-              materialMap.set(row.material_id, internalMaterialId);
-            }
-
-            await db.insert(materialProperties).values({
-              materialId: internalMaterialId!,
+          const materialId = materialMap.get(row.material_id);
+          if (materialId) {
+            propertiesToInsert.push({
+              materialId,
               propertyName: row.property,
               value: parseFloat(String(row.value)) || 0,
               units: row.units,
-              source: 'experiment',
+              source: 'experiment' as const,
               confidence: 1.0
             });
-            
-            result.recordsInserted++;
-          } catch (rowError: any) {
-            result.errors.push(`Row error: ${rowError.message}`);
-            result.recordsSkipped++;
           }
+        }
+        
+        if (propertiesToInsert.length > 0) {
+          await db.insert(materialProperties).values(propertiesToInsert);
+          result.recordsInserted += propertiesToInsert.length;
         }
 
         offset += batchSize;
