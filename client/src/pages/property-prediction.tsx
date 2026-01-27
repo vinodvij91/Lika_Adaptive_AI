@@ -41,7 +41,8 @@ interface PropertyResult {
 interface MaterialPredictionResult {
   material_id: string;
   material_type: string;
-  descriptors: Record<string, number>;
+  smiles?: string;
+  descriptors?: Record<string, number>;
   properties: PropertyResult[];
 }
 
@@ -398,6 +399,7 @@ export default function PropertyPredictionPage() {
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialPredictionResult | null>(null);
   const [currentMaterialName, setCurrentMaterialName] = useState("");
   const [currentSmiles, setCurrentSmiles] = useState("");
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -448,6 +450,18 @@ export default function PropertyPredictionPage() {
     onSuccess: (data) => {
       if (data.results) {
         setManufResults(data.results);
+      }
+    },
+  });
+
+  const aiAnalysisMutation = useMutation({
+    mutationFn: async ({ smiles, properties, materialName }: { smiles: string; properties: any[]; materialName?: string }) => {
+      const res = await apiRequest("POST", "/api/compute/materials/ai-analysis", { smiles, properties, materialName });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.analysis) {
+        setAiAnalysis(data);
       }
     },
   });
@@ -704,6 +718,104 @@ export default function PropertyPredictionPage() {
                     <ManufacturabilityCard 
                       result={manufResults.find(m => m.material_id === selectedMaterial.material_id) || manufResults[0]} 
                     />
+                  )}
+                  
+                  {materialType === "polymer" && selectedMaterial.smiles && (
+                    <Card className="shadow-lg">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-purple-500" />
+                            AI-Powered Analysis
+                          </CardTitle>
+                          <Button
+                            onClick={() => aiAnalysisMutation.mutate({
+                              smiles: selectedMaterial.smiles || currentSmiles || inputText.split("\n")[0],
+                              properties: selectedMaterial.properties,
+                              materialName: currentMaterialName || selectedMaterial.material_id
+                            })}
+                            disabled={aiAnalysisMutation.isPending}
+                            size="sm"
+                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                            data-testid="button-ai-analysis"
+                          >
+                            {aiAnalysisMutation.isPending ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Analyzing...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Get AI Insights
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Use GPT-4o to analyze structure-property relationships and get scientific recommendations
+                        </p>
+                      </CardHeader>
+                      {aiAnalysis?.analysis && (
+                        <CardContent className="space-y-4">
+                          <div className="grid gap-4">
+                            {aiAnalysis.analysis.structureAnalysis && (
+                              <div className="p-3 bg-purple-500/10 rounded-lg">
+                                <p className="font-semibold text-purple-600 dark:text-purple-400 mb-1 flex items-center gap-2">
+                                  <Atom className="h-4 w-4" />
+                                  Structure Analysis
+                                </p>
+                                <p className="text-sm">{aiAnalysis.analysis.structureAnalysis}</p>
+                              </div>
+                            )}
+                            {aiAnalysis.analysis.propertyExplanation && (
+                              <div className="p-3 bg-blue-500/10 rounded-lg">
+                                <p className="font-semibold text-blue-600 dark:text-blue-400 mb-1 flex items-center gap-2">
+                                  <Activity className="h-4 w-4" />
+                                  Property Explanation
+                                </p>
+                                <p className="text-sm">{aiAnalysis.analysis.propertyExplanation}</p>
+                              </div>
+                            )}
+                            {aiAnalysis.analysis.applicationSuggestions && (
+                              <div className="p-3 bg-emerald-500/10 rounded-lg">
+                                <p className="font-semibold text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-2">
+                                  <Factory className="h-4 w-4" />
+                                  Applications
+                                </p>
+                                <ul className="text-sm list-disc list-inside">
+                                  {(Array.isArray(aiAnalysis.analysis.applicationSuggestions) 
+                                    ? aiAnalysis.analysis.applicationSuggestions 
+                                    : [aiAnalysis.analysis.applicationSuggestions]
+                                  ).map((app: string, i: number) => (
+                                    <li key={i}>{app}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {aiAnalysis.analysis.improvementSuggestions && (
+                              <div className="p-3 bg-amber-500/10 rounded-lg">
+                                <p className="font-semibold text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-2">
+                                  <TrendingUp className="h-4 w-4" />
+                                  Improvement Suggestions
+                                </p>
+                                <ul className="text-sm list-disc list-inside">
+                                  {(Array.isArray(aiAnalysis.analysis.improvementSuggestions)
+                                    ? aiAnalysis.analysis.improvementSuggestions
+                                    : [aiAnalysis.analysis.improvementSuggestions]
+                                  ).map((sug: string, i: number) => (
+                                    <li key={i}>{sug}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground text-right">
+                            Powered by {aiAnalysis.model}
+                          </p>
+                        </CardContent>
+                      )}
+                    </Card>
                   )}
                 </>
               ) : (

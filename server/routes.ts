@@ -1601,6 +1601,68 @@ print(json.dumps({
     }
   });
 
+  // ==================== AI-Enhanced Polymer Analysis ====================
+  
+  app.post("/api/compute/materials/ai-analysis", requireAuth, async (req, res) => {
+    try {
+      const { smiles, properties, materialName } = req.body;
+      
+      if (!smiles) {
+        return res.status(400).json({ error: "SMILES string is required" });
+      }
+
+      const OpenAI = (await import("openai")).default;
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+      
+      const propertiesText = properties ? 
+        properties.map((p: any) => `${p.property_name}: ${p.value.toFixed(2)} ${p.unit}`).join(", ") : 
+        "No predictions available";
+      
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        max_completion_tokens: 1024,
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert polymer scientist. Analyze polymer structures and properties. Provide concise, scientific insights. Format response as JSON with these fields:
+- structureAnalysis: Brief analysis of the polymer structure from SMILES (functional groups, backbone type, key features)
+- propertyExplanation: Why the polymer has these predicted properties based on structure
+- applicationSuggestions: 2-3 potential applications based on the properties
+- improvementSuggestions: 1-2 structural modifications that could improve properties
+- confidenceNotes: Any caveats about the predictions`
+          },
+          {
+            role: "user",
+            content: `Analyze this polymer:
+Name: ${materialName || "Unknown polymer"}
+SMILES: ${smiles}
+Predicted Properties: ${propertiesText}
+
+Provide scientific analysis in JSON format.`
+          }
+        ],
+        response_format: { type: "json_object" }
+      });
+      
+      const analysis = JSON.parse(response.choices[0]?.message?.content || "{}");
+      
+      res.json({
+        success: true,
+        smiles,
+        materialName,
+        analysis,
+        model: "gpt-4o",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("AI analysis error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ==================== Materials Science Compute ====================
 
   app.post("/api/compute/materials/predict", requireAuth, async (req, res) => {
