@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -891,7 +892,7 @@ export default function PipelineLauncherPage() {
                                     <p className="text-sm text-muted-foreground">{jobTypeInfo?.label} - Completed {new Date(job.completedAt || job.createdAt).toLocaleString()}</p>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-4">
                                   <div className="text-right">
                                     <p className="text-2xl font-bold text-emerald-600">{output.candidatesFound || candidates.length}</p>
                                     <p className="text-xs text-muted-foreground">Candidates Found</p>
@@ -900,6 +901,11 @@ export default function PipelineLauncherPage() {
                                     <p className="text-2xl font-bold">{output.materialsProcessed || job.itemsCompleted}</p>
                                     <p className="text-xs text-muted-foreground">Materials Screened</p>
                                   </div>
+                                  <Link href={`/pipeline/results/${job.id}`}>
+                                    <Button data-testid={`button-view-report-${job.id}`}>
+                                      View Full Report
+                                    </Button>
+                                  </Link>
                                 </div>
                               </div>
                               
@@ -947,9 +953,11 @@ export default function PipelineLauncherPage() {
                                     ))}
                                   </div>
                                   {candidates.length > 5 && (
-                                    <p className="text-sm text-muted-foreground text-center">
-                                      + {candidates.length - 5} more candidates in full results
-                                    </p>
+                                    <Link href={`/pipeline/results/${job.id}`}>
+                                      <p className="text-sm text-muted-foreground text-center cursor-pointer hover:underline" data-testid={`link-more-candidates-${job.id}`}>
+                                        + {candidates.length - 5} more candidates in full results →
+                                      </p>
+                                    </Link>
                                   )}
                                 </div>
                               )}
