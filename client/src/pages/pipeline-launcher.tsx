@@ -666,7 +666,73 @@ export default function PipelineLauncherPage() {
                             </div>
 
                             {isExpanded && (
-                              <div className="mt-4 pt-4 border-t space-y-3">
+                              <div className="mt-4 pt-4 border-t space-y-4">
+                                {/* Pipeline Configuration Details */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div className="bg-muted/30 rounded-lg p-3">
+                                    <p className="text-muted-foreground text-xs mb-1">Job Type</p>
+                                    <p className="font-medium">{JOB_TYPES.find(j => j.value === job.type)?.label || job.type}</p>
+                                  </div>
+                                  <div className="bg-muted/30 rounded-lg p-3">
+                                    <p className="text-muted-foreground text-xs mb-1">GPU Acceleration</p>
+                                    <p className="font-medium">{(job.inputPayload as any)?.useGpu ? "Enabled" : "Disabled"}</p>
+                                  </div>
+                                  <div className="bg-muted/30 rounded-lg p-3">
+                                    <p className="text-muted-foreground text-xs mb-1">Dask Workers</p>
+                                    <p className="font-medium">{(job.inputPayload as any)?.nWorkers || 4}</p>
+                                  </div>
+                                  <div className="bg-muted/30 rounded-lg p-3">
+                                    <p className="text-muted-foreground text-xs mb-1">Chunk Size</p>
+                                    <p className="font-medium">{((job.inputPayload as any)?.chunkSize || 10000).toLocaleString()}</p>
+                                  </div>
+                                </div>
+                                
+                                {/* Materials Being Processed */}
+                                <div className="bg-orange-500/5 border border-orange-500/20 rounded-lg p-4">
+                                  <p className="text-sm font-medium text-orange-600 mb-2">Materials Discovery Pipeline</p>
+                                  <p className="text-sm text-muted-foreground mb-3">
+                                    {JOB_TYPES.find(j => j.value === job.type)?.description || "Processing materials from the database"}
+                                  </p>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                      <span className="text-muted-foreground">Source:</span>
+                                      <span className="ml-2 font-medium">Materials Library (53,923 materials)</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">Target Properties:</span>
+                                      <span className="ml-2 font-medium">
+                                        {job.type.includes('battery') ? 'Voltage, Capacity, Stability' :
+                                         job.type.includes('solar') ? 'Band Gap, Absorption, Efficiency' :
+                                         job.type.includes('pfas') ? 'Fluorine-free, EPA Compliant' :
+                                         job.type.includes('catalyst') ? 'Activity, Selectivity, Durability' :
+                                         job.type.includes('superconductor') ? 'Critical Temperature (Tc)' :
+                                         job.type.includes('thermoelectric') ? 'Figure of Merit (ZT)' :
+                                         job.type.includes('aerospace') ? 'Strength-to-Weight Ratio' :
+                                         job.type.includes('biomedical') ? 'Biocompatibility, Osseointegration' :
+                                         job.type.includes('semiconductor') ? 'Band Gap, Mobility' :
+                                         job.type.includes('construction') ? 'CO2 Reduction, Strength' :
+                                         job.type.includes('transparent') ? 'Conductivity, Transparency' :
+                                         job.type.includes('magnet') ? 'Coercivity, Remanence' :
+                                         job.type.includes('electrolyte') ? 'Ionic Conductivity, Stability' :
+                                         job.type.includes('water') ? 'Permeability, Selectivity' :
+                                         job.type.includes('carbon') ? 'Adsorption Capacity, Selectivity' :
+                                         'Multiple Properties'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Output Payload if succeeded */}
+                                {job.status === "succeeded" && job.outputPayload && (
+                                  <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-4">
+                                    <p className="text-sm font-medium text-emerald-600 mb-2">Results</p>
+                                    <div className="text-sm space-y-1">
+                                      <p><span className="text-muted-foreground">Materials Processed:</span> <span className="font-medium">{(job.outputPayload as any)?.materialsProcessed || job.itemsCompleted}</span></p>
+                                      <p><span className="text-muted-foreground">Candidates Found:</span> <span className="font-medium">{(job.outputPayload as any)?.candidatesFound || 0}</span></p>
+                                    </div>
+                                  </div>
+                                )}
+
                                 {job.errorMessage && (
                                   <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-600">
                                     {job.errorMessage}
