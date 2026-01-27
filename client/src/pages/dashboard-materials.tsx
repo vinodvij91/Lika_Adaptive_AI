@@ -31,9 +31,10 @@ export default function MaterialsDashboardPage() {
     queryKey: ["/api/dashboard/stats/materials"],
   });
 
-  const { data: recentMaterials } = useQuery<MaterialEntity[]>({
+  const { data: materialsResponse } = useQuery<{ materials: MaterialEntity[], total: number }>({
     queryKey: ["/api/materials"],
   });
+  const recentMaterials = materialsResponse?.materials;
 
   const { data: recentCampaigns } = useQuery<MaterialsCampaign[]>({
     queryKey: ["/api/materials-campaigns"],

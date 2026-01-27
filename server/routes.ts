@@ -4049,8 +4049,10 @@ print(json.dumps({
   app.get("/api/materials", requireAuth, async (req, res) => {
     try {
       const type = req.query.type as string | undefined;
-      const materials = await storage.getMaterialEntities(type);
-      res.json(materials);
+      const limit = parseInt(req.query.limit as string) || 5000;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const result = await storage.getMaterialEntities(type, limit, offset);
+      res.json(result);
     } catch (error) {
       console.error("Error fetching materials:", error);
       res.status(500).json({ error: "Failed to fetch materials" });
@@ -4344,8 +4346,8 @@ print(json.dumps({
   app.get("/api/agent/materials", async (req, res) => {
     try {
       const type = req.query.type as string | undefined;
-      const materials = await storage.getMaterialEntities(type);
-      res.json(materials.map(m => ({ id: m.id, type: m.type, isCurated: m.isCurated })));
+      const result = await storage.getMaterialEntities(type);
+      res.json(result.materials.map((m: any) => ({ id: m.id, type: m.type, isCurated: m.isCurated })));
     } catch (error) {
       console.error("Error fetching materials for agent:", error);
       res.status(500).json({ error: "Failed to fetch materials" });

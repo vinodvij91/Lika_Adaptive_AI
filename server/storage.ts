@@ -400,7 +400,7 @@ export interface IStorage {
   createSharedAsset(asset: InsertSharedAsset): Promise<SharedAsset>;
   deleteSharedAsset(id: string): Promise<void>;
 
-  getMaterialEntities(type?: string): Promise<MaterialEntity[]>;
+  getMaterialEntities(type?: string, limit?: number, offset?: number): Promise<{ materials: MaterialEntity[], total: number }>;
   getMaterialEntity(id: string): Promise<MaterialEntity | undefined>;
   createMaterialEntity(entity: InsertMaterialEntity): Promise<MaterialEntity>;
   updateMaterialEntity(id: string, entity: Partial<InsertMaterialEntity>): Promise<MaterialEntity | undefined>;
@@ -1663,11 +1663,19 @@ export class DatabaseStorage implements IStorage {
     await db.delete(sharedAssets).where(eq(sharedAssets.id, id));
   }
 
-  async getMaterialEntities(type?: string): Promise<MaterialEntity[]> {
+  async getMaterialEntities(type?: string, limit: number = 5000, offset: number = 0): Promise<{ materials: MaterialEntity[], total: number }> {
+    const countResult = await db.select({ count: sql<number>`count(*)` }).from(materialEntities);
+    const total = Number(countResult[0]?.count || 0);
+    
+    let query;
     if (type) {
-      return db.select().from(materialEntities).where(eq(materialEntities.type, type as any)).orderBy(desc(materialEntities.createdAt));
+      query = db.select().from(materialEntities).where(eq(materialEntities.type, type as any)).orderBy(desc(materialEntities.createdAt)).limit(limit).offset(offset);
+    } else {
+      query = db.select().from(materialEntities).orderBy(desc(materialEntities.createdAt)).limit(limit).offset(offset);
     }
-    return db.select().from(materialEntities).orderBy(desc(materialEntities.createdAt)).limit(500);
+    
+    const materials = await query;
+    return { materials, total };
   }
 
   async getMaterialEntity(id: string): Promise<MaterialEntity | undefined> {

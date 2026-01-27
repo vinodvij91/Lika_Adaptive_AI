@@ -10,7 +10,7 @@ import { Link } from "wouter";
 import { 
   Hexagon, Plus, Upload, Search, Zap, Atom, Box, Layers, 
   Calculator, Factory, Sparkles, ArrowRight, CheckCircle2,
-  Loader2, Play
+  Loader2, Play, Database
 } from "lucide-react";
 import type { MaterialEntity } from "@shared/schema";
 
@@ -40,9 +40,11 @@ export default function MaterialsLibraryPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [quickPredictions, setQuickPredictions] = useState<QuickPrediction[]>([]);
 
-  const { data: materials = [], isLoading } = useQuery<MaterialEntity[]>({
+  const { data: materialsResponse, isLoading } = useQuery<{ materials: MaterialEntity[], total: number }>({
     queryKey: ["/api/materials"],
   });
+  const materials = materialsResponse?.materials || [];
+  const totalMaterials = materialsResponse?.total || 0;
 
   const { data: computeNodes } = useQuery<any[]>({
     queryKey: ["/api/compute-nodes"],
@@ -104,6 +106,10 @@ export default function MaterialsLibraryPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-emerald-100">
+                  <Badge variant="outline" className="bg-white/20 text-white border-white/30 gap-1">
+                    <Database className="h-3 w-3" />
+                    {totalMaterials.toLocaleString()} Total Materials
+                  </Badge>
                   <Badge variant="outline" className="bg-white/20 text-white border-white/30 gap-1">
                     <Zap className="h-3 w-3" />
                     Polymers, Crystals, Composites
