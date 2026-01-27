@@ -198,46 +198,60 @@ export default function MaterialsLibraryPage() {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Hexagon className="h-5 w-5 text-emerald-500" />
-                  Your Materials ({filteredMaterials.length})
+                  Your Materials ({totalMaterials.toLocaleString()})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {filteredMaterials.map((material) => (
-                    <div
-                      key={material.id}
-                      className="p-4 rounded-lg border hover:bg-muted/50 transition-colors"
-                      data-testid={`material-${material.id}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                            material.type === "polymer" ? "bg-blue-500/10" :
-                            material.type === "crystal" ? "bg-violet-500/10" : "bg-amber-500/10"
-                          }`}>
-                            {material.type === "polymer" ? <Layers className="h-5 w-5 text-blue-500" /> :
-                             material.type === "crystal" ? <Atom className="h-5 w-5 text-violet-500" /> :
-                             <Box className="h-5 w-5 text-amber-500" />}
+                  {filteredMaterials.map((material) => {
+                    const typeCategory = isPolymer(material.type) ? "polymer" :
+                      isCrystal(material.type) ? "crystal" :
+                      isComposite(material.type) ? "composite" :
+                      isThinFilm(material.type) ? "thinfilm" :
+                      isElectrochemical(material.type) ? "electrochemical" : "other";
+                    
+                    const iconConfig = {
+                      polymer: { bg: "bg-blue-500/10", icon: Hexagon, color: "text-blue-500" },
+                      crystal: { bg: "bg-violet-500/10", icon: Atom, color: "text-violet-500" },
+                      composite: { bg: "bg-amber-500/10", icon: Box, color: "text-amber-500" },
+                      thinfilm: { bg: "bg-pink-500/10", icon: Layers, color: "text-pink-500" },
+                      electrochemical: { bg: "bg-yellow-500/10", icon: Zap, color: "text-yellow-500" },
+                      other: { bg: "bg-gray-500/10", icon: Hexagon, color: "text-gray-500" },
+                    }[typeCategory];
+                    
+                    const IconComponent = iconConfig.icon;
+                    
+                    return (
+                      <div
+                        key={material.id}
+                        className="p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                        data-testid={`material-${material.id}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${iconConfig.bg}`}>
+                              <IconComponent className={`h-5 w-5 ${iconConfig.color}`} />
+                            </div>
+                            <div>
+                              <p className="font-medium">{material.name || material.id}</p>
+                              <p className="text-sm text-muted-foreground capitalize">{material.type.replace(/_/g, ' ')}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{material.name || material.id}</p>
-                            <p className="text-sm text-muted-foreground capitalize">{material.type}</p>
+                          <div className="flex items-center gap-2">
+                            {material.isCurated && (
+                              <Badge variant="outline" className="text-xs">Curated</Badge>
+                            )}
+                            <Link href={`/property-prediction`}>
+                              <Button size="sm" variant="outline" className="gap-1">
+                                <Calculator className="h-3 w-3" />
+                                Predict
+                              </Button>
+                            </Link>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {material.isCurated && (
-                            <Badge variant="outline" className="text-xs">Curated</Badge>
-                          )}
-                          <Link href={`/property-prediction`}>
-                            <Button size="sm" variant="outline" className="gap-1">
-                              <Calculator className="h-3 w-3" />
-                              Predict
-                            </Button>
-                          </Link>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
