@@ -1,3 +1,4 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import pg from 'pg';
 import { db } from '../db';
 import { molecules, materialEntities, materialVariants, materialProperties } from '@shared/schema';
@@ -45,21 +46,21 @@ export interface ExternalVariantsRow {
 }
 
 class SupabaseSyncService {
-  private externalPool: pg.Pool | null = null;
+  private supabaseClient: SupabaseClient | null = null;
   private digitalOceanPool: pg.Pool | null = null;
 
-  private getExternalPool(): pg.Pool {
-    if (!this.externalPool) {
-      const externalUrl = process.env.EXTERNAL_DATABASE_URL;
-      if (!externalUrl) {
-        throw new Error('EXTERNAL_DATABASE_URL environment variable is not set');
+  private getSupabaseClient(): SupabaseClient {
+    if (!this.supabaseClient) {
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required');
       }
-      this.externalPool = new Pool({
-        connectionString: externalUrl,
-        ssl: { rejectUnauthorized: false }
-      });
+      
+      this.supabaseClient = createClient(supabaseUrl, supabaseKey);
     }
-    return this.externalPool;
+    return this.supabaseClient;
   }
 
   private getDigitalOceanPool(): pg.Pool {
@@ -76,31 +77,48 @@ class SupabaseSyncService {
     return this.digitalOceanPool;
   }
 
-  private getPoolForSource(source: 'supabase' | 'digitalocean'): pg.Pool {
-    return source === 'digitalocean' ? this.getDigitalOceanPool() : this.getExternalPool();
-  }
-
   async testConnection(source: 'supabase' | 'digitalocean' = 'supabase'): Promise<{ success: boolean; message: string; tables?: string[]; source: string }> {
     try {
-      const pool = this.getPoolForSource(source);
-      const client = await pool.connect();
-      
-      const result = await client.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        ORDER BY table_name
-      `);
-      
-      client.release();
-      
-      const tables = result.rows.map(r => r.table_name);
-      return {
-        success: true,
-        message: `Successfully connected to ${source} database`,
-        tables,
-        source
-      };
+      if (source === 'supabase') {
+        const client = this.getSupabaseClient();
+        
+        const { data, error } = await client.from('SMILES').select('*').limit(1);
+        
+        if (error) {
+          return {
+            success: false,
+            message: `Connection failed: ${error.message}`,
+            source
+          };
+        }
+        
+        return {
+          success: true,
+          message: 'Successfully connected to Supabase',
+          tables: ['SMILES', 'Materials Property Table'],
+          source
+        };
+      } else {
+        const pool = this.getDigitalOceanPool();
+        const poolClient = await pool.connect();
+        
+        const result = await poolClient.query(`
+          SELECT table_name 
+          FROM information_schema.tables 
+          WHERE table_schema = 'public'
+          ORDER BY table_name
+        `);
+        
+        poolClient.release();
+        
+        const tables = result.rows.map(r => r.table_name);
+        return {
+          success: true,
+          message: 'Successfully connected to DigitalOcean database',
+          tables,
+          source
+        };
+      }
     } catch (error: any) {
       return {
         success: false,
@@ -110,15 +128,61 @@ class SupabaseSyncService {
     }
   }
 
-  async testAllConnections(): Promise<{ supabase: { success: boolean; message: string; tables?: string[] }; digitalocean: { success: boolean; message: string; tables?: string[] } }> {
-    const supabase = await this.testConnection('supabase');
-    const digitalocean = await this.testConnection('digitalocean');
+  async testAllConnections(): Promise<{ supabase: any; digitalocean: any }> {
+    const [supabase, digitalocean] = await Promise.all([
+      this.testConnection('supabase').catch(e => ({ success: false, message: e.message, source: 'supabase' })),
+      this.testConnection('digitalocean').catch(e => ({ success: false, message: e.message, source: 'digitalocean' }))
+    ]);
+    
     return { supabase, digitalocean };
   }
 
-  async syncSmilesTable(tableName: string = 'SMILES'): Promise<SyncResult> {
+  async previewTable(tableName: string, limit: number = 10, source: 'supabase' | 'digitalocean' = 'supabase'): Promise<{ columns: string[]; rows: any[]; totalCount: number }> {
+    if (source === 'supabase') {
+      const client = this.getSupabaseClient();
+      
+      const { data, error, count } = await client
+        .from(tableName)
+        .select('*', { count: 'exact' })
+        .limit(limit);
+      
+      if (error) {
+        throw new Error(`Failed to preview table: ${error.message}`);
+      }
+      
+      const columns = data && data.length > 0 ? Object.keys(data[0]) : [];
+      
+      return {
+        columns,
+        rows: data || [],
+        totalCount: count || 0
+      };
+    } else {
+      const pool = this.getDigitalOceanPool();
+      const poolClient = await pool.connect();
+      
+      try {
+        const countResult = await poolClient.query(`SELECT COUNT(*) FROM "${tableName}"`);
+        const totalCount = parseInt(countResult.rows[0].count);
+        
+        const result = await poolClient.query(`SELECT * FROM "${tableName}" LIMIT $1`, [limit]);
+        
+        const columns = result.fields.map(f => f.name);
+        
+        return {
+          columns,
+          rows: result.rows,
+          totalCount
+        };
+      } finally {
+        poolClient.release();
+      }
+    }
+  }
+
+  async syncSmiles(tableName: string = 'SMILES'): Promise<SyncResult> {
     const result: SyncResult = {
-      success: false,
+      success: true,
       table: tableName,
       recordsProcessed: 0,
       recordsInserted: 0,
@@ -127,16 +191,21 @@ class SupabaseSyncService {
     };
 
     try {
-      const pool = this.getExternalPool();
-      const client = await pool.connect();
+      const client = this.getSupabaseClient();
       
-      const queryResult = await client.query<ExternalSmilesRow>(`
-        SELECT "Drug_Name", "Disease_Condition", "SMILES", "ChEMBL_ID", "Category", "Therapeutic_Class"
-        FROM "${tableName}"
-      `);
-      client.release();
+      const { data: rows, error } = await client
+        .from(tableName)
+        .select('*');
+      
+      if (error) {
+        throw new Error(`Failed to fetch SMILES data: ${error.message}`);
+      }
 
-      for (const row of queryResult.rows) {
+      if (!rows || rows.length === 0) {
+        return result;
+      }
+
+      for (const row of rows as ExternalSmilesRow[]) {
         result.recordsProcessed++;
         
         try {
@@ -145,7 +214,8 @@ class SupabaseSyncService {
             continue;
           }
 
-          const existing = await db.select()
+          const existing = await db
+            .select()
             .from(molecules)
             .where(eq(molecules.smiles, row.SMILES))
             .limit(1);
@@ -156,30 +226,29 @@ class SupabaseSyncService {
           }
 
           await db.insert(molecules).values({
+            name: row.Drug_Name || 'Unknown',
             smiles: row.SMILES,
-            name: row.Drug_Name || null,
             seriesId: row.ChEMBL_ID || null,
             scaffoldId: row.Therapeutic_Class || null,
             source: 'uploaded'
           });
-          
+
           result.recordsInserted++;
-        } catch (err: any) {
-          result.errors.push(`Row ${result.recordsProcessed}: ${err.message}`);
+        } catch (rowError: any) {
+          result.errors.push(`Row error: ${rowError.message}`);
         }
       }
-
-      result.success = true;
     } catch (error: any) {
+      result.success = false;
       result.errors.push(error.message);
     }
 
     return result;
   }
 
-  async syncMaterialPropertiesTable(tableName: string = 'Material_Properties'): Promise<SyncResult> {
+  async syncMaterialProperties(tableName: string = 'Materials Property Table'): Promise<SyncResult> {
     const result: SyncResult = {
-      success: false,
+      success: true,
       table: tableName,
       recordsProcessed: 0,
       recordsInserted: 0,
@@ -188,25 +257,31 @@ class SupabaseSyncService {
     };
 
     try {
-      const pool = this.getExternalPool();
-      const client = await pool.connect();
+      const client = this.getSupabaseClient();
       
-      const queryResult = await client.query<ExternalMaterialPropertiesRow>(`
-        SELECT property_id, material_id, category, property, value, units, temp_C
-        FROM "${tableName}"
-      `);
-      client.release();
+      const { data: rows, error } = await client
+        .from(tableName)
+        .select('*');
+      
+      if (error) {
+        throw new Error(`Failed to fetch material properties: ${error.message}`);
+      }
+
+      if (!rows || rows.length === 0) {
+        return result;
+      }
 
       const materialMap = new Map<string, string>();
 
-      for (const row of queryResult.rows) {
+      for (const row of rows as ExternalMaterialPropertiesRow[]) {
         result.recordsProcessed++;
         
         try {
           let internalMaterialId = materialMap.get(row.material_id);
           
           if (!internalMaterialId) {
-            const existing = await db.select()
+            const existing = await db
+              .select()
               .from(materialEntities)
               .where(eq(materialEntities.name, row.material_id))
               .limit(1);
@@ -229,7 +304,7 @@ class SupabaseSyncService {
           }
 
           await db.insert(materialProperties).values({
-            materialId: internalMaterialId,
+            materialId: internalMaterialId!,
             propertyName: row.property,
             value: row.value,
             units: row.units,
@@ -238,22 +313,22 @@ class SupabaseSyncService {
           });
           
           result.recordsInserted++;
-        } catch (err: any) {
-          result.errors.push(`Row ${result.recordsProcessed}: ${err.message}`);
+        } catch (rowError: any) {
+          result.errors.push(`Row error: ${rowError.message}`);
+          result.recordsSkipped++;
         }
       }
-
-      result.success = true;
     } catch (error: any) {
+      result.success = false;
       result.errors.push(error.message);
     }
 
     return result;
   }
 
-  async syncVariantsFormulationsTable(tableName: string = 'Variants_Formulations', source: 'supabase' | 'digitalocean' = 'digitalocean'): Promise<SyncResult> {
+  async syncVariants(tableName: string = 'Variants_Formulations', source: 'supabase' | 'digitalocean' = 'digitalocean'): Promise<SyncResult> {
     const result: SyncResult = {
-      success: false,
+      success: true,
       table: tableName,
       recordsProcessed: 0,
       recordsInserted: 0,
@@ -262,23 +337,40 @@ class SupabaseSyncService {
     };
 
     try {
-      const pool = this.getPoolForSource(source);
-      const client = await pool.connect();
+      let rows: ExternalVariantsRow[] = [];
       
-      const queryResult = await client.query<ExternalVariantsRow>(`SELECT * FROM "${tableName}"`);
-      client.release();
+      if (source === 'supabase') {
+        const client = this.getSupabaseClient();
+        const { data, error } = await client.from(tableName).select('*');
+        if (error) throw new Error(error.message);
+        rows = data || [];
+      } else {
+        const pool = this.getDigitalOceanPool();
+        const poolClient = await pool.connect();
+        try {
+          const queryResult = await poolClient.query(`SELECT * FROM "${tableName}"`);
+          rows = queryResult.rows;
+        } finally {
+          poolClient.release();
+        }
+      }
+
+      if (rows.length === 0) {
+        return result;
+      }
 
       const materialMap = new Map<string, string>();
 
-      for (const row of queryResult.rows) {
+      for (const row of rows) {
         result.recordsProcessed++;
         
         try {
-          const baseMaterialName = row.base_material || row.active_material || `Material_${row.variant_id}`;
+          const baseMaterialName = row.base_material || row.active_material || 'Unknown Material';
           let internalMaterialId = materialMap.get(baseMaterialName);
           
           if (!internalMaterialId) {
-            const existing = await db.select()
+            const existing = await db
+              .select()
               .from(materialEntities)
               .where(eq(materialEntities.name, baseMaterialName))
               .limit(1);
@@ -289,8 +381,8 @@ class SupabaseSyncService {
               const inserted = await db.insert(materialEntities).values({
                 name: baseMaterialName,
                 type: 'composite',
-                representation: { formula: baseMaterialName },
-                baseFamily: row.variant_type || 'Unknown',
+                representation: { variant_source: source },
+                baseFamily: row.variant_type || 'formulation',
                 isCurated: true,
                 isDemo: false
               }).returning({ id: materialEntities.id });
@@ -300,28 +392,32 @@ class SupabaseSyncService {
             materialMap.set(baseMaterialName, internalMaterialId);
           }
 
-          const { variant_id, variant_type, base_material, active_material, description, ...variantParams } = row;
-          
+          const { variant_id, variant_type, base_material, active_material, description, process, processing_method, ...restParams } = row;
+
           await db.insert(materialVariants).values({
-            materialId: internalMaterialId,
+            materialId: internalMaterialId!,
             variantParams: {
-              externalId: variant_id,
-              variantType: variant_type,
-              description: description,
-              ...variantParams
+              external_variant_id: variant_id,
+              variant_type: variant_type || 'formulation',
+              base_material,
+              active_material,
+              description,
+              process,
+              processing_method,
+              source: source,
+              ...restParams
             },
-            generatedBy: 'human',
-            simulationState: 'pending'
+            generatedBy: 'human'
           });
-          
+
           result.recordsInserted++;
-        } catch (err: any) {
-          result.errors.push(`Row ${result.recordsProcessed}: ${err.message}`);
+        } catch (rowError: any) {
+          result.errors.push(`Row error: ${rowError.message}`);
+          result.recordsSkipped++;
         }
       }
-
-      result.success = true;
     } catch (error: any) {
+      result.success = false;
       result.errors.push(error.message);
     }
 
@@ -329,49 +425,34 @@ class SupabaseSyncService {
   }
 
   async syncAll(): Promise<{ smiles: SyncResult; materialProperties: SyncResult; variants: SyncResult }> {
-    const smiles = await this.syncSmilesTable();
-    const materialPropertiesResult = await this.syncMaterialPropertiesTable();
-    const variants = await this.syncVariantsFormulationsTable();
-
-    return {
-      smiles,
-      materialProperties: materialPropertiesResult,
-      variants
-    };
-  }
-
-  async getTablePreview(tableName: string, limit: number = 10, source: 'supabase' | 'digitalocean' = 'supabase'): Promise<{ success: boolean; data?: any[]; columns?: string[]; error?: string; source: string }> {
-    try {
-      const pool = this.getPoolForSource(source);
-      const client = await pool.connect();
-      
-      const queryResult = await client.query(`SELECT * FROM "${tableName}" LIMIT $1`, [limit]);
-      client.release();
-      
-      return {
-        success: true,
-        data: queryResult.rows,
-        columns: queryResult.fields.map(f => f.name),
-        source
-      };
-    } catch (error: any) {
-      return {
+    const [smiles, materialProperties, variants] = await Promise.all([
+      this.syncSmiles().catch(e => ({
         success: false,
-        error: error.message,
-        source
-      };
-    }
-  }
+        table: 'SMILES',
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        recordsSkipped: 0,
+        errors: [e.message]
+      })),
+      this.syncMaterialProperties().catch(e => ({
+        success: false,
+        table: 'Materials Property Table',
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        recordsSkipped: 0,
+        errors: [e.message]
+      })),
+      this.syncVariants().catch(e => ({
+        success: false,
+        table: 'Variants_Formulations',
+        recordsProcessed: 0,
+        recordsInserted: 0,
+        recordsSkipped: 0,
+        errors: [e.message]
+      }))
+    ]);
 
-  async close(): Promise<void> {
-    if (this.externalPool) {
-      await this.externalPool.end();
-      this.externalPool = null;
-    }
-    if (this.digitalOceanPool) {
-      await this.digitalOceanPool.end();
-      this.digitalOceanPool = null;
-    }
+    return { smiles, materialProperties, variants };
   }
 }
 
