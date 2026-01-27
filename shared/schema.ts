@@ -43,7 +43,13 @@ export const materialTypeEnum = pgEnum("material_type", [
 export const materialPropertySourceEnum = pgEnum("material_property_source", ["ml", "simulation", "experiment"]);
 export const variantGeneratedByEnum = pgEnum("variant_generated_by", ["human", "ml", "genetic", "quantum"]);
 export const processingJobStatusEnum = pgEnum("processing_job_status", ["queued", "dispatched", "running", "succeeded", "failed", "cancelled", "paused"]);
-export const processingJobTypeEnum = pgEnum("processing_job_type", ["property_prediction", "simulation", "variant_generation", "optimization", "screening", "aggregation", "docking", "fingerprint_generation", "ml_training", "distributed_prediction", "full_pipeline"]);
+export const processingJobTypeEnum = pgEnum("processing_job_type", [
+  "property_prediction", "simulation", "variant_generation", "optimization", "screening", "aggregation",
+  "docking", "fingerprint_generation", "ml_training", "distributed_prediction", "full_pipeline",
+  "mat_battery", "mat_solar", "mat_superconductor", "mat_catalyst", "mat_thermoelectric",
+  "mat_pfas_replacement", "mat_aerospace", "mat_biomedical", "mat_semiconductor",
+  "mat_construction", "mat_transparent", "mat_magnet", "mat_electrolyte", "mat_water", "mat_carbon_capture"
+]);
 
 export const canonicalMoleculeSourceEnum = pgEnum("canonical_molecule_source", ["import", "built_in", "vendor", "generated"]);
 export const canonicalAssayOutcomeEnum = pgEnum("canonical_assay_outcome", ["active", "inactive", "toxic", "ambiguous"]);
@@ -1583,7 +1589,12 @@ export const pipelineConfigSchema = z.object({
   // General settings
   name: z.string().min(1),
   description: z.string().optional(),
-  jobType: z.enum(["docking", "fingerprint_generation", "ml_training", "distributed_prediction", "full_pipeline"]),
+  jobType: z.enum([
+    "docking", "fingerprint_generation", "ml_training", "distributed_prediction", "full_pipeline",
+    "mat_battery", "mat_solar", "mat_superconductor", "mat_catalyst", "mat_thermoelectric",
+    "mat_pfas_replacement", "mat_aerospace", "mat_biomedical", "mat_semiconductor",
+    "mat_construction", "mat_transparent", "mat_magnet", "mat_electrolyte", "mat_water", "mat_carbon_capture"
+  ]),
   
   // Compute settings
   useGpu: z.boolean().default(true),
