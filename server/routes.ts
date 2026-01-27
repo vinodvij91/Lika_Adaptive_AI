@@ -4094,10 +4094,25 @@ print(json.dumps({
 
   app.get("/api/materials", requireAuth, async (req, res) => {
     try {
-      const type = req.query.type as string | undefined;
+      const category = req.query.category as string | undefined;
       const limit = parseInt(req.query.limit as string) || 5000;
       const offset = parseInt(req.query.offset as string) || 0;
-      const result = await storage.getMaterialEntities(type, limit, offset);
+      
+      // Map category to array of types
+      let types: string[] | undefined;
+      if (category === "polymer") {
+        types = ["polymer", "homopolymer", "copolymer"];
+      } else if (category === "crystal") {
+        types = ["crystal", "perovskite", "double_perovskite", "spinel", "binary_oxide", "binary_chalcogenide", "binary_pnictide", "mxene_2d", "tmd_2d", "2d_material"];
+      } else if (category === "composite") {
+        types = ["composite", "high_entropy_alloy", "binary_alloy", "ternary_alloy"];
+      } else if (category === "thinfilm") {
+        types = ["thin_film", "doped_semiconductor"];
+      } else if (category === "electrochemical") {
+        types = ["battery_cathode", "battery_anode", "solid_electrolyte", "catalyst", "coating", "membrane"];
+      }
+      
+      const result = await storage.getMaterialEntitiesByTypes(types, limit, offset);
       res.json(result);
     } catch (error) {
       console.error("Error fetching materials:", error);

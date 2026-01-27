@@ -40,8 +40,14 @@ export default function MaterialsLibraryPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [quickPredictions, setQuickPredictions] = useState<QuickPrediction[]>([]);
 
+  const categoryParam = activeTab !== "all" ? `?category=${activeTab}` : "";
   const { data: materialsResponse, isLoading } = useQuery<{ materials: MaterialEntity[], total: number }>({
-    queryKey: ["/api/materials"],
+    queryKey: ["/api/materials", activeTab],
+    queryFn: async () => {
+      const res = await fetch(`/api/materials${categoryParam}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch materials");
+      return res.json();
+    },
   });
   const materials = materialsResponse?.materials || [];
   const totalMaterials = materialsResponse?.total || 0;
@@ -101,12 +107,8 @@ export default function MaterialsLibraryPage() {
     { label: "Electrochemical", value: typeCounts?.electrochemical || 0, icon: Zap, color: "from-yellow-500 to-amber-500", bgColor: "bg-yellow-500", filter: "electrochemical" },
   ];
 
+  // Backend now handles category filtering; only apply search filter client-side
   const filteredMaterials = materials.filter(m => {
-    if (activeTab === "polymer" && !isPolymer(m.type)) return false;
-    if (activeTab === "crystal" && !isCrystal(m.type)) return false;
-    if (activeTab === "composite" && !isComposite(m.type)) return false;
-    if (activeTab === "thinfilm" && !isThinFilm(m.type)) return false;
-    if (activeTab === "electrochemical" && !isElectrochemical(m.type)) return false;
     if (searchQuery && !m.name?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
