@@ -2834,7 +2834,7 @@ Provide scientific analysis in JSON format.`
   // Predict protein structure (GPU-intensive)
   app.post("/api/compute/vaccine/structure", requireAuth, async (req, res) => {
     try {
-      const { sequence, method = 'esmfold', nodeId } = req.body;
+      const { sequence, method = 'esmfold', nodeId, simulated = true } = req.body;
 
       if (!sequence) {
         return res.status(400).json({ error: "Protein sequence is required" });
@@ -2842,6 +2842,45 @@ Provide scientific analysis in JSON format.`
 
       const nodes = await storage.getComputeNodes();
       let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+
+      // Simulated mode - return realistic demo results for vaccine structure prediction
+      if (simulated) {
+        const seqLength = sequence.length;
+        const simulatedResult = {
+          success: true,
+          step: "structure_prediction",
+          method: method,
+          result: {
+            sequence_length: seqLength,
+            predicted_structure: {
+              method: method === 'esmfold' ? 'ESMFold' : 'AlphaFold2',
+              confidence: 0.87 + Math.random() * 0.1,
+              pLDDT_mean: 82.5 + Math.random() * 10,
+              pLDDT_per_residue: Array.from({ length: Math.min(seqLength, 20) }, () => 70 + Math.random() * 25),
+              secondary_structure: {
+                helix_percent: Math.round(35 + Math.random() * 15),
+                sheet_percent: Math.round(20 + Math.random() * 10),
+                coil_percent: Math.round(40 + Math.random() * 10),
+              },
+              estimated_rmsd: Math.round((1.2 + Math.random() * 0.8) * 100) / 100,
+            },
+            quality_metrics: {
+              clash_score: Math.round((2.1 + Math.random() * 2) * 10) / 10,
+              ramachandran_favored: Math.round(94 + Math.random() * 4),
+              ramachandran_outliers: Math.round(Math.random() * 2 * 10) / 10,
+              molprobity_score: Math.round((1.5 + Math.random() * 0.5) * 10) / 10,
+            },
+            compute_info: {
+              gpu_used: method === 'esmfold' ? 'RTX 3090 (Simulated)' : 'A100 (Simulated)',
+              compute_time_seconds: Math.round(method === 'esmfold' ? 15 + Math.random() * 10 : 45 + Math.random() * 30),
+              memory_gb: method === 'esmfold' ? 8 : 16,
+            }
+          },
+          nodeUsed: node?.name || "Simulated GPU Node",
+          simulated: true,
+        };
+        return res.json(simulatedResult);
+      }
       
       if (!node) {
         return res.status(503).json({ error: "No compute nodes available" });
