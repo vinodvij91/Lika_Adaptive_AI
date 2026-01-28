@@ -93,10 +93,12 @@ export default function MaterialVariantsPage() {
   const totalPages = Math.ceil(total / pageSize);
 
   const filteredVariants = searchQuery 
-    ? variants.filter(v => 
-        v.variantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        v.variantType.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+    ? variants.filter(v => {
+        const query = searchQuery.toLowerCase();
+        const name = v.variantName || v.parameters?.description || v.parameters?.variant_type || '';
+        const type = v.variantType || v.parameters?.variant_type || '';
+        return name.toLowerCase().includes(query) || type.toLowerCase().includes(query);
+      })
     : variants;
 
   const evaluatedCount = variants.filter(v => v.predictedProperties && Object.keys(v.predictedProperties).length > 0).length;
