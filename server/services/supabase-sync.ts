@@ -374,6 +374,15 @@ class SupabaseSyncService {
         if (mat.name) materialMap.set(mat.name, mat.id);
       }
 
+      // Pre-load existing external variant IDs to prevent duplicates
+      const existingVariants = await db.select({ variantParams: materialVariants.variantParams }).from(materialVariants);
+      const existingExternalIds = new Set<string>();
+      for (const v of existingVariants) {
+        const extId = (v.variantParams as any)?.external_variant_id;
+        if (extId) existingExternalIds.add(String(extId));
+      }
+      console.log(`Loaded ${existingExternalIds.size} existing external variant IDs for deduplication`);
+
       const pool = this.getDigitalOceanPool();
       const poolClient = await pool.connect();
       
@@ -420,11 +429,18 @@ class SupabaseSyncService {
             }
           }
 
-          // Batch insert variants
+          // Batch insert variants (skip duplicates)
           const variantsToInsert = [];
           for (const row of rows) {
             if (result.recordsProcessed >= maxRecords) break;
             result.recordsProcessed++;
+            
+            // Skip if this variant already exists
+            const externalId = String(row.variant_id);
+            if (existingExternalIds.has(externalId)) {
+              result.recordsSkipped++;
+              continue;
+            }
             
             const baseMaterialName = row.base_material || row.active_material || 'Unknown Material';
             const materialId = materialMap.get(baseMaterialName);
@@ -446,6 +462,8 @@ class SupabaseSyncService {
                 },
                 generatedBy: 'human' as const
               });
+              // Mark as existing to prevent duplicates within the same sync
+              existingExternalIds.add(externalId);
             }
           }
 
