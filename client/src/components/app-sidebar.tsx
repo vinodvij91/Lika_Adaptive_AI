@@ -37,6 +37,7 @@ import {
   Atom,
   Dna,
   Database,
+  Syringe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -57,6 +58,7 @@ const drugWorkflowItems = [
   { title: "Lika Agent", url: "/lika-agent", icon: Brain },
   { title: "Campaigns", url: "/campaigns", icon: Workflow },
   { title: "Virtual Screening", url: "/campaigns/new", icon: Crosshair },
+  { title: "Vaccine Discovery", url: "/vaccine-discovery", icon: Syringe },
   { title: "3D Viewer", url: "/molecular-viewer", icon: Atom },
   { title: "Docking & 3D", url: "/docking", icon: Layers },
   { title: "ADMET", url: "/admet", icon: Beaker },
