@@ -196,22 +196,6 @@ class HardwareConfig:
         ])
         
         return "\n".join(lines)
-    
-    def to_dict(self) -> Dict:
-        """Export configuration as dictionary"""
-        return {
-            'device_type': self.device_type,
-            'device_count': self.device_count,
-            'device_name': self.device_name,
-            'total_memory_gb': self.total_memory_gb,
-            'compute_capability': self.compute_capability,
-            'supports_mixed_precision': self.supports_mixed_precision,
-            'cpu_cores': self.cpu_cores,
-            'optimal_batch_size': self.optimal_batch_size,
-            'optimal_workers': self.optimal_workers,
-            'gradient_accumulation': self.gradient_accumulation,
-            'use_multi_gpu': self.use_multi_gpu
-        }
 
 
 # ============================================================================
@@ -334,50 +318,6 @@ class CompositionFeatureExtractor(BaseFeatureExtractor):
         return 147
 
 
-class PolymerFeatureExtractor(BaseFeatureExtractor):
-    """Polymer-specific features from SMILES (repeating unit)"""
-    
-    def __init__(self, fingerprint_size: int = 512):
-        self.fingerprint_size = fingerprint_size
-        self.molecular_extractor = MolecularFeatureExtractor(fingerprint_size)
-    
-    def extract_features(self, smiles: str) -> np.ndarray:
-        if not RDKIT_AVAILABLE:
-            return np.zeros(self.get_feature_dim())
-        
-        # Get base molecular features
-        base_features = self.molecular_extractor.extract_features(smiles)
-        
-        # Add polymer-specific features
-        mol = Chem.MolFromSmiles(smiles.replace('*', '[H]'))
-        if mol is None:
-            polymer_features = [0] * 8
-        else:
-            try:
-                polymer_features = [
-                    # Flexibility indicators
-                    Descriptors.NumRotatableBonds(mol) / max(1, mol.GetNumAtoms()),
-                    # Polarity
-                    Descriptors.TPSA(mol) / max(1, mol.GetNumAtoms()),
-                    # Ring content
-                    Descriptors.RingCount(mol),
-                    Descriptors.NumAromaticRings(mol),
-                    Descriptors.NumAliphaticRings(mol),
-                    # Heteroatom content
-                    sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() == 8),  # O count
-                    sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() == 7),  # N count
-                    # Chain character
-                    Descriptors.FractionCSP3(mol),
-                ]
-            except:
-                polymer_features = [0] * 8
-        
-        return np.concatenate([base_features, np.array(polymer_features, dtype=np.float32)])
-    
-    def get_feature_dim(self) -> int:
-        return self.molecular_extractor.get_feature_dim() + 8
-
-
 # ============================================================================
 # UNIVERSAL DATASET AND MODEL
 # ============================================================================
@@ -443,65 +383,6 @@ class UniversalNN(nn.Module):
         return self.network(x)
 
 
-class MultiTaskNN(nn.Module):
-    """Multi-task neural network for predicting multiple properties"""
-    
-    def __init__(self, input_dim: int, hidden_dims: Optional[List[int]] = None,
-                 output_dims: Dict[str, int] = None, dropout: float = 0.3):
-        super(MultiTaskNN, self).__init__()
-        
-        if hidden_dims is None:
-            hidden_dims = [
-                min(1024, max(256, input_dim * 2)),
-                min(512, max(128, input_dim)),
-            ]
-        
-        if output_dims is None:
-            output_dims = {'default': 1}
-        
-        # Shared encoder
-        layers = []
-        prev_dim = input_dim
-        
-        for hidden_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.BatchNorm1d(hidden_dim),
-                nn.ReLU(inplace=True),
-                nn.Dropout(dropout)
-            ])
-            prev_dim = hidden_dim
-        
-        self.shared_encoder = nn.Sequential(*layers)
-        
-        # Task-specific heads
-        self.task_heads = nn.ModuleDict()
-        for task_name, out_dim in output_dims.items():
-            self.task_heads[task_name] = nn.Sequential(
-                nn.Linear(hidden_dims[-1], 128),
-                nn.ReLU(inplace=True),
-                nn.Dropout(dropout / 2),
-                nn.Linear(128, out_dim)
-            )
-        
-        self.apply(self._init_weights)
-    
-    def _init_weights(self, module):
-        if isinstance(module, nn.Linear):
-            nn.init.kaiming_normal_(module.weight, mode='fan_in', nonlinearity='relu')
-            if module.bias is not None:
-                nn.init.constant_(module.bias, 0)
-    
-    def forward(self, x, task: str = None):
-        shared = self.shared_encoder(x)
-        
-        if task is not None:
-            return self.task_heads[task](shared)
-        
-        # Return all task predictions
-        return {name: head(shared) for name, head in self.task_heads.items()}
-
-
 # ============================================================================
 # UNIVERSAL MATERIALS PREDICTOR - WORKS ON ANY HARDWARE
 # ============================================================================
@@ -518,7 +399,7 @@ class UniversalMaterialsPredictor:
         Initialize predictor
         
         Args:
-            material_type: 'molecular', 'composition', 'polymer', 'perovskite'
+            material_type: 'molecular', 'composition', 'perovskite'
             property_name: Property to predict
             auto_config: Automatically configure for hardware (recommended)
         """
@@ -539,11 +420,10 @@ class UniversalMaterialsPredictor:
         extractors = {
             'molecular': MolecularFeatureExtractor(fingerprint_size=512),
             'composition': CompositionFeatureExtractor(),
-            'polymer': PolymerFeatureExtractor(fingerprint_size=512),
         }
         
         if material_type not in extractors:
-            raise ValueError(f"Material type '{material_type}' not supported. Choose from: {list(extractors.keys())}")
+            raise ValueError(f"Material type '{material_type}' not supported")
         
         self.feature_extractor = extractors[material_type]
         
@@ -551,7 +431,6 @@ class UniversalMaterialsPredictor:
         self.scaler_X = StandardScaler()
         self.scaler_y = StandardScaler()
         self.model = None
-        self.best_model_state = None
         
         # Mixed precision scaler (only for CUDA with support)
         if self.hw_config.supports_mixed_precision and self.hw_config.device_type == 'cuda':
@@ -593,7 +472,7 @@ class UniversalMaterialsPredictor:
         # Wrap for multi-GPU if available
         if self.hw_config.use_multi_gpu:
             self.model = nn.DataParallel(self.model)
-            print(f"Model wrapped for {self.hw_config.device_count} GPUs")
+            print(f"✓ Model wrapped for {self.hw_config.device_count} GPUs")
         
         total_params = sum(p.numel() for p in self.model.parameters())
         print(f"Model: {total_params:,} parameters")
@@ -762,8 +641,7 @@ class UniversalMaterialsPredictor:
                 break
         
         # Load best model
-        if self.best_model_state:
-            self.model.load_state_dict(self.best_model_state)
+        self.model.load_state_dict(self.best_model_state)
         
         if verbose:
             print(f"\nTraining complete! Best val loss: {best_val_loss:.6f}")
@@ -811,11 +689,10 @@ class UniversalMaterialsPredictor:
         checkpoint = {
             'material_type': self.material_type,
             'property_name': self.property_name,
-            'model_state_dict': self.model.state_dict() if self.model else None,
+            'model_state_dict': self.model.state_dict(),
             'scaler_X': self.scaler_X,
             'scaler_y': self.scaler_y,
             'training_history': self.training_history,
-            'hw_config': self.hw_config.to_dict(),
         }
         torch.save(checkpoint, filepath)
         print(f"Model saved to {filepath}")
@@ -836,353 +713,35 @@ class UniversalMaterialsPredictor:
         self.training_history = checkpoint['training_history']
         
         print(f"Model loaded from {filepath}")
-    
-    def get_hardware_info(self) -> Dict:
-        """Get current hardware configuration"""
-        return self.hw_config.to_dict()
 
 
 # ============================================================================
-# POLYMER-SPECIFIC PREDICTOR (WRAPPER FOR BACKWARD COMPATIBILITY)
+# EXAMPLE USAGE
 # ============================================================================
-
-class AdvancedPolymerMLPredictor(UniversalMaterialsPredictor):
-    """
-    Polymer-specific ML predictor
-    Backward compatible with old AdvancedPolymerMLPredictor API
-    """
-    
-    def __init__(self, property_name: str = 'glass_transition_temp', auto_config: bool = True):
-        super().__init__(
-            material_type='polymer',
-            property_name=property_name,
-            auto_config=auto_config
-        )
-    
-    def train_on_polymers(self, smiles_list: List[str], properties: List[float], **kwargs):
-        """Train on polymer data (convenience method)"""
-        X, y = self.prepare_data(smiles_list, np.array(properties))
-        return self.train(X, y, **kwargs)
-    
-    def predict_polymers(self, smiles_list: List[str]) -> np.ndarray:
-        """Predict polymer properties (convenience method)"""
-        return self.predict(smiles_list)
-
-
-# ============================================================================
-# MULTI-PROPERTY PREDICTOR
-# ============================================================================
-
-class MultiPropertyPredictor:
-    """
-    Predict multiple properties simultaneously
-    Uses shared encoder with task-specific heads
-    """
-    
-    def __init__(self, material_type: str, property_names: List[str], auto_config: bool = True):
-        self.material_type = material_type
-        self.property_names = property_names
-        
-        self.hw_config = HardwareConfig()
-        if auto_config:
-            print(self.hw_config.summary())
-        
-        self.device = self.hw_config.get_device()
-        
-        extractors = {
-            'molecular': MolecularFeatureExtractor(fingerprint_size=512),
-            'composition': CompositionFeatureExtractor(),
-            'polymer': PolymerFeatureExtractor(fingerprint_size=512),
-        }
-        
-        self.feature_extractor = extractors[material_type]
-        self.scalers_X = StandardScaler()
-        self.scalers_y = {prop: StandardScaler() for prop in property_names}
-        
-        self.model = None
-        
-        if self.hw_config.supports_mixed_precision and self.hw_config.device_type == 'cuda':
-            self.scaler_amp = GradScaler()
-            self.use_amp = True
-        else:
-            self.scaler_amp = None
-            self.use_amp = False
-    
-    def train(self, representations: List, properties_dict: Dict[str, np.ndarray],
-              epochs: int = 200, verbose: bool = True):
-        """Train multi-property model"""
-        
-        # Extract features
-        X = self.feature_extractor.batch_extract_parallel(representations)
-        
-        # Find valid samples (non-NaN for all properties)
-        valid = ~np.isnan(X).any(axis=1)
-        for prop_values in properties_dict.values():
-            valid &= ~np.isnan(prop_values)
-        
-        X = X[valid]
-        X_scaled = self.scalers_X.fit_transform(X)
-        
-        # Scale targets
-        y_dict = {}
-        for prop, values in properties_dict.items():
-            y = np.array(values)[valid].reshape(-1, 1)
-            y_dict[prop] = self.scalers_y[prop].fit_transform(y)
-        
-        # Create model
-        output_dims = {prop: 1 for prop in self.property_names}
-        self.model = MultiTaskNN(
-            input_dim=X.shape[1],
-            output_dims=output_dims
-        ).to(self.device)
-        
-        if self.hw_config.use_multi_gpu:
-            self.model = nn.DataParallel(self.model)
-        
-        # Training loop (simplified)
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=0.001)
-        criterion = nn.MSELoss()
-        
-        batch_size = self.hw_config.optimal_batch_size
-        n_samples = len(X_scaled)
-        
-        for epoch in range(epochs):
-            self.model.train()
-            total_loss = 0
-            
-            for i in range(0, n_samples, batch_size):
-                batch_X = torch.FloatTensor(X_scaled[i:i+batch_size]).to(self.device)
-                
-                optimizer.zero_grad()
-                outputs = self.model(batch_X)
-                
-                loss = 0
-                for prop in self.property_names:
-                    batch_y = torch.FloatTensor(y_dict[prop][i:i+batch_size]).to(self.device)
-                    loss += criterion(outputs[prop], batch_y)
-                
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item()
-            
-            if verbose and (epoch + 1) % 20 == 0:
-                print(f"Epoch [{epoch+1}/{epochs}] - Loss: {total_loss/n_samples:.6f}")
-        
-        if verbose:
-            print("Multi-property training complete!")
-    
-    def predict(self, representations: List) -> Dict[str, np.ndarray]:
-        """Predict all properties"""
-        X = self.feature_extractor.batch_extract_parallel(representations)
-        X_scaled = self.scalers_X.transform(X)
-        
-        self.model.eval()
-        with torch.no_grad():
-            X_tensor = torch.FloatTensor(X_scaled).to(self.device)
-            outputs = self.model(X_tensor)
-        
-        predictions = {}
-        for prop in self.property_names:
-            pred = outputs[prop].cpu().numpy()
-            predictions[prop] = self.scalers_y[prop].inverse_transform(pred).flatten()
-        
-        return predictions
-
-
-# ============================================================================
-# CLI INTERFACE FOR SERVER INTEGRATION
-# ============================================================================
-
-def predict_from_smiles(smiles_list: List[str]) -> Dict:
-    """
-    Quick prediction from SMILES for CLI usage
-    Returns structure-based property predictions
-    """
-    results = []
-    
-    for smiles in smiles_list:
-        if not RDKIT_AVAILABLE:
-            results.append({
-                'material_id': f"POLY_{int(np.random.rand()*1e9)}",
-                'material_type': 'polymer',
-                'smiles': smiles,
-                'properties': [],
-                'error': 'RDKit not available'
-            })
-            continue
-        
-        mol = Chem.MolFromSmiles(smiles.replace('*', '[H]'))
-        if mol is None:
-            results.append({
-                'material_id': f"POLY_{int(np.random.rand()*1e9)}",
-                'material_type': 'polymer',
-                'smiles': smiles,
-                'properties': [],
-                'error': 'Invalid SMILES'
-            })
-            continue
-        
-        try:
-            mw = Descriptors.MolWt(mol)
-            logp = Descriptors.MolLogP(mol)
-            tpsa = Descriptors.TPSA(mol)
-            n_rotatable = Descriptors.NumRotatableBonds(mol)
-            n_aromatic = Descriptors.NumAromaticRings(mol)
-            n_rings = Descriptors.RingCount(mol)
-            n_hbd = Descriptors.NumHDonors(mol)
-            n_hba = Descriptors.NumHAcceptors(mol)
-            frac_csp3 = Descriptors.FractionCSP3(mol)
-            n_atoms = mol.GetNumAtoms()
-            
-            has_aromatic = n_aromatic > 0
-            has_nitrogen = any(atom.GetAtomicNum() == 7 for atom in mol.GetAtoms())
-            has_oxygen = any(atom.GetAtomicNum() == 8 for atom in mol.GetAtoms())
-            has_fluorine = any(atom.GetAtomicNum() == 9 for atom in mol.GetAtoms())
-            has_carbonyl = 'C(=O)' in smiles or 'C=O' in smiles
-            
-            base_tg = -50 + (mw * 0.3)
-            tg = base_tg + (n_aromatic * 50) + (n_rings * 15) - (n_rotatable * 3)
-            tg = tg + (30 if has_nitrogen else 0) + (20 if has_carbonyl else 0)
-            tg = max(-150, min(350, tg))
-            
-            base_strength = 20 + (mw * 0.05)
-            tensile = base_strength + (n_aromatic * 40) + (n_rings * 15)
-            tensile = tensile + (30 if has_nitrogen else 0) + (20 if has_carbonyl else 0)
-            tensile = max(5, min(300, tensile))
-            
-            modulus = 0.5 + (n_aromatic * 1.5) + (n_rings * 0.5) - (n_rotatable * 0.1)
-            modulus = modulus + (1.0 if has_nitrogen else 0) + (0.5 if has_carbonyl else 0)
-            modulus = max(0.1, min(15, modulus))
-            
-            density = 0.9 + (n_aromatic * 0.05) + (0.1 if has_nitrogen else 0)
-            density = density + (0.3 if has_fluorine else 0)
-            density = max(0.8, min(2.5, density))
-            
-            thermal_cond = 0.12 + (n_aromatic * 0.02) + (0.05 if has_nitrogen else 0)
-            thermal_cond = max(0.08, min(0.5, thermal_cond))
-            
-            elongation = 200 - (n_aromatic * 50) - (n_rings * 20) + (n_rotatable * 10)
-            elongation = max(2, min(800, elongation))
-            
-            results.append({
-                'material_id': f"POLY_{int(np.random.rand()*1e9)}",
-                'material_type': 'polymer',
-                'smiles': smiles,
-                'descriptors': {
-                    'molecular_weight': round(mw, 2),
-                    'logp': round(logp, 2),
-                    'tpsa': round(tpsa, 2),
-                    'rotatable_bonds': n_rotatable,
-                    'aromatic_rings': n_aromatic,
-                    'ring_count': n_rings,
-                    'h_bond_donors': n_hbd,
-                    'h_bond_acceptors': n_hba,
-                    'frac_csp3': round(frac_csp3, 3),
-                    'atom_count': n_atoms
-                },
-                'properties': [
-                    {'property_name': 'glass_transition', 'value': round(tg, 1), 'unit': '°C', 'confidence': 0.82, 'method': 'universal_nn', 'percentile': 55},
-                    {'property_name': 'tensile_strength', 'value': round(tensile, 1), 'unit': 'MPa', 'confidence': 0.78, 'method': 'universal_nn', 'percentile': 60},
-                    {'property_name': 'youngs_modulus', 'value': round(modulus, 2), 'unit': 'GPa', 'confidence': 0.75, 'method': 'universal_nn', 'percentile': 58},
-                    {'property_name': 'density', 'value': round(density, 3), 'unit': 'g/cm³', 'confidence': 0.88, 'method': 'universal_nn', 'percentile': 50},
-                    {'property_name': 'thermal_conductivity', 'value': round(thermal_cond, 3), 'unit': 'W/m·K', 'confidence': 0.72, 'method': 'universal_nn', 'percentile': 45},
-                    {'property_name': 'elongation_at_break', 'value': round(elongation, 1), 'unit': '%', 'confidence': 0.70, 'method': 'universal_nn', 'percentile': 52},
-                ]
-            })
-        except Exception as e:
-            results.append({
-                'material_id': f"POLY_{int(np.random.rand()*1e9)}",
-                'material_type': 'polymer',
-                'smiles': smiles,
-                'properties': [],
-                'error': str(e)
-            })
-    
-    return {
-        'step': 'property_prediction',
-        'success': True,
-        'pipeline': 'universal_hardware_agnostic',
-        'hardware': HardwareConfig().to_dict() if TORCH_AVAILABLE else {'device_type': 'cpu'},
-        'results': results
-    }
-
 
 if __name__ == "__main__":
-    import argparse
-    import sys
-    import os
+    print("\nUniversal Materials Prediction Pipeline")
+    print("Works on ANY hardware: CPU, Single GPU, Multi-GPU\n")
     
-    parser = argparse.ArgumentParser(description='Universal Materials Prediction Pipeline')
-    parser.add_argument('--smiles', type=str, help='JSON array of SMILES strings')
-    parser.add_argument('--material-type', type=str, default='polymer', 
-                       choices=['molecular', 'composition', 'polymer'],
-                       help='Type of material')
-    parser.add_argument('--property', type=str, default='glass_transition_temp',
-                       help='Property to predict')
-    parser.add_argument('--test', action='store_true', help='Run test mode')
+    # This will auto-detect and configure for your hardware
+    predictor = UniversalMaterialsPredictor(
+        material_type='molecular',
+        property_name='glass_transition_temp',
+        auto_config=True  # Automatically optimizes for your hardware
+    )
     
-    args = parser.parse_args()
+    # Generate example data
+    materials = ['CC', 'c1ccccc1CC', 'CC(C)(C(=O)OC)C'] * 100
+    properties = np.random.randn(300) * 50 + 50
     
-    if args.smiles:
-        # Suppress all warnings and redirect stderr to /dev/null for clean JSON output
-        import warnings
-        warnings.filterwarnings('ignore')
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-        os.environ['PYTHONWARNINGS'] = 'ignore'
-        
-        # Redirect stderr to suppress library warnings
-        old_stderr = sys.stderr
-        sys.stderr = open(os.devnull, 'w')
-        
-        try:
-            try:
-                smiles_list = json.loads(args.smiles)
-            except json.JSONDecodeError as e:
-                result = {
-                    'step': 'property_prediction',
-                    'success': False,
-                    'error': f'Invalid JSON input: {str(e)}',
-                    'results': []
-                }
-                print(json.dumps(result))
-                sys.exit(0)
-            
-            result = predict_from_smiles(smiles_list)
-            print(json.dumps(result))
-        except Exception as e:
-            result = {
-                'step': 'property_prediction',
-                'success': False,
-                'error': str(e),
-                'results': []
-            }
-            print(json.dumps(result))
-        finally:
-            sys.stderr.close()
-            sys.stderr = old_stderr
-    elif args.test:
-        print("\nUniversal Materials Prediction Pipeline")
-        print("Works on ANY hardware: CPU, Single GPU, Multi-GPU\n")
-        
-        predictor = UniversalMaterialsPredictor(
-            material_type='molecular',
-            property_name='glass_transition_temp',
-            auto_config=True
-        )
-        
-        materials = ['CC', 'c1ccccc1CC', 'CC(C)(C(=O)OC)C'] * 100
-        properties = np.random.randn(300) * 50 + 50
-        
-        X, y = predictor.prepare_data(materials, properties, n_jobs=-1)
-        predictor.train(X, y, epochs=50, verbose=True)
-        
-        predictions = predictor.predict(['CCOCC', 'CCCl'])
-        print(f"\nPredictions: {predictions}")
-        print("\nPipeline works on your hardware!")
-    else:
-        print("Universal Materials Prediction Pipeline")
-        print("Usage: python advanced_polymer_pipeline.py --smiles '[\"CC\", \"CCO\"]'")
-        print("       python advanced_polymer_pipeline.py --test")
-        
-        hw = HardwareConfig()
-        print(hw.summary())
+    # Prepare data
+    X, y = predictor.prepare_data(materials, properties, n_jobs=-1)
+    
+    # Train (uses optimal settings for YOUR hardware automatically)
+    predictor.train(X, y, epochs=50, verbose=True)
+    
+    # Predict
+    predictions = predictor.predict(['CCOCC', 'CCCl'])
+    print(f"\nPredictions: {predictions}")
+    
+    print("\n✓ Pipeline works on your hardware!")
