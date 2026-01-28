@@ -6348,6 +6348,42 @@ Provide scientific analysis in JSON format.`
     }
   });
 
+  // Query DigitalOcean SMILES table directly (with pagination and filters)
+  app.get("/api/external-sync/digitalocean/smiles", requireAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const category = req.query.category as string | undefined;
+      const search = req.query.search as string | undefined;
+      const diseaseCondition = req.query.diseaseCondition as string | undefined;
+      
+      const { supabaseSyncService } = await import("./services/supabase-sync");
+      const result = await supabaseSyncService.queryDigitalOceanSmiles({
+        limit,
+        offset,
+        category,
+        search,
+        diseaseCondition
+      });
+      res.json(result);
+    } catch (error: any) {
+      console.error("DigitalOcean SMILES query error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Get DigitalOcean SMILES statistics (total count, categories breakdown)
+  app.get("/api/external-sync/digitalocean/smiles/stats", requireAuth, async (req, res) => {
+    try {
+      const { supabaseSyncService } = await import("./services/supabase-sync");
+      const result = await supabaseSyncService.getDigitalOceanSmilesStats();
+      res.json(result);
+    } catch (error: any) {
+      console.error("DigitalOcean SMILES stats error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   app.post("/api/external-sync/sync/material-properties", requireAuth, async (req, res) => {
     try {
       const tableName = req.body.tableName || "Materials Property Table";

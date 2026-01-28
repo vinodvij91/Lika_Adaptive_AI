@@ -488,6 +488,130 @@ class SupabaseSyncService {
     return result;
   }
 
+  async queryDigitalOceanSmiles(options: {
+    limit?: number;
+    offset?: number;
+    category?: string;
+    search?: string;
+    diseaseCondition?: string;
+  } = {}): Promise<{
+    success: boolean;
+    totalCount: number;
+    rows: any[];
+    categories?: string[];
+    diseaseConditions?: string[];
+  }> {
+    const { limit = 100, offset = 0, category, search, diseaseCondition } = options;
+    
+    try {
+      const pool = this.getDigitalOceanPool();
+      const poolClient = await pool.connect();
+      
+      try {
+        // Build query with filters (lowercase column names)
+        let whereClause = '';
+        const params: any[] = [];
+        let paramIndex = 1;
+        
+        if (category) {
+          whereClause += ` WHERE category = $${paramIndex}`;
+          params.push(category);
+          paramIndex++;
+        }
+        
+        if (diseaseCondition) {
+          const connector = whereClause ? ' AND' : ' WHERE';
+          whereClause += `${connector} disease_condition = $${paramIndex}`;
+          params.push(diseaseCondition);
+          paramIndex++;
+        }
+        
+        if (search) {
+          const connector = whereClause ? ' AND' : ' WHERE';
+          whereClause += `${connector} (drug_name ILIKE $${paramIndex} OR smiles ILIKE $${paramIndex} OR disease_condition ILIKE $${paramIndex} OR chembl_id ILIKE $${paramIndex})`;
+          params.push(`%${search}%`);
+          paramIndex++;
+        }
+        
+        // Get total count
+        const countResult = await poolClient.query(
+          `SELECT COUNT(*) FROM smiles${whereClause}`,
+          params
+        );
+        const totalCount = parseInt(countResult.rows[0].count);
+        
+        // Get paginated rows
+        const dataParams = [...params, limit, offset];
+        const result = await poolClient.query(
+          `SELECT * FROM smiles${whereClause} ORDER BY drug_name LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+          dataParams
+        );
+        
+        // Get distinct categories and disease conditions for filtering
+        const [categoriesResult, conditionsResult] = await Promise.all([
+          poolClient.query(`SELECT DISTINCT category FROM smiles WHERE category IS NOT NULL ORDER BY category`),
+          poolClient.query(`SELECT DISTINCT disease_condition FROM smiles WHERE disease_condition IS NOT NULL ORDER BY disease_condition`)
+        ]);
+        
+        return {
+          success: true,
+          totalCount,
+          rows: result.rows,
+          categories: categoriesResult.rows.map(r => r.category).filter(Boolean),
+          diseaseConditions: conditionsResult.rows.map(r => r.disease_condition).filter(Boolean)
+        };
+      } finally {
+        poolClient.release();
+      }
+    } catch (error: any) {
+      console.error("DigitalOcean SMILES query error:", error);
+      return {
+        success: false,
+        totalCount: 0,
+        rows: [],
+        categories: [],
+        diseaseConditions: []
+      };
+    }
+  }
+
+  async getDigitalOceanSmilesStats(): Promise<{
+    success: boolean;
+    totalRecords: number;
+    categories: { category: string; count: number }[];
+    diseaseConditions: { condition: string; count: number }[];
+  }> {
+    try {
+      const pool = this.getDigitalOceanPool();
+      const poolClient = await pool.connect();
+      
+      try {
+        const [totalResult, categoriesResult, conditionsResult] = await Promise.all([
+          poolClient.query(`SELECT COUNT(*) FROM smiles`),
+          poolClient.query(`SELECT category, COUNT(*) as count FROM smiles WHERE category IS NOT NULL GROUP BY category ORDER BY count DESC`),
+          poolClient.query(`SELECT disease_condition, COUNT(*) as count FROM smiles WHERE disease_condition IS NOT NULL GROUP BY disease_condition ORDER BY count DESC LIMIT 50`)
+        ]);
+        
+        return {
+          success: true,
+          totalRecords: parseInt(totalResult.rows[0].count),
+          categories: categoriesResult.rows.map(r => ({ category: r.category, count: parseInt(r.count) })),
+          diseaseConditions: conditionsResult.rows.map(r => ({ condition: r.disease_condition, count: parseInt(r.count) }))
+        };
+      } finally {
+        poolClient.release();
+      }
+    } catch (error: any) {
+      console.error("DigitalOcean SMILES stats error:", error);
+      return {
+        success: false,
+        totalRecords: 0,
+        categories: [],
+        diseaseConditions: []
+      };
+    }
+  }
+
   async syncAll(): Promise<{ smiles: SyncResult; materialProperties: SyncResult; variants: SyncResult }> {
     const [smiles, materialProperties, variants] = await Promise.all([
       this.syncSmiles().catch(e => ({
