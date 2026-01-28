@@ -6584,5 +6584,120 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
+  // ==================== FEA Simulation AI Analysis ====================
+
+  app.post("/api/fea/analyze", requireAuth, async (req, res) => {
+    try {
+      const { simulation } = req.body;
+      if (!simulation) {
+        return res.status(400).json({ error: "Simulation data is required" });
+      }
+
+      const { analyzeFeaResults, isAIConfigured } = await import("./services/fea-analysis");
+      
+      if (!isAIConfigured()) {
+        return res.status(503).json({ 
+          error: "AI not configured",
+          message: "AI Integrations not available"
+        });
+      }
+
+      const analysis = await analyzeFeaResults(simulation);
+      res.json({ success: true, analysis });
+    } catch (error: any) {
+      console.error("FEA analysis error:", error);
+      res.status(500).json({ error: error.message || "Failed to analyze simulation" });
+    }
+  });
+
+  app.post("/api/fea/compare", requireAuth, async (req, res) => {
+    try {
+      const { baseline, alternative } = req.body;
+      if (!baseline || !alternative) {
+        return res.status(400).json({ error: "Baseline and alternative simulations are required" });
+      }
+
+      const { compareFeaMaterials, isAIConfigured } = await import("./services/fea-analysis");
+      
+      if (!isAIConfigured()) {
+        return res.status(503).json({ 
+          error: "AI not configured",
+          message: "AI Integrations not available"
+        });
+      }
+
+      const comparison = await compareFeaMaterials(baseline, alternative);
+      res.json({ success: true, comparison });
+    } catch (error: any) {
+      console.error("FEA comparison error:", error);
+      res.status(500).json({ error: error.message || "Failed to compare materials" });
+    }
+  });
+
+  app.post("/api/fea/analyze-assembly", requireAuth, async (req, res) => {
+    try {
+      const { simulation } = req.body;
+      if (!simulation) {
+        return res.status(400).json({ error: "Simulation data is required" });
+      }
+
+      const { analyzeAssemblyInteractions, isAIConfigured } = await import("./services/fea-analysis");
+      
+      if (!isAIConfigured()) {
+        return res.status(503).json({ 
+          error: "AI not configured",
+          message: "AI Integrations not available"
+        });
+      }
+
+      const analysis = await analyzeAssemblyInteractions(simulation);
+      res.json({ success: true, analysis });
+    } catch (error: any) {
+      console.error("Assembly analysis error:", error);
+      res.status(500).json({ error: error.message || "Failed to analyze assembly" });
+    }
+  });
+
+  app.post("/api/fea/bionemo-insights", requireAuth, async (req, res) => {
+    try {
+      const { simulation, context = "general" } = req.body;
+      if (!simulation) {
+        return res.status(400).json({ error: "Simulation data is required" });
+      }
+
+      const { getBioNeMoInsights, isAIConfigured } = await import("./services/fea-analysis");
+      
+      if (!isAIConfigured()) {
+        return res.status(503).json({ 
+          error: "AI not configured",
+          message: "AI Integrations not available"
+        });
+      }
+
+      const insights = await getBioNeMoInsights(simulation, context);
+      res.json({ success: true, insights });
+    } catch (error: any) {
+      console.error("BioNeMo insights error:", error);
+      res.status(500).json({ error: error.message || "Failed to get BioNeMo insights" });
+    }
+  });
+
+  app.get("/api/fea/ai-status", requireAuth, async (req, res) => {
+    try {
+      const { isAIConfigured } = await import("./services/fea-analysis");
+      res.json({
+        configured: isAIConfigured(),
+        capabilities: [
+          "simulation_analysis",
+          "material_comparison", 
+          "assembly_analysis",
+          "bionemo_insights"
+        ]
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }

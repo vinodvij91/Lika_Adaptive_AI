@@ -54,7 +54,13 @@ import {
   FlaskConical,
   Puzzle,
   Plus,
-  Trash2
+  Trash2,
+  Sparkles,
+  Brain,
+  Lightbulb,
+  Shield,
+  Target,
+  MessageSquare
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -198,6 +204,11 @@ export default function FEASimulationsPage() {
   const [assemblyName, setAssemblyName] = useState("");
   const [isAssemblyMode, setIsAssemblyMode] = useState(false);
 
+  // AI Analysis state
+  const [selectedJobForAnalysis, setSelectedJobForAnalysis] = useState<FEAJob | null>(null);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
+  const [analysisContext, setAnalysisContext] = useState<"general" | "biomedical" | "pharmaceutical">("general");
+
   const addAssemblyComponent = () => {
     const newId = (assemblyComponents.length + 1).toString();
     setAssemblyComponents([
@@ -312,6 +323,73 @@ export default function FEASimulationsPage() {
       toast({
         title: "Submission failed",
         description: error.message || "Failed to submit simulation job",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // AI Analysis mutation
+  const analyzeJobMutation = useMutation({
+    mutationFn: async (job: FEAJob) => {
+      const simulation = {
+        jobId: job.id,
+        simulationType: job.simulationType,
+        name: job.name,
+        status: job.status,
+        material: selectedMaterial,
+        meshQuality: "medium",
+        results: job.results ? {
+          maxStress: job.results.maxStress,
+          maxDeformation: job.results.maxDisplacement,
+          maxTemperature: job.results.maxTemperature,
+          safetyFactor: job.results.maxStress ? 2.5 : undefined
+        } : undefined
+      };
+      const response = await apiRequest("POST", "/api/fea/analyze", { simulation });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setAiAnalysisResult(data.analysis);
+      toast({
+        title: "Analysis complete",
+        description: "AI has analyzed your simulation results"
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Analysis failed",
+        description: error.message || "Failed to analyze simulation",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // BioNeMo insights mutation
+  const bionemoInsightsMutation = useMutation({
+    mutationFn: async ({ job, context }: { job: FEAJob; context: string }) => {
+      const simulation = {
+        jobId: job.id,
+        simulationType: job.simulationType,
+        name: job.name,
+        status: job.status,
+        material: selectedMaterial,
+        meshQuality: "medium",
+        results: job.results
+      };
+      const response = await apiRequest("POST", "/api/fea/bionemo-insights", { simulation, context });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setAiAnalysisResult((prev: any) => ({ ...prev, bionemo: data.insights }));
+      toast({
+        title: "BioNeMo insights ready",
+        description: "Molecular and structural insights generated"
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "BioNeMo analysis failed",
+        description: error.message || "Failed to get BioNeMo insights",
         variant: "destructive"
       });
     }
@@ -434,7 +512,7 @@ export default function FEASimulationsPage() {
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl grid-cols-4">
+            <TabsList className="grid w-full max-w-3xl grid-cols-5">
               <TabsTrigger value="new" className="gap-2" data-testid="tab-new-simulation">
                 <Play className="h-4 w-4" />
                 New Simulation
@@ -446,6 +524,10 @@ export default function FEASimulationsPage() {
               <TabsTrigger value="compare" className="gap-2" data-testid="tab-material-compare">
                 <Scale className="h-4 w-4" />
                 Material Compare
+              </TabsTrigger>
+              <TabsTrigger value="ai-analysis" className="gap-2" data-testid="tab-ai-analysis">
+                <Sparkles className="h-4 w-4" />
+                AI Analysis
               </TabsTrigger>
               <TabsTrigger value="history" className="gap-2" data-testid="tab-history">
                 <Clock className="h-4 w-4" />
@@ -1383,6 +1465,296 @@ export default function FEASimulationsPage() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* AI Analysis Tab */}
+            <TabsContent value="ai-analysis" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column - Job Selection */}
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Target className="h-5 w-5 text-purple-500" />
+                        Select Simulation
+                      </CardTitle>
+                      <CardDescription>
+                        Choose a completed simulation to analyze
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[300px]">
+                        <div className="space-y-2">
+                          {jobs?.filter(j => j.status === "completed").map((job) => (
+                            <div
+                              key={job.id}
+                              className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                selectedJobForAnalysis?.id === job.id 
+                                  ? "border-primary bg-primary/5" 
+                                  : "hover-elevate"
+                              }`}
+                              onClick={() => {
+                                setSelectedJobForAnalysis(job);
+                                setAiAnalysisResult(null);
+                              }}
+                              data-testid={`job-select-${job.id}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                <span className="font-medium text-sm">{job.name}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {job.simulationType} • {new Date(job.createdAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                          ))}
+                          {(!jobs || jobs.filter(j => j.status === "completed").length === 0) && (
+                            <div className="text-center text-muted-foreground py-8">
+                              No completed simulations yet
+                            </div>
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Analysis Options</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Analysis Context</Label>
+                        <Select value={analysisContext} onValueChange={(v: any) => setAnalysisContext(v)}>
+                          <SelectTrigger data-testid="select-analysis-context">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="general">General Engineering</SelectItem>
+                            <SelectItem value="biomedical">Biomedical / Medical Devices</SelectItem>
+                            <SelectItem value="pharmaceutical">Pharmaceutical</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <Button 
+                          className="w-full gap-2"
+                          disabled={!selectedJobForAnalysis || analyzeJobMutation.isPending}
+                          onClick={() => selectedJobForAnalysis && analyzeJobMutation.mutate(selectedJobForAnalysis)}
+                          data-testid="button-run-ai-analysis"
+                        >
+                          {analyzeJobMutation.isPending ? (
+                            <><RefreshCw className="h-4 w-4 animate-spin" />Analyzing...</>
+                          ) : (
+                            <><Sparkles className="h-4 w-4" />Run AI Analysis</>
+                          )}
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          className="w-full gap-2"
+                          disabled={!selectedJobForAnalysis || bionemoInsightsMutation.isPending}
+                          onClick={() => selectedJobForAnalysis && bionemoInsightsMutation.mutate({ 
+                            job: selectedJobForAnalysis, 
+                            context: analysisContext 
+                          })}
+                          data-testid="button-bionemo-insights"
+                        >
+                          {bionemoInsightsMutation.isPending ? (
+                            <><RefreshCw className="h-4 w-4 animate-spin" />Getting Insights...</>
+                          ) : (
+                            <><Brain className="h-4 w-4" />BioNeMo Insights</>
+                          )}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right Column - Analysis Results */}
+                <div className="lg:col-span-2 space-y-6">
+                  {!aiAnalysisResult ? (
+                    <Card className="h-full flex items-center justify-center min-h-[500px]">
+                      <CardContent className="text-center space-y-4">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center mx-auto">
+                          <Sparkles className="h-8 w-8 text-purple-500" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold">AI-Powered Analysis</h3>
+                          <p className="text-muted-foreground text-sm mt-1">
+                            Select a completed simulation and click "Run AI Analysis" to get<br />
+                            expert insights, recommendations, and optimization suggestions.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-2 pt-2">
+                          <Badge variant="outline" className="gap-1"><Shield className="h-3 w-3" />Safety Assessment</Badge>
+                          <Badge variant="outline" className="gap-1"><Lightbulb className="h-3 w-3" />Recommendations</Badge>
+                          <Badge variant="outline" className="gap-1"><Brain className="h-3 w-3" />Material Insights</Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <>
+                      {/* Summary Card */}
+                      <Card>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <MessageSquare className="h-5 w-5 text-blue-500" />
+                              Analysis Summary
+                            </CardTitle>
+                            <Badge variant={
+                              aiAnalysisResult.confidenceLevel === "high" ? "default" :
+                              aiAnalysisResult.confidenceLevel === "medium" ? "secondary" : "outline"
+                            }>
+                              {aiAnalysisResult.confidenceLevel} confidence
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm leading-relaxed">{aiAnalysisResult.summary}</p>
+                        </CardContent>
+                      </Card>
+
+                      {/* Safety & Performance Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <Shield className={`h-4 w-4 ${
+                                aiAnalysisResult.safetyAssessment?.status === "safe" ? "text-green-500" :
+                                aiAnalysisResult.safetyAssessment?.status === "marginal" ? "text-yellow-500" : "text-red-500"
+                              }`} />
+                              Safety Assessment
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <Badge className={`mb-2 ${
+                              aiAnalysisResult.safetyAssessment?.status === "safe" ? "bg-green-500/10 text-green-700 dark:text-green-400" :
+                              aiAnalysisResult.safetyAssessment?.status === "marginal" ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400" : 
+                              "bg-red-500/10 text-red-700 dark:text-red-400"
+                            }`}>
+                              {aiAnalysisResult.safetyAssessment?.status?.toUpperCase() || "N/A"}
+                            </Badge>
+                            <p className="text-sm text-muted-foreground">
+                              {aiAnalysisResult.safetyAssessment?.explanation}
+                            </p>
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <Activity className={`h-4 w-4 ${
+                                aiAnalysisResult.materialPerformance?.rating === "excellent" ? "text-green-500" :
+                                aiAnalysisResult.materialPerformance?.rating === "good" ? "text-blue-500" :
+                                aiAnalysisResult.materialPerformance?.rating === "adequate" ? "text-yellow-500" : "text-red-500"
+                              }`} />
+                              Material Performance
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <Badge className="mb-2" variant="outline">
+                              {aiAnalysisResult.materialPerformance?.rating?.toUpperCase() || "N/A"}
+                            </Badge>
+                            <div className="space-y-1">
+                              {aiAnalysisResult.materialPerformance?.strengths?.slice(0, 2).map((s: string, i: number) => (
+                                <div key={i} className="text-xs text-green-600 dark:text-green-400 flex items-start gap-1">
+                                  <span>+</span>{s}
+                                </div>
+                              ))}
+                              {aiAnalysisResult.materialPerformance?.limitations?.slice(0, 1).map((l: string, i: number) => (
+                                <div key={i} className="text-xs text-muted-foreground flex items-start gap-1">
+                                  <span>-</span>{l}
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* Key Findings */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4 text-indigo-500" />
+                            Key Findings
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ul className="space-y-2">
+                            {aiAnalysisResult.keyFindings?.map((finding: string, i: number) => (
+                              <li key={i} className="flex items-start gap-2 text-sm">
+                                <ChevronRight className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                {finding}
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+
+                      {/* Recommendations */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Lightbulb className="h-4 w-4 text-yellow-500" />
+                            Recommendations
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {aiAnalysisResult.recommendations?.map((rec: string, i: number) => (
+                              <div key={i} className="p-3 rounded-lg bg-muted/50 text-sm">
+                                {rec}
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* BioNeMo Insights (if available) */}
+                      {aiAnalysisResult.bionemo && (
+                        <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-indigo-500/5">
+                          <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <Brain className="h-4 w-4 text-purple-500" />
+                              BioNeMo Molecular Insights
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            {aiAnalysisResult.bionemo.molecularInsights && (
+                              <div>
+                                <div className="text-xs font-medium text-muted-foreground mb-1">Molecular Analysis</div>
+                                <p className="text-sm">{aiAnalysisResult.bionemo.molecularInsights}</p>
+                              </div>
+                            )}
+                            {aiAnalysisResult.bionemo.structuralRecommendations && (
+                              <div>
+                                <div className="text-xs font-medium text-muted-foreground mb-1">Structural Recommendations</div>
+                                <ul className="space-y-1">
+                                  {aiAnalysisResult.bionemo.structuralRecommendations.map((rec: string, i: number) => (
+                                    <li key={i} className="text-sm flex items-start gap-1">
+                                      <ChevronRight className="h-3 w-3 mt-1 flex-shrink-0" />{rec}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {aiAnalysisResult.bionemo.biocompatibilityNotes && (
+                              <div>
+                                <div className="text-xs font-medium text-muted-foreground mb-1">Biocompatibility</div>
+                                <p className="text-sm">{aiAnalysisResult.bionemo.biocompatibilityNotes}</p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
             </TabsContent>
 
             {/* Job History Tab */}
