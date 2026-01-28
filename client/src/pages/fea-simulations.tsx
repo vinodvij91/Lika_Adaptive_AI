@@ -101,12 +101,27 @@ const SIMULATION_TYPES = [
 ];
 
 const MATERIAL_PRESETS = [
-  // Metals
+  // Standard Steels
   { name: "Steel (AISI 1045)", youngsModulus: 200, poissonsRatio: 0.29, density: 7850, thermalConductivity: 51.9, specificHeat: 486, category: "metal" },
-  { name: "Aluminum 6061-T6", youngsModulus: 68.9, poissonsRatio: 0.33, density: 2700, thermalConductivity: 167, specificHeat: 896, category: "metal" },
-  { name: "Titanium Ti-6Al-4V", youngsModulus: 113.8, poissonsRatio: 0.34, density: 4430, thermalConductivity: 6.7, specificHeat: 526, category: "metal" },
-  { name: "Copper C11000", youngsModulus: 117, poissonsRatio: 0.34, density: 8940, thermalConductivity: 388, specificHeat: 385, category: "metal" },
+  { name: "High Carbon Steel (AISI 1095)", youngsModulus: 205, poissonsRatio: 0.29, density: 7870, thermalConductivity: 49.8, specificHeat: 477, category: "metal" },
+  // Spring & High-Stress Steels
+  { name: "Chrome Silicon Steel (AISI 9254)", youngsModulus: 207, poissonsRatio: 0.29, density: 7800, thermalConductivity: 38.0, specificHeat: 460, category: "metal" },
+  { name: "Chrome Vanadium Steel (AISI 6150)", youngsModulus: 207, poissonsRatio: 0.29, density: 7850, thermalConductivity: 42.0, specificHeat: 475, category: "metal" },
+  // Stainless Steels
+  { name: "Stainless Steel 302", youngsModulus: 193, poissonsRatio: 0.30, density: 7860, thermalConductivity: 16.2, specificHeat: 500, category: "metal" },
   { name: "Stainless Steel 316L", youngsModulus: 193, poissonsRatio: 0.27, density: 8000, thermalConductivity: 16.3, specificHeat: 500, category: "metal" },
+  { name: "Stainless Steel 17-7 PH", youngsModulus: 204, poissonsRatio: 0.28, density: 7800, thermalConductivity: 16.4, specificHeat: 460, category: "metal" },
+  // Aluminum
+  { name: "Aluminum 6061-T6", youngsModulus: 68.9, poissonsRatio: 0.33, density: 2700, thermalConductivity: 167, specificHeat: 896, category: "metal" },
+  // Titanium Alloys
+  { name: "Titanium Ti-6Al-4V", youngsModulus: 113.8, poissonsRatio: 0.34, density: 4430, thermalConductivity: 6.7, specificHeat: 526, category: "metal" },
+  { name: "Titanium Grade 5 (Spring)", youngsModulus: 114, poissonsRatio: 0.34, density: 4420, thermalConductivity: 6.6, specificHeat: 560, category: "metal" },
+  // Superalloys (Aerospace/Motorsports)
+  { name: "Inconel 718", youngsModulus: 211, poissonsRatio: 0.29, density: 8190, thermalConductivity: 11.4, specificHeat: 435, category: "metal" },
+  { name: "Inconel 625", youngsModulus: 208, poissonsRatio: 0.28, density: 8440, thermalConductivity: 9.8, specificHeat: 410, category: "metal" },
+  { name: "Hastelloy X", youngsModulus: 205, poissonsRatio: 0.32, density: 8220, thermalConductivity: 9.1, specificHeat: 473, category: "metal" },
+  // Other Metals
+  { name: "Copper C11000", youngsModulus: 117, poissonsRatio: 0.34, density: 8940, thermalConductivity: 388, specificHeat: 385, category: "metal" },
   // Composites
   { name: "Carbon Fiber Composite", youngsModulus: 135, poissonsRatio: 0.30, density: 1600, thermalConductivity: 7, specificHeat: 1000, category: "composite" },
   // High-Performance Polymers
@@ -121,6 +136,11 @@ const MATERIAL_PRESETS = [
   { name: "PES/PSU (Udel)", youngsModulus: 2.5, poissonsRatio: 0.37, density: 1370, thermalConductivity: 0.22, specificHeat: 1130, category: "polymer" },
   { name: "Polyimide (Kapton)", youngsModulus: 3.2, poissonsRatio: 0.34, density: 1420, thermalConductivity: 0.12, specificHeat: 1090, category: "polymer" },
   { name: "PDMS (Silicone)", youngsModulus: 0.002, poissonsRatio: 0.49, density: 970, thermalConductivity: 0.15, specificHeat: 1460, category: "polymer" },
+  { name: "UHMWPE", youngsModulus: 0.8, poissonsRatio: 0.46, density: 930, thermalConductivity: 0.42, specificHeat: 1900, category: "polymer" },
+  { name: "PBT (Polyester)", youngsModulus: 2.6, poissonsRatio: 0.37, density: 1310, thermalConductivity: 0.29, specificHeat: 1200, category: "polymer" },
+  { name: "PET (Polyester)", youngsModulus: 2.8, poissonsRatio: 0.37, density: 1380, thermalConductivity: 0.24, specificHeat: 1170, category: "polymer" },
+  { name: "PEI (Ultem)", youngsModulus: 3.3, poissonsRatio: 0.36, density: 1270, thermalConductivity: 0.22, specificHeat: 1130, category: "polymer" },
+  { name: "PAI (Torlon)", youngsModulus: 4.9, poissonsRatio: 0.38, density: 1420, thermalConductivity: 0.26, specificHeat: 1050, category: "polymer" },
   // Custom
   { name: "Custom", youngsModulus: 0, poissonsRatio: 0, density: 0, thermalConductivity: 0, specificHeat: 0, category: "custom" },
 ];
