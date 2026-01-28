@@ -273,15 +273,16 @@ export default function MaterialVariantsPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollArea className="h-[500px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Variant Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Parameters</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
+                <div className="overflow-x-auto">
+                  <ScrollArea className="h-[500px]">
+                    <Table className="min-w-[800px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[200px]">Variant Name</TableHead>
+                          <TableHead className="min-w-[120px]">Type</TableHead>
+                          <TableHead className="min-w-[250px]">Parameters</TableHead>
+                          <TableHead className="min-w-[100px]">Status</TableHead>
+                          <TableHead className="min-w-[100px]">Created</TableHead>
                         <TableHead className="w-[100px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -311,8 +312,9 @@ export default function MaterialVariantsPage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
-                </ScrollArea>
+                    </Table>
+                  </ScrollArea>
+                </div>
 
                 {/* Pagination */}
                 {totalPages > 1 && (
