@@ -225,6 +225,88 @@ export async function registerRoutes(
     }
   });
 
+  // Bulk import SMILES to a project
+  const bulkImportSmilesSchema = z.object({
+    smilesList: z.array(z.union([
+      z.string().min(1),
+      z.object({
+        smiles: z.string().min(1),
+        name: z.string().optional(),
+        source: z.string().optional()
+      })
+    ])).min(1, "At least one SMILES is required").max(1000, "Maximum 1000 SMILES per import")
+  });
+
+  app.post("/api/projects/:id/molecules/bulk", requireAuth, async (req, res) => {
+    try {
+      const projectId = req.params.id;
+      
+      const parsed = bulkImportSmilesSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request body" });
+      }
+      
+      const { smilesList } = parsed.data;
+
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const results = {
+        imported: 0,
+        alreadyLinked: 0,
+        skipped: 0,
+        errors: [] as string[]
+      };
+
+      for (const item of smilesList) {
+        try {
+          const smiles = typeof item === "string" ? item : item.smiles;
+          const source = typeof item === "object" ? item.source : "external-db";
+          
+          if (!smiles) {
+            results.skipped++;
+            continue;
+          }
+
+          // Check if molecule already exists
+          let molecule = await storage.getMoleculeBySmiles(smiles);
+          const isNewMolecule = !molecule;
+          
+          if (!molecule) {
+            // Create the molecule
+            molecule = await storage.createMolecule({
+              smiles,
+              name: typeof item === "object" ? item.name : undefined,
+              source: source as any
+            });
+          }
+
+          // Link molecule to project if not already linked (returns true if newly linked)
+          const wasLinked = await storage.addMoleculeToProject(projectId, molecule.id);
+          if (wasLinked) {
+            results.imported++;
+          } else {
+            results.alreadyLinked++;
+          }
+        } catch (itemError: any) {
+          results.errors.push(itemError.message);
+          results.skipped++;
+        }
+      }
+
+      res.json({
+        success: true,
+        projectId,
+        ...results
+      });
+    } catch (error: any) {
+      console.error("Error bulk importing molecules:", error);
+      res.status(500).json({ error: error.message || "Failed to bulk import molecules" });
+    }
+  });
+
   app.get("/api/targets", requireAuth, async (req, res) => {
     try {
       const targets = await storage.getTargets();

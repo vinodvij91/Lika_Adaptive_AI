@@ -2,6 +2,7 @@ import { db } from "./db";
 import { eq, and, or, desc, sql, count, avg, sum, inArray } from "drizzle-orm";
 import {
   projects,
+  projectMolecules,
   targets,
   molecules,
   campaigns,
@@ -380,6 +381,7 @@ export interface IStorage {
   createAssayResult(result: InsertAssayResult): Promise<AssayResult>;
   bulkCreateAssayResults(results: InsertAssayResult[]): Promise<AssayResult[]>;
   getMoleculeBySmiles(smiles: string): Promise<Molecule | undefined>;
+  addMoleculeToProject(projectId: string, moleculeId: string): Promise<boolean>;
   getHitCandidates(campaignId: string, filters?: { minOracleScore?: number; maxOracleScore?: number; maxSynthesisComplexity?: number; ipSafeOnly?: boolean; hasAssayData?: boolean }): Promise<(MoleculeScore & { molecule: Molecule | null; lastAssayOutcome?: string; bestAssayValue?: number })[]>;
 
   getLiteratureAnnotations(targetId?: string, moleculeId?: string): Promise<LiteratureAnnotation[]>;
@@ -1561,6 +1563,26 @@ export class DatabaseStorage implements IStorage {
   async getMoleculeBySmiles(smiles: string): Promise<Molecule | undefined> {
     const result = await db.select().from(molecules).where(eq(molecules.smiles, smiles)).limit(1);
     return result[0];
+  }
+
+  async addMoleculeToProject(projectId: string, moleculeId: string): Promise<boolean> {
+    // Check if already linked
+    const existing = await db.select()
+      .from(projectMolecules)
+      .where(and(
+        eq(projectMolecules.projectId, projectId),
+        eq(projectMolecules.moleculeId, moleculeId)
+      ))
+      .limit(1);
+    
+    if (existing.length === 0) {
+      await db.insert(projectMolecules).values({
+        projectId,
+        moleculeId
+      });
+      return true; // Newly linked
+    }
+    return false; // Already linked
   }
 
   async getHitCandidates(campaignId: string, filters?: { minOracleScore?: number; maxOracleScore?: number; maxSynthesisComplexity?: number; ipSafeOnly?: boolean; hasAssayData?: boolean }): Promise<(MoleculeScore & { molecule: Molecule | null; lastAssayOutcome?: string; bestAssayValue?: number })[]> {

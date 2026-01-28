@@ -51,6 +51,7 @@ const drugNavigationItems = [
   { title: "Projects", url: "/projects", icon: FolderKanban },
   { title: "Molecules", url: "/molecules", icon: FlaskConical },
   { title: "Libraries", url: "/libraries", icon: Library },
+  { title: "External SMILES", url: "/external-smiles", icon: Database },
   { title: "Targets", url: "/targets", icon: Target },
 ];
 

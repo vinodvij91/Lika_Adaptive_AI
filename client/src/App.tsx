@@ -48,6 +48,7 @@ import DockingPage from "@/pages/docking";
 import AdmetPage from "@/pages/admet";
 import SimulationRunsPage from "@/pages/simulation-runs";
 import MaterialsLibraryPage from "@/pages/materials-library";
+import ExternalSmilesLibraryPage from "@/pages/external-smiles-library";
 import MaterialVariantsPage from "@/pages/material-variants";
 import ImportHubPage from "@/pages/import-hub";
 import ImportWizardPage from "@/pages/import-wizard";
@@ -98,6 +99,7 @@ function AuthenticatedRoutes() {
         <Route path="/projects/:id" component={ProjectDetailPage} />
         <Route path="/libraries" component={LibrariesPage} />
         <Route path="/libraries/:id" component={LibraryDetailPage} />
+        <Route path="/external-smiles" component={ExternalSmilesLibraryPage} />
         <Route path="/targets" component={TargetsPage} />
         <Route path="/targets/:id" component={TargetDetailPage} />
         <Route path="/molecules" component={MoleculesPage} />
