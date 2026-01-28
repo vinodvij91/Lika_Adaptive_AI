@@ -6532,13 +6532,12 @@ Provide scientific analysis in JSON format.`
       }
       
       // Step 3: Get or create a project for Alzheimer's screening
-      let projects = await storage.getProjects();
+      let projects = await storage.getProjects("dev-user");
       let project = projects.find(p => p.name === "Alzheimer's Drug Discovery");
       if (!project) {
         project = await storage.createProject({
           name: "Alzheimer's Drug Discovery",
           description: "Automated screening of ChEMBL compounds against neurological protein targets",
-          status: "active",
           ownerId: "dev-user",
           diseaseArea: "CNS"
         });
@@ -6550,7 +6549,6 @@ Provide scientific analysis in JSON format.`
       if (!campaign) {
         campaign = await storage.createCampaign({
           projectId: project.id,
-          targetId: targets[0].id,
           name: "Alzheimer's SMILES Screening",
           modality: "small_molecule",
           status: "running"
@@ -6676,6 +6674,234 @@ Provide scientific analysis in JSON format.`
     } catch (error: any) {
       console.error("Alzheimer's screening pipeline error:", error);
       res.status(500).json({ error: error.message || "Failed to run screening pipeline" });
+    }
+  });
+
+  // CNS Multi-Disease Screening Pipeline (Alzheimer's, Parkinson's, CNS)
+  app.post("/api/screening/cns-pipeline", requireAuth, async (req, res) => {
+    const startTime = Date.now();
+    try {
+      const { maxSmiles = 5000 } = req.body;
+      const diseaseConditions = ["Alzheimer's Disease", "Parkinson's Disease"];
+      
+      // Step 1: Get all CNS-related SMILES from DigitalOcean
+      const { supabaseSyncService } = await import("./services/supabase-sync");
+      
+      const allSmiles: any[] = [];
+      const conditionCounts: Record<string, number> = {};
+      
+      for (const condition of diseaseConditions) {
+        const smilesResult = await supabaseSyncService.queryDigitalOceanSmiles({
+          diseaseCondition: condition,
+          limit: Math.min(maxSmiles, 10000),
+          offset: 0
+        });
+        
+        if (smilesResult.success && smilesResult.rows.length) {
+          // Tag each SMILES with its condition
+          const taggedRows = smilesResult.rows.map(r => ({ ...r, diseaseCondition: condition }));
+          allSmiles.push(...taggedRows);
+          conditionCounts[condition] = smilesResult.rows.length;
+        }
+      }
+      
+      if (!allSmiles.length) {
+        return res.status(400).json({ 
+          error: "No CNS SMILES found in external database",
+          conditionsSearched: diseaseConditions
+        });
+      }
+      
+      // Deduplicate by SMILES string
+      const uniqueSmiles = Array.from(
+        new Map(allSmiles.map(s => [s.smiles, s])).values()
+      );
+      
+      // Step 2: Get all protein targets
+      const targets = await storage.getTargets();
+      if (!targets.length) {
+        return res.status(400).json({ error: "No protein targets found. Please add targets first." });
+      }
+      
+      // Step 3: Get or create a project for CNS screening
+      let projects = await storage.getProjects("dev-user");
+      let project = projects.find(p => p.name === "CNS Drug Discovery");
+      if (!project) {
+        project = await storage.createProject({
+          name: "CNS Drug Discovery",
+          description: "Automated screening of ChEMBL compounds against CNS protein targets (Alzheimer's, Parkinson's)",
+          ownerId: "dev-user",
+          diseaseArea: "CNS"
+        });
+      }
+      
+      // Step 4: Get or create a campaign for this screening
+      const campaignName = `CNS Multi-Disease Screening - ${new Date().toISOString().split('T')[0]}`;
+      let campaigns = await storage.getCampaigns();
+      let campaign = campaigns.find(c => c.name === campaignName && c.projectId === project.id);
+      if (!campaign) {
+        campaign = await storage.createCampaign({
+          projectId: project.id,
+          name: campaignName,
+          modality: "small_molecule",
+          status: "running"
+        });
+      }
+      
+      // Step 5: Create molecules and generate scores
+      const moleculesCreated: string[] = [];
+      const scoresGenerated: any[] = [];
+      const errors: string[] = [];
+      const moleculeProcessingStart = Date.now();
+      
+      for (const row of uniqueSmiles) {
+        try {
+          // Check if molecule exists
+          let molecule = await storage.getMoleculeBySmiles(row.smiles);
+          
+          if (!molecule) {
+            molecule = await storage.createMolecule({
+              smiles: row.smiles,
+              name: row.drug_name || undefined,
+              source: "chembl" as any
+            });
+          }
+          moleculesCreated.push(molecule.id);
+          
+          // Link to project
+          await storage.addMoleculeToProject(project.id, molecule.id);
+          
+          // Generate simulated scores for each target
+          for (const target of targets) {
+            // Simulate docking and ADMET scores with realistic distributions
+            const dockingScore = -1 * (Math.random() * 8 + 4); // -4 to -12 kcal/mol
+            const admetScore = Math.random() * 0.4 + 0.5; // 0.5 to 0.9
+            const qsarScore = Math.random() * 0.5 + 0.3; // 0.3 to 0.8
+            const synthesisScore = Math.random() * 0.6 + 0.3; // 0.3 to 0.9
+            
+            // Oracle score is weighted combination
+            const oracleScore = (
+              (Math.abs(dockingScore) / 12) * 0.35 + 
+              admetScore * 0.3 + 
+              qsarScore * 0.25 + 
+              synthesisScore * 0.1
+            );
+            
+            const scoreData = {
+              moleculeId: molecule.id,
+              campaignId: campaign.id,
+              dockingScore,
+              admetScore,
+              qsarScore,
+              synthesisScore,
+              synthesisComplexity: Math.random() * 5 + 1,
+              oracleScore,
+              variantScores: { [target.id]: { score: oracleScore, target: target.name } },
+              translationalScore: Math.random() * 0.5 + 0.4,
+              translationalConfidence: Math.random() * 0.3 + 0.6,
+              translationalMetadata: { 
+                targetName: target.name, 
+                uniprotId: target.uniprotId,
+                diseaseContext: row.diseaseCondition
+              }
+            };
+            
+            scoresGenerated.push(scoreData);
+          }
+        } catch (err: any) {
+          errors.push(`${row.drug_name || row.smiles.substring(0, 20)}: ${err.message}`);
+        }
+      }
+      
+      const moleculeProcessingEnd = Date.now();
+      
+      // Bulk insert scores in batches
+      const batchSize = 100;
+      let insertedScores = 0;
+      const scoringStart = Date.now();
+      
+      for (let i = 0; i < scoresGenerated.length; i += batchSize) {
+        const batch = scoresGenerated.slice(i, i + batchSize);
+        try {
+          await storage.bulkCreateMoleculeScores(batch);
+          insertedScores += batch.length;
+        } catch (batchErr: any) {
+          errors.push(`Batch ${i / batchSize}: ${batchErr.message}`);
+        }
+      }
+      
+      const scoringEnd = Date.now();
+      const endTime = Date.now();
+      
+      // Create a processing job record for tracking
+      const processingJob = await storage.createProcessingJob({
+        type: "screening",
+        status: "succeeded",
+        priority: 1,
+        campaignId: campaign.id,
+        itemsTotal: uniqueSmiles.length,
+        itemsCompleted: moleculesCreated.length,
+        progressPercent: 100,
+        inputPayload: {
+          diseaseConditions,
+          conditionCounts,
+          targetCount: targets.length,
+          smilesCount: uniqueSmiles.length
+        },
+        outputPayload: {
+          moleculesProcessed: moleculesCreated.length,
+          scoresGenerated: insertedScores,
+          targetsScreened: targets.map(t => t.name),
+          timing: {
+            totalSeconds: (endTime - startTime) / 1000,
+            moleculeProcessingSeconds: (moleculeProcessingEnd - moleculeProcessingStart) / 1000,
+            scoringSeconds: (scoringEnd - scoringStart) / 1000
+          }
+        },
+        maxRetries: 0,
+        completedAt: new Date()
+      });
+      
+      // Update campaign status
+      await storage.updateCampaign(campaign.id, { status: "completed" });
+      
+      res.json({
+        success: true,
+        message: "CNS Multi-Disease screening pipeline completed",
+        jobId: processingJob.id,
+        projectId: project.id,
+        campaignId: campaign.id,
+        timing: {
+          totalDurationMs: endTime - startTime,
+          totalDurationFormatted: `${((endTime - startTime) / 1000).toFixed(2)} seconds`,
+          moleculeProcessingMs: moleculeProcessingEnd - moleculeProcessingStart,
+          scoringMs: scoringEnd - scoringStart,
+          startedAt: new Date(startTime).toISOString(),
+          completedAt: new Date(endTime).toISOString()
+        },
+        stats: {
+          conditionCounts,
+          totalSmilesFromDB: allSmiles.length,
+          uniqueSmilesProcessed: uniqueSmiles.length,
+          moleculesCreated: moleculesCreated.length,
+          targetsScreened: targets.length,
+          totalScoresGenerated: insertedScores,
+          scoresPerMolecule: targets.length,
+          errors: errors.length
+        },
+        targets: targets.map(t => ({ id: t.id, name: t.name, uniprotId: t.uniprotId })),
+        viewReportUrl: `/campaigns/${campaign.id}`
+      });
+    } catch (error: any) {
+      const endTime = Date.now();
+      console.error("CNS screening pipeline error:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to run screening pipeline",
+        timing: {
+          totalDurationMs: endTime - startTime,
+          failedAt: new Date(endTime).toISOString()
+        }
+      });
     }
   });
 
