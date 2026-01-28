@@ -44,7 +44,14 @@ import {
   Zap,
   BarChart3,
   Download,
-  Eye
+  Eye,
+  ArrowRight,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Scale,
+  Beaker,
+  FlaskConical
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -94,14 +101,28 @@ const SIMULATION_TYPES = [
 ];
 
 const MATERIAL_PRESETS = [
-  { name: "Steel (AISI 1045)", youngsModulus: 200, poissonsRatio: 0.29, density: 7850, thermalConductivity: 51.9, specificHeat: 486 },
-  { name: "Aluminum 6061-T6", youngsModulus: 68.9, poissonsRatio: 0.33, density: 2700, thermalConductivity: 167, specificHeat: 896 },
-  { name: "Titanium Ti-6Al-4V", youngsModulus: 113.8, poissonsRatio: 0.34, density: 4430, thermalConductivity: 6.7, specificHeat: 526 },
-  { name: "PEEK", youngsModulus: 3.6, poissonsRatio: 0.38, density: 1320, thermalConductivity: 0.25, specificHeat: 2000 },
-  { name: "Carbon Fiber Composite", youngsModulus: 135, poissonsRatio: 0.30, density: 1600, thermalConductivity: 7, specificHeat: 1000 },
-  { name: "Copper C11000", youngsModulus: 117, poissonsRatio: 0.34, density: 8940, thermalConductivity: 388, specificHeat: 385 },
-  { name: "Stainless Steel 316L", youngsModulus: 193, poissonsRatio: 0.27, density: 8000, thermalConductivity: 16.3, specificHeat: 500 },
-  { name: "Custom", youngsModulus: 0, poissonsRatio: 0, density: 0, thermalConductivity: 0, specificHeat: 0 },
+  // Metals
+  { name: "Steel (AISI 1045)", youngsModulus: 200, poissonsRatio: 0.29, density: 7850, thermalConductivity: 51.9, specificHeat: 486, category: "metal" },
+  { name: "Aluminum 6061-T6", youngsModulus: 68.9, poissonsRatio: 0.33, density: 2700, thermalConductivity: 167, specificHeat: 896, category: "metal" },
+  { name: "Titanium Ti-6Al-4V", youngsModulus: 113.8, poissonsRatio: 0.34, density: 4430, thermalConductivity: 6.7, specificHeat: 526, category: "metal" },
+  { name: "Copper C11000", youngsModulus: 117, poissonsRatio: 0.34, density: 8940, thermalConductivity: 388, specificHeat: 385, category: "metal" },
+  { name: "Stainless Steel 316L", youngsModulus: 193, poissonsRatio: 0.27, density: 8000, thermalConductivity: 16.3, specificHeat: 500, category: "metal" },
+  // Composites
+  { name: "Carbon Fiber Composite", youngsModulus: 135, poissonsRatio: 0.30, density: 1600, thermalConductivity: 7, specificHeat: 1000, category: "composite" },
+  // High-Performance Polymers
+  { name: "PEEK", youngsModulus: 3.6, poissonsRatio: 0.38, density: 1320, thermalConductivity: 0.25, specificHeat: 2000, category: "polymer" },
+  { name: "PTFE (Teflon)", youngsModulus: 0.5, poissonsRatio: 0.46, density: 2200, thermalConductivity: 0.25, specificHeat: 1000, category: "polymer" },
+  { name: "PCTFE (Kel-F)", youngsModulus: 1.3, poissonsRatio: 0.36, density: 2100, thermalConductivity: 0.22, specificHeat: 900, category: "polymer" },
+  { name: "PVDF (Kynar)", youngsModulus: 2.0, poissonsRatio: 0.34, density: 1780, thermalConductivity: 0.19, specificHeat: 1200, category: "polymer" },
+  { name: "ECTFE (Halar)", youngsModulus: 1.7, poissonsRatio: 0.35, density: 1680, thermalConductivity: 0.16, specificHeat: 1100, category: "polymer" },
+  { name: "POM (Delrin)", youngsModulus: 2.9, poissonsRatio: 0.35, density: 1410, thermalConductivity: 0.31, specificHeat: 1500, category: "polymer" },
+  { name: "PPS (Ryton)", youngsModulus: 3.8, poissonsRatio: 0.36, density: 1350, thermalConductivity: 0.29, specificHeat: 1090, category: "polymer" },
+  { name: "LCP (Vectra)", youngsModulus: 12.0, poissonsRatio: 0.35, density: 1400, thermalConductivity: 0.20, specificHeat: 1000, category: "polymer" },
+  { name: "PES/PSU (Udel)", youngsModulus: 2.5, poissonsRatio: 0.37, density: 1370, thermalConductivity: 0.22, specificHeat: 1130, category: "polymer" },
+  { name: "Polyimide (Kapton)", youngsModulus: 3.2, poissonsRatio: 0.34, density: 1420, thermalConductivity: 0.12, specificHeat: 1090, category: "polymer" },
+  { name: "PDMS (Silicone)", youngsModulus: 0.002, poissonsRatio: 0.49, density: 970, thermalConductivity: 0.15, specificHeat: 1460, category: "polymer" },
+  // Custom
+  { name: "Custom", youngsModulus: 0, poissonsRatio: 0, density: 0, thermalConductivity: 0, specificHeat: 0, category: "custom" },
 ];
 
 const MESH_QUALITY_OPTIONS = [
@@ -135,6 +156,71 @@ export default function FEASimulationsPage() {
   const [inletVelocity, setInletVelocity] = useState("1.0");
   const [fluidDensity, setFluidDensity] = useState("1.225");
   const [fluidViscosity, setFluidViscosity] = useState("1.81e-5");
+
+  // Material comparison state
+  const [baselineMaterial, setBaselineMaterial] = useState(MATERIAL_PRESETS[0]);
+  const [alternativeMaterial, setAlternativeMaterial] = useState(MATERIAL_PRESETS[7]); // PTFE by default
+
+  // Calculate comparison metrics
+  const calculateComparison = (baseline: typeof MATERIAL_PRESETS[0], alternative: typeof MATERIAL_PRESETS[0]) => {
+    const metrics = [
+      {
+        property: "Young's Modulus",
+        unit: "GPa",
+        baseline: baseline.youngsModulus,
+        alternative: alternative.youngsModulus,
+        higherIsBetter: true,
+        description: "Stiffness - higher means more rigid"
+      },
+      {
+        property: "Density",
+        unit: "kg/m³",
+        baseline: baseline.density,
+        alternative: alternative.density,
+        higherIsBetter: false,
+        description: "Weight - lower is often better for lightweight designs"
+      },
+      {
+        property: "Thermal Conductivity",
+        unit: "W/m·K",
+        baseline: baseline.thermalConductivity,
+        alternative: alternative.thermalConductivity,
+        higherIsBetter: null, // Depends on application
+        description: "Heat transfer - depends on application"
+      },
+      {
+        property: "Specific Heat",
+        unit: "J/kg·K",
+        baseline: baseline.specificHeat,
+        alternative: alternative.specificHeat,
+        higherIsBetter: null,
+        description: "Heat capacity - depends on application"
+      },
+      {
+        property: "Poisson's Ratio",
+        unit: "",
+        baseline: baseline.poissonsRatio,
+        alternative: alternative.poissonsRatio,
+        higherIsBetter: null,
+        description: "Lateral vs axial strain ratio"
+      }
+    ];
+
+    return metrics.map(m => {
+      const change = m.baseline > 0 ? ((m.alternative - m.baseline) / m.baseline) * 100 : 0;
+      let status: "better" | "worse" | "neutral" = "neutral";
+      if (m.higherIsBetter !== null && Math.abs(change) > 5) {
+        if (m.higherIsBetter) {
+          status = change > 0 ? "better" : "worse";
+        } else {
+          status = change < 0 ? "better" : "worse";
+        }
+      }
+      return { ...m, change, status };
+    });
+  };
+
+  const comparisonMetrics = calculateComparison(baselineMaterial, alternativeMaterial);
 
   // Fetch FEA jobs from API with polling for status updates
   const { data: jobs = [], isLoading: isLoadingJobs, refetch: refetchJobs } = useQuery<FEAJob[]>({
@@ -291,10 +377,14 @@ export default function FEASimulationsPage() {
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-lg grid-cols-3">
               <TabsTrigger value="new" className="gap-2" data-testid="tab-new-simulation">
                 <Play className="h-4 w-4" />
                 New Simulation
+              </TabsTrigger>
+              <TabsTrigger value="compare" className="gap-2" data-testid="tab-material-compare">
+                <Scale className="h-4 w-4" />
+                Material Compare
               </TabsTrigger>
               <TabsTrigger value="history" className="gap-2" data-testid="tab-history">
                 <Clock className="h-4 w-4" />
@@ -704,6 +794,230 @@ export default function FEASimulationsPage() {
                   </Button>
                 </div>
               </div>
+            </TabsContent>
+
+            {/* Material Comparison Tab */}
+            <TabsContent value="compare" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Baseline Material */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Box className="h-5 w-5 text-blue-500" />
+                      Current Material (Baseline)
+                    </CardTitle>
+                    <CardDescription>Select the material currently used in your component</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Select 
+                      value={baselineMaterial.name} 
+                      onValueChange={(name) => {
+                        const mat = MATERIAL_PRESETS.find(m => m.name === name);
+                        if (mat) setBaselineMaterial(mat);
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-baseline-material">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MATERIAL_PRESETS.filter(m => m.name !== "Custom").map((mat) => (
+                          <SelectItem key={mat.name} value={mat.name}>
+                            {mat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="p-4 rounded-md bg-muted/50 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Young's Modulus</span>
+                        <span className="font-mono">{baselineMaterial.youngsModulus} GPa</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Density</span>
+                        <span className="font-mono">{baselineMaterial.density} kg/m³</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Thermal Conductivity</span>
+                        <span className="font-mono">{baselineMaterial.thermalConductivity} W/m·K</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Specific Heat</span>
+                        <span className="font-mono">{baselineMaterial.specificHeat} J/kg·K</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Alternative Material */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FlaskConical className="h-5 w-5 text-green-500" />
+                      Alternative Material
+                    </CardTitle>
+                    <CardDescription>Select a discovered or alternative material to compare</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Select 
+                      value={alternativeMaterial.name} 
+                      onValueChange={(name) => {
+                        const mat = MATERIAL_PRESETS.find(m => m.name === name);
+                        if (mat) setAlternativeMaterial(mat);
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-alternative-material">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MATERIAL_PRESETS.filter(m => m.name !== "Custom").map((mat) => (
+                          <SelectItem key={mat.name} value={mat.name}>
+                            {mat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="p-4 rounded-md bg-muted/50 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Young's Modulus</span>
+                        <span className="font-mono">{alternativeMaterial.youngsModulus} GPa</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Density</span>
+                        <span className="font-mono">{alternativeMaterial.density} kg/m³</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Thermal Conductivity</span>
+                        <span className="font-mono">{alternativeMaterial.thermalConductivity} W/m·K</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Specific Heat</span>
+                        <span className="font-mono">{alternativeMaterial.specificHeat} J/kg·K</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Comparison Results */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Property Comparison
+                  </CardTitle>
+                  <CardDescription>
+                    Compare {baselineMaterial.name} vs {alternativeMaterial.name}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {comparisonMetrics.map((metric) => (
+                      <div key={metric.property} className="space-y-2">
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <div className="flex-1 min-w-[200px]">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{metric.property}</span>
+                              {metric.unit && <span className="text-xs text-muted-foreground">({metric.unit})</span>}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{metric.description}</p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <div className="text-xs text-muted-foreground">Baseline</div>
+                              <div className="font-mono text-sm">{metric.baseline.toLocaleString()}</div>
+                            </div>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                            <div className="text-right">
+                              <div className="text-xs text-muted-foreground">Alternative</div>
+                              <div className="font-mono text-sm">{metric.alternative.toLocaleString()}</div>
+                            </div>
+                            <div className="w-24 text-right">
+                              <Badge 
+                                className={`gap-1 ${
+                                  metric.status === "better" 
+                                    ? "bg-green-500/10 text-green-600 border-green-500/20" 
+                                    : metric.status === "worse"
+                                    ? "bg-red-500/10 text-red-600 border-red-500/20"
+                                    : "bg-muted text-muted-foreground"
+                                }`}
+                                data-testid={`badge-comparison-${metric.property.toLowerCase().replace(/[^a-z]/g, '-')}`}
+                              >
+                                {metric.status === "better" && <TrendingUp className="h-3 w-3" />}
+                                {metric.status === "worse" && <TrendingDown className="h-3 w-3" />}
+                                {metric.status === "neutral" && <Minus className="h-3 w-3" />}
+                                {metric.change > 0 ? "+" : ""}{metric.change.toFixed(1)}%
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="absolute inset-y-0 left-0 bg-blue-500 rounded-full"
+                            style={{ 
+                              width: `${Math.min(100, (metric.baseline / Math.max(metric.baseline, metric.alternative)) * 100)}%` 
+                            }}
+                          />
+                          <div 
+                            className="absolute inset-y-0 right-0 bg-green-500 rounded-full"
+                            style={{ 
+                              width: `${Math.min(100, (metric.alternative / Math.max(metric.baseline, metric.alternative)) * 100)}%`,
+                              opacity: 0.5
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  {/* Summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 rounded-md bg-green-500/10 border border-green-500/20">
+                      <div className="text-2xl font-bold text-green-600">
+                        {comparisonMetrics.filter(m => m.status === "better").length}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Properties Improved</div>
+                    </div>
+                    <div className="p-4 rounded-md bg-red-500/10 border border-red-500/20">
+                      <div className="text-2xl font-bold text-red-600">
+                        {comparisonMetrics.filter(m => m.status === "worse").length}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Properties Reduced</div>
+                    </div>
+                    <div className="p-4 rounded-md bg-muted">
+                      <div className="text-2xl font-bold">
+                        {comparisonMetrics.filter(m => m.status === "neutral").length}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Application Dependent</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex items-center gap-3 flex-wrap">
+                    <Button 
+                      className="gap-2"
+                      onClick={() => {
+                        setSelectedMaterial(alternativeMaterial);
+                        setActiveTab("new");
+                        toast({
+                          title: "Material selected",
+                          description: `${alternativeMaterial.name} is now selected for simulation`
+                        });
+                      }}
+                      data-testid="button-use-alternative-material"
+                    >
+                      <Play className="h-4 w-4" />
+                      Run Simulation with {alternativeMaterial.name}
+                    </Button>
+                    <Button variant="outline" className="gap-2" data-testid="button-export-comparison">
+                      <Download className="h-4 w-4" />
+                      Export Comparison Report
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Job History Tab */}
