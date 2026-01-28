@@ -411,6 +411,7 @@ export interface IStorage {
   createMaterialProperty(property: InsertMaterialProperty): Promise<MaterialProperty>;
 
   getMaterialVariants(materialId: string): Promise<MaterialVariant[]>;
+  getAllMaterialVariants(limit?: number, offset?: number): Promise<{ variants: MaterialVariant[], total: number }>;
   getMaterialVariant(id: string): Promise<MaterialVariant | undefined>;
   createMaterialVariant(variant: InsertMaterialVariant): Promise<MaterialVariant>;
   updateMaterialVariant(id: string, variant: Partial<InsertMaterialVariant>): Promise<MaterialVariant | undefined>;
@@ -1729,6 +1730,14 @@ export class DatabaseStorage implements IStorage {
 
   async getMaterialVariants(materialId: string): Promise<MaterialVariant[]> {
     return db.select().from(materialVariants).where(eq(materialVariants.materialId, materialId)).orderBy(desc(materialVariants.createdAt));
+  }
+
+  async getAllMaterialVariants(limit: number = 100, offset: number = 0): Promise<{ variants: MaterialVariant[], total: number }> {
+    const [variants, countResult] = await Promise.all([
+      db.select().from(materialVariants).orderBy(desc(materialVariants.createdAt)).limit(limit).offset(offset),
+      db.select({ count: sql<number>`count(*)` }).from(materialVariants)
+    ]);
+    return { variants, total: Number(countResult[0]?.count || 0) };
   }
 
   async getMaterialVariant(id: string): Promise<MaterialVariant | undefined> {

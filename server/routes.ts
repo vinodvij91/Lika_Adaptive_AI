@@ -4371,6 +4371,19 @@ Provide scientific analysis in JSON format.`
     }
   });
 
+  // Get all material variants with pagination
+  app.get("/api/material-variants", requireAuth, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const result = await storage.getAllMaterialVariants(limit, offset);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching all material variants:", error);
+      res.status(500).json({ error: "Failed to fetch material variants" });
+    }
+  });
+
   app.get("/api/material-variants/:id", requireAuth, async (req, res) => {
     try {
       const variant = await storage.getMaterialVariant(req.params.id);
