@@ -51,7 +51,10 @@ import {
   Minus,
   Scale,
   Beaker,
-  FlaskConical
+  FlaskConical,
+  Puzzle,
+  Plus,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -180,6 +183,40 @@ export default function FEASimulationsPage() {
   // Material comparison state
   const [baselineMaterial, setBaselineMaterial] = useState(MATERIAL_PRESETS[0]);
   const [alternativeMaterial, setAlternativeMaterial] = useState(MATERIAL_PRESETS[7]); // PTFE by default
+
+  // Multi-component assembly state
+  interface AssemblyComponent {
+    id: string;
+    name: string;
+    material: typeof MATERIAL_PRESETS[0];
+    volume?: string;
+    description?: string;
+  }
+  const [assemblyComponents, setAssemblyComponents] = useState<AssemblyComponent[]>([
+    { id: "1", name: "Component 1", material: MATERIAL_PRESETS[0], description: "" }
+  ]);
+  const [assemblyName, setAssemblyName] = useState("");
+  const [isAssemblyMode, setIsAssemblyMode] = useState(false);
+
+  const addAssemblyComponent = () => {
+    const newId = (assemblyComponents.length + 1).toString();
+    setAssemblyComponents([
+      ...assemblyComponents,
+      { id: newId, name: `Component ${newId}`, material: MATERIAL_PRESETS[0], description: "" }
+    ]);
+  };
+
+  const removeAssemblyComponent = (id: string) => {
+    if (assemblyComponents.length > 1) {
+      setAssemblyComponents(assemblyComponents.filter(c => c.id !== id));
+    }
+  };
+
+  const updateAssemblyComponent = (id: string, updates: Partial<AssemblyComponent>) => {
+    setAssemblyComponents(assemblyComponents.map(c => 
+      c.id === id ? { ...c, ...updates } : c
+    ));
+  };
 
   // Calculate comparison metrics
   const calculateComparison = (baseline: typeof MATERIAL_PRESETS[0], alternative: typeof MATERIAL_PRESETS[0]) => {
@@ -397,10 +434,14 @@ export default function FEASimulationsPage() {
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-lg grid-cols-3">
+            <TabsList className="grid w-full max-w-2xl grid-cols-4">
               <TabsTrigger value="new" className="gap-2" data-testid="tab-new-simulation">
                 <Play className="h-4 w-4" />
                 New Simulation
+              </TabsTrigger>
+              <TabsTrigger value="assembly" className="gap-2" data-testid="tab-assembly">
+                <Puzzle className="h-4 w-4" />
+                Assembly
               </TabsTrigger>
               <TabsTrigger value="compare" className="gap-2" data-testid="tab-material-compare">
                 <Scale className="h-4 w-4" />
@@ -810,6 +851,310 @@ export default function FEASimulationsPage() {
                         <Play className="h-5 w-5" />
                         Run Simulation
                       </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Multi-Component Assembly Tab */}
+            <TabsContent value="assembly" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column - Assembly Setup */}
+                <div className="lg:col-span-2 space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Puzzle className="h-5 w-5 text-purple-500" />
+                        Multi-Component Assembly
+                      </CardTitle>
+                      <CardDescription>
+                        Define multiple components with different materials for assembly simulations. 
+                        Ideal for CAD files containing parts made from different materials.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="assembly-name">Assembly Name</Label>
+                        <Input
+                          id="assembly-name"
+                          placeholder="e.g., Valve Assembly, Pump Housing..."
+                          value={assemblyName}
+                          onChange={(e) => setAssemblyName(e.target.value)}
+                          data-testid="input-assembly-name"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Label>Upload Assembly Drawing</Label>
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept=".stl,.step,.stp,.obj,.iges,.igs"
+                            className="hidden"
+                            onChange={handleFileUpload}
+                            data-testid="input-assembly-file"
+                          />
+                          <Button variant="outline" size="sm" asChild>
+                            <span><Upload className="h-4 w-4 mr-2" />Upload CAD File</span>
+                          </Button>
+                        </label>
+                      </div>
+                      {uploadedFile && (
+                        <div className="p-3 rounded-md bg-muted flex items-center gap-3">
+                          <FileBox className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-sm font-medium">{uploadedFile.name}</span>
+                          <Badge variant="outline" className="ml-auto">Ready</Badge>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Component Definitions */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg">Assembly Components</CardTitle>
+                          <CardDescription>Define each component and assign materials</CardDescription>
+                        </div>
+                        <Button onClick={addAssemblyComponent} size="sm" data-testid="button-add-component">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Component
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {assemblyComponents.map((component, index) => (
+                          <div 
+                            key={component.id} 
+                            className="p-4 rounded-lg border bg-card space-y-4"
+                            data-testid={`component-${component.id}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-md bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                                  {index + 1}
+                                </div>
+                                <Input
+                                  value={component.name}
+                                  onChange={(e) => updateAssemblyComponent(component.id, { name: e.target.value })}
+                                  className="max-w-xs font-medium"
+                                  placeholder="Component name..."
+                                  data-testid={`input-component-name-${component.id}`}
+                                />
+                              </div>
+                              {assemblyComponents.length > 1 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeAssemblyComponent(component.id)}
+                                  data-testid={`button-remove-component-${component.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Material</Label>
+                                <Select
+                                  value={component.material.name}
+                                  onValueChange={(value) => {
+                                    const mat = MATERIAL_PRESETS.find(m => m.name === value);
+                                    if (mat) updateAssemblyComponent(component.id, { material: mat });
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`select-material-${component.id}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">Metals</div>
+                                    {MATERIAL_PRESETS.filter(m => m.category === "metal").map((mat) => (
+                                      <SelectItem key={mat.name} value={mat.name}>{mat.name}</SelectItem>
+                                    ))}
+                                    <Separator className="my-1" />
+                                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">Polymers</div>
+                                    {MATERIAL_PRESETS.filter(m => m.category === "polymer").map((mat) => (
+                                      <SelectItem key={mat.name} value={mat.name}>{mat.name}</SelectItem>
+                                    ))}
+                                    <Separator className="my-1" />
+                                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">Composites</div>
+                                    {MATERIAL_PRESETS.filter(m => m.category === "composite").map((mat) => (
+                                      <SelectItem key={mat.name} value={mat.name}>{mat.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Description (optional)</Label>
+                                <Input
+                                  value={component.description || ""}
+                                  onChange={(e) => updateAssemblyComponent(component.id, { description: e.target.value })}
+                                  placeholder="e.g., Main housing, Spring element..."
+                                  data-testid={`input-description-${component.id}`}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Material Properties Preview */}
+                            <div className="grid grid-cols-3 gap-2 text-xs">
+                              <div className="p-2 rounded bg-muted">
+                                <div className="text-muted-foreground">Modulus</div>
+                                <div className="font-medium">{component.material.youngsModulus} GPa</div>
+                              </div>
+                              <div className="p-2 rounded bg-muted">
+                                <div className="text-muted-foreground">Density</div>
+                                <div className="font-medium">{component.material.density} kg/m³</div>
+                              </div>
+                              <div className="p-2 rounded bg-muted">
+                                <div className="text-muted-foreground">Thermal Cond.</div>
+                                <div className="font-medium">{component.material.thermalConductivity} W/m·K</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Interface Conditions */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Interface Conditions</CardTitle>
+                      <CardDescription>Define how components interact at contact surfaces</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Contact Type</Label>
+                          <Select defaultValue="bonded">
+                            <SelectTrigger data-testid="select-contact-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="bonded">Bonded (No Slip)</SelectItem>
+                              <SelectItem value="frictionless">Frictionless</SelectItem>
+                              <SelectItem value="frictional">Frictional Contact</SelectItem>
+                              <SelectItem value="rough">Rough (Infinite Friction)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Thermal Interface</Label>
+                          <Select defaultValue="perfect">
+                            <SelectTrigger data-testid="select-thermal-interface">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="perfect">Perfect Thermal Contact</SelectItem>
+                              <SelectItem value="resistance">Thermal Resistance</SelectItem>
+                              <SelectItem value="insulated">Thermally Insulated</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right Column - Summary & Actions */}
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Assembly Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Components</span>
+                          <span className="font-medium">{assemblyComponents.length}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Unique Materials</span>
+                          <span className="font-medium">
+                            {new Set(assemblyComponents.map(c => c.material.name)).size}
+                          </span>
+                        </div>
+                        <Separator />
+                        <div className="space-y-2">
+                          <div className="text-sm text-muted-foreground">Materials Used:</div>
+                          <div className="flex flex-wrap gap-1">
+                            {Array.from(new Set(assemblyComponents.map(c => c.material.name))).map((name) => (
+                              <Badge key={name} variant="outline" className="text-xs">
+                                {name.split(" ")[0]}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Simulation Settings</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Analysis Type</Label>
+                        <Select value={simulationType} onValueChange={setSimulationType}>
+                          <SelectTrigger data-testid="select-assembly-sim-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SIMULATION_TYPES.map((type) => (
+                              <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Mesh Quality</Label>
+                        <Select value={meshQuality} onValueChange={setMeshQuality}>
+                          <SelectTrigger data-testid="select-assembly-mesh">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MESH_QUALITY_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Button 
+                    className="w-full" 
+                    size="lg"
+                    disabled={!uploadedFile || !assemblyName.trim() || submitJobMutation.isPending}
+                    onClick={() => {
+                      if (!uploadedFile || !assemblyName.trim()) return;
+                      submitJobMutation.mutate({
+                        name: assemblyName,
+                        simulationType,
+                        fileName: uploadedFile.name,
+                        meshQuality,
+                        material: assemblyComponents[0].material,
+                        parameters: {
+                          isAssembly: "true",
+                          componentCount: assemblyComponents.length.toString(),
+                          components: JSON.stringify(assemblyComponents.map(c => ({
+                            name: c.name,
+                            material: c.material.name
+                          })))
+                        }
+                      });
+                    }}
+                    data-testid="button-run-assembly-simulation"
+                  >
+                    {submitJobMutation.isPending ? (
+                      <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Submitting...</>
+                    ) : (
+                      <><Play className="h-4 w-4 mr-2" />Run Assembly Simulation</>
                     )}
                   </Button>
                 </div>
