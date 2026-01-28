@@ -27,6 +27,19 @@ Adheres to Material Design principles with Carbon Design data patterns, using In
 ### Python Compute Pipelines
 The platform integrates production-grade Python pipelines for both drug discovery and materials science, designed for executing computational workloads.
 - **Drug Discovery Pipeline**: Features Dask for distributed computing, RAPIDS cuML for GPU-accelerated ML, PyTorch mixed precision training, AutoDock Vina integration, and XGBoost with GPU acceleration. Supports steps like SMILES validation, fingerprint generation, property calculation, ML prediction, Vina docking, scoring, and rule filtering.
+- **Vaccine Discovery Pipeline** (`compute/vaccine_discovery_pipeline.py`): GPU-agnostic pipeline with automatic hardware detection (NVIDIA CUDA, AMD ROCm, Apple Metal, CPU). Intelligently routes tasks between CPU and GPU based on workload characteristics.
+  - **GPU-Intensive Tasks** (15-100x speedup): Structure prediction (ESMFold/AlphaFold2), MD simulation (OpenMM/GROMACS)
+  - **GPU-Preferred Tasks** (2-5x speedup): MHC binding prediction with deep learning models
+  - **CPU-Intensive Tasks**: Epitope prediction (NetMHCpan), mRNA secondary structure (ViennaRNA)
+  - **CPU-Only Tasks**: Codon optimization, file I/O
+  - **API Endpoints**:
+    - `POST /api/compute/vaccine/pipeline` - Run full vaccine discovery pipeline
+    - `POST /api/compute/vaccine/structure` - Predict protein structure (GPU-intensive)
+    - `POST /api/compute/vaccine/epitopes` - Predict MHC binding/epitopes (CPU-intensive)
+    - `POST /api/compute/vaccine/codon-optimize` - Codon optimization (CPU-only)
+    - `POST /api/compute/vaccine/mrna-design` - mRNA construct design (CPU-intensive)
+    - `POST /api/compute/vaccine/md-simulation` - Molecular dynamics (GPU-intensive)
+    - `GET /api/compute/vaccine/hardware` - Get hardware performance report
 - **Materials Science Pipeline**: Includes Magpie and SOAP descriptors, Graph Neural Networks (CGCNN, Multi-Property GNN), Multi-task Neural Networks, GPU acceleration, materials generation, element substitution, synthesis planning, and atomistic simulations (VASP, Quantum ESPRESSO). It also incorporates specialized designers for various material types (e.g., Battery, Photovoltaic, Structural) and discovery workflows (e.g., Superconductor, Catalyst).
 - **Universal Hardware-Agnostic Materials Pipeline**: Automatically adapts to any hardware configuration (CPU, GPU, Apple Silicon) for optimal performance, supporting molecular, compositional, and polymer material types. It includes specialized feature extractors and predictors for various polymer properties (e.g., Tg, tensile strength).
 

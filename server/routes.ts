@@ -2764,6 +2764,368 @@ Provide scientific analysis in JSON format.`
   });
 
   // ============================================
+  // VACCINE DISCOVERY ENDPOINTS
+  // ============================================
+
+  // Run full vaccine discovery pipeline
+  app.post("/api/compute/vaccine/pipeline", requireAuth, async (req, res) => {
+    try {
+      const { 
+        pathogenName,
+        proteinSequences,
+        mhcAlleles = ['HLA-A*02:01', 'HLA-A*01:01', 'HLA-B*07:02'],
+        runMD = false,
+        organism = 'human',
+        nodeId 
+      } = req.body;
+
+      if (!pathogenName || !proteinSequences || proteinSequences.length === 0) {
+        return res.status(400).json({ error: "Pathogen name and protein sequences are required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        pathogen_name: pathogenName,
+        proteins: proteinSequences.map((seq: string, i: number) => ({
+          name: `Protein_${i+1}`,
+          sequence: seq,
+          type: 'surface'
+        })),
+        mhc_alleles: mhcAlleles,
+        run_md: runMD,
+        organism: organism
+      });
+      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `vaccine-pipeline-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 3600000, // 1 hour for full pipeline
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Vaccine pipeline failed" });
+      }
+    } catch (error: any) {
+      console.error("Vaccine pipeline error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Predict protein structure (GPU-intensive)
+  app.post("/api/compute/vaccine/structure", requireAuth, async (req, res) => {
+    try {
+      const { sequence, method = 'esmfold', nodeId } = req.body;
+
+      if (!sequence) {
+        return res.status(400).json({ error: "Protein sequence is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ sequence, method });
+      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type predict_structure --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `vaccine-structure-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 1800000, // 30 minutes
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Structure prediction failed" });
+      }
+    } catch (error: any) {
+      console.error("Structure prediction error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Predict MHC binding / epitopes (CPU-intensive)
+  app.post("/api/compute/vaccine/epitopes", requireAuth, async (req, res) => {
+    try {
+      const { 
+        sequence, 
+        mhcAlleles = ['HLA-A*02:01', 'HLA-A*01:01', 'HLA-B*07:02'],
+        peptideLength = 9,
+        nodeId 
+      } = req.body;
+
+      if (!sequence) {
+        return res.status(400).json({ error: "Protein sequence is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        sequence, 
+        mhc_alleles: mhcAlleles, 
+        peptide_length: peptideLength 
+      });
+      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type predict_epitopes --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `vaccine-epitopes-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 600000, // 10 minutes
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Epitope prediction failed" });
+      }
+    } catch (error: any) {
+      console.error("Epitope prediction error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Optimize codons for expression (CPU-only)
+  app.post("/api/compute/vaccine/codon-optimize", requireAuth, async (req, res) => {
+    try {
+      const { sequence, organism = 'human', nodeId } = req.body;
+
+      if (!sequence) {
+        return res.status(400).json({ error: "Protein sequence is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ sequence, organism });
+      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type optimize_codons --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `vaccine-codon-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 120000, // 2 minutes
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Codon optimization failed" });
+      }
+    } catch (error: any) {
+      console.error("Codon optimization error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Design mRNA construct (CPU-intensive)
+  app.post("/api/compute/vaccine/mrna-design", requireAuth, async (req, res) => {
+    try {
+      const { 
+        sequence, 
+        utrType = 'optimized',
+        capType = 'cap1',
+        polyALength = 120,
+        nodeId 
+      } = req.body;
+
+      if (!sequence) {
+        return res.status(400).json({ error: "Protein sequence is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        sequence, 
+        utr_type: utrType,
+        cap_type: capType,
+        poly_a_length: polyALength
+      });
+      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type design_mrna --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `vaccine-mrna-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 300000, // 5 minutes
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "mRNA design failed" });
+      }
+    } catch (error: any) {
+      console.error("mRNA design error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Run molecular dynamics simulation (GPU-intensive)
+  app.post("/api/compute/vaccine/md-simulation", requireAuth, async (req, res) => {
+    try {
+      const { 
+        structurePdb, 
+        nanoseconds = 10,
+        temperature = 310,
+        nodeId 
+      } = req.body;
+
+      if (!structurePdb) {
+        return res.status(400).json({ error: "PDB structure is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const params = JSON.stringify({ 
+        structure_pdb: structurePdb, 
+        nanoseconds,
+        temperature
+      });
+      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type run_md --params '${params.replace(/'/g, "'\\''")}'`;
+
+      const job = {
+        id: `vaccine-md-${Date.now()}`,
+        type: "command",
+        command: command,
+        timeout: 7200000, // 2 hours
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "MD simulation failed" });
+      }
+    } catch (error: any) {
+      console.error("MD simulation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get hardware performance report
+  app.get("/api/compute/vaccine/hardware", requireAuth, async (req, res) => {
+    try {
+      const nodes = await storage.getComputeNodes();
+      const activeNodes = nodes.filter(n => n.status === "active");
+      
+      const report = {
+        totalNodes: nodes.length,
+        activeNodes: activeNodes.length,
+        gpuNodes: activeNodes.filter(n => n.gpuType).length,
+        taskRouting: {
+          gpu_intensive: ['structure_prediction', 'md_simulation'],
+          gpu_preferred: ['mhc_binding_prediction'],
+          cpu_intensive: ['epitope_prediction', 'sequence_alignment', 'mrna_design'],
+          cpu_only: ['codon_optimization', 'file_io']
+        },
+        estimatedSpeedups: {
+          structure_prediction: '15-20x with GPU',
+          md_simulation: '50-100x with GPU',
+          epitope_prediction: '2-3x with GPU'
+        }
+      };
+      
+      res.json(report);
+    } catch (error: any) {
+      console.error("Hardware report error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================
   // USER SSH KEYS ENDPOINTS
   // ============================================
 
