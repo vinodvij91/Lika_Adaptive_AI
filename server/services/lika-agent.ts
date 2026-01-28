@@ -201,16 +201,36 @@ const PAGE_KNOWLEDGE: Record<string, { title: string; domain: string; descriptio
     quickActions: ["Score feasibility", "Plan synthesis", "Check precursors"]
   },
   "/structure-property": {
-    title: "Structure-Property Relationships",
+    title: "Structure-Property Analytics",
     domain: "materials_science",
-    description: "Analyze correlations between material structure and properties. Visualize trends and optimize compositions.",
+    description: "Advanced analytics page for exploring structure-property relationships across 127K+ material variants. Features interactive visualizations including density plots, percentile curves, property heatmaps, and family analysis tables. Click 'Run Analysis' to refresh data, then explore correlations between properties like Thermal Stability, Tensile Strength, Conductivity, and Glass Transition Temperature. Click any heatmap cell or table row to drill down into individual materials with full SMILES structures, property values, confidence scores, and synthesis feasibility metrics.",
     capabilities: [
-      "Visualize structure-property correlations",
-      "Identify composition-property trends",
-      "Optimize material compositions",
-      "Compare structural families"
+      "Run structure-property correlation analysis on 127K+ material variants",
+      "View density distribution plots showing property distributions by material family",
+      "Explore percentile curves to understand property ranges and outliers",
+      "Interact with property heatmaps - X and Y axes show selected properties, color shows variant density",
+      "Compare material families (Polyamide, PEEK, Polyester, etc.) in the Family Analysis table",
+      "Drill down into individual materials by clicking heatmap cells or table rows",
+      "View detailed material info: SMILES, predicted properties with confidence scores, synthesis feasibility",
+      "Export analysis results and individual material structures"
     ],
-    quickActions: ["Plot correlations", "Optimize", "Compare families"]
+    quickActions: ["Click 'Run Analysis' button", "Switch tabs (Density Plot, Percentile Curves, Property Heatmap, Family Analysis)", "Click heatmap cells to view individual materials", "Use dropdowns to change X/Y axis properties"]
+  },
+  "/materials/structure-property": {
+    title: "Structure-Property Analytics",
+    domain: "materials_science",
+    description: "Advanced analytics page for exploring structure-property relationships across 127K+ material variants. Features interactive visualizations including density plots, percentile curves, property heatmaps, and family analysis tables. Click 'Run Analysis' to refresh data, then explore correlations between properties like Thermal Stability, Tensile Strength, Conductivity, and Glass Transition Temperature. Click any heatmap cell or table row to drill down into individual materials with full SMILES structures, property values, confidence scores, and synthesis feasibility metrics.",
+    capabilities: [
+      "Run structure-property correlation analysis on 127K+ material variants",
+      "View density distribution plots showing property distributions by material family",
+      "Explore percentile curves to understand property ranges and outliers",
+      "Interact with property heatmaps - X and Y axes show selected properties, color shows variant density",
+      "Compare material families (Polyamide, PEEK, Polyester, etc.) in the Family Analysis table",
+      "Drill down into individual materials by clicking heatmap cells or table rows",
+      "View detailed material info: SMILES, predicted properties with confidence scores, synthesis feasibility",
+      "Export analysis results and individual material structures"
+    ],
+    quickActions: ["Click 'Run Analysis' button", "Switch tabs (Density Plot, Percentile Curves, Property Heatmap, Family Analysis)", "Click heatmap cells to view individual materials", "Use dropdowns to change X/Y axis properties"]
   },
   "/property-pipelines": {
     title: "Property Pipelines",
