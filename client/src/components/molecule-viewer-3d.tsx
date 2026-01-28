@@ -1,6 +1,6 @@
 import { useRef, useState, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Text, Environment } from "@react-three/drei";
+import { OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
 
 interface Atom {
@@ -373,7 +373,6 @@ export default function MoleculeViewer3D({
           minDistance={3}
           maxDistance={20}
         />
-        <Environment preset="city" />
       </Canvas>
     </div>
   );
