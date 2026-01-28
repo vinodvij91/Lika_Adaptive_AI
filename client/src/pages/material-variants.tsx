@@ -54,7 +54,14 @@ export default function MaterialVariantsPage() {
   const pageSize = 50;
 
   const { data, isLoading, error } = useQuery<VariantsResponse>({
-    queryKey: ["/api/material-variants", { limit: pageSize, offset: page * pageSize }],
+    queryKey: ["/api/material-variants", page, pageSize],
+    queryFn: async () => {
+      const response = await fetch(`/api/material-variants?limit=${pageSize}&offset=${page * pageSize}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch variants');
+      return response.json();
+    }
   });
 
   const syncMutation = useMutation({
