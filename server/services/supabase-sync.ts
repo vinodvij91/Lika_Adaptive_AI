@@ -356,7 +356,7 @@ class SupabaseSyncService {
     return result;
   }
 
-  async syncVariants(tableName: string = 'variants_formulations_massive', source: 'supabase' | 'digitalocean' = 'digitalocean', batchSize: number = 1000, maxRecords: number = 50000): Promise<SyncResult> {
+  async syncVariants(tableName: string = 'variants_formulations_massive', source: 'supabase' | 'digitalocean' = 'digitalocean', batchSize: number = 5000, maxRecords: number = 400000): Promise<SyncResult> {
     const result: SyncResult = {
       success: true,
       table: tableName,
