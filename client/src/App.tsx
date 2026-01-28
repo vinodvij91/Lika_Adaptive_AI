@@ -57,6 +57,7 @@ import LikaAgentPage from "@/pages/lika-agent";
 import QuantumComputePage from "@/pages/quantum-compute";
 import PipelineLauncherPage from "@/pages/pipeline-launcher";
 import PipelineResultsDetailPage from "@/pages/pipeline-results-detail";
+import FEASimulationsPage from "@/pages/fea-simulations";
 import UseCasesPage from "@/pages/use-cases";
 import BioNemoPage from "@/pages/bionemo";
 import ExternalDataPage from "@/pages/external-data";
@@ -128,6 +129,7 @@ function AuthenticatedRoutes() {
         <Route path="/integrations" component={IntegrationsPage} />
         <Route path="/lika-agent" component={LikaAgentPage} />
         <Route path="/quantum" component={QuantumComputePage} />
+        <Route path="/fea-simulations" component={FEASimulationsPage} />
         <Route path="/pipeline" component={PipelineLauncherPage} />
         <Route path="/pipeline/results/:jobId" component={PipelineResultsDetailPage} />
         <Route path="/use-cases" component={UseCasesPage} />

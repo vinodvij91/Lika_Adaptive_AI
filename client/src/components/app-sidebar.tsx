@@ -77,6 +77,7 @@ const materialsWorkflowItems = [
   { title: "Property Prediction", url: "/property-prediction", icon: Calculator },
   { title: "Structure-Property", url: "/structure-property", icon: Beaker },
   { title: "Manufacturability", url: "/manufacturability-scoring", icon: Factory },
+  { title: "FEA Simulations", url: "/fea-simulations", icon: Activity },
   { title: "Simulation Runs", url: "/simulation-runs", icon: Workflow },
   { title: "Reports", url: "/reports", icon: BarChart3 },
 ];

@@ -5645,6 +5645,138 @@ Provide scientific analysis in JSON format.`
     }
   });
 
+  // ==================== FEA Simulation Endpoints ====================
+  
+  // In-memory storage for FEA jobs (in production, this would be in the database)
+  interface FEAJob {
+    id: string;
+    name: string;
+    simulationType: string;
+    status: "queued" | "running" | "completed" | "failed";
+    progress: number;
+    fileName: string;
+    meshQuality?: string;
+    material?: any;
+    parameters?: any;
+    createdAt: string;
+    completedAt?: string;
+    results?: {
+      maxStress?: number;
+      maxDisplacement?: number;
+      maxTemperature?: number;
+      convergence?: boolean;
+    };
+  }
+  
+  const feaJobsStore: FEAJob[] = [
+    // Seed with a few example completed jobs
+    {
+      id: "fea-001",
+      name: "Bracket Stress Analysis",
+      simulationType: "structural",
+      status: "completed",
+      progress: 100,
+      fileName: "bracket_v3.stl",
+      createdAt: "2026-01-28T10:00:00Z",
+      completedAt: "2026-01-28T10:15:00Z",
+      results: { maxStress: 125.4, maxDisplacement: 0.023, convergence: true }
+    },
+    {
+      id: "fea-002",
+      name: "Heat Sink Thermal",
+      simulationType: "thermal",
+      status: "completed",
+      progress: 100,
+      fileName: "heatsink.step",
+      createdAt: "2026-01-28T09:00:00Z",
+      completedAt: "2026-01-28T09:45:00Z",
+      results: { maxTemperature: 85.2, convergence: true }
+    },
+  ];
+  
+  app.post("/api/fea/jobs", requireAuth, async (req, res) => {
+    try {
+      const { name, simulationType, fileName, meshQuality, material, parameters } = req.body;
+      
+      const jobId = `fea-${Date.now()}`;
+      const job: FEAJob = {
+        id: jobId,
+        name,
+        simulationType,
+        fileName,
+        meshQuality,
+        material,
+        parameters,
+        status: "queued",
+        progress: 0,
+        createdAt: new Date().toISOString(),
+      };
+      
+      // Store the job in memory
+      feaJobsStore.unshift(job);
+      
+      // Simulate async job processing (in production, this would be handled by compute nodes)
+      setTimeout(() => {
+        const storedJob = feaJobsStore.find(j => j.id === jobId);
+        if (storedJob) {
+          storedJob.status = "running";
+          storedJob.progress = 25;
+        }
+      }, 2000);
+      
+      setTimeout(() => {
+        const storedJob = feaJobsStore.find(j => j.id === jobId);
+        if (storedJob) {
+          storedJob.progress = 75;
+        }
+      }, 4000);
+      
+      setTimeout(() => {
+        const storedJob = feaJobsStore.find(j => j.id === jobId);
+        if (storedJob) {
+          storedJob.status = "completed";
+          storedJob.progress = 100;
+          storedJob.completedAt = new Date().toISOString();
+          // Generate mock results based on simulation type
+          if (simulationType === "structural") {
+            storedJob.results = {
+              maxStress: Math.random() * 200 + 50,
+              maxDisplacement: Math.random() * 0.1,
+              convergence: true
+            };
+          } else if (simulationType === "thermal") {
+            storedJob.results = {
+              maxTemperature: Math.random() * 100 + 50,
+              convergence: true
+            };
+          } else if (simulationType === "cfd") {
+            storedJob.results = {
+              convergence: true
+            };
+          }
+        }
+      }, 8000);
+      
+      res.status(201).json(job);
+    } catch (error: any) {
+      console.error("Error creating FEA job:", error);
+      res.status(500).json({ error: "Failed to create FEA job" });
+    }
+  });
+
+  app.get("/api/fea/jobs", requireAuth, async (req, res) => {
+    try {
+      // Return stored FEA jobs sorted by creation date (newest first)
+      const sortedJobs = [...feaJobsStore].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      res.json(sortedJobs);
+    } catch (error: any) {
+      console.error("Error fetching FEA jobs:", error);
+      res.status(500).json({ error: "Failed to fetch FEA jobs" });
+    }
+  });
+
   // ==================== External Database Lookup Endpoints ====================
 
   app.get("/api/lookup/chembl/smiles", requireAuth, async (req, res) => {
