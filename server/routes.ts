@@ -3125,6 +3125,185 @@ Provide scientific analysis in JSON format.`
     }
   });
 
+  // Get full task classification matrix for vaccine discovery
+  app.get("/api/compute/vaccine/task-matrix", requireAuth, async (req, res) => {
+    try {
+      const taskClassification = {
+        genome_analysis: {
+          stage: 1,
+          stageName: "Target Identification & Antigen Selection",
+          tasks: {
+            sequence_extraction: { type: "CPU_ONLY", reason: "File I/O and parsing", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 1 },
+            gene_annotation: { type: "CPU_INTENSIVE", reason: "BLAST searches, parallel annotation", cpuCores: 16, memoryGb: 16, estimatedTimeMinutes: 30, tools: ["BLAST", "Prokka", "GeneMark"] },
+            protein_translation: { type: "CPU_ONLY", reason: "Simple translation, no parallelization benefit", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 1 }
+          }
+        },
+        protein_function_prediction: {
+          stage: 1,
+          stageName: "Target Identification & Antigen Selection",
+          tasks: {
+            esm2_embedding: { type: "GPU_INTENSIVE", reason: "Transformer model, massive matrix operations", gpuMemoryGb: 8, cpuCores: 4, memoryGb: 16, estimatedTimeMinutes: 5, speedup: "50x", tools: ["BioNeMo ESM-2", "ESM-2 650M/3B"] },
+            functional_annotation: { type: "CPU_INTENSIVE", reason: "Database lookups, GO term assignment", cpuCores: 8, memoryGb: 8, estimatedTimeMinutes: 10 }
+          }
+        },
+        structure_prediction: {
+          stage: 1,
+          stageName: "Target Identification & Antigen Selection",
+          tasks: {
+            esmfold_prediction: { type: "GPU_INTENSIVE", reason: "Deep learning inference, attention mechanisms", gpuMemoryGb: 16, cpuCores: 8, memoryGb: 32, estimatedTimeMinutes: 15, speedup: "100x", tools: ["ESMFold", "BioNeMo"] },
+            alphafold2_prediction: { type: "GPU_INTENSIVE", reason: "Multi-stage deep learning, MSA generation", gpuMemoryGb: 24, cpuCores: 16, memoryGb: 64, estimatedTimeMinutes: 45, speedup: "200x", tools: ["AlphaFold2", "OpenFold"] },
+            homology_modeling: { type: "CPU_INTENSIVE", reason: "Template search, alignment, energy minimization", cpuCores: 8, memoryGb: 16, estimatedTimeMinutes: 120, tools: ["MODELLER", "SWISS-MODEL"] },
+            structure_quality_assessment: { type: "CPU_ONLY", reason: "Geometry checks, Ramachandran analysis", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 2, tools: ["MolProbity", "ProCheck"] }
+          }
+        },
+        conservation_analysis: {
+          stage: 1,
+          stageName: "Target Identification & Antigen Selection",
+          tasks: {
+            multiple_sequence_alignment: { type: "CPU_INTENSIVE", reason: "Dynamic programming, parallelizable across sequences", cpuCores: 32, memoryGb: 64, estimatedTimeMinutes: 60, tools: ["MAFFT", "Clustal Omega", "MUSCLE"] },
+            phylogenetic_analysis: { type: "CPU_INTENSIVE", reason: "Tree building, bootstrap analysis", cpuCores: 16, memoryGb: 32, estimatedTimeMinutes: 120, tools: ["RAxML", "IQ-TREE", "FastTree"] },
+            conservation_scoring: { type: "CPU_ONLY", reason: "Simple statistical calculations", cpuCores: 4, memoryGb: 4, estimatedTimeMinutes: 5 }
+          }
+        },
+        b_cell_epitope_prediction: {
+          stage: 2,
+          stageName: "Epitope Prediction & Design",
+          tasks: {
+            linear_epitope_bepipred: { type: "CPU_ONLY", reason: "Rule-based prediction, no heavy computation", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 1, tools: ["BepiPred 3.0"] },
+            conformational_epitope_ellipro: { type: "CPU_INTENSIVE", reason: "Surface accessibility calculations", cpuCores: 8, memoryGb: 8, estimatedTimeMinutes: 10, tools: ["ElliPro", "DiscoTope"] },
+            dl_based_epitope_prediction: { type: "GPU_PREFERRED", reason: "Neural network inference, benefits from GPU but works on CPU", gpuMemoryGb: 4, cpuCores: 8, memoryGb: 16, speedup: "5x" }
+          }
+        },
+        t_cell_epitope_prediction: {
+          stage: 2,
+          stageName: "Epitope Prediction & Design",
+          tasks: {
+            netmhcpan_mhc1: { type: "CPU_INTENSIVE", reason: "Neural network per allele, highly parallelizable", cpuCores: 64, memoryGb: 32, estimatedTimeMinutes: 30, tools: ["NetMHCpan 4.1"] },
+            netmhcpan_mhc1_gpu: { type: "GPU_PREFERRED", reason: "Batch neural network inference", gpuMemoryGb: 8, cpuCores: 8, memoryGb: 16, estimatedTimeMinutes: 5, speedup: "6x" },
+            netmhciipan_mhc2: { type: "CPU_INTENSIVE", reason: "Similar to MHC-I, CPU-based neural networks", cpuCores: 64, memoryGb: 32, estimatedTimeMinutes: 45, tools: ["NetMHCIIpan 4.0"] },
+            population_coverage: { type: "CPU_ONLY", reason: "Statistical calculations", cpuCores: 4, memoryGb: 4, estimatedTimeMinutes: 5, tools: ["IEDB Population Coverage"] },
+            tap_transport_prediction: { type: "CPU_ONLY", reason: "Simple scoring function", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 1, tools: ["NetCTL", "TAPPred"] },
+            proteasomal_cleavage: { type: "CPU_ONLY", reason: "Matrix-based scoring", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 1, tools: ["NetChop", "ProteaSMM"] }
+          }
+        },
+        protein_sequence_design: {
+          stage: 3,
+          stageName: "Antigen Design & Optimization",
+          tasks: {
+            proteinmpnn_design: { type: "GPU_INTENSIVE", reason: "Message passing neural network, GPU-optimized", gpuMemoryGb: 8, cpuCores: 4, memoryGb: 16, estimatedTimeMinutes: 10, speedup: "50x", tools: ["ProteinMPNN", "BioNeMo"] },
+            rosetta_design: { type: "CPU_INTENSIVE", reason: "Monte Carlo sampling, parallelizable", cpuCores: 32, memoryGb: 64, estimatedTimeMinutes: 240, tools: ["Rosetta", "RoseTTAFold"] },
+            stability_prediction: { type: "GPU_PREFERRED", reason: "Machine learning models", gpuMemoryGb: 4, cpuCores: 4, memoryGb: 8 },
+            aggregation_prediction: { type: "CPU_ONLY", reason: "Sequence-based algorithms", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 5, tools: ["AGGRESCAN", "Zyggregator"] }
+          }
+        },
+        mrna_vaccine_design: {
+          stage: 3,
+          stageName: "Antigen Design & Optimization",
+          tasks: {
+            codon_optimization: { type: "CPU_ONLY", reason: "Lookup table operations, no parallelization benefit", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 1, tools: ["Python CodonW", "OPTIMIZER"] },
+            rna_secondary_structure: { type: "CPU_INTENSIVE", reason: "Dynamic programming, can parallelize multiple sequences", cpuCores: 16, memoryGb: 16, estimatedTimeMinutes: 15, tools: ["ViennaRNA", "RNAfold"] },
+            rna_secondary_structure_gpu: { type: "GPU_PREFERRED", reason: "Can be accelerated with GPU for large sequences", gpuMemoryGb: 4, cpuCores: 4, memoryGb: 8, speedup: "5x" },
+            utr_optimization: { type: "CPU_INTENSIVE", reason: "Sequence search and optimization", cpuCores: 8, memoryGb: 8, estimatedTimeMinutes: 30 },
+            gc_content_adjustment: { type: "CPU_ONLY", reason: "Simple sequence manipulation", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 2 }
+          }
+        },
+        immune_simulation: {
+          stage: 4,
+          stageName: "Immunogenicity Prediction & Validation",
+          tasks: {
+            c_immsim_simulation: { type: "CPU_INTENSIVE", reason: "Agent-based modeling, parallelizable parameter sweeps", cpuCores: 64, memoryGb: 128, estimatedTimeMinutes: 180, tools: ["C-ImmSim"] },
+            immunogrid_simulation: { type: "CPU_INTENSIVE", reason: "Large-scale cellular automata", cpuCores: 32, memoryGb: 64, estimatedTimeMinutes: 240 }
+          }
+        },
+        antibody_prediction: {
+          stage: 4,
+          stageName: "Immunogenicity Prediction & Validation",
+          tasks: {
+            antibody_structure_prediction: { type: "GPU_INTENSIVE", reason: "AlphaFold-based antibody modeling", gpuMemoryGb: 16, cpuCores: 8, memoryGb: 32, estimatedTimeMinutes: 30, tools: ["AlphaFold-Multimer", "ABodyBuilder2"] },
+            antibody_antigen_docking: { type: "HYBRID", reason: "Benefits from GPU for scoring, CPU for conformational search", gpuMemoryGb: 8, cpuCores: 32, memoryGb: 64, estimatedTimeMinutes: 60, tools: ["HADDOCK", "ClusPro"] },
+            binding_affinity_prediction: { type: "GPU_PREFERRED", reason: "Machine learning models", gpuMemoryGb: 4, cpuCores: 4, memoryGb: 8, speedup: "4x" }
+          }
+        },
+        safety_assessment: {
+          stage: 4,
+          stageName: "Immunogenicity Prediction & Validation",
+          tasks: {
+            allergenicity_prediction: { type: "CPU_ONLY", reason: "Sequence comparison and simple ML", cpuCores: 4, memoryGb: 4, estimatedTimeMinutes: 5, tools: ["AllerTop", "AlgPred"] },
+            autoimmunity_screen: { type: "CPU_INTENSIVE", reason: "BLAST against human proteome", cpuCores: 16, memoryGb: 32, estimatedTimeMinutes: 20, tools: ["BLAST", "PSI-BLAST"] },
+            toxicity_prediction: { type: "GPU_PREFERRED", reason: "Deep learning models", gpuMemoryGb: 2, cpuCores: 2, memoryGb: 4, speedup: "5x", tools: ["ToxIBTL", "DeepTox"] }
+          }
+        },
+        molecular_dynamics: {
+          stage: 5,
+          stageName: "Advanced Analysis",
+          tasks: {
+            md_simulation_gpu: { type: "GPU_INTENSIVE", reason: "Force calculations, highly parallel", gpuMemoryGb: 16, cpuCores: 8, memoryGb: 32, speedup: "100x", tools: ["OpenMM", "GROMACS", "AMBER"] },
+            md_simulation_cpu: { type: "CPU_INTENSIVE", reason: "CPU-only MD, very slow", cpuCores: 64, memoryGb: 128, note: "Not recommended, 100x slower than GPU" },
+            trajectory_analysis: { type: "CPU_INTENSIVE", reason: "RMSD, RMSF calculations, parallelizable", cpuCores: 16, memoryGb: 32, estimatedTimeMinutes: 30, tools: ["MDAnalysis", "CPPTRAJ"] },
+            free_energy_calculations: { type: "HYBRID", reason: "MD simulations (GPU) + statistical analysis (CPU)", gpuMemoryGb: 16, cpuCores: 32, memoryGb: 64, estimatedTimeMinutes: 480, tools: ["GROMACS", "FEP+"] }
+          }
+        },
+        visualization: {
+          stage: 5,
+          stageName: "Advanced Analysis",
+          tasks: {
+            structure_rendering: { type: "CPU_ONLY", reason: "PyMOL, ChimeraX rendering", cpuCores: 4, memoryGb: 8, estimatedTimeMinutes: 5, tools: ["PyMOL", "ChimeraX", "VMD"] },
+            surface_analysis: { type: "CPU_INTENSIVE", reason: "SASA calculations, electrostatics", cpuCores: 8, memoryGb: 16, estimatedTimeMinutes: 10, tools: ["APBS", "PDB2PQR"] },
+            interactive_visualization: { type: "CPU_ONLY", reason: "Web-based viewers", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 1, tools: ["Mol*", "NGL Viewer"] }
+          }
+        }
+      };
+
+      const hardwareRequirements = {
+        minimum: { description: "Can run pipeline, but slow for GPU-intensive tasks", cpuCores: 16, memoryGb: 64, gpu: "Optional", estimatedHours: 48 },
+        recommended: { description: "Balanced performance for most projects", cpuCores: 32, memoryGb: 128, gpu: "NVIDIA RTX 4090 or A4000 (24GB)", estimatedHours: 8 },
+        highPerformance: { description: "Fast turnaround for multiple projects", cpuCores: 64, memoryGb: 512, gpu: "4x NVIDIA A100 80GB", estimatedHours: 3 },
+        enterprise: { description: "Maximum throughput, concurrent projects", cpuCores: 128, memoryGb: 1024, gpu: "8x NVIDIA H100 80GB", estimatedHours: 1.5 }
+      };
+
+      const costAnalysis = {
+        structurePrediction1000Proteins: { gpuTimeHours: 250, cpuTimeHours: 25000, gpuCostUsd: 1250, cpuCostUsd: 5000, gpuSavingsPct: 75 },
+        mdSimulation100ns: { gpuTimeHours: 10, cpuTimeHours: 1000, gpuCostUsd: 50, cpuCostUsd: 2000, gpuSavingsPct: 97.5 },
+        epitopePrediction1000Sequences: { gpuTimeHours: 5, cpuTimeHours: 30, gpuCostUsd: 25, cpuCostUsd: 60, gpuSavingsPct: 58 }
+      };
+
+      // Build summary statistics
+      let totalTasks = 0;
+      const typeCounts: Record<string, number> = { GPU_INTENSIVE: 0, GPU_PREFERRED: 0, CPU_INTENSIVE: 0, CPU_ONLY: 0, HYBRID: 0 };
+      
+      for (const category of Object.values(taskClassification)) {
+        for (const task of Object.values((category as any).tasks)) {
+          totalTasks++;
+          const taskType = (task as any).type;
+          if (typeCounts[taskType] !== undefined) {
+            typeCounts[taskType]++;
+          }
+        }
+      }
+
+      res.json({
+        taskClassification,
+        hardwareRequirements,
+        costAnalysis,
+        summary: {
+          totalCategories: Object.keys(taskClassification).length,
+          totalTasks,
+          typeCounts,
+          stages: [
+            { stage: 1, name: "Target Identification & Antigen Selection" },
+            { stage: 2, name: "Epitope Prediction & Design" },
+            { stage: 3, name: "Antigen Design & Optimization" },
+            { stage: 4, name: "Immunogenicity Prediction & Validation" },
+            { stage: 5, name: "Advanced Analysis" }
+          ]
+        }
+      });
+    } catch (error: any) {
+      console.error("Task matrix error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============================================
   // USER SSH KEYS ENDPOINTS
   // ============================================

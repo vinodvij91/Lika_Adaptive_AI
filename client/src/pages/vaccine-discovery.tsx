@@ -26,8 +26,14 @@ import {
   Cpu,
   Zap,
   FileCode,
-  Beaker
+  Beaker,
+  Grid3X3,
+  Clock,
+  DollarSign,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface HardwareReport {
   totalNodes: number;
@@ -48,6 +54,36 @@ interface VaccineResult {
   result?: any;
   error?: string;
   nodeUsed?: string;
+}
+
+interface TaskInfo {
+  type: string;
+  reason: string;
+  cpuCores?: number;
+  memoryGb?: number;
+  gpuMemoryGb?: number;
+  estimatedTimeMinutes?: number;
+  speedup?: string;
+  tools?: string[];
+  note?: string;
+}
+
+interface CategoryInfo {
+  stage: number;
+  stageName: string;
+  tasks: Record<string, TaskInfo>;
+}
+
+interface TaskMatrixData {
+  taskClassification: Record<string, CategoryInfo>;
+  hardwareRequirements: Record<string, any>;
+  costAnalysis: Record<string, any>;
+  summary: {
+    totalCategories: number;
+    totalTasks: number;
+    typeCounts: Record<string, number>;
+    stages: Array<{ stage: number; name: string }>;
+  };
 }
 
 export default function VaccineDiscoveryPage() {
@@ -79,10 +115,36 @@ export default function VaccineDiscoveryPage() {
   const [epitopeResult, setEpitopeResult] = useState<VaccineResult | null>(null);
   const [codonResult, setCodonResult] = useState<VaccineResult | null>(null);
   const [mrnaResult, setMrnaResult] = useState<VaccineResult | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const { data: hardwareReport, isLoading: hardwareLoading } = useQuery<HardwareReport>({
     queryKey: ["/api/compute/vaccine/hardware"],
   });
+
+  const { data: taskMatrix, isLoading: taskMatrixLoading } = useQuery<TaskMatrixData>({
+    queryKey: ["/api/compute/vaccine/task-matrix"],
+  });
+
+  const toggleCategory = (category: string) => {
+    const newSet = new Set(expandedCategories);
+    if (newSet.has(category)) {
+      newSet.delete(category);
+    } else {
+      newSet.add(category);
+    }
+    setExpandedCategories(newSet);
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case "GPU_INTENSIVE": return "bg-purple-500/10 text-purple-600 border-purple-500/30";
+      case "GPU_PREFERRED": return "bg-blue-500/10 text-blue-600 border-blue-500/30";
+      case "CPU_INTENSIVE": return "bg-amber-500/10 text-amber-600 border-amber-500/30";
+      case "CPU_ONLY": return "bg-slate-500/10 text-slate-600 border-slate-500/30";
+      case "HYBRID": return "bg-green-500/10 text-green-600 border-green-500/30";
+      default: return "bg-muted";
+    }
+  };
 
   const pipelineMutation = useMutation({
     mutationFn: async () => {
@@ -214,10 +276,10 @@ export default function VaccineDiscoveryPage() {
 
       <div className="container mx-auto px-6 py-6 flex-1">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="pipeline" data-testid="tab-pipeline">
               <Activity className="h-4 w-4 mr-2" />
-              Full Pipeline
+              Pipeline
             </TabsTrigger>
             <TabsTrigger value="structure" data-testid="tab-structure">
               <Atom className="h-4 w-4 mr-2" />
@@ -229,11 +291,15 @@ export default function VaccineDiscoveryPage() {
             </TabsTrigger>
             <TabsTrigger value="codon" data-testid="tab-codon">
               <FileCode className="h-4 w-4 mr-2" />
-              Codon Opt
+              Codon
             </TabsTrigger>
             <TabsTrigger value="mrna" data-testid="tab-mrna">
               <Dna className="h-4 w-4 mr-2" />
-              mRNA Design
+              mRNA
+            </TabsTrigger>
+            <TabsTrigger value="task-matrix" data-testid="tab-task-matrix">
+              <Grid3X3 className="h-4 w-4 mr-2" />
+              Task Matrix
             </TabsTrigger>
             <TabsTrigger value="hardware" data-testid="tab-hardware">
               <Server className="h-4 w-4 mr-2" />
@@ -659,6 +725,230 @@ export default function VaccineDiscoveryPage() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="task-matrix" className="space-y-6">
+            {taskMatrixLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : taskMatrix ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <Card className="col-span-1">
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold">{taskMatrix.summary.totalTasks}</div>
+                        <div className="text-sm text-muted-foreground">Total Tasks</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="col-span-1">
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-purple-500">{taskMatrix.summary.typeCounts.GPU_INTENSIVE}</div>
+                        <div className="text-sm text-muted-foreground">GPU-Intensive</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="col-span-1">
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-blue-500">{taskMatrix.summary.typeCounts.GPU_PREFERRED}</div>
+                        <div className="text-sm text-muted-foreground">GPU-Preferred</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="col-span-1">
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-amber-500">{taskMatrix.summary.typeCounts.CPU_INTENSIVE}</div>
+                        <div className="text-sm text-muted-foreground">CPU-Intensive</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="col-span-1">
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-slate-500">{taskMatrix.summary.typeCounts.CPU_ONLY}</div>
+                        <div className="text-sm text-muted-foreground">CPU-Only</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Grid3X3 className="h-5 w-5 text-purple-500" />
+                      Task Classification Matrix
+                    </CardTitle>
+                    <CardDescription>
+                      Hardware routing map showing optimal execution environment for each task
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {Object.entries(taskMatrix.taskClassification).map(([categoryKey, category]) => (
+                        <Collapsible
+                          key={categoryKey}
+                          open={expandedCategories.has(categoryKey)}
+                          onOpenChange={() => toggleCategory(categoryKey)}
+                        >
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted rounded-lg hover-elevate" data-testid={`category-${categoryKey}`}>
+                            <div className="flex items-center gap-3">
+                              {expandedCategories.has(categoryKey) ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                              <div className="text-left">
+                                <div className="font-medium">{categoryKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                                <div className="text-xs text-muted-foreground">Stage {category.stage}: {category.stageName}</div>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {Object.keys(category.tasks).length} tasks
+                            </Badge>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <Table className="mt-2">
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-[200px]">Task</TableHead>
+                                  <TableHead className="w-[120px]">Type</TableHead>
+                                  <TableHead>Reason</TableHead>
+                                  <TableHead className="w-[100px]">Resources</TableHead>
+                                  <TableHead className="w-[80px]">Speedup</TableHead>
+                                  <TableHead className="w-[150px]">Tools</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {Object.entries(category.tasks).map(([taskKey, task]) => (
+                                  <TableRow key={taskKey}>
+                                    <TableCell className="font-medium text-sm">
+                                      {taskKey.replace(/_/g, ' ')}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant="outline" className={`text-xs ${getTypeColor(task.type)}`}>
+                                        {task.type.replace(/_/g, ' ')}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
+                                      {task.reason}
+                                    </TableCell>
+                                    <TableCell className="text-xs">
+                                      {task.cpuCores && <div>{task.cpuCores} CPU</div>}
+                                      {task.memoryGb && <div>{task.memoryGb}GB RAM</div>}
+                                      {task.gpuMemoryGb && <div>{task.gpuMemoryGb}GB GPU</div>}
+                                    </TableCell>
+                                    <TableCell>
+                                      {task.speedup && (
+                                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30 text-xs">
+                                          {task.speedup}
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">
+                                      {task.tools?.join(', ')}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Server className="h-5 w-5 text-blue-500" />
+                        Hardware Requirements
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {Object.entries(taskMatrix.hardwareRequirements).map(([key, config]: [string, any]) => (
+                          <div key={key} className="p-4 bg-muted rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                              <Badge variant="outline" className="text-xs">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {config.estimatedHours}h
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">{config.description}</p>
+                            <div className="grid grid-cols-3 gap-2 text-xs">
+                              <div className="text-center p-2 bg-background rounded">
+                                <div className="font-medium">{config.cpuCores}</div>
+                                <div className="text-muted-foreground">CPU Cores</div>
+                              </div>
+                              <div className="text-center p-2 bg-background rounded">
+                                <div className="font-medium">{config.memoryGb}GB</div>
+                                <div className="text-muted-foreground">Memory</div>
+                              </div>
+                              <div className="text-center p-2 bg-background rounded">
+                                <div className="font-medium text-xs">{typeof config.gpu === 'string' ? config.gpu : config.gpu}</div>
+                                <div className="text-muted-foreground">GPU</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <DollarSign className="h-5 w-5 text-green-500" />
+                        Cost Analysis
+                      </CardTitle>
+                      <CardDescription>
+                        GPU vs CPU cost comparison for common workloads
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Workload</TableHead>
+                            <TableHead className="text-right">GPU Cost</TableHead>
+                            <TableHead className="text-right">CPU Cost</TableHead>
+                            <TableHead className="text-right">Savings</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Object.entries(taskMatrix.costAnalysis).map(([key, data]: [string, any]) => (
+                            <TableRow key={key}>
+                              <TableCell className="font-medium text-sm">
+                                {key.replace(/([A-Z])/g, ' $1').replace(/(\d+)/g, ' $1').trim()}
+                              </TableCell>
+                              <TableCell className="text-right text-green-600">${data.gpuCostUsd}</TableCell>
+                              <TableCell className="text-right text-red-600">${data.cpuCostUsd}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                                  {data.gpuSavingsPct}%
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-12">
+                No task matrix data available
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="hardware" className="space-y-6">
