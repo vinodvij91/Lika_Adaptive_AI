@@ -603,44 +603,92 @@ function InsightBadge({ icon, label, value, variant = "default" }: InsightBadgeP
   );
 }
 
-function DensityHeatmap({ data, onCellClick }: { data: any[]; onCellClick?: (cellIndex: number) => void }) {
+function DensityHeatmap({ 
+  data, 
+  onCellClick,
+  xLabel = "X-Axis",
+  yLabel = "Y-Axis"
+}: { 
+  data: any[]; 
+  onCellClick?: (cellIndex: number) => void;
+  xLabel?: string;
+  yLabel?: string;
+}) {
   const maxCount = Math.max(...data.map(d => d.count));
+  const gridSize = 8; // 8x8 grid for better visibility
+  const xLabels = ["Low", "", "", "Med", "", "", "", "High"];
+  const yLabels = ["High", "", "", "Med", "", "", "", "Low"];
   
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-15 gap-0.5">
-        {data.map((cell, i) => {
-          const intensity = cell.count / maxCount;
-          const hue = 220 - intensity * 160;
-          return (
-            <div
-              key={i}
-              className="aspect-square rounded-sm cursor-pointer hover-elevate"
-              style={{
-                backgroundColor: `hsl(${hue}, 70%, ${40 + intensity * 30}%)`,
-                opacity: 0.3 + intensity * 0.7,
-              }}
-              title={`Count: ${formatNumber(cell.count)}\nAvg Score: ${cell.avgScore.toFixed(2)}\nClick to view materials`}
-              onClick={() => onCellClick?.(i)}
-              data-testid={`heatmap-cell-${i}`}
-            />
-          );
-        })}
-      </div>
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Low density</span>
-        <div className="flex items-center gap-1">
-          {[0.2, 0.4, 0.6, 0.8, 1].map((v, i) => (
-            <div
-              key={i}
-              className="w-4 h-3 rounded-sm"
-              style={{
-                backgroundColor: `hsl(${220 - v * 160}, 70%, ${40 + v * 30}%)`,
-              }}
-            />
+    <div className="space-y-3">
+      <div className="flex items-stretch gap-2">
+        {/* Y-axis label */}
+        <div className="flex items-center justify-center w-6">
+          <span className="text-xs text-muted-foreground font-medium -rotate-90 whitespace-nowrap">
+            {yLabel}
+          </span>
+        </div>
+        
+        {/* Y-axis ticks */}
+        <div className="flex flex-col justify-between text-xs text-muted-foreground py-1" style={{ width: '32px' }}>
+          {yLabels.map((label, i) => (
+            <span key={i} className="text-right pr-1 h-6 flex items-center justify-end">{label}</span>
           ))}
         </div>
-        <span>High density</span>
+        
+        {/* Heatmap grid */}
+        <div className="flex-1 max-w-md">
+          <div className="grid grid-cols-8 gap-1">
+            {data.slice(0, gridSize * gridSize).map((cell, i) => {
+              const intensity = cell.count / maxCount;
+              const hue = 220 - intensity * 160;
+              return (
+                <div
+                  key={i}
+                  className="aspect-square rounded cursor-pointer hover-elevate"
+                  style={{
+                    backgroundColor: `hsl(${hue}, 70%, ${40 + intensity * 30}%)`,
+                    opacity: 0.3 + intensity * 0.7,
+                    minHeight: '24px',
+                  }}
+                  title={`Count: ${formatNumber(cell.count)}\nAvg Score: ${cell.avgScore.toFixed(2)}\nClick to view materials`}
+                  onClick={() => onCellClick?.(i)}
+                  data-testid={`heatmap-cell-${i}`}
+                />
+              );
+            })}
+          </div>
+          
+          {/* X-axis ticks */}
+          <div className="flex justify-between text-xs text-muted-foreground mt-1 px-0.5">
+            {xLabels.map((label, i) => (
+              <span key={i} className="w-6 text-center">{label}</span>
+            ))}
+          </div>
+          
+          {/* X-axis label */}
+          <div className="text-center mt-1">
+            <span className="text-xs text-muted-foreground font-medium">{xLabel}</span>
+          </div>
+        </div>
+        
+        {/* Color legend */}
+        <div className="flex flex-col items-center justify-center gap-1 ml-4">
+          <span className="text-xs text-muted-foreground">High</span>
+          <div className="flex flex-col gap-0.5">
+            {[1, 0.8, 0.6, 0.4, 0.2].map((v, i) => (
+              <div
+                key={i}
+                className="w-4 h-4 rounded-sm"
+                style={{
+                  backgroundColor: `hsl(${220 - v * 160}, 70%, ${40 + v * 30}%)`,
+                }}
+              />
+            ))}
+          </div>
+          <span className="text-xs text-muted-foreground">Low</span>
+          <span className="text-xs text-muted-foreground mt-1">Density</span>
+        </div>
       </div>
     </div>
   );
@@ -968,6 +1016,8 @@ export default function StructurePropertyPage() {
                 <CardContent>
                   <DensityHeatmap 
                     data={binnedScatterData} 
+                    xLabel={propertyX.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    yLabel={propertyY.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                     onCellClick={(cellIndex) => {
                       const families = GROUP_CONFIGS.family.labels;
                       const family = families[cellIndex % families.length];
