@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,14 +9,16 @@ import {
   Plus, 
   Search, 
   GitBranch, 
-  Zap, 
   Sparkles, 
+  Zap,
   RefreshCw,
   Database,
-  Upload,
   ChevronLeft,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Columns,
+  Eye,
+  ChevronDown
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,17 +30,35 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface MaterialVariant {
   id: string;
   materialId: string;
-  variantName: string;
-  variantType: string;
-  parameters: Record<string, any>;
+  variantName?: string;
+  variantType?: string;
+  variantParams?: Record<string, any>;
+  parameters?: Record<string, any>;
   predictedProperties: Record<string, any> | null;
-  status: string;
+  status?: string;
+  generatedBy?: string;
+  simulationState?: string | null;
+  manufacturabilityScore?: number | null;
   createdAt: string;
 }
 
@@ -47,11 +67,90 @@ interface VariantsResponse {
   total: number;
 }
 
+const ALL_COLUMNS = [
+  { key: "external_variant_id", label: "Variant ID", group: "Core" },
+  { key: "variant_type", label: "Variant Type", group: "Core" },
+  { key: "base_material", label: "Base Material", group: "Core" },
+  { key: "description", label: "Description", group: "Core" },
+  { key: "source", label: "Source", group: "Core" },
+  { key: "substrate", label: "Substrate", group: "Deposition" },
+  { key: "deposition_method", label: "Deposition Method", group: "Deposition" },
+  { key: "film_material", label: "Film Material", group: "Deposition" },
+  { key: "target_thickness_nm", label: "Thickness (nm)", group: "Deposition" },
+  { key: "ald_cycles", label: "ALD Cycles", group: "Deposition" },
+  { key: "power_w", label: "Power (W)", group: "Deposition" },
+  { key: "pressure_mtorr", label: "Pressure (mTorr)", group: "Deposition" },
+  { key: "substrate_temperature_c", label: "Substrate Temp (°C)", group: "Deposition" },
+  { key: "dopant", label: "Dopant", group: "Chemistry" },
+  { key: "doping_method", label: "Doping Method", group: "Chemistry" },
+  { key: "concentration_wt_percent", label: "Concentration (wt%)", group: "Chemistry" },
+  { key: "concentration_cm3", label: "Concentration (cm⁻³)", group: "Chemistry" },
+  { key: "solvent", label: "Solvent", group: "Chemistry" },
+  { key: "initiator", label: "Initiator", group: "Chemistry" },
+  { key: "polymer", label: "Polymer", group: "Polymer" },
+  { key: "target_mn", label: "Target Mn", group: "Polymer" },
+  { key: "target_pdi", label: "Target PDI", group: "Polymer" },
+  { key: "polymerization_temperature_c", label: "Polymerization Temp (°C)", group: "Polymer" },
+  { key: "polymerization_time_hours", label: "Polymerization Time (h)", group: "Polymer" },
+  { key: "binder", label: "Binder", group: "Composite" },
+  { key: "binder_wt_percent", label: "Binder (wt%)", group: "Composite" },
+  { key: "matrix", label: "Matrix", group: "Composite" },
+  { key: "reinforcement", label: "Reinforcement", group: "Composite" },
+  { key: "fiber_volume_percent", label: "Fiber Volume (%)", group: "Composite" },
+  { key: "fiber_architecture", label: "Fiber Architecture", group: "Composite" },
+  { key: "layup_sequence", label: "Layup Sequence", group: "Composite" },
+  { key: "active_material", label: "Active Material", group: "Battery" },
+  { key: "active_material_wt_percent", label: "Active Material (wt%)", group: "Battery" },
+  { key: "conductive_additive", label: "Conductive Additive", group: "Battery" },
+  { key: "conductive_additive_wt_percent", label: "Conductive Additive (wt%)", group: "Battery" },
+  { key: "synthesis_method", label: "Synthesis Method", group: "Processing" },
+  { key: "processing_method", label: "Processing Method", group: "Processing" },
+  { key: "treatment_type", label: "Treatment Type", group: "Processing" },
+  { key: "treatment_temperature_c", label: "Treatment Temp (°C)", group: "Processing" },
+  { key: "atmosphere", label: "Atmosphere", group: "Processing" },
+  { key: "annealing_temperature_c", label: "Annealing Temp (°C)", group: "Thermal" },
+  { key: "annealing_time_hours", label: "Annealing Time (h)", group: "Thermal" },
+  { key: "annealing_time_min", label: "Annealing Time (min)", group: "Thermal" },
+  { key: "sintering_temperature_c", label: "Sintering Temp (°C)", group: "Thermal" },
+  { key: "sintering_time_hours", label: "Sintering Time (h)", group: "Thermal" },
+  { key: "heating_rate_c_min", label: "Heating Rate (°C/min)", group: "Thermal" },
+  { key: "cooling_rate_c_min", label: "Cooling Rate (°C/min)", group: "Thermal" },
+  { key: "cooling_method", label: "Cooling Method", group: "Thermal" },
+  { key: "quench_medium", label: "Quench Medium", group: "Thermal" },
+  { key: "curing_temperature_c", label: "Curing Temp (°C)", group: "Curing" },
+  { key: "curing_time_hours", label: "Curing Time (h)", group: "Curing" },
+  { key: "curing_pressure_mpa", label: "Curing Pressure (MPa)", group: "Curing" },
+  { key: "drying_temperature_c", label: "Drying Temp (°C)", group: "Curing" },
+  { key: "drying_time_hours", label: "Drying Time (h)", group: "Curing" },
+  { key: "print_speed_mm_s", label: "Print Speed (mm/s)", group: "Additive" },
+  { key: "nozzle_temperature_c", label: "Nozzle Temp (°C)", group: "Additive" },
+  { key: "layer_thickness_um", label: "Layer Thickness (μm)", group: "Additive" },
+  { key: "infill_density_percent", label: "Infill Density (%)", group: "Additive" },
+  { key: "build_orientation", label: "Build Orientation", group: "Additive" },
+  { key: "laser_power_w", label: "Laser Power (W)", group: "Additive" },
+  { key: "scan_speed_mm_s", label: "Scan Speed (mm/s)", group: "Additive" },
+  { key: "coating_thickness_um", label: "Coating Thickness (μm)", group: "Surface" },
+  { key: "implantation_energy_kev", label: "Implantation Energy (keV)", group: "Surface" },
+  { key: "reduction_percent", label: "Reduction (%)", group: "Metallurgy" },
+  { key: "grain_size_target_um", label: "Grain Size Target (μm)", group: "Metallurgy" },
+  { key: "calendering_pressure_mpa", label: "Calendering Pressure (MPa)", group: "Metallurgy" },
+  { key: "holding_time_hours", label: "Holding Time (h)", group: "Other" },
+  { key: "support_type", label: "Support Type", group: "Other" },
+  { key: "temperature_regime", label: "Temperature Regime", group: "Other" },
+];
+
+const DEFAULT_VISIBLE_COLUMNS = [
+  "external_variant_id", "variant_type", "base_material", "description",
+  "deposition_method", "substrate", "target_thickness_nm", "substrate_temperature_c"
+];
+
 export default function MaterialVariantsPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const pageSize = 50;
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(DEFAULT_VISIBLE_COLUMNS);
+  const [selectedVariant, setSelectedVariant] = useState<MaterialVariant | null>(null);
 
   const { data, isLoading, error } = useQuery<VariantsResponse>({
     queryKey: ["/api/material-variants", page, pageSize],
@@ -63,6 +162,41 @@ export default function MaterialVariantsPage() {
       return response.json();
     }
   });
+
+  const columnGroups = useMemo(() => {
+    const groups: Record<string, typeof ALL_COLUMNS> = {};
+    ALL_COLUMNS.forEach(col => {
+      if (!groups[col.group]) groups[col.group] = [];
+      groups[col.group].push(col);
+    });
+    return groups;
+  }, []);
+
+  const toggleColumn = (key: string) => {
+    setVisibleColumns(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const toggleGroup = (group: string) => {
+    const groupKeys = columnGroups[group].map(c => c.key);
+    const allVisible = groupKeys.every(k => visibleColumns.includes(k));
+    if (allVisible) {
+      setVisibleColumns(prev => prev.filter(k => !groupKeys.includes(k)));
+    } else {
+      setVisibleColumns(prev => {
+        const combined = [...prev, ...groupKeys];
+        return combined.filter((key, index) => combined.indexOf(key) === index);
+      });
+    }
+  };
+
+  const getVariantValue = (variant: MaterialVariant, key: string): string => {
+    const params = variant.variantParams || variant.parameters || {};
+    const value = params[key];
+    if (value === null || value === undefined || value === '') return '-';
+    return String(value);
+  };
 
   const syncMutation = useMutation({
     mutationFn: async () => {
@@ -95,9 +229,13 @@ export default function MaterialVariantsPage() {
   const filteredVariants = searchQuery 
     ? variants.filter(v => {
         const query = searchQuery.toLowerCase();
-        const name = v.variantName || v.parameters?.description || v.parameters?.variant_type || '';
-        const type = v.variantType || v.parameters?.variant_type || '';
-        return name.toLowerCase().includes(query) || type.toLowerCase().includes(query);
+        const params = v.variantParams || v.parameters || {};
+        const searchableFields = [
+          params.description, params.variant_type, params.base_material,
+          params.external_variant_id, params.substrate, params.deposition_method,
+          v.variantName, v.variantType
+        ].filter(Boolean);
+        return searchableFields.some(field => String(field).toLowerCase().includes(query));
       })
     : variants;
 
@@ -268,52 +406,105 @@ export default function MaterialVariantsPage() {
             </Card>
           ) : (
             <Card className="shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
-                <CardTitle className="text-lg">Material Variants</CardTitle>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Showing {page * pageSize + 1}-{Math.min((page + 1) * pageSize, total)} of {total.toLocaleString()}</span>
+              <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4 flex-wrap">
+                <div className="flex items-center gap-4">
+                  <CardTitle className="text-lg">Material Variants</CardTitle>
+                  <Badge variant="outline" className="text-xs">
+                    {visibleColumns.length} of {ALL_COLUMNS.length} columns
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2" data-testid="button-column-picker">
+                        <Columns className="h-4 w-4" />
+                        Columns
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-72 max-h-[400px] overflow-y-auto">
+                      <DropdownMenuLabel className="flex items-center justify-between">
+                        <span>Column Visibility</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 text-xs"
+                          onClick={() => setVisibleColumns(DEFAULT_VISIBLE_COLUMNS)}
+                        >
+                          Reset
+                        </Button>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {Object.entries(columnGroups).map(([group, cols]) => (
+                        <div key={group}>
+                          <DropdownMenuCheckboxItem
+                            checked={cols.every(c => visibleColumns.includes(c.key))}
+                            onCheckedChange={() => toggleGroup(group)}
+                            className="font-semibold"
+                          >
+                            {group} ({cols.length})
+                          </DropdownMenuCheckboxItem>
+                          {cols.map(col => (
+                            <DropdownMenuCheckboxItem
+                              key={col.key}
+                              checked={visibleColumns.includes(col.key)}
+                              onCheckedChange={() => toggleColumn(col.key)}
+                              className="pl-6"
+                            >
+                              {col.label}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                        </div>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <span className="text-sm text-muted-foreground">
+                    Showing {page * pageSize + 1}-{Math.min((page + 1) * pageSize, total)} of {total.toLocaleString()}
+                  </span>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <ScrollArea className="h-[500px]">
-                    <Table className="min-w-[800px]">
+                    <Table style={{ minWidth: `${visibleColumns.length * 150 + 100}px` }}>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="min-w-[200px]">Variant Name</TableHead>
-                          <TableHead className="min-w-[120px]">Type</TableHead>
-                          <TableHead className="min-w-[250px]">Parameters</TableHead>
-                          <TableHead className="min-w-[100px]">Status</TableHead>
-                          <TableHead className="min-w-[100px]">Created</TableHead>
-                        <TableHead className="w-[100px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredVariants.map((variant) => (
-                        <TableRow key={variant.id} data-testid={`row-variant-${variant.id}`}>
-                          <TableCell className="font-medium">{variant.variantName}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{variant.variantType}</Badge>
-                          </TableCell>
-                          <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                            {variant.parameters ? Object.entries(variant.parameters).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(", ") : "-"}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(variant.status)}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {new Date(variant.createdAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              data-testid={`button-view-variant-${variant.id}`}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                          {ALL_COLUMNS.filter(c => visibleColumns.includes(c.key)).map(col => (
+                            <TableHead key={col.key} className="min-w-[130px] whitespace-nowrap">
+                              {col.label}
+                            </TableHead>
+                          ))}
+                          <TableHead className="w-[80px] sticky right-0 bg-background">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredVariants.map((variant) => (
+                          <TableRow key={variant.id} data-testid={`row-variant-${variant.id}`}>
+                            {ALL_COLUMNS.filter(c => visibleColumns.includes(c.key)).map(col => (
+                              <TableCell key={col.key} className="whitespace-nowrap max-w-[200px] truncate">
+                                {col.key === "variant_type" ? (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {getVariantValue(variant, col.key)}
+                                  </Badge>
+                                ) : (
+                                  getVariantValue(variant, col.key)
+                                )}
+                              </TableCell>
+                            ))}
+                            <TableCell className="sticky right-0 bg-background">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => setSelectedVariant(variant)}
+                                data-testid={`button-view-variant-${variant.id}`}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
                     </Table>
                   </ScrollArea>
                 </div>
@@ -349,6 +540,59 @@ export default function MaterialVariantsPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Variant Detail Dialog */}
+          <Dialog open={!!selectedVariant} onOpenChange={(open) => !open && setSelectedVariant(null)}>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3">
+                  <Layers className="h-5 w-5 text-violet-500" />
+                  Variant Details
+                </DialogTitle>
+              </DialogHeader>
+              {selectedVariant && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="p-3 rounded-md bg-muted/50">
+                      <p className="text-xs text-muted-foreground mb-1">Variant ID</p>
+                      <p className="font-mono text-sm">{getVariantValue(selectedVariant, "external_variant_id")}</p>
+                    </div>
+                    <div className="p-3 rounded-md bg-muted/50">
+                      <p className="text-xs text-muted-foreground mb-1">Type</p>
+                      <Badge variant="secondary">{getVariantValue(selectedVariant, "variant_type")}</Badge>
+                    </div>
+                    <div className="p-3 rounded-md bg-muted/50">
+                      <p className="text-xs text-muted-foreground mb-1">Base Material</p>
+                      <p className="font-medium">{getVariantValue(selectedVariant, "base_material")}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3 text-sm">All Parameters ({ALL_COLUMNS.length} columns)</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {ALL_COLUMNS.map(col => {
+                        const value = getVariantValue(selectedVariant, col.key);
+                        if (value === '-') return null;
+                        return (
+                          <div key={col.key} className="p-2 rounded-md border bg-card">
+                            <p className="text-xs text-muted-foreground truncate">{col.label}</p>
+                            <p className="font-medium text-sm truncate" title={value}>{value}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3 text-sm">Raw Data</h4>
+                    <pre className="p-4 rounded-md bg-muted text-xs overflow-auto max-h-[200px]">
+                      {JSON.stringify(selectedVariant.variantParams || selectedVariant.parameters, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>
