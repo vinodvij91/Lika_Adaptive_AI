@@ -74,6 +74,7 @@ export default function ExternalSmilesLibrary() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [diseaseCondition, setDiseaseCondition] = useState<string>("all");
+  const [category, setCategory] = useState<string>("all");
   const [page, setPage] = useState(0);
   const [selectedSmiles, setSelectedSmiles] = useState<Set<string>>(new Set());
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -89,6 +90,7 @@ export default function ExternalSmilesLibrary() {
       limit: pageSize, 
       offset: page * pageSize,
       diseaseCondition: diseaseCondition !== "all" ? diseaseCondition : undefined,
+      category: category !== "all" ? category : undefined,
       search: search.length >= 3 ? search : undefined
     }],
     enabled: true,
@@ -278,8 +280,8 @@ export default function ExternalSmilesLibrary() {
       </div>
 
       {statsLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
             <Card key={i}>
               <CardContent className="pt-4">
                 <Skeleton className="h-8 w-24 mb-2" />
@@ -289,7 +291,7 @@ export default function ExternalSmilesLibrary() {
           ))}
         </div>
       ) : stats?.success ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-4">
               <div className="text-3xl font-bold text-primary">
@@ -304,6 +306,14 @@ export default function ExternalSmilesLibrary() {
                 {stats.diseaseConditions.length}
               </div>
               <p className="text-sm text-muted-foreground">Disease Conditions</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-3xl font-bold text-primary">
+                {stats.categories.length}
+              </div>
+              <p className="text-sm text-muted-foreground">Categories</p>
             </CardContent>
           </Card>
           <Card>
@@ -365,6 +375,27 @@ export default function ExternalSmilesLibrary() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="w-64">
+              <Select 
+                value={category} 
+                onValueChange={(val) => {
+                  setCategory(val);
+                  setPage(0);
+                }}
+              >
+                <SelectTrigger data-testid="select-category">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {stats?.categories.map((cat) => (
+                    <SelectItem key={cat.category} value={cat.category}>
+                      {cat.category} ({cat.count.toLocaleString()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {smilesLoading ? (
@@ -416,6 +447,7 @@ export default function ExternalSmilesLibrary() {
                       </TableHead>
                       <TableHead>Drug Name / ChEMBL ID</TableHead>
                       <TableHead>Disease Condition</TableHead>
+                      <TableHead>Category</TableHead>
                       <TableHead className="max-w-md">SMILES</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -439,6 +471,9 @@ export default function ExternalSmilesLibrary() {
                         <TableCell>
                           <Badge variant="secondary">{row.disease_condition}</Badge>
                         </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{row.category || "—"}</Badge>
+                        </TableCell>
                         <TableCell className="max-w-md">
                           <code className="text-xs break-all line-clamp-2">{row.smiles}</code>
                         </TableCell>
@@ -446,7 +481,7 @@ export default function ExternalSmilesLibrary() {
                     ))}
                     {smilesData.rows.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                           No SMILES found matching your criteria
                         </TableCell>
                       </TableRow>
