@@ -2924,7 +2924,8 @@ Provide scientific analysis in JSON format.`
         sequence, 
         mhcAlleles = ['HLA-A*02:01', 'HLA-A*01:01', 'HLA-B*07:02'],
         peptideLength = 9,
-        nodeId 
+        nodeId,
+        simulated = true
       } = req.body;
 
       if (!sequence) {
@@ -2933,6 +2934,52 @@ Provide scientific analysis in JSON format.`
 
       const nodes = await storage.getComputeNodes();
       let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+
+      // Simulated mode - return realistic demo results
+      if (simulated) {
+        const generateEpitopes = (allele: string, count: number) => {
+          const peptides = [];
+          for (let i = 0; i < count; i++) {
+            const start = Math.floor(Math.random() * (sequence.length - peptideLength));
+            peptides.push({
+              peptide: sequence.substring(start, start + peptideLength),
+              position: start + 1,
+              allele: allele,
+              score: Math.round((0.3 + Math.random() * 0.65) * 1000) / 1000,
+              binding_level: Math.random() > 0.7 ? "Strong" : Math.random() > 0.4 ? "Weak" : "No",
+              ic50_nm: Math.round(10 + Math.random() * 490),
+            });
+          }
+          return peptides.sort((a, b) => b.score - a.score);
+        };
+
+        const allEpitopes = mhcAlleles.flatMap((allele: string) => generateEpitopes(allele, 5));
+        const strongBinders = allEpitopes.filter(e => e.binding_level === "Strong");
+        
+        const simulatedResult = {
+          success: true,
+          step: "epitope_prediction",
+          result: {
+            total_peptides_screened: sequence.length - peptideLength + 1,
+            epitopes: allEpitopes,
+            summary: {
+              total_epitopes: allEpitopes.length,
+              strong_binders: strongBinders.length,
+              weak_binders: allEpitopes.filter(e => e.binding_level === "Weak").length,
+              alleles_tested: mhcAlleles.length,
+              population_coverage: Math.round((60 + Math.random() * 35) * 10) / 10,
+            },
+            compute_info: {
+              method: "NetMHCpan 4.1 (Simulated)",
+              compute_time_seconds: Math.round(5 + Math.random() * 10),
+              peptide_length: peptideLength,
+            }
+          },
+          nodeUsed: node?.name || "Simulated CPU Node",
+          simulated: true,
+        };
+        return res.json(simulatedResult);
+      }
       
       if (!node) {
         return res.status(503).json({ error: "No compute nodes available" });
@@ -2976,7 +3023,7 @@ Provide scientific analysis in JSON format.`
   // Optimize codons for expression (CPU-only)
   app.post("/api/compute/vaccine/codon-optimize", requireAuth, async (req, res) => {
     try {
-      const { sequence, organism = 'human', nodeId } = req.body;
+      const { sequence, organism = 'human', nodeId, simulated = true } = req.body;
 
       if (!sequence) {
         return res.status(400).json({ error: "Protein sequence is required" });
@@ -2984,6 +3031,53 @@ Provide scientific analysis in JSON format.`
 
       const nodes = await storage.getComputeNodes();
       let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+
+      // Simulated mode - return realistic demo results
+      if (simulated) {
+        const codonTable: Record<string, string[]> = {
+          'A': ['GCT', 'GCC', 'GCA', 'GCG'], 'R': ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
+          'N': ['AAT', 'AAC'], 'D': ['GAT', 'GAC'], 'C': ['TGT', 'TGC'],
+          'Q': ['CAA', 'CAG'], 'E': ['GAA', 'GAG'], 'G': ['GGT', 'GGC', 'GGA', 'GGG'],
+          'H': ['CAT', 'CAC'], 'I': ['ATT', 'ATC', 'ATA'], 'L': ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
+          'K': ['AAA', 'AAG'], 'M': ['ATG'], 'F': ['TTT', 'TTC'], 'P': ['CCT', 'CCC', 'CCA', 'CCG'],
+          'S': ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'], 'T': ['ACT', 'ACC', 'ACA', 'ACG'],
+          'W': ['TGG'], 'Y': ['TAT', 'TAC'], 'V': ['GTT', 'GTC', 'GTA', 'GTG']
+        };
+        
+        let optimizedDna = '';
+        for (const aa of sequence.toUpperCase()) {
+          const codons = codonTable[aa];
+          if (codons) optimizedDna += codons[0];
+        }
+        
+        const gcCount = (optimizedDna.match(/[GC]/g) || []).length;
+        const gcContent = Math.round((gcCount / optimizedDna.length) * 1000) / 10;
+        
+        const simulatedResult = {
+          success: true,
+          step: "codon_optimization",
+          result: {
+            original_sequence: sequence,
+            optimized_dna: optimizedDna,
+            sequence_length: sequence.length,
+            dna_length: optimizedDna.length,
+            metrics: {
+              gc_content: gcContent,
+              cai_score: Math.round((0.75 + Math.random() * 0.2) * 100) / 100,
+              rare_codons_removed: Math.floor(sequence.length * 0.1 * Math.random()),
+              cpg_dinucleotides: Math.floor(optimizedDna.length / 50),
+            },
+            organism: organism,
+            compute_info: {
+              method: "Codon Adaptation Index (Simulated)",
+              compute_time_seconds: Math.round(1 + Math.random() * 2),
+            }
+          },
+          nodeUsed: node?.name || "Simulated CPU Node",
+          simulated: true,
+        };
+        return res.json(simulatedResult);
+      }
       
       if (!node) {
         return res.status(503).json({ error: "No compute nodes available" });
@@ -3028,7 +3122,8 @@ Provide scientific analysis in JSON format.`
         utrType = 'optimized',
         capType = 'cap1',
         polyALength = 120,
-        nodeId 
+        nodeId,
+        simulated = true
       } = req.body;
 
       if (!sequence) {
@@ -3037,6 +3132,72 @@ Provide scientific analysis in JSON format.`
 
       const nodes = await storage.getComputeNodes();
       let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+
+      // Simulated mode - return realistic demo results
+      if (simulated) {
+        const codonTable: Record<string, string> = {
+          'A': 'GCU', 'R': 'CGU', 'N': 'AAU', 'D': 'GAU', 'C': 'UGU',
+          'Q': 'CAA', 'E': 'GAA', 'G': 'GGU', 'H': 'CAU', 'I': 'AUU',
+          'L': 'CUG', 'K': 'AAA', 'M': 'AUG', 'F': 'UUU', 'P': 'CCU',
+          'S': 'UCU', 'T': 'ACU', 'W': 'UGG', 'Y': 'UAU', 'V': 'GUU'
+        };
+        
+        let codingSeq = '';
+        for (const aa of sequence.toUpperCase()) {
+          codingSeq += codonTable[aa] || 'NNN';
+        }
+        
+        const utr5 = utrType === 'optimized' 
+          ? 'GGGAAAUAAGAGAGAAAAGAAGAGUAAGAAGAAAUAUAAGAGCCACC' 
+          : 'GGGAGACCCAAGCUGGCUAGGCCC';
+        const utr3 = utrType === 'optimized'
+          ? 'UGAUAAUAGGCUGGAGCCUCGGUGGCCAUGCUUCUUGCCCCUUGGGCCUCCCCCCAGCCCCUCCUCCCCUUCCUGCACCCGUACCCCC'
+          : 'AAUAAAGCGGCCGC';
+        const polyA = 'A'.repeat(polyALength);
+        const capSeq = capType === 'cap1' ? 'm7GpppAm' : capType === 'cap0' ? 'm7GpppG' : 'ARCA';
+        
+        const fullMrna = utr5 + codingSeq + utr3 + polyA;
+        const gcCount = (fullMrna.match(/[GC]/g) || []).length;
+        
+        const simulatedResult = {
+          success: true,
+          step: "mrna_design",
+          result: {
+            mrna_construct: {
+              cap: capSeq,
+              utr5_length: utr5.length,
+              coding_length: codingSeq.length,
+              utr3_length: utr3.length,
+              poly_a_length: polyALength,
+              total_length: fullMrna.length,
+            },
+            sequence_preview: {
+              utr5: utr5.substring(0, 30) + '...',
+              coding_start: codingSeq.substring(0, 30) + '...',
+              coding_end: '...' + codingSeq.substring(codingSeq.length - 30),
+              utr3: utr3.substring(0, 30) + '...',
+            },
+            quality_metrics: {
+              gc_content: Math.round((gcCount / fullMrna.length) * 1000) / 10,
+              mfe_kcal_mol: Math.round((-50 - Math.random() * 100) * 10) / 10,
+              translation_efficiency: Math.round((0.7 + Math.random() * 0.25) * 100) / 100,
+              stability_score: Math.round((0.75 + Math.random() * 0.2) * 100) / 100,
+            },
+            design_params: {
+              utr_type: utrType,
+              cap_type: capType,
+              poly_a_length: polyALength,
+            },
+            compute_info: {
+              method: "ViennaRNA (Simulated)",
+              compute_time_seconds: Math.round(3 + Math.random() * 5),
+            }
+          },
+          nodeUsed: node?.name || "Simulated CPU Node",
+          simulated: true,
+        };
+        return res.json(simulatedResult);
+      }
       
       if (!node) {
         return res.status(503).json({ error: "No compute nodes available" });
