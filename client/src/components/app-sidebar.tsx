@@ -47,6 +47,7 @@ import { LikaLogoLeafGradient } from "@/components/lika-logo";
 
 const drugNavigationItems = [
   { title: "Dashboard", url: "/dashboard/drug", icon: LayoutDashboard },
+  { title: "Disease Discovery", url: "/disease-discovery", icon: Brain },
   { title: "Import", url: "/import", icon: Upload },
   { title: "Projects", url: "/projects", icon: FolderKanban },
   { title: "Molecules", url: "/molecules", icon: FlaskConical },

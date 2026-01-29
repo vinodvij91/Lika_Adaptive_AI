@@ -64,6 +64,7 @@ import UseCasesPage from "@/pages/use-cases";
 import BioNemoPage from "@/pages/bionemo";
 import ExternalDataPage from "@/pages/external-data";
 import VaccineDiscoveryPage from "@/pages/vaccine-discovery";
+import DiseaseDiscoveryPage from "@/pages/disease-discovery";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -141,6 +142,7 @@ function AuthenticatedRoutes() {
         <Route path="/bionemo" component={BioNemoPage} />
         <Route path="/external-data" component={ExternalDataPage} />
         <Route path="/vaccine-discovery" component={VaccineDiscoveryPage} />
+        <Route path="/disease-discovery" component={DiseaseDiscoveryPage} />
         <Route component={NotFound} />
       </Switch>
     </AuthenticatedLayout>
