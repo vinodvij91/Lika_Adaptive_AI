@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,20 @@ import {
   Loader2,
   FlaskConical,
   Sparkles,
-  Activity
+  Activity,
+  Heart,
+  Dna,
+  Pill,
+  Zap,
+  Shield,
+  Microscope,
+  Flame,
+  Eye,
+  Bone,
+  Baby,
+  Droplets,
+  Wind,
+  Scan
 } from "lucide-react";
 
 interface DiseaseCondition {
@@ -40,6 +54,106 @@ interface SmilesStats {
   diseaseConditions: DiseaseCondition[];
 }
 
+const ADDITIONAL_DISEASE_CATEGORIES: DiseaseCondition[] = [
+  { condition: "Cancer - Solid Tumors", count: 0 },
+  { condition: "Cancer - Hematological", count: 0 },
+  { condition: "Cancer - Breast", count: 0 },
+  { condition: "Cancer - Lung", count: 0 },
+  { condition: "Cancer - Pancreatic", count: 0 },
+  { condition: "Mitochondrial Diseases", count: 0 },
+  { condition: "Mitochondrial Dysfunction", count: 0 },
+  { condition: "Rare Genetic Disorders", count: 0 },
+  { condition: "Orphan Diseases", count: 0 },
+  { condition: "Cardiovascular Disease", count: 0 },
+  { condition: "Heart Failure", count: 0 },
+  { condition: "Diabetes Type 2", count: 0 },
+  { condition: "Metabolic Syndrome", count: 0 },
+  { condition: "Obesity", count: 0 },
+  { condition: "NAFLD/NASH", count: 0 },
+  { condition: "Autoimmune Disorders", count: 0 },
+  { condition: "Rheumatoid Arthritis", count: 0 },
+  { condition: "Lupus", count: 0 },
+  { condition: "Inflammatory Bowel Disease", count: 0 },
+  { condition: "Infectious Disease - Viral", count: 0 },
+  { condition: "Infectious Disease - Bacterial", count: 0 },
+  { condition: "HIV/AIDS", count: 0 },
+  { condition: "Hepatitis", count: 0 },
+  { condition: "Tuberculosis", count: 0 },
+  { condition: "Respiratory Diseases", count: 0 },
+  { condition: "COPD", count: 0 },
+  { condition: "Asthma", count: 0 },
+  { condition: "Pulmonary Fibrosis", count: 0 },
+  { condition: "Kidney Disease", count: 0 },
+  { condition: "Liver Disease", count: 0 },
+  { condition: "Eye Diseases", count: 0 },
+  { condition: "Macular Degeneration", count: 0 },
+  { condition: "Glaucoma", count: 0 },
+  { condition: "Bone Disorders", count: 0 },
+  { condition: "Osteoporosis", count: 0 },
+  { condition: "Pediatric Diseases", count: 0 },
+  { condition: "Aging & Longevity", count: 0 },
+];
+
+const THERAPEUTIC_AREAS = [
+  { id: "all", label: "All Diseases" },
+  { id: "cns", label: "CNS & Neuro" },
+  { id: "oncology", label: "Oncology" },
+  { id: "rare", label: "Rare & Genetic" },
+  { id: "cardio", label: "Cardiovascular" },
+  { id: "metabolic", label: "Metabolic" },
+  { id: "immune", label: "Immune & Inflammatory" },
+  { id: "infectious", label: "Infectious" },
+  { id: "other", label: "Other" },
+];
+
+const DISEASE_AREA_MAP: Record<string, string> = {
+  "Alzheimer's Disease": "cns",
+  "Parkinson's Disease": "cns",
+  "Huntington's Disease": "cns",
+  "ALS (Amyotrophic Lateral Sclerosis)": "cns",
+  "Multiple Sclerosis": "cns",
+  "Dementia": "cns",
+  "Neuroinflammation": "cns",
+  "Neurological Disorders": "cns",
+  "Cancer - Solid Tumors": "oncology",
+  "Cancer - Hematological": "oncology",
+  "Cancer - Breast": "oncology",
+  "Cancer - Lung": "oncology",
+  "Cancer - Pancreatic": "oncology",
+  "Mitochondrial Diseases": "rare",
+  "Mitochondrial Dysfunction": "rare",
+  "Rare Genetic Disorders": "rare",
+  "Orphan Diseases": "rare",
+  "Cardiovascular Disease": "cardio",
+  "Heart Failure": "cardio",
+  "Diabetes Type 2": "metabolic",
+  "Metabolic Syndrome": "metabolic",
+  "Obesity": "metabolic",
+  "NAFLD/NASH": "metabolic",
+  "Autoimmune Disorders": "immune",
+  "Rheumatoid Arthritis": "immune",
+  "Lupus": "immune",
+  "Inflammatory Bowel Disease": "immune",
+  "Infectious Disease - Viral": "infectious",
+  "Infectious Disease - Bacterial": "infectious",
+  "HIV/AIDS": "infectious",
+  "Hepatitis": "infectious",
+  "Tuberculosis": "infectious",
+  "Respiratory Diseases": "other",
+  "COPD": "other",
+  "Asthma": "other",
+  "Pulmonary Fibrosis": "other",
+  "Kidney Disease": "other",
+  "Liver Disease": "other",
+  "Eye Diseases": "other",
+  "Macular Degeneration": "other",
+  "Glaucoma": "other",
+  "Bone Disorders": "other",
+  "Osteoporosis": "other",
+  "Pediatric Diseases": "other",
+  "Aging & Longevity": "other",
+};
+
 const DISEASE_ICONS: Record<string, typeof Brain> = {
   "Alzheimer's Disease": Brain,
   "Parkinson's Disease": Activity,
@@ -49,6 +163,43 @@ const DISEASE_ICONS: Record<string, typeof Brain> = {
   "Dementia": Brain,
   "Neuroinflammation": FlaskConical,
   "Neurological Disorders": Brain,
+  "Cancer - Solid Tumors": Scan,
+  "Cancer - Hematological": Droplets,
+  "Cancer - Breast": Target,
+  "Cancer - Lung": Wind,
+  "Cancer - Pancreatic": Target,
+  "Mitochondrial Diseases": Zap,
+  "Mitochondrial Dysfunction": Zap,
+  "Rare Genetic Disorders": Dna,
+  "Orphan Diseases": Dna,
+  "Cardiovascular Disease": Heart,
+  "Heart Failure": Heart,
+  "Diabetes Type 2": Pill,
+  "Metabolic Syndrome": Flame,
+  "Obesity": Flame,
+  "NAFLD/NASH": Flame,
+  "Autoimmune Disorders": Shield,
+  "Rheumatoid Arthritis": Bone,
+  "Lupus": Shield,
+  "Inflammatory Bowel Disease": Shield,
+  "Infectious Disease - Viral": Microscope,
+  "Infectious Disease - Bacterial": Microscope,
+  "HIV/AIDS": Shield,
+  "Hepatitis": Microscope,
+  "Tuberculosis": Microscope,
+  "Respiratory Diseases": Wind,
+  "COPD": Wind,
+  "Asthma": Wind,
+  "Pulmonary Fibrosis": Wind,
+  "Kidney Disease": Droplets,
+  "Liver Disease": Flame,
+  "Eye Diseases": Eye,
+  "Macular Degeneration": Eye,
+  "Glaucoma": Eye,
+  "Bone Disorders": Bone,
+  "Osteoporosis": Bone,
+  "Pediatric Diseases": Baby,
+  "Aging & Longevity": Activity,
   "default": Target
 };
 
@@ -58,6 +209,7 @@ export default function DiseaseDiscovery() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDisease, setSelectedDisease] = useState<DiseaseCondition | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedArea, setSelectedArea] = useState("all");
 
   const { data: stats, isLoading: statsLoading } = useQuery<SmilesStats>({
     queryKey: ["/api/external-sync/digitalocean/smiles/stats"],
@@ -68,14 +220,14 @@ export default function DiseaseDiscovery() {
       const projectRes = await apiRequest("POST", "/api/projects", {
         name: `${disease} Drug Discovery`,
         description: `Automated screening of ChEMBL compounds against ${disease} protein targets`,
-        diseaseArea: "CNS",
+        diseaseArea: getDiseaseAreaLabel(disease),
       });
       const project = await projectRes.json();
       
       const campaignRes = await apiRequest("POST", "/api/campaigns", {
         name: `${disease} SMILES Screening`,
         projectId: project.id,
-        domainType: "CNS",
+        domainType: getDiseaseAreaLabel(disease),
         modality: "small_molecule",
         pipelineConfig: {
           diseaseCondition: disease,
@@ -97,7 +249,7 @@ export default function DiseaseDiscovery() {
       
       toast({
         title: "Screening Started",
-        description: `Pipeline is now running for ${disease} with ${selectedDisease?.count.toLocaleString()} compounds`,
+        description: `Pipeline is now running for ${disease}`,
       });
       
       setDialogOpen(false);
@@ -112,13 +264,32 @@ export default function DiseaseDiscovery() {
     },
   });
 
-  const filteredDiseases = stats?.diseaseConditions.filter(d => 
-    d.condition.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    d.condition !== "Unknown" &&
-    d.condition !== "General"
-  ) || [];
+  const getDiseaseAreaLabel = (disease: string): string => {
+    const area = DISEASE_AREA_MAP[disease];
+    const areaObj = THERAPEUTIC_AREAS.find(a => a.id === area);
+    return areaObj?.label || "Other";
+  };
 
-  const topDiseases = filteredDiseases.slice(0, 12);
+  const allDiseases = (() => {
+    const dbDiseases = stats?.diseaseConditions.filter(d => 
+      d.condition !== "Unknown" && d.condition !== "General"
+    ) || [];
+    
+    const dbConditionNames = new Set(dbDiseases.map(d => d.condition));
+    const additionalDiseases = ADDITIONAL_DISEASE_CATEGORIES.filter(
+      d => !dbConditionNames.has(d.condition)
+    );
+    
+    return [...dbDiseases, ...additionalDiseases];
+  })();
+
+  const filteredDiseases = allDiseases.filter(d => {
+    const matchesSearch = d.condition.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesArea = selectedArea === "all" || 
+      DISEASE_AREA_MAP[d.condition] === selectedArea ||
+      (!DISEASE_AREA_MAP[d.condition] && selectedArea === "other");
+    return matchesSearch && matchesArea;
+  });
 
   const handleStartScreening = (disease: DiseaseCondition) => {
     setSelectedDisease(disease);
@@ -163,6 +334,21 @@ export default function DiseaseDiscovery() {
         </div>
       </div>
 
+      <Tabs value={selectedArea} onValueChange={setSelectedArea} className="w-full">
+        <TabsList className="flex flex-wrap h-auto gap-1 bg-transparent justify-center">
+          {THERAPEUTIC_AREAS.map(area => (
+            <TabsTrigger 
+              key={area.id} 
+              value={area.id}
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              data-testid={`tab-${area.id}`}
+            >
+              {area.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       {statsLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
@@ -179,8 +365,9 @@ export default function DiseaseDiscovery() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {topDiseases.map((disease) => {
+            {filteredDiseases.map((disease) => {
               const Icon = getIcon(disease.condition);
+              const hasData = disease.count > 0;
               
               return (
                 <Card 
@@ -193,9 +380,15 @@ export default function DiseaseDiscovery() {
                       <div className="p-2 rounded-lg bg-primary/10">
                         <Icon className="h-6 w-6 text-primary" />
                       </div>
-                      <Badge variant="secondary" className="font-mono">
-                        {disease.count.toLocaleString()}
-                      </Badge>
+                      {hasData ? (
+                        <Badge variant="secondary" className="font-mono">
+                          {disease.count.toLocaleString()}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          Coming Soon
+                        </Badge>
+                      )}
                     </div>
                     
                     <div>
@@ -203,18 +396,20 @@ export default function DiseaseDiscovery() {
                         {disease.condition}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        compounds available
+                        {hasData ? "compounds available" : "database pending"}
                       </p>
                     </div>
 
                     <Button 
                       className="w-full gap-2" 
                       onClick={() => handleStartScreening(disease)}
+                      disabled={!hasData}
+                      variant={hasData ? "default" : "outline"}
                       data-testid={`button-start-${disease.condition.replace(/\s+/g, '-').toLowerCase()}`}
                     >
                       <Sparkles className="h-4 w-4" />
-                      Start Screening
-                      <ArrowRight className="h-4 w-4" />
+                      {hasData ? "Start Screening" : "Not Available"}
+                      {hasData && <ArrowRight className="h-4 w-4" />}
                     </Button>
                   </CardContent>
                 </Card>
@@ -222,20 +417,13 @@ export default function DiseaseDiscovery() {
             })}
           </div>
 
-          {filteredDiseases.length > 12 && (
-            <div className="text-center">
-              <p className="text-muted-foreground">
-                Showing 12 of {filteredDiseases.length} disease categories. 
-                Use the search to find more.
-              </p>
-            </div>
-          )}
-
-          {filteredDiseases.length === 0 && searchTerm && (
+          {filteredDiseases.length === 0 && (
             <div className="text-center py-12">
               <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-lg text-muted-foreground">
-                No diseases found matching "{searchTerm}"
+                {searchTerm 
+                  ? `No diseases found matching "${searchTerm}"`
+                  : "No diseases in this category"}
               </p>
             </div>
           )}
