@@ -1,0 +1,146 @@
+You are an expert vaccine discovery engineer working inside an existing drug discovery pipeline (cheminformatics + ML). Your task is to extend this pipeline with a dedicated module for Nipah virus (NiV) vaccine discovery.
+
+Overall goals
+
+Focus on vaccine antigen discovery and ranking for Nipah virus, not full clinical development.
+
+Align all outputs with published Nipah Target Product Profile (TPP) priorities:
+
+Single‑dose, rapid‑onset protection
+
+Cross‑lineage coverage (NiV Bangladesh + Malaysia)
+
+Usable in all age groups in low‑resource settings
+
+Design this as a reusable module that plugs into an existing ML/cheminformatics pipeline.
+
+Key functional requirements
+
+Build Python modules and/or notebooks that do the following:
+
+Data ingestion for Nipah sequences
+
+Download or read Nipah virus protein sequences (at minimum: G and F, optionally N, M, and P) from local FASTA files or public databases (NCBI, UniProt – assume I’ll provide FASTA if needed).
+
+Provide utilities to:
+
+Parse FASTA and align sequences (e.g., using Biopython + MUSCLE/Clustal).
+
+Identify conserved vs variable regions across Bangladesh and Malaysia strains.
+
+Epitope and antigen design layer
+
+Implement an epitope prediction pipeline for:
+
+B‑cell epitopes on G (and optionally F) using standard open tools/APIs (or local models if possible).
+
+T‑cell epitopes (MHC I and II) across common HLA alleles relevant to South Asian populations.
+
+Combine this into a multi‑epitope antigen design step:
+
+Rank epitopes by:
+
+Conservation across strains
+
+Predicted immunogenicity
+
+Population HLA coverage
+
+Location on structurally accessible regions (surface‑exposed on G/F where structural data are available).
+
+Build candidate “antigen cassettes” (e.g., concatenated epitopes with appropriate linkers) for:
+
+mRNA vaccines
+
+Protein/subunit vaccines
+
+Viral vector inserts (single G or multi‑epitope constructs)
+
+Scoring and ranking engine
+
+For each antigen candidate, compute a composite score that includes:
+
+Conservation score across NiV lineages
+
+Predicted neutralizing potential (e.g., weighting epitopes in the receptor‑binding domain of G)
+
+Predicted population coverage (HLA)
+
+Manufacturability flags (GC content, repeats, cysteine content, N‑glycosylation sites, etc.)
+
+Output a ranked list of top N candidates with a clear, human‑readable rationale for each score component.
+
+Integration with existing pipeline
+
+Expose clean entry points so I can call this from my existing drug discovery system:
+
+A main function, e.g. run_nipah_vaccine_discovery(config_path: str) -> pd.DataFrame
+
+Config‑driven: file paths to NiV FASTA, desired epitopes per antigen, output directories, etc.
+
+Ensure all heavy logic is in pure Python modules (no notebook‑only logic), so this can run headless in a CI/CD or batch pipeline.
+
+Reports and artifacts
+
+Generate:
+
+A CSV/Parquet file of all candidate epitopes with scores and annotations.
+
+A CSV/Parquet file of top antigen constructs with composite scores and predicted coverage.
+
+A short Markdown report summarizing:
+
+Methods and tools used (alignment, epitope predictors, scoring)
+
+The top 5–10 antigen constructs and why they were selected
+
+How these map to Nipah TPP requirements (e.g., cross‑lineage G coverage).
+
+Non‑functional requirements
+
+Use Python 3.10+ and common scientific stack (pandas, numpy, biopython, scikit‑learn, etc.).
+
+Code must be modular, readable, and documented with docstrings and inline comments.
+
+Include example config files and minimal “demo” script that I can run end‑to‑end with test data.
+
+Assume I will later plug in my own ML models; design interfaces so models can be swapped in easily (e.g., strategy pattern or simple “model function” hooks).
+
+Deliverables
+
+Python package or module structure, e.g.:
+
+nipah_vax/
+
+__init__.py
+
+config.py
+
+data_io.py
+
+alignment.py
+
+epitope_prediction.py
+
+antigen_design.py
+
+scoring.py
+
+reporting.py
+
+cli.py (optional)
+
+Example Jupyter notebook:
+
+examples/nipah_vaccine_discovery_demo.ipynb
+showing end‑to‑end usage on a small NiV sequence dataset.
+
+Example config YAML/JSON plus README explaining how to:
+
+Add new NiV sequences,
+
+Change scoring weights,
+
+Export the top candidates for wet‑lab validation.
+
+Start by scaffolding the package structure and minimal stubs for each module, then fill in realistic, working implementations for each step.
