@@ -85,14 +85,18 @@ export default function ExternalSmilesLibrary() {
     queryKey: ["/api/external-sync/digitalocean/smiles/stats"],
   });
 
+  const smilesQueryParams = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("limit", String(pageSize));
+    params.set("offset", String(page * pageSize));
+    if (diseaseCondition !== "all") params.set("diseaseCondition", diseaseCondition);
+    if (category !== "all") params.set("category", category);
+    if (search.length >= 3) params.set("search", search);
+    return params.toString();
+  }, [page, pageSize, diseaseCondition, category, search]);
+
   const { data: smilesData, isLoading: smilesLoading, isFetching } = useQuery<SmilesQueryResult>({
-    queryKey: ["/api/external-sync/digitalocean/smiles", { 
-      limit: pageSize, 
-      offset: page * pageSize,
-      diseaseCondition: diseaseCondition !== "all" ? diseaseCondition : undefined,
-      category: category !== "all" ? category : undefined,
-      search: search.length >= 3 ? search : undefined
-    }],
+    queryKey: [`/api/external-sync/digitalocean/smiles?${smilesQueryParams}`],
     enabled: true,
   });
 
