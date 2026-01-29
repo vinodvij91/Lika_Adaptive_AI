@@ -87,6 +87,8 @@ export default function DiseaseDiscovery() {
       });
       const campaign = await campaignRes.json();
       
+      await apiRequest("POST", `/api/campaigns/${campaign.id}/start`, {});
+      
       return { project, campaign, disease };
     },
     onSuccess: async ({ project, campaign, disease }) => {
@@ -94,8 +96,8 @@ export default function DiseaseDiscovery() {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       
       toast({
-        title: "Screening Campaign Created",
-        description: `Created campaign for ${disease} with ${selectedDisease?.count.toLocaleString()} compounds available`,
+        title: "Screening Started",
+        description: `Pipeline is now running for ${disease} with ${selectedDisease?.count.toLocaleString()} compounds`,
       });
       
       setDialogOpen(false);
