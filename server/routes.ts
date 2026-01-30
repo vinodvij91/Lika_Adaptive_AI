@@ -3108,6 +3108,173 @@ Provide scientific analysis in JSON format.`
     }
   });
 
+  // Deploy compute scripts to remote GPU instance
+  app.post("/api/compute/deploy-scripts", requireAuth, async (req, res) => {
+    try {
+      const { nodeId } = req.body;
+      
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+      
+      // List of compute scripts to deploy
+      const scriptsToUpload = [
+        "complete_vaccine_pipeline.py",
+        "vaccine_discovery_pipeline.py",
+        "drug_discovery_pipeline.py",
+        "materials_science_pipeline.py",
+        "task_classification_matrix.py",
+      ];
+      
+      const remotePath = "/root/compute";
+      const uploadResults: { file: string; success: boolean }[] = [];
+      
+      // Create remote directory first
+      const mkdirJob = {
+        id: `mkdir-${Date.now()}`,
+        type: "command",
+        command: `mkdir -p ${remotePath}`,
+        timeout: 30000,
+      };
+      await adapter.runJob(node, mkdirJob as any);
+      
+      // Upload each script
+      for (const script of scriptsToUpload) {
+        const localPath = path.join(process.cwd(), "compute", script);
+        if (fs.existsSync(localPath)) {
+          if (adapter.uploadFile) {
+            const success = await adapter.uploadFile(node, localPath, `${remotePath}/${script}`);
+            uploadResults.push({ file: script, success });
+          } else {
+            // Fallback: use base64 encoding via SSH
+            const content = fs.readFileSync(localPath, "utf-8");
+            const b64 = Buffer.from(content).toString("base64");
+            const uploadJob = {
+              id: `upload-${script}-${Date.now()}`,
+              type: "command",
+              command: `echo "${b64}" | base64 -d > ${remotePath}/${script}`,
+              timeout: 60000,
+            };
+            const result = await adapter.runJob(node, uploadJob as any);
+            uploadResults.push({ file: script, success: result.success });
+          }
+        }
+      }
+      
+      // Verify deployment
+      const verifyJob = {
+        id: `verify-${Date.now()}`,
+        type: "command",
+        command: `ls -la ${remotePath}/*.py`,
+        timeout: 30000,
+      };
+      const verifyResult = await adapter.runJob(node, verifyJob as any);
+      
+      res.json({
+        success: true,
+        node: node.name,
+        remotePath,
+        uploads: uploadResults,
+        verification: verifyResult.output
+      });
+    } catch (error: any) {
+      console.error("Deploy scripts error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Install bioinformatics tools on remote GPU instance
+  app.post("/api/compute/install-tools", requireAuth, async (req, res) => {
+    try {
+      const { nodeId } = req.body;
+      
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+      
+      // Install bioinformatics tools
+      const installJob = {
+        id: `install-tools-${Date.now()}`,
+        type: "command",
+        command: `apt-get update && apt-get install -y mafft dssp && pip3 install biopython numpy 2>&1 | tail -20`,
+        timeout: 300000, // 5 minutes
+      };
+      
+      const result = await adapter.runJob(node, installJob as any);
+      
+      // Verify installations
+      const verifyJob = {
+        id: `verify-tools-${Date.now()}`,
+        type: "command",
+        command: `which mafft && mafft --version; which mkdssp; python3 -c "import Bio; print('Biopython:', Bio.__version__)"`,
+        timeout: 30000,
+      };
+      const verifyResult = await adapter.runJob(node, verifyJob as any);
+      
+      res.json({
+        success: result.success,
+        node: node.name,
+        installOutput: result.output,
+        verification: verifyResult.output
+      });
+    } catch (error: any) {
+      console.error("Install tools error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Run arbitrary command on remote GPU (for debugging)
+  app.post("/api/compute/run-command", requireAuth, async (req, res) => {
+    try {
+      const { command, nodeId } = req.body;
+      
+      if (!command) {
+        return res.status(400).json({ error: "Command is required" });
+      }
+      
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+      
+      const job = {
+        id: `cmd-${Date.now()}`,
+        type: "command",
+        command,
+        timeout: 60000,
+      };
+      
+      const result = await adapter.runJob(node, job as any);
+      
+      res.json({
+        success: result.success,
+        node: node.name,
+        output: result.output,
+        error: result.error
+      });
+    } catch (error: any) {
+      console.error("Run command error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Run complete vaccine discovery pipeline with all bioinformatics tools
   app.post("/api/compute/vaccine/complete-pipeline", requireAuth, async (req, res) => {
     try {
@@ -3148,21 +3315,31 @@ Provide scientific analysis in JSON format.`
       const adapter = getComputeAdapter(node);
 
       const jobId = `complete-vaccine-pipeline-${Date.now()}`;
-      const paramsFile = `/tmp/${jobId}-params.json`;
+      const remoteParamsFile = `/tmp/${jobId}-params.json`;
       const params = {
         sequence: inputSequence,
         vaccine_type: vaccineType,
         pdb_content: pdbContent
       };
 
-      fs.writeFileSync(paramsFile, JSON.stringify(params));
+      // Write params to remote file via base64 encoding
+      const paramsB64 = Buffer.from(JSON.stringify(params)).toString("base64");
+      const writeParamsJob = {
+        id: `write-params-${Date.now()}`,
+        type: "command",
+        command: `echo "${paramsB64}" | base64 -d > ${remoteParamsFile}`,
+        timeout: 30000,
+      };
+      await adapter.runJob(node, writeParamsJob as any);
 
-      const command = `cd /home/runner/workspace/compute && python3 -c "
+      // Use remote compute path on GPU instance
+      const remotePath = "/root/compute";
+      const command = `cd ${remotePath} && python3 -c "
 import json
 import sys
 sys.path.insert(0, '.')
 from complete_vaccine_pipeline import run_pipeline_from_api
-with open('${paramsFile}', 'r') as f:
+with open('${remoteParamsFile}', 'r') as f:
     params = json.load(f)
 result = run_pipeline_from_api(
     sequence=params['sequence'],
@@ -3170,7 +3347,7 @@ result = run_pipeline_from_api(
     pdb_content=params.get('pdb_content')
 )
 print(json.dumps(result, default=str))
-" && rm -f ${paramsFile}`;
+" && rm -f ${remoteParamsFile}`;
 
       const job = {
         id: jobId,
