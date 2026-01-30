@@ -63,6 +63,26 @@ The platform integrates production-grade Python pipelines for both drug discover
     - `POST /api/compute/vaccine/md-simulation` - Molecular dynamics (GPU-intensive, accepts `pdbFileId` parameter)
     - `GET /api/compute/vaccine/hardware` - Get hardware performance report
     - `GET /api/compute/vaccine/task-matrix` - Get full task classification matrix with hardware requirements and cost analysis
+- **SandboxAQ AQAffinity Integration** (`compute/aqaffinity_integration.py`): Open-source AI model for fast, structure-free prediction of protein-ligand binding affinities, built on OpenFold3. **Note:** Currently in simulation mode - returns deterministic predictions based on input hashing. Real AQAffinity integration requires installing the package (`pip install git+https://huggingface.co/SandboxAQ/aqaffinity`) and GPU compute resources.
+  - **Key Features**:
+    - Structure-free prediction (sequence + SMILES only, no protein structure required)
+    - Fast "fail fast" drug candidate screening
+    - Apache 2.0 licensed (free for academic & commercial use)
+    - Trained on GOSTAR assay database
+  - **Supported Pipelines**:
+    - **Drug Discovery**: Screen drug candidates against therapeutic targets
+    - **Vaccine Discovery**: Complementary epitope-MHC binding analysis
+    - **Materials Discovery**: Catalyst-substrate and polymer binding prediction
+  - **API Endpoints**:
+    - `POST /api/compute/aqaffinity/predict` - Single protein-ligand binding affinity prediction
+    - `POST /api/compute/aqaffinity/batch-predict` - Batch predictions for multiple ligands against one target
+    - `POST /api/compute/aqaffinity/screen-library` - Screen compound library against target with hit classification
+    - `GET /api/compute/aqaffinity/info` - Get AQAffinity integration info and capabilities
+  - **Input/Output**:
+    - Input: `proteinSequence` (amino acid sequence), `ligandSmiles` (SMILES string), `pipeline` (discovery type)
+    - Output: `predictedAffinity` (IC50 in nM), `confidenceScore` (0-1), `isStrongBinder` (boolean)
+  - **Installation**: `pip install git+https://huggingface.co/SandboxAQ/aqaffinity`
+  - **References**: https://huggingface.co/SandboxAQ/AQAffinity, https://www.sandboxaq.com/aqaffinity
 - **Materials Science Pipeline**: Includes Magpie and SOAP descriptors, Graph Neural Networks (CGCNN, Multi-Property GNN), Multi-task Neural Networks, GPU acceleration, materials generation, element substitution, synthesis planning, and atomistic simulations (VASP, Quantum ESPRESSO). It also incorporates specialized designers for various material types (e.g., Battery, Photovoltaic, Structural) and discovery workflows (e.g., Superconductor, Catalyst).
 - **Universal Hardware-Agnostic Materials Pipeline**: Automatically adapts to any hardware configuration (CPU, GPU, Apple Silicon) for optimal performance, supporting molecular, compositional, and polymer material types. It includes specialized feature extractors and predictors for various polymer properties (e.g., Tg, tensile strength).
 
