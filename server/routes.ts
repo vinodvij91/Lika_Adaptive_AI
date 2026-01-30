@@ -606,6 +606,37 @@ export async function registerRoutes(
     }
   });
 
+  // Get pipeline job history for reports page
+  app.get("/api/reports/pipeline-history", requireAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const jobType = req.query.type as string | undefined;
+      
+      const jobs = await storage.getProcessingJobs({
+        type: jobType as any,
+        limit,
+      });
+      res.json(jobs);
+    } catch (error) {
+      console.error("Error fetching pipeline history:", error);
+      res.status(500).json({ error: "Failed to fetch pipeline history" });
+    }
+  });
+
+  // Get single pipeline job details
+  app.get("/api/reports/pipeline-history/:id", requireAuth, async (req, res) => {
+    try {
+      const job = await storage.getProcessingJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      console.error("Error fetching job details:", error);
+      res.status(500).json({ error: "Failed to fetch job details" });
+    }
+  });
+
   app.get("/api/learning-graph", requireAuth, async (req, res) => {
     try {
       const entries = await storage.getLearningGraphEntries();
@@ -3424,13 +3455,70 @@ print(json.dumps(result, default=str))
       const result = await adapter.runJob(node, job as any);
       
       if (result.success && result.output) {
+        // Extract JSON from output (may have progress text before the JSON)
+        // The JSON always starts with {"input" and ends at the end of output
+        let parsed: any = null;
+        let parseError: Error | null = null;
+        
         try {
-          const parsed = JSON.parse(result.output.trim());
-          res.json({ ...parsed, nodeUsed: node.name });
-        } catch (e) {
-          res.json({ success: true, output: result.output, nodeUsed: node.name });
+          // First try direct parse (if output is clean JSON)
+          parsed = JSON.parse(result.output.trim());
+        } catch (e1) {
+          // Look for JSON object starting with {"input"
+          const startIdx = result.output.indexOf('{"input"');
+          if (startIdx >= 0) {
+            const jsonStr = result.output.substring(startIdx);
+            try {
+              parsed = JSON.parse(jsonStr);
+            } catch (e2) {
+              parseError = e2 as Error;
+            }
+          } else {
+            parseError = e1 as Error;
+          }
+        }
+        
+        try {
+          // Save to database for reports history
+          const pipelineJob = await storage.createProcessingJob({
+            type: "vaccine_discovery",
+            status: "succeeded",
+            inputPayload: {
+              sequence: inputSequence,
+              vaccineType,
+              sequenceLength: inputSequence.length,
+              hasPdb: !!pdbContent,
+            },
+            outputPayload: parsed || { raw: result.output, parseError: parseError?.message },
+            computeNodeId: node.id,
+            startedAt: new Date(Date.now() - 30000),
+            completedAt: new Date(),
+          });
+          
+          if (parsed) {
+            res.json({ ...parsed, nodeUsed: node.name, jobId: pipelineJob.id });
+          } else {
+            res.json({ success: true, output: result.output, nodeUsed: node.name, jobId: pipelineJob.id });
+          }
+        } catch (dbError: any) {
+          console.error("Failed to save vaccine pipeline job:", dbError.message);
+          // Still return the result even if DB save fails
+          if (parsed) {
+            res.json({ ...parsed, nodeUsed: node.name });
+          } else {
+            res.json({ success: true, output: result.output, nodeUsed: node.name });
+          }
         }
       } else {
+        // Save failed job
+        await storage.createProcessingJob({
+          type: "vaccine_discovery",
+          status: "failed",
+          inputPayload: { sequence: inputSequence, vaccineType },
+          errorMessage: result.error || "Complete vaccine pipeline failed",
+          computeNodeId: node.id,
+          completedAt: new Date(),
+        });
         res.status(500).json({ success: false, error: result.error || "Complete vaccine pipeline failed" });
       }
     } catch (error: any) {
