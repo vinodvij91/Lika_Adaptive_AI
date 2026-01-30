@@ -48,7 +48,8 @@ export const processingJobTypeEnum = pgEnum("processing_job_type", [
   "docking", "fingerprint_generation", "ml_training", "distributed_prediction", "full_pipeline",
   "mat_battery", "mat_solar", "mat_superconductor", "mat_catalyst", "mat_thermoelectric",
   "mat_pfas_replacement", "mat_aerospace", "mat_biomedical", "mat_semiconductor",
-  "mat_construction", "mat_transparent", "mat_magnet", "mat_electrolyte", "mat_water", "mat_carbon_capture"
+  "mat_construction", "mat_transparent", "mat_magnet", "mat_electrolyte", "mat_water", "mat_carbon_capture",
+  "alzheimers_multitarget", "vaccine_discovery", "oncology_multitarget"
 ]);
 
 export const canonicalMoleculeSourceEnum = pgEnum("canonical_molecule_source", ["import", "built_in", "vendor", "generated"]);

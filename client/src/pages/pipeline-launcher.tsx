@@ -76,6 +76,7 @@ interface PipelineStats {
 }
 
 const drugDiscoveryJobs = [
+  { value: "alzheimers_multitarget", label: "Alzheimer's 12-Target Pipeline", icon: Sparkles, description: "Dedicated multi-target algorithm for Alzheimer's disease (Tau, APP, NLRP3, PINK1, ULK1, TFEB, Sigma-1, and more)", isSpecialized: true },
   { value: "docking", label: "Molecular Docking", icon: Target, description: "Run AutoDock Vina docking simulations" },
   { value: "fingerprint_generation", label: "Fingerprint Generation", icon: Layers, description: "Generate ECFP/MACCS molecular fingerprints" },
   { value: "ml_training", label: "ML Model Training", icon: Zap, description: "Train QSAR/ADMET prediction models" },
@@ -137,6 +138,32 @@ export default function PipelineLauncherPage() {
     boxSizeY: 20,
     boxSizeZ: 20,
   });
+
+  // Alzheimer's 12-target configuration with toggleable targets
+  const alzheimersTargets = [
+    { key: "tau", name: "Tau (MAPT)", pathway: "Protein Aggregation", active: true },
+    { key: "app", name: "APP", pathway: "Protein Aggregation", active: true },
+    { key: "snca", name: "Alpha-Synuclein", pathway: "Protein Aggregation", active: true },
+    { key: "nlrp3", name: "NLRP3", pathway: "Neuroinflammation", active: true },
+    { key: "rock2", name: "ROCK2", pathway: "Neuroprotection", active: true },
+    { key: "pink1", name: "PINK1", pathway: "Autophagy", active: true },
+    { key: "ulk1", name: "ULK1", pathway: "Autophagy", active: true },
+    { key: "tfeb", name: "TFEB", pathway: "Autophagy", active: true },
+    { key: "sigma1", name: "Sigma-1 Receptor", pathway: "Neuroprotection", active: true },
+    { key: "nsmase2", name: "nSMase2", pathway: "Exosome Biogenesis", active: true },
+    { key: "aqp4", name: "AQP4", pathway: "Glymphatic Clearance", active: true },
+    { key: "lrp1", name: "LRP1", pathway: "Receptor-mediated Clearance", active: true },
+  ];
+
+  const [activeTargets, setActiveTargets] = useState<string[]>(alzheimersTargets.map(t => t.key));
+
+  const toggleAlzheimersTarget = (targetKey: string) => {
+    setActiveTargets(prev => 
+      prev.includes(targetKey) 
+        ? prev.filter(k => k !== targetKey)
+        : [...prev, targetKey]
+    );
+  };
 
   const { data: stats, isLoading: statsLoading } = useQuery<PipelineStats>({
     queryKey: ["/api/pipeline/stats"],
@@ -201,9 +228,46 @@ export default function PipelineLauncherPage() {
     },
   });
 
+  const alzheimersLaunchMutation = useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      return apiRequest("POST", "/api/alzheimers/launch", payload);
+    },
+    onSuccess: (data: any) => {
+      toast({ 
+        title: "Alzheimer's Pipeline Launched", 
+        description: `${data.message} - Estimated time: ${data.executionPlan?.totalTimeHours?.toFixed(1) || 'N/A'}h` 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline/jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline/stats"] });
+      setActiveTab("jobs");
+    },
+    onError: (error: any) => {
+      toast({ title: "Launch Failed", description: error.message || "Failed to launch Alzheimer's pipeline", variant: "destructive" });
+    },
+  });
+
   const handleLaunch = () => {
     if (!config.name.trim()) {
       toast({ title: "Validation Error", description: "Pipeline name is required", variant: "destructive" });
+      return;
+    }
+
+    if (config.jobType === "alzheimers_multitarget") {
+      const alzheimersPayload = {
+        campaignId: `alzheimers-${Date.now()}`,
+        moleculeIds: [],
+        config: {
+          enableGpuAcceleration: config.useGpu,
+          prioritizeBbbPenetration: true,
+          maxCandidates: 100,
+          diversityClustering: true,
+          activeTargets: activeTargets,
+        },
+        preferredNodeId: config.preferredNodeId || undefined,
+        useGpu: config.useGpu,
+        name: config.name || `Alzheimer's ${activeTargets.length}-Target Pipeline`,
+      };
+      alzheimersLaunchMutation.mutate(alzheimersPayload);
       return;
     }
 
@@ -605,22 +669,119 @@ export default function PipelineLauncherPage() {
                     </div>
                   )}
 
+                  {config.jobType === "alzheimers_multitarget" && (
+                    <div className="border rounded-lg p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+                      <h4 className="font-medium mb-4 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-purple-500" />
+                        Alzheimer's Multi-Target Algorithm Configuration
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Dedicated multi-target algorithm optimized for Alzheimer's disease drug discovery.
+                        Select which targets to include in the screening pipeline.
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div className="bg-background/60 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-purple-500">{activeTargets.length}</p>
+                          <p className="text-xs text-muted-foreground">Active Targets</p>
+                        </div>
+                        <div className="bg-background/60 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-pink-500">{new Set(alzheimersTargets.filter(t => activeTargets.includes(t.key)).map(t => t.pathway)).size}</p>
+                          <p className="text-xs text-muted-foreground">Pathways</p>
+                        </div>
+                        <div className="bg-background/60 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-amber-500">3</p>
+                          <p className="text-xs text-muted-foreground">Phases</p>
+                        </div>
+                        <div className="bg-background/60 rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-emerald-500">16</p>
+                          <p className="text-xs text-muted-foreground">Tasks</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-background/60 rounded-lg p-3 mb-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-sm font-medium text-purple-500">Select Targets</p>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs h-7"
+                              onClick={() => setActiveTargets(alzheimersTargets.map(t => t.key))}
+                              data-testid="button-select-all-targets"
+                            >
+                              Select All
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs h-7"
+                              onClick={() => setActiveTargets([])}
+                              data-testid="button-deselect-all-targets"
+                            >
+                              Clear
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {alzheimersTargets.map((target) => (
+                            <div 
+                              key={target.key}
+                              className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+                                activeTargets.includes(target.key) 
+                                  ? "bg-purple-500/20 border border-purple-500/30" 
+                                  : "bg-muted/30 border border-transparent hover:bg-muted/50"
+                              }`}
+                              onClick={() => toggleAlzheimersTarget(target.key)}
+                              data-testid={`target-toggle-${target.key}`}
+                            >
+                              <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                                activeTargets.includes(target.key) 
+                                  ? "bg-purple-500 text-white" 
+                                  : "border border-muted-foreground"
+                              }`}>
+                                {activeTargets.includes(target.key) && <CheckCircle className="h-3 w-3" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium truncate">{target.name}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">{target.pathway}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                        <div className="flex items-center gap-2 text-amber-600">
+                          <TrendingUp className="h-4 w-4" />
+                          <span className="text-sm font-medium">BBB Penetration Priority</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          This algorithm prioritizes blood-brain barrier penetration for CNS drug candidates
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex justify-end gap-3 pt-4 border-t">
                     <Button variant="outline" onClick={() => setConfig({ ...config, name: "" })}>
                       Reset
                     </Button>
                     <Button
                       data-testid="button-launch-pipeline"
-                      className="bg-gradient-to-r from-orange-500 to-amber-500 gap-2"
+                      className={config.jobType === "alzheimers_multitarget" 
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500 gap-2" 
+                        : "bg-gradient-to-r from-orange-500 to-amber-500 gap-2"}
                       onClick={handleLaunch}
-                      disabled={launchMutation.isPending}
+                      disabled={launchMutation.isPending || alzheimersLaunchMutation.isPending}
                     >
-                      {launchMutation.isPending ? (
+                      {(launchMutation.isPending || alzheimersLaunchMutation.isPending) ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Play className="h-4 w-4" />
                       )}
-                      Launch Pipeline
+                      {config.jobType === "alzheimers_multitarget" 
+                        ? "Launch Alzheimer's Pipeline" 
+                        : "Launch Pipeline"}
                     </Button>
                   </div>
                 </CardContent>

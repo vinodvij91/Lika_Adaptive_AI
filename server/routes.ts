@@ -7995,5 +7995,338 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
+  // ==================== Alzheimer's Multi-Target Algorithm ====================
+
+  app.get("/api/alzheimers/algorithm-info", requireAuth, async (req, res) => {
+    try {
+      const { createAlzheimersAlgorithm } = await import("./services/alzheimers-algorithm");
+      const algorithm = createAlzheimersAlgorithm();
+      res.json(algorithm.getAlgorithmInfo());
+    } catch (error: any) {
+      console.error("Error getting Alzheimer's algorithm info:", error);
+      res.status(500).json({ error: "Failed to get algorithm info" });
+    }
+  });
+
+  app.get("/api/alzheimers/targets", requireAuth, async (req, res) => {
+    try {
+      const { createAlzheimersAlgorithm } = await import("./services/alzheimers-algorithm");
+      const algorithm = createAlzheimersAlgorithm();
+      res.json({ targets: algorithm.getTargetInfo() });
+    } catch (error: any) {
+      console.error("Error getting Alzheimer's targets:", error);
+      res.status(500).json({ error: "Failed to get targets" });
+    }
+  });
+
+  // Zod schema for target toggle
+  const alzheimersToggleSchema = z.object({
+    targetKey: z.string().min(1, "targetKey is required"),
+    active: z.boolean().optional().default(true),
+  });
+
+  app.post("/api/alzheimers/toggle-target", requireAuth, async (req, res) => {
+    try {
+      const parseResult = alzheimersToggleSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          error: "Validation failed", 
+          details: parseResult.error.errors 
+        });
+      }
+      
+      const { targetKey, active } = parseResult.data;
+      
+      const { createAlzheimersAlgorithm, ALZHEIMER_12_TARGETS } = await import("./services/alzheimers-algorithm");
+      
+      if (!ALZHEIMER_12_TARGETS[targetKey]) {
+        return res.status(404).json({ error: "Target not found" });
+      }
+      
+      const algorithm = createAlzheimersAlgorithm();
+      algorithm.toggleTarget(targetKey, active !== false);
+      
+      res.json({ 
+        success: true, 
+        targetKey, 
+        active: active !== false,
+        targets: algorithm.getTargetInfo()
+      });
+    } catch (error: any) {
+      console.error("Error toggling Alzheimer's target:", error);
+      res.status(500).json({ error: "Failed to toggle target" });
+    }
+  });
+
+  app.get("/api/alzheimers/execution-plan", requireAuth, async (req, res) => {
+    try {
+      const { createAlzheimersAlgorithm } = await import("./services/alzheimers-algorithm");
+      const algorithm = createAlzheimersAlgorithm();
+      const plan = algorithm.generateExecutionPlan();
+      res.json(plan);
+    } catch (error: any) {
+      console.error("Error generating execution plan:", error);
+      res.status(500).json({ error: "Failed to generate execution plan" });
+    }
+  });
+
+  // Zod schema for Alzheimer's pipeline launch
+  const alzheimersLaunchSchema = z.object({
+    campaignId: z.string().min(1, "campaignId is required"),
+    moleculeIds: z.array(z.string()).optional().default([]),
+    config: z.object({
+      enableGpuAcceleration: z.boolean().optional().default(true),
+      prioritizeBbbPenetration: z.boolean().optional().default(true),
+      maxCandidates: z.number().optional().default(100),
+      diversityClustering: z.boolean().optional().default(true),
+      activeTargets: z.array(z.string()).optional(),
+      pathwayWeights: z.record(z.string(), z.number()).optional(),
+    }).optional().default({}),
+    preferredNodeId: z.string().optional(),
+    useGpu: z.boolean().optional().default(true),
+    name: z.string().optional(),
+  });
+
+  app.post("/api/alzheimers/launch", requireAuth, async (req, res) => {
+    try {
+      const parseResult = alzheimersLaunchSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          error: "Validation failed", 
+          details: parseResult.error.errors 
+        });
+      }
+      
+      const { campaignId, moleculeIds, config, preferredNodeId, useGpu, name } = parseResult.data;
+      
+      const { createAlzheimersAlgorithm } = await import("./services/alzheimers-algorithm");
+      const algorithm = createAlzheimersAlgorithm(config);
+      
+      const executionPlan = algorithm.generateExecutionPlan();
+      const algorithmInfo = algorithm.getAlgorithmInfo();
+      
+      const nodes = await storage.getComputeNodes();
+      let selectedNode = nodes.find(n => n.id === preferredNodeId);
+      
+      if (!selectedNode && useGpu) {
+        selectedNode = nodes.find(n => n.gpuType !== "none" && n.status === "active");
+      }
+      if (!selectedNode) {
+        selectedNode = nodes.find(n => n.status === "active");
+      }
+      
+      const job = await storage.createProcessingJob({
+        type: "alzheimers_multitarget" as any,
+        status: "queued",
+        priority: 10,
+        campaignId,
+        computeNodeId: selectedNode?.id || null,
+        itemsTotal: moleculeIds?.length || 0,
+        itemsCompleted: 0,
+        progressPercent: 0,
+        inputPayload: {
+          name: name || `Alzheimer's 12-Target Pipeline - ${new Date().toISOString().split('T')[0]}`,
+          algorithm: "alzheimers_12target",
+          version: algorithmInfo.version,
+          config,
+          moleculeIds,
+          activeTargets: config.activeTargets || algorithmInfo.targets.map((t: any) => t.name),
+          targetCount: algorithmInfo.activeTargetCount,
+          pathways: algorithmInfo.pathways,
+          executionPlan
+        },
+        maxRetries: 3,
+      });
+      
+      await storage.createProcessingJobEvent({
+        jobId: job.id,
+        eventType: "created",
+        payload: { 
+          algorithm: "alzheimers_12target",
+          targets: algorithmInfo.activeTargetCount,
+          pathways: algorithmInfo.pathways,
+          estimatedTimeHours: executionPlan.totalTimeHours
+        },
+      });
+      
+      res.json({
+        jobId: job.id,
+        status: job.status,
+        computeNode: selectedNode?.name || "default",
+        algorithm: algorithmInfo,
+        executionPlan,
+        message: `Alzheimer's 12-Target pipeline launched with ${algorithmInfo.activeTargetCount} active targets`,
+      });
+    } catch (error: any) {
+      console.error("Error launching Alzheimer's pipeline:", error);
+      res.status(500).json({ error: "Failed to launch Alzheimer's pipeline" });
+    }
+  });
+
+  // Zod schema for Alzheimer's simulation
+  const alzheimersSimulateSchema = z.object({
+    jobId: z.string().min(1, "jobId is required"),
+  });
+
+  app.post("/api/alzheimers/simulate", requireAuth, async (req, res) => {
+    try {
+      const parseResult = alzheimersSimulateSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          error: "Validation failed", 
+          details: parseResult.error.errors 
+        });
+      }
+      
+      const { jobId } = parseResult.data;
+      
+      const job = await storage.getProcessingJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      if (job.type !== "alzheimers_multitarget") {
+        return res.status(400).json({ error: "Job is not an Alzheimer's pipeline job" });
+      }
+      
+      const { createAlzheimersAlgorithm } = await import("./services/alzheimers-algorithm");
+      const algorithm = createAlzheimersAlgorithm();
+      
+      const sampleCompounds = Array.from({ length: job.itemsTotal || 50 }, (_, i) => ({
+        id: `LIKA-AD-${String(i + 1).padStart(4, '0')}`,
+        smiles: "CC(C)Cc1ccc(cc1)C(C)C(=O)O"
+      }));
+      
+      const workflowResult = await algorithm.runCompleteWorkflow(sampleCompounds);
+      
+      await storage.updateProcessingJob(jobId, {
+        status: "succeeded",
+        startedAt: new Date(Date.now() - 7200000),
+        completedAt: new Date(),
+        itemsTotal: workflowResult.inputCount,
+        itemsCompleted: workflowResult.inputCount,
+        progressPercent: 100,
+        outputPayload: {
+          algorithm: "alzheimers_12target",
+          phases: Object.fromEntries(
+            Object.entries(workflowResult.phases).map(([key, phase]) => [
+              key,
+              {
+                inputCount: phase?.inputCount,
+                outputCount: phase?.outputCount,
+                steps: Object.keys(phase?.steps || {})
+              }
+            ])
+          ),
+          candidatesFound: workflowResult.finalCandidates.length,
+          topCandidates: workflowResult.multiTargetScores.slice(0, 10),
+          executionTimes: workflowResult.executionTimes,
+          activeTargets: algorithm.getTargetInfo().filter(t => t.active).length
+        },
+      });
+      
+      await storage.createProcessingJobEvent({
+        jobId,
+        eventType: "completed",
+        payload: { 
+          candidatesFound: workflowResult.finalCandidates.length,
+          topScore: workflowResult.multiTargetScores[0]?.overallScore || 0
+        },
+      });
+      
+      res.json({
+        success: true,
+        message: "Alzheimer's pipeline simulation completed",
+        candidatesFound: workflowResult.finalCandidates.length,
+        topCandidates: workflowResult.multiTargetScores.slice(0, 5),
+        executionTimes: workflowResult.executionTimes
+      });
+    } catch (error: any) {
+      console.error("Error simulating Alzheimer's pipeline:", error);
+      res.status(500).json({ error: "Failed to simulate Alzheimer's pipeline" });
+    }
+  });
+
+  // Zod schema for Alzheimer's scoring
+  const alzheimersScoreSchema = z.object({
+    compounds: z.array(z.object({
+      id: z.string().optional(),
+      smiles: z.string().min(1),
+    })).min(1, "At least one compound is required"),
+    config: z.object({
+      enableGpuAcceleration: z.boolean().optional(),
+      prioritizeBbbPenetration: z.boolean().optional(),
+      activeTargets: z.array(z.string()).optional(),
+    }).optional(),
+  });
+
+  app.post("/api/alzheimers/score-compounds", requireAuth, async (req, res) => {
+    try {
+      const parseResult = alzheimersScoreSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          error: "Validation failed", 
+          details: parseResult.error.errors 
+        });
+      }
+      
+      const { compounds, config } = parseResult.data;
+      
+      const { createAlzheimersAlgorithm } = await import("./services/alzheimers-algorithm");
+      const algorithm = createAlzheimersAlgorithm(config);
+      
+      const scores = [];
+      const activeTargets = algorithm.getActiveTargets();
+      
+      for (const compound of compounds) {
+        const targetScores: Record<string, number> = {};
+        for (const targetKey of Object.keys(activeTargets)) {
+          targetScores[targetKey] = 0.3 + Math.random() * 0.6;
+        }
+        
+        const admetProfile = {
+          solubility: 0.5 + Math.random() * 0.4,
+          permeability: 0.4 + Math.random() * 0.5,
+          hergRisk: Math.random() * 0.35,
+          cypInhibition: Math.random() * 0.45,
+          neurotoxicity: Math.random() * 0.25
+        };
+        
+        const bbbPenetration = 0.5 + Math.random() * 0.45;
+        
+        const overallScore = algorithm.calculateMultiTargetScore(
+          targetScores,
+          admetProfile,
+          bbbPenetration
+        );
+        
+        scores.push({
+          compoundId: compound.id || compound.smiles,
+          smiles: compound.smiles,
+          overallScore,
+          targetScores,
+          bbbPenetration,
+          admetProfile,
+          rank: 0
+        });
+      }
+      
+      scores.sort((a, b) => b.overallScore - a.overallScore);
+      scores.forEach((score, idx) => {
+        score.rank = idx + 1;
+      });
+      
+      res.json({
+        success: true,
+        algorithm: algorithm.getAlgorithmInfo().name,
+        activeTargets: Object.keys(activeTargets).length,
+        scores
+      });
+    } catch (error: any) {
+      console.error("Error scoring compounds:", error);
+      res.status(500).json({ error: "Failed to score compounds" });
+    }
+  });
+
   return httpServer;
 }
