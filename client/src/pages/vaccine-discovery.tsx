@@ -414,38 +414,114 @@ export default function VaccineDiscoveryPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {pdbUploads && pdbUploads.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Use Existing PDB Structure (Optional)</Label>
-                      <div className="flex items-center gap-2">
-                        <Select value={completePdbFileId || ""} onValueChange={(v) => {
-                          setCompletePdbFileId(v || null);
-                          if (v) {
-                            const pdb = pdbUploads.find(p => p.id === v);
-                            if (pdb?.extractedSequence) {
-                              setCompleteSequence(pdb.extractedSequence);
-                            }
-                          }
-                        }}>
-                          <SelectTrigger className="flex-1" data-testid="select-complete-pdb">
-                            <SelectValue placeholder="Select uploaded PDB file..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {pdbUploads.map((pdb) => (
-                              <SelectItem key={pdb.id} value={pdb.id}>
-                                {pdb.fileName} ({pdb.sequenceLength || 0} residues)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {completePdbFileId && (
-                          <Button variant="ghost" size="icon" onClick={() => setCompletePdbFileId(null)}>
+                  <div className="space-y-2">
+                    <Label>PDB Structure File (Optional)</Label>
+                    <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                      {completePdbFileId && pdbUploads ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-purple-500" />
+                            <span className="text-sm font-medium">
+                              {pdbUploads.find(p => p.id === completePdbFileId)?.fileName || "Selected PDB"}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {pdbUploads.find(p => p.id === completePdbFileId)?.sequenceLength || 0} residues
+                            </Badge>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setCompletePdbFileId(null)}
+                            data-testid="button-remove-complete-pdb"
+                          >
                             <X className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <label className="flex-1">
+                            <input
+                              type="file"
+                              accept=".pdb"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setUploadingPdb(true);
+                                  try {
+                                    const formData = new FormData();
+                                    formData.append("file", file);
+                                    formData.append("description", "Complete pipeline structure");
+                                    formData.append("purpose", "vaccine_complete_pipeline");
+                                    const res = await fetch("/api/compute/vaccine/upload-pdb", {
+                                      method: "POST",
+                                      body: formData,
+                                      credentials: "include",
+                                    });
+                                    if (!res.ok) throw new Error("Upload failed");
+                                    const data = await res.json();
+                                    queryClient.invalidateQueries({ queryKey: ["/api/compute/vaccine/pdb-uploads"] });
+                                    setCompletePdbFileId(data.id);
+                                    if (data.extractedSequence) {
+                                      setCompleteSequence(data.extractedSequence);
+                                    }
+                                    toast({ title: "PDB Uploaded", description: `Extracted ${data.sequenceLength || 0} residues` });
+                                  } catch (err: any) {
+                                    toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
+                                  } finally {
+                                    setUploadingPdb(false);
+                                  }
+                                }
+                                e.target.value = "";
+                              }}
+                              disabled={uploadingPdb}
+                              data-testid="input-complete-pdb-file"
+                            />
+                            <Button 
+                              variant="outline" 
+                              className="w-full cursor-pointer" 
+                              disabled={uploadingPdb}
+                              asChild
+                            >
+                              <span>
+                                {uploadingPdb ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Upload className="h-4 w-4 mr-2" />
+                                )}
+                                {uploadingPdb ? "Uploading..." : "Upload PDB File"}
+                              </span>
+                            </Button>
+                          </label>
+                          {pdbUploads && pdbUploads.length > 0 && (
+                            <Select value={completePdbFileId || ""} onValueChange={(v) => {
+                              setCompletePdbFileId(v || null);
+                              if (v) {
+                                const pdb = pdbUploads.find(p => p.id === v);
+                                if (pdb?.extractedSequence) {
+                                  setCompleteSequence(pdb.extractedSequence);
+                                }
+                              }
+                            }}>
+                              <SelectTrigger className="w-[180px]" data-testid="select-complete-existing-pdb">
+                                <SelectValue placeholder="Or select existing" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {pdbUploads.map((pdb) => (
+                                  <SelectItem key={pdb.id} value={pdb.id}>
+                                    {pdb.fileName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Upload a PDB file to automatically extract protein sequences and enable structure-based analysis (DSSP, DiscoTope)
+                      </p>
                     </div>
-                  )}
+                  </div>
                   <div className="space-y-2">
                     <Label>Protein Sequence</Label>
                     <Textarea
