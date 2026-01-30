@@ -992,17 +992,23 @@ export async function registerRoutes(
   
   // Import SMILES library from DigitalOcean Spaces CSV file
   // Expected CSV format: Drug_Name, Disease_Condition, SMILES, ChEMBL_ID, Category
+  const importFromSpacesSchema = z.object({
+    spacesKey: z.string().min(1, "spacesKey is required (path to CSV file in DigitalOcean Spaces)"),
+    libraryName: z.string().min(1, "libraryName is required"),
+    description: z.string().optional(),
+    tags: z.array(z.string()).optional()
+  });
+  
   app.post("/api/libraries/import-from-spaces", requireAuth, async (req, res) => {
     try {
       const userId = (req.user as any)?.id || "system";
-      const { spacesKey, libraryName, description, tags } = req.body;
       
-      if (!spacesKey) {
-        return res.status(400).json({ error: "spacesKey is required (path to CSV file in DigitalOcean Spaces)" });
+      // Validate request body
+      const parseResult = importFromSpacesSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.issues[0].message });
       }
-      if (!libraryName) {
-        return res.status(400).json({ error: "libraryName is required" });
-      }
+      const { spacesKey, libraryName, description, tags } = parseResult.data;
       
       // Check if library already exists
       const existingLibraries = await storage.getCuratedLibraries();
@@ -1040,13 +1046,51 @@ export async function registerRoutes(
       const headerLine = lines[0];
       const delimiter = headerLine.includes("\t") ? "\t" : ",";
       
-      // Parse header to find column indices
-      const headerParts = headerLine.split(delimiter).map(h => h.replace(/^"|"$/g, "").trim().toLowerCase());
-      const nameIdx = headerParts.findIndex(h => h.includes("drug") || h.includes("name"));
-      const diseaseIdx = headerParts.findIndex(h => h.includes("disease") || h.includes("condition"));
-      const smilesIdx = headerParts.findIndex(h => h.includes("smiles"));
-      const chemblIdx = headerParts.findIndex(h => h.includes("chembl") || h.includes("id"));
-      const categoryIdx = headerParts.findIndex(h => h.includes("category") || h.includes("type"));
+      // Robust CSV parsing function that handles empty fields and quoted values
+      function parseCSVLine(line: string, delim: string): string[] {
+        if (delim === "\t") {
+          return line.split("\t").map(f => f.replace(/^"|"$/g, "").trim());
+        }
+        // For comma-delimited, handle quoted fields and empty values
+        const result: string[] = [];
+        let current = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.replace(/^"|"$/g, "").trim());
+            current = "";
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.replace(/^"|"$/g, "").trim());
+        return result;
+      }
+      
+      // Parse header to find column indices with exact matches first
+      const headerParts = parseCSVLine(headerLine, delimiter).map(h => h.toLowerCase());
+      
+      // Priority-based column detection to avoid mismatches
+      const findColumn = (priorities: string[]): number => {
+        for (const term of priorities) {
+          const idx = headerParts.findIndex(h => h === term);
+          if (idx >= 0) return idx;
+        }
+        for (const term of priorities) {
+          const idx = headerParts.findIndex(h => h.includes(term));
+          if (idx >= 0) return idx;
+        }
+        return -1;
+      };
+      
+      const nameIdx = findColumn(["drug_name", "name", "drug", "compound"]);
+      const diseaseIdx = findColumn(["disease_condition", "disease", "condition", "indication"]);
+      const smilesIdx = findColumn(["smiles"]);
+      const chemblIdx = findColumn(["chembl_id", "chembl", "chemblid"]);
+      const categoryIdx = findColumn(["category", "class", "type"]);
       
       if (smilesIdx === -1) {
         return res.status(400).json({ error: "CSV must have a SMILES column" });
@@ -1060,15 +1104,9 @@ export async function registerRoutes(
         const line = lines[i].trim();
         if (!line) continue;
         
-        let parts: string[];
-        if (delimiter === "\t") {
-          parts = line.split("\t");
-        } else {
-          // Handle CSV with quoted fields for comma delimiter
-          parts = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
-        }
+        const parts = parseCSVLine(line, delimiter);
         
-        const smiles = (parts[smilesIdx]?.replace(/^"|"$/g, "").trim() || "");
+        const smiles = (parts[smilesIdx] || "");
         
         // Skip entries without valid SMILES or with BIOLOGIC marker
         if (!smiles || smiles.includes("BIOLOGIC") || smiles.length < 2) {
@@ -1077,11 +1115,11 @@ export async function registerRoutes(
         }
         
         compounds.push({
-          name: nameIdx >= 0 ? (parts[nameIdx]?.replace(/^"|"$/g, "").trim() || `Compound_${i}`) : `Compound_${i}`,
-          disease: diseaseIdx >= 0 ? (parts[diseaseIdx]?.replace(/^"|"$/g, "").trim() || "") : "",
+          name: nameIdx >= 0 ? (parts[nameIdx] || `Compound_${i}`) : `Compound_${i}`,
+          disease: diseaseIdx >= 0 ? (parts[diseaseIdx] || "") : "",
           smiles,
-          chemblId: chemblIdx >= 0 ? (parts[chemblIdx]?.replace(/^"|"$/g, "").trim() || "") : "",
-          category: categoryIdx >= 0 ? (parts[categoryIdx]?.replace(/^"|"$/g, "").trim() || "") : ""
+          chemblId: chemblIdx >= 0 ? (parts[chemblIdx] || "") : "",
+          category: categoryIdx >= 0 ? (parts[categoryIdx] || "") : ""
         });
       }
       
