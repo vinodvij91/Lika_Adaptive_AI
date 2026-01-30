@@ -3108,6 +3108,174 @@ Provide scientific analysis in JSON format.`
     }
   });
 
+  // Run complete vaccine discovery pipeline with all bioinformatics tools
+  app.post("/api/compute/vaccine/complete-pipeline", requireAuth, async (req, res) => {
+    try {
+      const { 
+        sequence,
+        vaccineType = 'protein_subunit',
+        pdbFileId,
+        nodeId 
+      } = req.body;
+
+      let inputSequence = sequence;
+      let pdbContent: string | null = null;
+
+      if (pdbFileId) {
+        const pdbRecord = pdbUploads.find(p => p.id === pdbFileId);
+        if (pdbRecord && fs.existsSync(pdbRecord.storedPath)) {
+          pdbContent = fs.readFileSync(pdbRecord.storedPath, "utf-8");
+          if (!inputSequence) {
+            inputSequence = extractSequenceFromPdb(pdbContent);
+          }
+        } else {
+          return res.status(404).json({ error: "PDB file not found" });
+        }
+      }
+
+      if (!inputSequence) {
+        return res.status(400).json({ error: "Protein sequence or PDB file is required" });
+      }
+
+      const nodes = await storage.getComputeNodes();
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active");
+      
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+
+      const jobId = `complete-vaccine-pipeline-${Date.now()}`;
+      const paramsFile = `/tmp/${jobId}-params.json`;
+      const params = {
+        sequence: inputSequence,
+        vaccine_type: vaccineType,
+        pdb_content: pdbContent
+      };
+
+      fs.writeFileSync(paramsFile, JSON.stringify(params));
+
+      const command = `cd /home/runner/workspace/compute && python3 -c "
+import json
+import sys
+sys.path.insert(0, '.')
+from complete_vaccine_pipeline import run_pipeline_from_api
+with open('${paramsFile}', 'r') as f:
+    params = json.load(f)
+result = run_pipeline_from_api(
+    sequence=params['sequence'],
+    vaccine_type=params['vaccine_type'],
+    pdb_content=params.get('pdb_content')
+)
+print(json.dumps(result, default=str))
+" && rm -f ${paramsFile}`;
+
+      const job = {
+        id: jobId,
+        type: "command",
+        command: command,
+        timeout: 3600000,
+      };
+
+      const result = await adapter.runJob(node, job as any);
+      
+      if (result.success && result.output) {
+        try {
+          const parsed = JSON.parse(result.output.trim());
+          res.json({ ...parsed, nodeUsed: node.name });
+        } catch (e) {
+          res.json({ success: true, output: result.output, nodeUsed: node.name });
+        }
+      } else {
+        res.status(500).json({ success: false, error: result.error || "Complete vaccine pipeline failed" });
+      }
+    } catch (error: any) {
+      console.error("Complete vaccine pipeline error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get complete vaccine pipeline task registry
+  app.get("/api/compute/vaccine/complete-task-registry", requireAuth, async (req, res) => {
+    try {
+      res.json({
+        tasks: {
+          dssp_analysis: {
+            name: "DSSP Surface Analysis",
+            type: "cpu_only",
+            description: "Secondary structure and surface accessibility",
+            tool: "DSSP + Biopython",
+            status: "implemented"
+          },
+          structure_prediction: {
+            name: "AlphaFold2/ESMFold Structure Prediction",
+            type: "gpu_intensive",
+            description: "Predict 3D structure from sequence",
+            tool: "AlphaFold2/ESMFold",
+            gpu_memory_gb: 16,
+            speedup: 200,
+            status: "implemented"
+          },
+          discotope_prediction: {
+            name: "DiscoTope B-cell Epitope Prediction",
+            type: "cpu_only",
+            description: "Conformational B-cell epitopes from structure",
+            tool: "DiscoTope-3.0",
+            status: "implemented"
+          },
+          netmhcpan_mhc1: {
+            name: "NetMHCpan MHC-I Prediction",
+            type: "cpu_intensive",
+            description: "T-cell epitope prediction (MHC-I)",
+            tool: "NetMHCpan-4.1",
+            status: "implemented"
+          },
+          netmhcpan_mhc2: {
+            name: "NetMHCIIpan MHC-II Prediction",
+            type: "cpu_intensive",
+            description: "T-cell epitope prediction (MHC-II)",
+            tool: "NetMHCIIpan-4.0",
+            status: "implemented"
+          },
+          conservation_analysis: {
+            name: "Conservation Analysis (MAFFT)",
+            type: "cpu_intensive",
+            description: "Multiple sequence alignment and conservation scoring",
+            tool: "MAFFT",
+            status: "implemented"
+          },
+          linker_design: {
+            name: "Linker Design for Multi-epitope",
+            type: "cpu_only",
+            description: "Design linkers between epitopes",
+            tool: "Rule-based",
+            status: "implemented"
+          },
+          codon_optimization: {
+            name: "Codon Optimization (JCat)",
+            type: "cpu_only",
+            description: "Optimize codons for expression",
+            tool: "JCat algorithm",
+            status: "implemented"
+          },
+          rna_structure_prediction: {
+            name: "RNA Secondary Structure (ViennaRNA)",
+            type: "cpu_only",
+            description: "Predict mRNA secondary structure",
+            tool: "ViennaRNA RNAfold",
+            status: "implemented"
+          }
+        },
+        vaccine_types: ["protein_subunit", "mrna", "multi_epitope", "peptide"],
+        version: "1.0"
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Predict protein structure (GPU-intensive)
   app.post("/api/compute/vaccine/structure", requireAuth, async (req, res) => {
     try {

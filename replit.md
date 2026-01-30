@@ -28,6 +28,15 @@ Adheres to Material Design principles with Carbon Design data patterns, using In
 The platform integrates production-grade Python pipelines for both drug discovery and materials science, designed for executing computational workloads.
 - **Drug Discovery Pipeline**: Features Dask for distributed computing, RAPIDS cuML for GPU-accelerated ML, PyTorch mixed precision training, AutoDock Vina integration, and XGBoost with GPU acceleration. Supports steps like SMILES validation, fingerprint generation, property calculation, ML prediction, Vina docking, scoring, and rule filtering.
 - **Vaccine Discovery Pipeline** (`compute/vaccine_discovery_pipeline.py`): GPU-agnostic pipeline with automatic hardware detection (NVIDIA CUDA, AMD ROCm, Apple Metal, CPU). Intelligently routes tasks between CPU and GPU based on workload characteristics.
+- **Complete Vaccine Pipeline** (`compute/complete_vaccine_pipeline.py`): Production-ready vaccine design with all bioinformatics tool integrations:
+  - DSSP surface analysis and secondary structure
+  - DiscoTope-3.0 B-cell epitope prediction
+  - NetMHCpan-4.1 T-cell epitope prediction (MHC-I/II)
+  - MAFFT conservation analysis
+  - Linker design for multi-epitope constructs
+  - JCat codon optimization
+  - ViennaRNA secondary structure prediction
+  - End-to-end pipeline for protein subunit, mRNA, and multi-epitope vaccines
   - **Task Classification Matrix** (`compute/task_classification_matrix.py`): Comprehensive hardware routing map for all vaccine discovery tasks organized by pipeline stages:
     - **Stage 1 - Target Identification**: Genome analysis, protein function prediction, structure prediction, conservation analysis
     - **Stage 2 - Epitope Prediction**: B-cell epitopes (linear, conformational), T-cell epitopes (MHC-I/II binding, population coverage)
@@ -45,6 +54,8 @@ The platform integrates production-grade Python pipelines for both drug discover
     - `POST /api/compute/vaccine/upload-pdb` - Upload PDB structure file (extracts sequence automatically)
     - `GET /api/compute/vaccine/pdb-uploads` - List uploaded PDB files for vaccine discovery
     - `POST /api/compute/vaccine/pipeline` - Run full vaccine discovery pipeline (accepts `pdbFileId` parameter)
+    - `POST /api/compute/vaccine/complete-pipeline` - Run complete pipeline with all bioinformatics tools (DSSP, DiscoTope, NetMHCpan, MAFFT, etc.)
+    - `GET /api/compute/vaccine/complete-task-registry` - Get complete pipeline task registry with all tools and status
     - `POST /api/compute/vaccine/structure` - Predict protein structure (GPU-intensive, accepts `pdbFileId` parameter)
     - `POST /api/compute/vaccine/epitopes` - Predict MHC binding/epitopes (CPU-intensive)
     - `POST /api/compute/vaccine/codon-optimize` - Codon optimization (CPU-only)
