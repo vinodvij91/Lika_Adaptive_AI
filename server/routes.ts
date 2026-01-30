@@ -1,8 +1,36 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import * as path from "path";
+import * as fs from "fs";
 import { storage } from "./storage";
 import { orchestrator } from "./orchestrator";
 import { registerArtifactsFromManifest } from "./artifact-ingestion";
+
+const upload = multer({
+  dest: "/tmp/uploads",
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === ".pdb") {
+      cb(null, true);
+    } else {
+      cb(new Error("Only .pdb files are allowed"));
+    }
+  },
+});
+
+interface PdbUpload {
+  id: string;
+  fileName: string;
+  storedPath: string;
+  description: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  fileSize: number;
+}
+
+const pdbUploads: PdbUpload[] = [];
 import { db } from "./db";
 import { eq, count, sql } from "drizzle-orm";
 import { materialEntities } from "@shared/schema";
@@ -765,6 +793,55 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error creating annotation:", error);
       res.status(500).json({ error: "Failed to create annotation" });
+    }
+  });
+
+  app.get("/api/libraries/pdb-uploads", requireAuth, async (req, res) => {
+    try {
+      res.json(pdbUploads.slice().reverse());
+    } catch (error) {
+      console.error("Error fetching PDB uploads:", error);
+      res.status(500).json({ error: "Failed to fetch PDB uploads" });
+    }
+  });
+
+  app.post("/api/libraries/upload-pdb", requireAuth, upload.single("file"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const description = req.body.description || "";
+      const userId = (req.user as any)?.id || "dev-user";
+      
+      const pdbUploadDir = "/tmp/pdb_uploads";
+      if (!fs.existsSync(pdbUploadDir)) {
+        fs.mkdirSync(pdbUploadDir, { recursive: true });
+      }
+      
+      const timestamp = Date.now();
+      const safeFileName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const storedPath = path.join(pdbUploadDir, `${timestamp}_${safeFileName}`);
+      fs.renameSync(file.path, storedPath);
+
+      const pdbRecord: PdbUpload = {
+        id: `pdb-${timestamp}`,
+        fileName: file.originalname,
+        storedPath,
+        description,
+        uploadedBy: userId,
+        uploadedAt: new Date().toISOString(),
+        fileSize: file.size,
+      };
+
+      pdbUploads.push(pdbRecord);
+      console.log("PDB file uploaded:", pdbRecord);
+
+      res.status(201).json(pdbRecord);
+    } catch (error: any) {
+      console.error("Error uploading PDB file:", error);
+      res.status(500).json({ error: error.message || "Failed to upload PDB file" });
     }
   });
 
