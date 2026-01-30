@@ -186,63 +186,118 @@ export function parseSMILESto3D(smiles: string): MoleculeData {
   const atoms: Atom[] = [];
   const bonds: Bond[] = [];
   let atomId = 0;
-  let x = 0;
-  const y = 0;
-  const z = 0;
   let lastAtomId = -1;
   const ringAtoms: Record<number, number> = {};
   const branchStack: number[] = [];
+  let nextBondOrder = 1;
 
-  const elementPattern = /Cl|Br|[HCNOFPSIBC]|[a-z]/gi;
-  const tokens = smiles.match(elementPattern) || [];
+  // Tokenize SMILES properly - handles elements, numbers, brackets, bonds
+  const tokenPattern = /Cl|Br|Si|[HCNOFPSIB]|[cnos]|[0-9]|[\(\)\[\]=#@\+\-\\\/]/g;
+  const tokens = smiles.match(tokenPattern) || [];
+  
+  // Track positions for 3D layout
+  const positions: [number, number, number][] = [];
+  
+  const getNextPosition = (): [number, number, number] => {
+    if (atomId === 0) return [0, 0, 0];
+    
+    // Calculate position based on parent atom and bond angle
+    const parentPos = lastAtomId >= 0 ? positions[lastAtomId] : [0, 0, 0] as [number, number, number];
+    const bondLength = 1.5;
+    
+    // Vary angle based on atom count for better visualization
+    const baseAngle = (atomId * 72 + (atomId % 3) * 30) * Math.PI / 180;
+    const zOffset = (atomId % 3 === 0) ? 0.4 : (atomId % 3 === 1) ? -0.4 : 0;
+    
+    return [
+      parentPos[0] + Math.cos(baseAngle) * bondLength,
+      parentPos[1] + Math.sin(baseAngle) * bondLength * 0.6,
+      parentPos[2] + zOffset
+    ];
+  };
 
-  tokens.forEach((token) => {
-    const element = token.toUpperCase();
-    if (element.match(/[0-9]/)) {
-      const ringNum = parseInt(element);
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    
+    // Handle bond order symbols
+    if (token === "=") {
+      nextBondOrder = 2;
+      continue;
+    }
+    if (token === "#") {
+      nextBondOrder = 3;
+      continue;
+    }
+    
+    // Skip stereochemistry and other modifiers
+    if (token === "/" || token === "\\" || token === "@" || token === "+" || token === "-") {
+      continue;
+    }
+    
+    // Skip square brackets (simplified handling)
+    if (token === "[" || token === "]") {
+      continue;
+    }
+
+    // Handle ring closures
+    if (/[0-9]/.test(token)) {
+      const ringNum = parseInt(token);
       if (ringAtoms[ringNum] !== undefined) {
-        bonds.push({ atom1: lastAtomId, atom2: ringAtoms[ringNum], order: 1 });
+        bonds.push({ atom1: lastAtomId, atom2: ringAtoms[ringNum], order: nextBondOrder });
         delete ringAtoms[ringNum];
       } else {
         ringAtoms[ringNum] = lastAtomId;
       }
-      return;
+      nextBondOrder = 1;
+      continue;
     }
 
+    // Handle branching
     if (token === "(") {
       branchStack.push(lastAtomId);
-      return;
+      continue;
     }
     if (token === ")") {
       lastAtomId = branchStack.pop() ?? lastAtomId;
-      return;
+      continue;
     }
 
+    // It's an element - convert lowercase aromatic to uppercase
+    const element = token.toUpperCase();
     const color = ELEMENT_COLORS[element] || ELEMENT_COLORS.default;
     const radius = ELEMENT_RADII[element] || ELEMENT_RADII.default;
 
-    const angle = (atomId * 60 * Math.PI) / 180;
-    const bondLength = 1.5;
-    const newX = atomId === 0 ? 0 : x + Math.cos(angle) * bondLength;
-    const newY = atomId === 0 ? 0 : y + Math.sin(angle) * bondLength * 0.5;
-    const newZ = atomId === 0 ? 0 : z + (atomId % 2 === 0 ? 0.3 : -0.3);
+    const position = getNextPosition();
+    positions.push(position);
 
     atoms.push({
       id: atomId,
       element,
-      position: [newX, newY, newZ],
+      position,
       color,
       radius
     });
 
+    // Add bond to previous atom
     if (lastAtomId >= 0) {
-      bonds.push({ atom1: lastAtomId, atom2: atomId, order: 1 });
+      bonds.push({ atom1: lastAtomId, atom2: atomId, order: nextBondOrder });
     }
 
+    nextBondOrder = 1;
     lastAtomId = atomId;
-    x = newX;
     atomId++;
-  });
+  }
+
+  // If no atoms were parsed, return a simple carbon atom
+  if (atoms.length === 0) {
+    atoms.push({
+      id: 0,
+      element: "C",
+      position: [0, 0, 0],
+      color: ELEMENT_COLORS.C,
+      radius: ELEMENT_RADII.C
+    });
+  }
 
   return { atoms, bonds };
 }
