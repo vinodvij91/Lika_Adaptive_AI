@@ -37,6 +37,7 @@ import CrystalViewer3D, {
   generateNaClCrystal,
   generateLiFePO4Crystal,
   generatePerovskiteCrystal,
+  generateMolecularCrystal,
   type CrystalData
 } from "@/components/crystal-viewer-3d";
 
@@ -88,6 +89,23 @@ export default function MolecularViewerPage() {
       const molecule = parseSMILESto3D(customSmiles);
       setSelectedMolecule(molecule);
       setSelectedMoleculeName(`Custom: ${customSmiles}`);
+    }
+  };
+
+  const handleGenerateCrystal = () => {
+    if (selectedMolecule.atoms.length > 0) {
+      const crystal = generateMolecularCrystal(
+        selectedMolecule.atoms.map(a => ({
+          element: a.element,
+          position: a.position,
+          color: a.color,
+          radius: a.radius
+        })),
+        selectedMoleculeName
+      );
+      setSelectedCrystal(crystal);
+      setSelectedCrystalName(`${selectedMoleculeName} Crystal`);
+      setActiveTab("crystals");
     }
   };
 
@@ -204,6 +222,24 @@ export default function MolecularViewerPage() {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Enter a SMILES string to visualize any molecule
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <Label>Generate Crystal Structure</Label>
+                      <Button 
+                        onClick={handleGenerateCrystal} 
+                        className="w-full"
+                        variant="secondary"
+                        data-testid="button-generate-crystal"
+                      >
+                        <Grid3X3 className="h-4 w-4 mr-2" />
+                        View as Crystal Lattice
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Create a molecular crystal from the current molecule
                       </p>
                     </div>
                   </CardContent>

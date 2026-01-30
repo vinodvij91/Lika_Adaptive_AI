@@ -404,4 +404,79 @@ export default function CrystalViewer3D({
   );
 }
 
+// Generate a molecular crystal by replicating a molecule in a simple lattice
+export function generateMolecularCrystal(
+  moleculeAtoms: Array<{ element: string; position: [number, number, number]; color: string; radius: number }>,
+  moleculeName: string,
+  repeatX: number = 2,
+  repeatY: number = 2,
+  repeatZ: number = 2
+): CrystalData {
+  const crystalAtoms: CrystalAtom[] = [];
+  let atomId = 0;
+  
+  // Calculate molecule bounding box to determine lattice spacing
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  let minZ = Infinity, maxZ = -Infinity;
+  
+  for (const atom of moleculeAtoms) {
+    minX = Math.min(minX, atom.position[0]);
+    maxX = Math.max(maxX, atom.position[0]);
+    minY = Math.min(minY, atom.position[1]);
+    maxY = Math.max(maxY, atom.position[1]);
+    minZ = Math.min(minZ, atom.position[2]);
+    maxZ = Math.max(maxZ, atom.position[2]);
+  }
+  
+  // Add padding for lattice spacing
+  const spacingX = (maxX - minX) + 3;
+  const spacingY = (maxY - minY) + 3;
+  const spacingZ = (maxZ - minZ) + 3;
+  
+  // Center offset
+  const centerX = (repeatX - 1) * spacingX / 2;
+  const centerY = (repeatY - 1) * spacingY / 2;
+  const centerZ = (repeatZ - 1) * spacingZ / 2;
+  
+  // Replicate molecule in 3D lattice
+  for (let ix = 0; ix < repeatX; ix++) {
+    for (let iy = 0; iy < repeatY; iy++) {
+      for (let iz = 0; iz < repeatZ; iz++) {
+        const offsetX = ix * spacingX - centerX;
+        const offsetY = iy * spacingY - centerY;
+        const offsetZ = iz * spacingZ - centerZ;
+        
+        for (const atom of moleculeAtoms) {
+          const color = ELEMENT_COLORS[atom.element] || atom.color || ELEMENT_COLORS.default;
+          const radius = ELEMENT_RADII[atom.element] || atom.radius || ELEMENT_RADII.default;
+          
+          crystalAtoms.push({
+            id: atomId++,
+            element: atom.element,
+            position: [
+              atom.position[0] + offsetX,
+              atom.position[1] + offsetY,
+              atom.position[2] + offsetZ
+            ],
+            color,
+            radius
+          });
+        }
+      }
+    }
+  }
+  
+  return {
+    atoms: crystalAtoms,
+    latticeVectors: [
+      [spacingX, 0, 0],
+      [0, spacingY, 0],
+      [0, 0, spacingZ]
+    ],
+    name: `${moleculeName} Crystal`,
+    spaceGroup: "P1 (molecular)"
+  };
+}
+
 export { type CrystalData, type CrystalAtom };
