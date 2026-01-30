@@ -105,7 +105,7 @@ interface TaskMatrixData {
 
 export default function VaccineDiscoveryPage() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("pipeline");
+  const [activeTab, setActiveTab] = useState("complete");
   
   const [pathogenName, setPathogenName] = useState("Novel Coronavirus");
   const [proteinSequences, setProteinSequences] = useState("MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLHSTQDLFLPFFSNVTWFHAIHVSGTNGTKRFDNPVLPFNDGVYFASTEKSNIIRGWIFGTTLDSKTQSLLIVNNATNVVIKVCEFQFCNDPFLGVYYHKNNKSWMESEFRVYSSANNCTFEYVSQPFLMDLEGKQGNFKNLREFVFKNIDGYFKIYSKHTPINLVRDLPQGFSALEPLVDLPIGINITRFQTLLALHRSYLTPGDSSSGWTAGAAAYYVGYLQPRTFLLKYNENGTITDAVDCALDPLSETKCTLKSFTVEKGIYQTSNFRVQPTESIVRFPNITNLCPFGEVFNATRFASVYAWNRKRISNCVADYSVLYNSASFSTFKCYGVSPTKLNDLCFTNVYADSFVIRGDEVRQIAPGQTGKIADYNYKLPDDFTGCVIAWNSNNLDSKVGGNYNYLYRLFRKSNLKPFERDISTEIYQAGSTPCNGVEGFNCYFPLQSYGFQPTNGVGYQPYRVVVLSFELLHAPATVCGPKKSTNLVKNKCVNF");
@@ -132,7 +132,12 @@ export default function VaccineDiscoveryPage() {
   const [epitopeResult, setEpitopeResult] = useState<VaccineResult | null>(null);
   const [codonResult, setCodonResult] = useState<VaccineResult | null>(null);
   const [mrnaResult, setMrnaResult] = useState<VaccineResult | null>(null);
+  const [completePipelineResult, setCompletePipelineResult] = useState<any | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  const [completeSequence, setCompleteSequence] = useState("");
+  const [completeVaccineType, setCompleteVaccineType] = useState("protein_subunit");
+  const [completePdbFileId, setCompletePdbFileId] = useState<string | null>(null);
   
   const [selectedPdbFileId, setSelectedPdbFileId] = useState<string | null>(null);
   const [structurePdbFileId, setStructurePdbFileId] = useState<string | null>(null);
@@ -304,6 +309,24 @@ export default function VaccineDiscoveryPage() {
     },
   });
 
+  const completePipelineMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/compute/vaccine/complete-pipeline", {
+        sequence: completeSequence,
+        vaccineType: completeVaccineType,
+        pdbFileId: completePdbFileId,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setCompletePipelineResult(data);
+      toast({ title: "Complete Pipeline Finished", description: "All bioinformatics analyses complete" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Pipeline Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   return (
     <div className="flex flex-col h-full overflow-auto">
       <div className="border-b bg-card">
@@ -343,7 +366,11 @@ export default function VaccineDiscoveryPage() {
 
       <div className="container mx-auto px-6 py-6 flex-1">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
+            <TabsTrigger value="complete" data-testid="tab-complete">
+              <Syringe className="h-4 w-4 mr-2" />
+              Complete
+            </TabsTrigger>
             <TabsTrigger value="pipeline" data-testid="tab-pipeline">
               <Activity className="h-4 w-4 mr-2" />
               Pipeline
@@ -366,13 +393,177 @@ export default function VaccineDiscoveryPage() {
             </TabsTrigger>
             <TabsTrigger value="task-matrix" data-testid="tab-task-matrix">
               <Grid3X3 className="h-4 w-4 mr-2" />
-              Task Matrix
+              Matrix
             </TabsTrigger>
             <TabsTrigger value="hardware" data-testid="tab-hardware">
               <Server className="h-4 w-4 mr-2" />
               Hardware
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="complete" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Syringe className="h-5 w-5 text-purple-500" />
+                    Complete Vaccine Pipeline
+                  </CardTitle>
+                  <CardDescription>
+                    End-to-end vaccine design with DSSP, DiscoTope, NetMHCpan, MAFFT, JCat codon optimization, and ViennaRNA
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {pdbUploads && pdbUploads.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Use Existing PDB Structure (Optional)</Label>
+                      <div className="flex items-center gap-2">
+                        <Select value={completePdbFileId || ""} onValueChange={(v) => {
+                          setCompletePdbFileId(v || null);
+                          if (v) {
+                            const pdb = pdbUploads.find(p => p.id === v);
+                            if (pdb?.extractedSequence) {
+                              setCompleteSequence(pdb.extractedSequence);
+                            }
+                          }
+                        }}>
+                          <SelectTrigger className="flex-1" data-testid="select-complete-pdb">
+                            <SelectValue placeholder="Select uploaded PDB file..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {pdbUploads.map((pdb) => (
+                              <SelectItem key={pdb.id} value={pdb.id}>
+                                {pdb.fileName} ({pdb.sequenceLength || 0} residues)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {completePdbFileId && (
+                          <Button variant="ghost" size="icon" onClick={() => setCompletePdbFileId(null)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label>Protein Sequence</Label>
+                    <Textarea
+                      value={completeSequence}
+                      onChange={(e) => setCompleteSequence(e.target.value)}
+                      placeholder="Enter amino acid sequence or select PDB file above..."
+                      rows={4}
+                      className="font-mono text-xs"
+                      data-testid="textarea-complete-sequence"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vaccine Type</Label>
+                    <Select value={completeVaccineType} onValueChange={setCompleteVaccineType}>
+                      <SelectTrigger data-testid="select-complete-vaccine-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="protein_subunit">Protein Subunit</SelectItem>
+                        <SelectItem value="mrna">mRNA Vaccine</SelectItem>
+                        <SelectItem value="multi_epitope">Multi-Epitope</SelectItem>
+                        <SelectItem value="peptide">Peptide Vaccine</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="border rounded-lg p-3 bg-muted/30">
+                    <div className="text-sm font-medium mb-2">Pipeline Stages:</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        Conservation Analysis (MAFFT)
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        DSSP Surface Analysis
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        DiscoTope B-cell Epitopes
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        NetMHCpan T-cell Epitopes
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        Linker Design
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        JCat Codon Optimization
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        ViennaRNA Structure
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        Vaccine Construct Design
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => completePipelineMutation.mutate()}
+                    disabled={completePipelineMutation.isPending || (!completeSequence.trim() && !completePdbFileId)}
+                    className="w-full"
+                    data-testid="button-run-complete-pipeline"
+                  >
+                    {completePipelineMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Play className="h-4 w-4 mr-2" />
+                    )}
+                    Run Complete Pipeline
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pipeline Results</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {completePipelineResult ? (
+                    <div className="space-y-4">
+                      {completePipelineResult.stages && (
+                        <div className="space-y-3">
+                          {Object.entries(completePipelineResult.stages).map(([stage, data]: [string, any]) => (
+                            <Collapsible key={stage}>
+                              <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg bg-muted/50 hover:bg-muted">
+                                <span className="text-sm font-medium capitalize">{stage.replace(/_/g, ' ')}</span>
+                                <ChevronRight className="h-4 w-4" />
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="pt-2">
+                                <pre className="bg-muted p-3 rounded-lg text-xs overflow-auto max-h-48 font-mono">
+                                  {JSON.stringify(data, null, 2)}
+                                </pre>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          ))}
+                        </div>
+                      )}
+                      {completePipelineResult.nodeUsed && (
+                        <Badge variant="outline" className="text-xs">
+                          <Server className="h-3 w-3 mr-1" />
+                          {completePipelineResult.nodeUsed}
+                        </Badge>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground py-12">
+                      Run the complete pipeline to see comprehensive vaccine design results
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           <TabsContent value="pipeline" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
