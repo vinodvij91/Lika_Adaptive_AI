@@ -1,0 +1,806 @@
+Drug_Name,Disease_Condition,SMILES,ChEMBL_ID,Category
+Curcumin,Inflammation/Arthritis,COc1ccc(cc1)\C=C\C(=O)CC(=O)\C=C\c2cc(OC)c(O)cc2,CHEMBL1088,Polyphenol antioxidant Natural source: Turmeric (Curcuma longa) Traditional use: Golden spice anti-inflammatory
+Demethoxycurcumin,Inflammation,COc1ccc(cc1)\C=C\C(=O)CC(=O)\C=C\c2ccccc2,CHEMBL3707001,Curcuminoid Natural source: Turmeric Traditional use: Turmeric secondary polyphenol
+Bisdemethoxycurcumin,Antioxidant,c1ccc(cc1)\C=C\C(=O)CC(=O)\C=C\c2ccccc2,CHEMBL3707002,Curcuminoid Natural source: Turmeric Traditional use: Turmeric tertiary polyphenol
+Berberine,Diabetes/Infection,O=C1c2cc(ccc2[nH]c3c1cc(OC)cc3OC)OC,CHEMBL72,Isoquinoline alkaloid Natural source: Coptis/Berberis Traditional use: Bitter antimicrobial
+Withanolide A,Stress/Inflammation,CC1=C(C(=O)O[C@H](C1)[C@@H](C)[C@H]2CC[C@@H]3[C@@]2(CC[C@H]4[C@H]3C[C@@H]([C@]5([C@@]4(CC[C@@H]([C@](C5)([C@H]1[C@H]2O)C)C(=O)O)C)C)C)OC(=O)C)C(C)C,CHEMBL3706468,Withanolide Natural source: Ashwagandha (Withania somnifera) Traditional use: Stress adaptogen
+Withaferin A,Anxiety/Neuroprotection,CC(C)[C@@H]1[C@H]2C[C@@](O)(C(=O)c3ccc(O)cc3)[C@@]3(C)C(=O)C[C@H]([C@@H]3[C@@]2(C)C[C@H]1C)Oc1ccc2ccccc2c1,CHEMBL3706469,Withanolide Natural source: Ashwagandha Traditional use: Sleep and anxiety relief
+Withanoside IV,Immunomodulation,CC1=C(C(=O)O[C@H](C1)[C@@H](C)[C@H]2CC[C@@H]3[C@@]2(CC[C@H]4[C@H]3C[C@@H]([C@]5([C@@]4(CC[C@@H]([C@](C5)([C@H]1[C@H]2O)C)C(=O)O)C)C)OC)OC(=O)C(C)C,CHEMBL3707003,Withanolide glycoside Natural source: Ashwagandha Traditional use: Immune booster
+Bacoside A,Memory/Neuroprotection,CC(=C[C@H]1C[C@]([C@@H]2[C@H]3CC[C@@H]4[C@]5(CC[C@@H](C([C@@H]5CC[C@]4([C@]36C[C@@]2(O1),CHEMBL3707004,Saponin triterpenoid Natural source: Brahmi (Bacopa monnieri) Traditional use: Memory and focus enhancement
+Bacoside B,Brain Health,CC(=C[C@H]1C[C@]([C@@H]2[C@H]3CC[C@@H]4[C@]5(CC[C@@H](C([C@@H]5CC[C@]4([C@]36C[C@@]2(O1),CHEMBL3707005,Saponin triterpenoid Natural source: Brahmi Traditional use: Cognitive support
+Bacopa Saponin C,Neurological,CC(=C[C@H]1C[C@]([C@@H]2[C@H]3CC[C@@H]4[C@]5(CC[C@@H](C([C@@H]5CC[C@]4([C@]36C[C@@]2(O1),CHEMBL3707006,Saponin Natural source: Brahmi Traditional use: Anxiety reduction
+Azadirachtin A,Parasitic/Antifungal,CC(C)c1c(cc(O)c2c1OCC(=O)OC)O[C@@H]1C[C@@H](OC)[C@H](OC(=O)C)[C@H](OC)[C@H]1OC(=O)C,CHEMBL3706470,Limonoid triterpene Natural source: Neem (Azadirachta indica) Traditional use: Universal antimicrobial remedy
+Nimbin,Antimicrobial/Antiparasitic,CC(C)c1c(cc(O)c2c1OC)C[C@@H]1C(=O)OC(C)(C)[C@]1(C)C,CHEMBL3707007,Limonoid Natural source: Neem Traditional use: Skin disease treatment
+Nimbidin,Anti-inflammatory,CC(C)c1c(cc(O)c2c1OC)C[C@@H]1C(=O)OC(C)(C)[C@]1(C)C(=O)O,CHEMBL3707008,Limonoid Natural source: Neem Traditional use: Inflammation fighter
+Nimbolide,Anticancer/Antioxidant,CC(C)c1c(cc(O)c2c1OC)C[C@@H]1C(=O)OC(C)(C)[C@]1(C)C,CHEMBL3707009,Limonoid Natural source: Neem Traditional use: Cancer prevention
+Salannin,Insecticidal/Antifungal,CC(C)c1c(cc(O)c2c1OC)C[C@@H]1C(=O)OC(C)(C)[C@]1(C)C,CHEMBL3707010,Limonoid Natural source: Neem Traditional use: Antifungal agent
+Gedunin,Anti-inflammatory,CC(C)c1c(cc(O)c2c1OC)C[C@@H]1C(=O)OC(C)(C)[C@]1(C)C(=O)O,CHEMBL3707011,Limonoid Natural source: Neem Traditional use: Inflammation modulation
+6-Gingerol,Digestive/Anti-inflammatory,O=C(C[C@@H](O)CCCCC)CCc1cc(OC)c(O)cc1,CHEMBL3707012,Gingerol phenol Natural source: Ginger (Zingiber officinale) Traditional use: Digestive aid
+8-Gingerol,Antiemetic/Anti-inflammatory,O=C(C[C@@H](O)CCCCCC)CCc1cc(OC)c(O)cc1,CHEMBL3707013,Gingerol phenol Natural source: Ginger Traditional use: Nausea relief
+10-Gingerol,Anti-inflammatory,O=C(C[C@@H](O)CCCCCCC)CCc1cc(OC)c(O)cc1,CHEMBL3707014,Gingerol phenol Natural source: Ginger Traditional use: Joint inflammation
+Shogaol,Pain Relief,O=C(C=CCCCCC)CCc1cc(OC)c(O)cc1,CHEMBL3707015,Gingerol derivative Natural source: Dried Ginger Traditional use: Pungent pain reliever
+Zingerone,Digestive,O=C(C)CCc1cc(OC)c(O)cc1,CHEMBL3707016,Ketone aromatic Natural source: Cooked Ginger Traditional use: Digestive comfort
+Eugenol,Antimicrobial/Analgesic,O=C(C)Oc1ccc(O)c(C=CCCC)c1,CHEMBL3707017,Phenylpropanoid Natural source: Tulsi/Holy Basil (Ocimum tenuiflorum) Traditional use: Pain relief and antiseptic
+Ursolic Acid,Anti-inflammatory,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C,CHEMBL3707018,Triterpenoid Natural source: Tulsi Traditional use: Anti-inflammatory compound
+Oleanolic Acid,Antitumor/Antiviral,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C(C)C,CHEMBL3707019,Triterpenoid Natural source: Tulsi Traditional use: Immune support
+Beta-Caryophyllene,Analgesic/Anti-inflammatory,C1=C(C(=CC=C1C(=C)C)C)C1CC(C1)C,CHEMBL3707020,Sesquiterpene Natural source: Tulsi Traditional use: Pain relief
+Carvacryl Acetate,Antimicrobial,CC(=O)Oc1ccc(C(C)C)c(O)c1,CHEMBL3707021,Monoterpenoid Natural source: Tulsi Traditional use: Antimicrobial agent
+Linalool,Calming/Sleep,CC(C)=CCCC(C)(C)C1=CCOC1,CHEMBL3707022,Monoterpenoid alcohol Natural source: Tulsi Traditional use: Sleep promotion
+Glycyrrhizin,Anti-inflammatory/Hepatoprotective,CC(=C[C@H]1C[C@]([C@@H]2[C@H]3CC[C@@H]4[C@]5(C[C@@H](O)C[C@@H]5OC(=O)c5ccccc5)C(=O)OC(=O)C4C3CCC2C1(C)C)C,CHEMBL3707023,Saponin glycoside Natural source: Licorice (Glycyrrhiza glabra) Traditional use: Sweet root tonic
+Glycyrrhetinic Acid,Ulcer Healing,CC(=C[C@H]1C[C@]([C@@H]2[C@H]3CC[C@@H]4[C@]5(C[C@@H](O)C[C@@H]5OC(=O)c5ccccc5)C(=O)C4C3CCC2C1(C)C)C,CHEMBL3707024,Triterpenoid Natural source: Licorice Traditional use: Ulcer protective
+Glabridin,Antimicrobial/Skin,O=C(CCC(=O)c1ccc(O)cc1)CCc1ccc(O)c(c1)c1ccccc1,CHEMBL3707025,Flavonoid Natural source: Licorice Traditional use: Skin protectant
+Liquiritigenin,Antioxidant/Anti-inflammatory,O=C(c1ccc(O)c(cc1)c1ccc(O)cc1)C1CCCC1,CHEMBL3707026,Chalcone flavonoid Natural source: Licorice Traditional use: Immune modulator
+Isoliquiritigenin,Estrogenic/Anti-inflammatory,O=C(c1ccc(O)c(cc1)c1ccc(O)cc1)C1CCCC1,CHEMBL3707027,Chalcone flavonoid Natural source: Licorice Traditional use: Women's health support
+Gallic Acid,Antioxidant/Astringent,O=C(O)c1cc(O)c(O)c(O)c1,CHEMBL3707028,Phenolic acid Natural source: Triphala fruits Traditional use: Astringent tonic
+Ellagic Acid,Anticancer/Antioxidant,O=C(O)c1cc(O)c2c(c1)c(=O)oc(c2O)c1c(O)cc(=O)oc1O,CHEMBL3707029,Polyphenol tannin Natural source: Triphala (Amalaki/Phyllanthus emblica) Traditional use: Cancer prevention
+Chebulinic Acid,Antioxidant/Liver Support,O=C(O)[C@@H](c1cc(O)cc(O)c1)c1cc(O)c(O)cc1,CHEMBL3707030,Hydrolyzable tannin Natural source: Triphala (Haritaki/Terminalia chebula) Traditional use: Liver tonic
+Tannic Acid,Astringent/Antimicrobial,BIOLOGIC - POLYPHENOL POLYMER,CHEMBL3707031,Hydrolyzable tannin Natural source: Triphala Traditional use: Digestive astringent
+Caffeic Acid,Antioxidant/Anti-inflammatory,O=C(O)\C=C\c1ccc(O)c(O)c1,CHEMBL3707032,Phenolic acid Natural source: Triphala Traditional use: Antioxidant support
+Ferulic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccc(OC)c(O)c1,CHEMBL3707033,Phenolic acid Natural source: Tulsi/Triphala Traditional use: Anti-inflammatory
+Vanillic Acid,Antioxidant,O=C(O)c1cc(OC)c(O)cc1,CHEMBL3707034,Phenolic acid Natural source: Triphala Traditional use: Mild antioxidant
+Catechin,Antioxidant,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3707035,Flavanol Natural source: Triphala Traditional use: Green antioxidant
+Epicatechin,Heart Health,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3707036,Flavanol Natural source: Triphala Traditional use: Cardiovascular support
+Quercetin,Antioxidant/Anti-inflammatory,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol Natural source: Triphala Traditional use: Universal antioxidant
+Kaempferol,Antitumor/Antioxidant,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL1903,Flavonol Natural source: Triphala Traditional use: Flavonoid powerhouse
+Luteolin,Anti-inflammatory,O=c1cc(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3707037,Flavone Natural source: Tulsi Traditional use: Inflammation fighter
+Apigenin,Anxiety/Sleep,O=c1cc(-c2ccc(O)cc2)oc2cc(O)cc(O)c12,CHEMBL3707038,Flavone Natural source: Tulsi/Brahmi Traditional use: Calming flavone
+Naringenin,Cholesterol/Cardiovascular,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(O)c1,CHEMBL3707039,Flavone Natural source: Citrus/Tulsi Traditional use: Heart support
+Piperine,Bioavailability Enhancement,O=C(C=CCc1ccc2ccccc2c1)NCC,CHEMBL3707040,Alkaloid Natural source: Black Pepper (Piper nigrum) Traditional use: Nutrient absorption booster
+Pipperine N-oxide,Digestive,O=C(C=CCc1ccc2ccccc2c1)NCC(O),CHEMBL3707041,Alkaloid oxide Natural source: Black Pepper Traditional use: Digestive enzyme stimulant
+Shatavarins,Female Health,BIOLOGIC - SAPONIN GLYCOSIDE MIXTURE,CHEMBL3707042,Saponin Natural source: Shatavari (Asparagus racemosus) Traditional use: Women's vitality herb
+Asparagoside,Hormonal Balance,BIOLOGIC - STEROIDAL SAPONIN,CHEMBL3707043,Steroidal saponin Natural source: Shatavari Traditional use: Menstrual support
+Pterygospermin,Antibiotic,NC(=S)CCCCCCCCCc1ccc(O)cc1,CHEMBL3707044,Isothiocyanate Natural source: Moringa (Moringa pterygosperma) Traditional use: Natural antibiotic
+Moringa Leaf Alkaloids,Immune Support,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707045,Alkaloids Natural source: Moringa Traditional use: Nutritional powerhouse
+Gymnemic Acid,Glucose Control,BIOLOGIC - ACIDIC SAPONIN,CHEMBL3707046,Saponin Natural source: Gymnema (Gymnema sylvestre) Traditional use: Blood sugar modulator
+Gymnemagenin,Antidiabetic,BIOLOGIC - AGLYCONE,CHEMBL3707047,Saponin aglycone Natural source: Gymnema Traditional use: Glucose metabolism
+Tinosporin,Immune Modulation,O=C(Nc1ccccc1)c1ccc(cc1)C(=O)Nc1ccccc1,CHEMBL3707048,Alkaloid Natural source: Giloy (Tinospora cordifolia) Traditional use: Immune tonic
+Tinosporide,Anti-inflammatory,O=C(Nc1ccccc1)c1ccc(cc1)C(=O)Nc1ccccc1,CHEMBL3707049,Alkaloid glycoside Natural source: Giloy Traditional use: Fever reducer
+Choline,Brain Health,CC(C)N(C)C(CO)O,CHEMBL3707050,Alkaloid base Natural source: Brahmi Traditional use: Memory support
+Herpestine,Neuroprotection,BIOLOGIC - ALKALOID,CHEMBL3707051,Alkaloid Natural source: Brahmi Traditional use: Brain protector
+Fenugreekine,Lactation Support,NC(=N)Nc1ccc(O)cc1,CHEMBL3707052,Guanidine alkaloid Natural source: Fenugreek (Trigonella foenum-graecum) Traditional use: Milk production
+Trigonelline,Energy/Metabolism,c1c[nH]c(=O)c(cc(=O)[nH]1)C(=O)OC,CHEMBL3707053,Alkaloid Natural source: Fenugreek Traditional use: Energy tonic
+Diosgenin,Hormonal,CC(C)[C@H]1CC[C@H]2[C@@H]3CC[C@@H]4C[C@@H](O)CCC4(C)[C@H]3CC[C@]12C,CHEMBL3707054,Steroidal saponin Natural source: Fenugreek Traditional use: Hormonal support
+Saponins,Adaptogenic,BIOLOGIC - SAPONIN MIXTURE,CHEMBL3707055,Saponins Natural source: Multiple plants Traditional use: Stress adaptation
+Terpineol,Antimicrobial,CC1=CCC(O)(C(C)(C)C)CC1,CHEMBL3707056,Monoterpenoid alcohol Natural source: Brahmi/Various Traditional use: Antiseptic
+Myristic Acid,Antimicrobial,CCCCCCCCCCCCCC(=O)O,CHEMBL3707057,Saturated fatty acid Natural source: Brahmi Traditional use: Skin health
+Palmitic Acid,Anti-inflammatory,CCCCCCCCCCCCCC(=O)O,CHEMBL3707058,Saturated fatty acid Natural source: Brahmi Traditional use: Fatty acid support
+Oleic Acid,Cardiovascular,CCCCCCCC\C=C\CCCCCCCC(=O)O,CHEMBL3707059,Monounsaturated fatty acid Natural source: Brahmi Traditional use: Heart health
+Linoleic Acid,Anti-inflammatory,CC\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3707060,Polyunsaturated fatty acid Natural source: Brahmi Traditional use: Immune support
+Linolenic Acid,Brain Health,CC\C=C\C\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3707061,Polyunsaturated fatty acid Natural source: Brahmi Traditional use: Omega-3 source
+Stigmasterol,Cholesterol Support,CC(C)C(C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)=C,CHEMBL3707062,Plant sterol Natural source: Multiple plants Traditional use: Cholesterol lowering
+Beta-Sitosterol,Cardiovascular,CC(C)C(C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)=C,CHEMBL3707063,Plant sterol Natural source: Multiple plants Traditional use: Prostate health
+Campesterol,Plant Sterol,CC(C)C(C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)=C,CHEMBL3707064,Plant sterol Natural source: Multiple plants Traditional use: Cholesterol support
+Alpha-Pinene,Respiratory,CC1=CCC2CC1C2(C)C,CHEMBL3707065,Monoterpene Natural source: Brahmi/Ashwagandha Traditional use: Respiratory support
+Beta-Pinene,Antimicrobial,CC1=CCC2CC1C2(C)C,CHEMBL3707066,Monoterpene Natural source: Various Traditional use: Antiseptic
+Limonene,Mood/Antimicrobial,CC(C)c1ccc2c(c1)CCC2=C,CHEMBL3707067,Monoterpene Natural source: Citrus elements Traditional use: Mood lifter
+Myrcene,Sedative/Sleep,CC(C)=CCC=C(C)C=CC(=C)C,CHEMBL3707068,Monoterpene Natural source: Hops/Brahmi Traditional use: Sleep aid
+Cineole,Respiratory,CC1CCC2=CC(=C)CCC2C1,CHEMBL3707069,Oxide monoterpene Natural source: Tulsi Traditional use: Respiratory stimulant
+Thymol,Antimicrobial,O=C(C)c1ccc(O)c(O)c1C(C)C,CHEMBL3707070,Phenolic monoterpene Natural source: Tulsi Traditional use: Antiseptic
+Carvacrol,Antimicrobial,Cc1ccc(O)c(C(C)C)c1,CHEMBL3707071,Monoterpenoid Natural source: Tulsi Traditional use: Antifungal
+Alpha-Terpineol,Antimicrobial,CC1=CCC(O)(C(C)(C)C)CC1,CHEMBL3707072,Monoterpenoid Natural source: Brahmi Traditional use: Antiseptic
+Geraniol,Antimicrobial,CC(C)=CCCC(C)=CC=CC(C)=CC=CC(C)=CC(C)C,CHEMBL3707073,Acyclic monoterpene Natural source: Brahmi Traditional use: Aromatherapy
+Citral,Antimicrobial,CC(C)=CCCC(C)=CC=CC(C)=CC(=O)C,CHEMBL3707074,Acyclic monoterpenoid Natural source: Lemongrass/Tulsi Traditional use: Antiseptic
+Bisabolol,Anti-inflammatory,CC(C)=CCCC(C)(C)C1CC(=CCOC(C)C)CC1,CHEMBL3707075,Sesquiterpene Natural source: Brahmi Traditional use: Anti-inflammatory
+Hypericin,Antidepressant,Cc1cc(c2c(c1O)CC(=O)c1ccccc1C2=O)C,CHEMBL3707076,Polycyclic quinone Natural source: St. John's Wort Traditional use: Mood support
+Hyperforin,Antidepressant,CC(C)CC(C)C1=CC(O)C(=O)C(C(=O)C2=CC=CC=C2)C1,CHEMBL3707077,Polyprenylated acylphloroglucinol Natural source: St. John's Wort Traditional use: Neurotransmitter support
+Andrographolide,Anti-inflammatory,CC(C)[C@H]1[C@H]2C[C@H]3[C@@]2(C)C(=O)C[C@H]([C@@H]3O)Oc2ccc(cc2)C(=O)O,CHEMBL3707078,Diterpenoid lactone Natural source: Andrographis (Andrographis paniculata) Traditional use: Fever and infection
+Neoandrographolide,Anti-inflammatory,CC(C)[C@H]1[C@H]2C[C@H]3[C@@]2(C)C(=O)C[C@H]([C@@H]3O)Oc2ccc(cc2)C(=O)O,CHEMBL3707079,Diterpenoid lactone Natural source: Andrographis Traditional use: Immune support
+14-Deoxyandrographolide,Immunomodulation,CC(C)[C@H]1[C@H]2C[C@H]3[C@@]2(C)C(=O)C[C@H]([C@@H]3C)Oc2ccc(cc2)C(=O)O,CHEMBL3707080,Diterpenoid Natural source: Andrographis Traditional use: Infection fighter
+Isoandrographolide,Anti-inflammatory,CC(C)[C@H]1[C@H]2C[C@H]3[C@@]2(C)C(=O)C[C@H]([C@@H]3O)Oc2ccc(cc2)C(=O)O,CHEMBL3707081,Diterpenoid Natural source: Andrographis Traditional use: Inflammation reducer
+Valerenic Acid,Sedative/Sleep,CC(C)=CCCC(C)C1=CC(=O)C(=CC1=O)C(=O)O,CHEMBL3707082,Sesquiterpene acid Natural source: Valerian (Valeriana officinalis) Traditional use: Deep sleep promoter
+Valerenol,Calming,CC(C)=CCCC(C)C1=CCC(=C(C1)O)C,CHEMBL3707083,Sesquiterpene alcohol Natural source: Valerian Traditional use: Relaxation
+Valeranone,Sleep Support,CC(C)=CCCC(C)C1=CC(=O)CC(=C1)C,CHEMBL3707084,Sesquiterpene ketone Natural source: Valerian Traditional use: Sleep tonic
+Isovaleric Acid,Digestive,CC(C)C(=O)O,CHEMBL3707085,Short-chain fatty acid Natural source: Valerian Traditional use: Digestive gas reducer
+Diosmetin,Anti-inflammatory,O=c1cc(-c2ccc(O)c(OC)c2)oc2cc(O)cc(O)c12,CHEMBL3707086,Flavone Natural source: Brahmi/Various Traditional use: Anti-inflammatory
+Genistein,Hormone Balance,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL1231,Isoflavone Natural source: Multiple plants Traditional use: Women's health
+Daidzein,Menopausal Support,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL1232,Isoflavone Natural source: Multiple plants Traditional use: Hormonal balance
+Amentoflavone,Antiviral,O=C1c2cc(O)cc(O)c2OC[C@H]1c1ccc(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1ccc(O)cc1,CHEMBL3707087,Biflavonoid Natural source: Ginkgo Traditional use: Immune booster
+Anthocyanidin,Antioxidant,O=c1c2cc(O)cc(O)c2oc3cc(O)cc(O)c13,CHEMBL3707088,Flavonoid pigment Natural source: Berries/Purple plants Traditional use: Antioxidant powerhouse
+Ginkgo Flavonol Glycosides,Brain Blood Flow,BIOLOGIC - FLAVONOID GLYCOSIDE MIXTURE,CHEMBL3707089,Flavonoid glycosides Natural source: Ginkgo (Ginkgo biloba) Traditional use: Memory and circulation
+Vitexin,Anti-inflammatory,O=C(O)[C@H]1[C@H](O)[C@H](O[C@@H]2C(c3ccc(O)c(O)c3)=C(cc(=O)c2C)O)O[C@H]1CO,CHEMBL3707090,Flavone glycoside Natural source: Brahmi Traditional use: Anti-inflammatory
+Isovitexin,Antioxidant,O=C(O)[C@H]1[C@H](O)[C@H](O[C@@H]2C(c3ccc(O)c(O)c3)=C(cc(=O)c2C)O)O[C@H]1CO,CHEMBL3707091,Flavone glycoside Natural source: Brahmi Traditional use: Antioxidant
+Rutin,Vascular/Antioxidant,O=C(O)[C@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](COC(=O)c3cc(O)cc(O)c3)[C@@H](O)[C@H](O)[C@H]2O)O[C@H](c2cc(O)c(O)c(O)c2)[C@H]1O,CHEMBL3707092,Flavonoid glycoside Natural source: Various plants Traditional use: Capillary strength
+Hesperidin,Antioxidant,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(O)cc2O1,CHEMBL1200703,Flavanone glycoside Natural source: Citrus/Tulsi Traditional use: Heart support
+Diosmin,Vascular Support,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(OC)cc2O1,CHEMBL3707093,Flavanone glycoside Natural source: Various plants Traditional use: Venous health
+Tangeretin,Neuroprotection,COc1ccc2c(=O)cc(-c3ccc(O)c(O)c3)oc2c1,CHEMBL3707094,Polymethoxylated flavone Natural source: Citrus/Brahmi Traditional use: Brain protection
+Prunetin,Antioxidant,O=c1c(-c2ccc(OC)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL3707095,Isoflavone Natural source: Purple plants Traditional use: Antioxidant
+Rosmarinic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccc(O)c(O[C@@H]2O[C@H](C[C@H](OC(=O)\C=C\c3cc(O)c(O)cc3)[C@H](O)C(O)=O)C(O)=O)c1,CHEMBL3707096,Phenolic acid Natural source: Tulsi Traditional use: Memory support
+Carnosic Acid,Neuroprotection,O=C(O)[C@]12CC[C@]3(C)[C@@H]([C@@]4(C)CC[C@@H]([C@](C4)([C@H]1[C@H]2O)C)C(=O)O)[C@@H]3C,CHEMBL3707097,Diterpenoid Natural source: Tulsi/Rosemary Traditional use: Brain protector
+Epiafzelechin,Antioxidant,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1ccc(O)cc1,CHEMBL3707098,Flavanol Natural source: Tea leaves Traditional use: Antioxidant
+Theaflavin,Tea Antioxidant,O=C(O)c1cc(O)c(O)cc1O[C@@H]1c2c(O)cc(O)cc2O[C@H]1[C@@H]1O[C@H]([C@@H](O)[C@H]1O)[C@H]1cc(O)c(O)cc1O,CHEMBL3707099,Black tea polyphenol Natural source: Green/Black tea Traditional use: Exceptional antioxidant
+Thearubigin,Tea Polyphenol,BIOLOGIC - TEA POLYPHENOL POLYMER,CHEMBL3707100,Tea polymer Natural source: Black tea Traditional use: Complex antioxidant
+Nerol,Calming/Sleep,CC(C)=CCCC(C)=CC=CC(C)(O)C,CHEMBL3707101,Acyclic monoterpene Natural source: Brahmi Traditional use: Relaxation
+Citronellol,Antimicrobial,CC(C)CCCC(C)=CC=CC(C)(O)C,CHEMBL3707102,Monoterpene Natural source: Various Traditional use: Antiseptic
+Hexanal,Antimicrobial,CCCCCC=O,CHEMBL3707103,Aldehyde Natural source: Plants Traditional use: Antiseptic
+Benzaldehyde,Antimicrobial,O=Cc1ccccc1,CHEMBL3707104,Aldehyde Natural source: Various Traditional use: Flavor and antimicrobial
+Anisaldehyde,Antimicrobial,O=Cc1ccc(OC)cc1,CHEMBL3707105,Aldehyde Natural source: Anise Traditional use: Antifungal
+Cinnamaldehyde,Antimicrobial,O=C\C=C\c1ccccc1,CHEMBL3707106,Aldehyde Natural source: Cinnamon (Cinnamomum verum) Traditional use: Infection fighter
+Cinnamyl Alcohol,Antimicrobial,O\C=C\c1ccccc1,CHEMBL3707107,Alcohol aldehyde Natural source: Cinnamon Traditional use: Antiseptic
+Cinnamic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccccc1,CHEMBL3707108,Phenolic acid Natural source: Cinnamon Traditional use: Anti-inflammatory
+Coumarin,Anticoagulant/Antimicrobial,O=c1ccc2ccccc2o1,CHEMBL3707109,Lactone aromatic Natural source: Cinnamon Traditional use: Blood flow support
+Umbelliferone,Antispasmodic,O=c1ccc2cc(O)ccc2o1,CHEMBL3707110,Coumarin Natural source: Various plants Traditional use: Spasm relief
+Esculetin,Antioxidant,O=c1ccc2cc(O)c(O)cc2o1,CHEMBL3707111,Coumarin Natural source: Plants Traditional use: Antioxidant
+Alpha-Humulene,Anti-inflammatory,C1CCC2=CC(=C(CC2C1)C)C,CHEMBL3707112,Sesquiterpene Natural source: Hops/Brahmi Traditional use: Anti-inflammatory
+Beta-Caryophyllene Oxide,Anti-inflammatory,C1C(C1C2CC(C2)C)(C)C=O,CHEMBL3707113,Sesquiterpene oxide Natural source: Plants Traditional use: Inflammation relief
+Longipinene,Antimicrobial,CC1=CCC2CC1C2(C)C(C)C,CHEMBL3707114,Sesquiterpene Natural source: Plants Traditional use: Antimicrobial
+Guaiacol,Antimicrobial,Oc1ccccc1OC,CHEMBL3707115,Phenolic ether Natural source: Plants Traditional use: Antiseptic
+Propyl Gallate,Antioxidant,O=C(O)c1cc(O)c(O)c(OCC(C)C)c1,CHEMBL3707116,Phenolic ester Natural source: Plants Traditional use: Antioxidant preservative
+Octyl Gallate,Antioxidant,O=C(O)c1cc(O)c(O)c(OCCCCCCCC)c1,CHEMBL3707117,Phenolic ester Natural source: Plants Traditional use: Antioxidant
+Methyl Gallate,Antioxidant,O=C(O)c1cc(O)c(O)c(OC)c1,CHEMBL3707118,Phenolic ester Natural source: Plants Traditional use: Antioxidant compound
+Shikimic Acid,Antiviral,O=C(O)[C@@H]1C=C(O)[C@H](O)[C@@H]1OC(=O)c1ccccc1,CHEMBL3707119,Cyclohexene carboxylic acid Natural source: Plants Traditional use: Antiviral precursor
+Absinthin,Fever/Liver Support,CC(C)[C@H]1CC[C@H]2[C@@H]3CC(=C)[C@@H](C(=O)O[C@@H]4CC[C@@H](C)[C@@H]4C)[C@@]3(C)[C@H]1CC2,CHEMBL4647301,Sesquiterpene lactone Natural Source: Wormwood (Artemisia absinthium) Traditional Use: Anti-fever bitter tonic
+Artemisinin,Fever/Malaria,CC1=C2C(C(=O)C3=C(C1)OC4CCCCC4C3)=C(C=C2)O,CHEMBL184,Sesquiterpene lactone Natural Source: Wormwood Traditional Use: Fever and infection treatment
+Thujone,Antimicrobial/Anthelmintic,CC1=CCC2CC1C2(C)C,CHEMBL3708001,Monoterpene ketone Natural Source: Wormwood Traditional Use: Parasite and worm remedy
+Sabinyl Acetate,Antispasmodic,CC(=O)OC1CCC2CC1C2(C)C,CHEMBL3708002,Acetate monoterpene Natural Source: Wormwood Traditional Use: Digestive spasm relief
+Beta-Pinene,Respiratory/Antimicrobial,CC1=CCC2CC1C2(C)C,CHEMBL3708003,Monoterpene Natural Source: Wormwood Traditional Use: Lung and cough support
+Yarrow Active Alkaloids,Wound Healing/Hemostatic,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708004,Alkaloid mixture Natural Source: Yarrow (Achillea millefolium) Traditional Use: Stops bleeding and heals wounds
+Achilleine,Anti-inflammatory/Hemostatic,O=C(c1ccccc1)N1CCCC1c1ccccc1,CHEMBL3708005,Alkaloid Natural Source: Yarrow Traditional Use: Blood clotting and wound care
+Salicylic Acid Precursor,Pain Relief/Anti-inflammatory,CC(=O)Oc1ccc(cc1)C(=O)O,CHEMBL3708006,Salicylate Natural Source: Yarrow Traditional Use: Ancient aspirin-like pain relief
+Luteolin,Anti-inflammatory/Antioxidant,O=c1cc(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3708007,Flavone Natural Source: Yarrow Traditional Use: Inflammation reduction
+Apigenin,Calming/Anti-anxiety,O=c1cc(-c2ccc(O)cc2)oc2cc(O)cc(O)c12,CHEMBL3708008,Flavone Natural Source: Yarrow Traditional Use: Nervous system calming
+Quercetin,Antioxidant/Allergy Support,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol Natural Source: Yarrow Traditional Use: Universal antioxidant remedy
+Chamazulene,Anti-inflammatory/Skin,CC1=CC(=C(C(=O)C1)C)c1ccc(cc1)C,CHEMBL3708009,Azulene sesquiterpene Natural Source: Chamomile (Matricaria chamomilla) Traditional Use: Blue healing oil for skin
+Alpha-Bisabolol,Anti-inflammatory/Calming,CC1=CCC(O)(C(C)(C)C)CC1,CHEMBL3708010,Sesquiterpene alcohol Natural Source: Chamomile Traditional Use: Gentle anti-inflammatory
+Matricine,Antioxidant Precursor,CC(C)c1cc(O)c(C(=O)c2ccc(cc2)C(C)C)cc1,CHEMBL3708011,Flavonoid Natural Source: Chamomile Traditional Use: Converts to chamazulene
+Umbelliferone,Antispasmodic/Digestive,O=c1ccc2cc(O)ccc2o1,CHEMBL3708012,Coumarin Natural Source: Chamomile Traditional Use: Digestive comfort support
+Herniarin,Anti-inflammatory,O=c1ccc2cc(OC)ccc2o1,CHEMBL3708013,Coumarin Natural Source: Chamomile Traditional Use: Gentle anti-inflammatory
+Salicin,Pain Relief/Anti-inflammatory,O[C@H]1[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccccc1,CHEMBL439503,Glycosidic Natural Source: White Willow (Salix alba) Traditional Use: Natural pain reliever precursor
+Saligenin,Anti-inflammatory/Fever,Oc1ccccc1CO,CHEMBL3708014,Alcohol phenol Natural Source: White Willow Traditional Use: Aspirin-like pain relief
+Salicaldehyde,Antimicrobial,O=Cc1ccccc1O,CHEMBL3708015,Aldehyde phenol Natural Source: White Willow Traditional Use: Antiseptic compound
+Populin,Anti-inflammatory,O[C@H]1[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccccc1C(=O)O,CHEMBL3708016,Glycoside Natural Source: White Willow Traditional Use: Anti-inflammatory support
+Phenolic Compounds,Anti-inflammatory/Antioxidant,O=C(O)c1ccccc1O,CHEMBL3708017,Phenolic acid Natural Source: White Willow Traditional Use: Multi-purpose wellness
+Hypericin,Antidepressant/Antiviral,Cc1cc(c2c(c1O)CC(=O)c1ccccc1C2=O)C,CHEMBL3708018,Polycyclic quinone Natural Source: St. John's Wort (Hypericum perforatum) Traditional Use: Mood elevation and nerve support
+Hyperforin,Antidepressant/Neuroprotection,CC(C)Cc1ccc(cc1)C(=O)N[C@H]1CCN(CC1)c1ccc(cc1)c1ccc(cc1)O,CHEMBL3708019,Acylphloroglucinol Natural Source: St. John's Wort Traditional Use: Brain-supportive compound
+Pseudohypericin,Antiviral/Neuroprotection,Cc1cc(c2c(c1O)CC(=O)c1ccccc1C2=O)C(=O)O,CHEMBL3708020,Quinone carboxylic Natural Source: St. John's Wort Traditional Use: Antiviral and mood support
+Flavonoids,Antioxidant/Circulation,O=C(c1ccccc1)c1ccccc1,CHEMBL3708021,Flavonoid mixture Natural Source: St. John's Wort Traditional Use: Antioxidant support system
+Caffeic Acid,Antioxidant/Anti-inflammatory,O=C(O)\C=C\c1ccc(O)c(O)c1,CHEMBL3708022,Phenolic acid Natural Source: St. John's Wort Traditional Use: Powerful antioxidant
+Chlorogenic Acid,Energy/Metabolism,O=C([O-])C(=C(O)C(=O)O)c1ccc(O)c(O[C@@H]2O[C@H](CO)[C@@H](O)[C@H]([C@H]2O)O[C@H]2O[C@H]([C@H](O)[C@H]2O)CO)c1,CHEMBL3708023,Cinnamate polyphenol Natural Source: St. John's Wort Traditional Use: Natural metabolism booster
+Rosmarinic Acid,Anti-inflammatory/Memory,O=C(O)\C=C\c1ccc(O)c(O[C@@H]2O[C@H](C[C@H](OC(=O)\C=C\c3cc(O)c(O)cc3)[C@H](O)C(O)=O)C(O)=O)c1,CHEMBL3708024,Phenolic acid Natural Source: St. John's Wort Traditional Use: Memory and inflammation support
+Hyperforin Metabolite,Antidepressant,CC(C)c1ccc(O)c(C(=O)c2ccc(cc2)C(C)C)cc1,CHEMBL3708025,Phenolic ketone Natural Source: St. John's Wort Traditional Use: Mood-supportive metabolite
+Stinging Nettle Compounds,Diuretic/Anti-inflammatory,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708026,Mixed alkaloids Natural Source: Stinging Nettle (Urtica dioica) Traditional Use: Herbal cleanse and support
+Histamine,Inflammatory Mediator,CCN1C=NC=C1,CHEMBL3708027,Imidazole alkaloid Natural Source: Stinging Nettle Traditional Use: Mediates immune response
+Serotonin,Mood/Pain Modulation,NCCc1c[nH]c2cc(O)ccc12,CHEMBL3708028,Indolamine alkaloid Natural Source: Stinging Nettle Traditional Use: Mood and pain neurotransmitter
+Acetylcholine,Nerve Function,CC(=O)OCC[N+](C)(C)C,CHEMBL3708029,Quaternary amine Natural Source: Stinging Nettle Traditional Use: Nerve impulse transmission
+Scopoletin,Anti-inflammatory/Antioxidant,COc1cc2oc(cc2cc1O)C,CHEMBL3708030,Coumarin Natural Source: Stinging Nettle Traditional Use: Anti-inflammatory compound
+Caffeic Acid Derivatives,Antioxidant/Immune,O=C(O)\C=C\c1ccc(O)c(O)c1,CHEMBL3708031,Phenolic acid Natural Source: Stinging Nettle Traditional Use: Immune system support
+Kaempferol,Antitumor/Cardiovascular,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL1903,Flavonol Natural Source: Stinging Nettle Traditional Use: Heart and cancer prevention
+Vanillic Acid,Antioxidant,O=C(O)c1cc(OC)c(O)cc1,CHEMBL3708032,Phenolic acid Natural Source: Stinging Nettle Traditional Use: Gentle antioxidant
+Chlorogenic Acid Ester,Metabolism/Antioxidant,O=C(O)\C=C\c1ccc(O)c(O)c1,CHEMBL3708033,Cinnamate Natural Source: Stinging Nettle Traditional Use: Metabolic support
+Linoleic Acid,Anti-inflammatory,CC\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3708034,Polyunsaturated fatty acid Natural Source: Stinging Nettle Traditional Use: Omega-6 essential fatty acid
+Linolenic Acid,Brain/Heart Health,CC\C=C\C\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3708035,Polyunsaturated fatty acid Natural Source: Stinging Nettle Traditional Use: Omega-3 essential support
+Valerian Acid Derivatives,Sleep/Relaxation,BIOLOGIC - VOLATILE ACID MIXTURE,CHEMBL3708036,Volatile carboxylic Natural Source: Valerian (Valeriana officinalis) Traditional Use: Deep sleep promotion
+Valerenic Acid,Sedative/Anti-anxiety,CC(C)=CCCC(C)C1=CC(=O)C(=CC1=O)C(=O)O,CHEMBL3708037,Sesquiterpene acid Natural Source: Valerian Traditional Use: Sleep-inducing compound
+Valerenol,Calming/Sleep,CC(C)=CCCC(C)C1=CCC(=C(C1)O)C,CHEMBL3708038,Sesquiterpene alcohol Natural Source: Valerian Traditional Use: Relaxation and sleep support
+Valeranone,Sleep Support/Stress,CC(C)=CCCC(C)C1=CC(=O)CC(=C1)C,CHEMBL3708039,Sesquiterpene ketone Natural Source: Valerian Traditional Use: Stress and sleep tonic
+Isovaleric Acid,Digestive/Sleep,CC(C)C(=O)O,CHEMBL3708040,Short-chain fatty acid Natural Source: Valerian Traditional Use: Digestive and sleep support
+Myrcene,Sedative/Anti-inflammatory,CC(C)=CCC=C(C)C=CC(=C)C,CHEMBL3708041,Monoterpene Natural Source: Valerian Traditional Use: Herbal sedative compound
+Camphene,Antimicrobial/Respiratory,CC1=CCC2CC1C2(C)C,CHEMBL3708042,Bicyclic monoterpene Natural Source: Valerian/Mugwort Traditional Use: Respiratory and antiseptic
+Linalool,Calming/Antifungal,CC(C)=CCCC(C)=CC=CC(C)(O)C,CHEMBL3708043,Monoterpenoid alcohol Natural Source: Lavender/Valerian Traditional Use: Aromatherapy and calm
+Geraniol,Antimicrobial/Calming,CC(C)=CCCC(C)=CC=CC(C)=CC(C)C,CHEMBL3708044,Acyclic monoterpene Natural Source: Lavender elements Traditional Use: Floral antimicrobial
+Lavender Compounds,Calming/Sleep,BIOLOGIC - VOLATILE MIXTURE,CHEMBL3708045,Volatile compound mixture Natural Source: Lavender (Lavandula officinalis) Traditional Use: Traditional sleep and calm
+Limonene,Mood/Digestive,CC(C)c1ccc2c(c1)CCC2=C,CHEMBL3708046,Monoterpene Natural Source: Mugwort/Citrus elements Traditional Use: Mood and digestion support
+Artemisia Compounds,Digestive/Anti-parasitic,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708047,Alkaloid mixture Natural Source: Mugwort (Artemisia vulgaris) Traditional Use: Digestive bitters and worm remedy
+Eucalyptol,Respiratory/Antimicrobial,CC1CCC2=CC(=C)CCC2C1,CHEMBL3708048,Oxide monoterpene Natural Source: Eucalyptus/Mugwort Traditional Use: Respiratory support
+Thymol,Antimicrobial/Antifungal,O=C(C)c1ccc(O)c(O)c1C(C)C,CHEMBL3708049,Phenolic monoterpene Natural Source: Thyme/Valerian Traditional Use: Antiseptic and antifungal
+Carvacrol,Antimicrobial,Cc1ccc(O)c(C(C)C)c1,CHEMBL3708050,Monoterpenoid phenol Natural Source: Thyme Traditional Use: Powerful antimicrobial
+Eugenol,Pain Relief/Antimicrobial,O=C(C)Oc1ccc(O)c(C=CCCC)c1,CHEMBL3708051,Phenylpropanoid Natural Source: Clove/Thyme Traditional Use: Numbing and antimicrobial
+Cinnamaldehyde,Antimicrobial/Warming,O=C\C=C\c1ccccc1,CHEMBL3708052,Aldehyde aromatic Natural Source: Cinnamon/Traditional Traditional Use: Warming and antimicrobial
+Tannic Acid,Astringent/Antioxidant,BIOLOGIC - POLYPHENOL POLYMER,CHEMBL3708053,Hydrolyzable tannin Natural Source: Oak Bark/Traditional Traditional Use: Astringent tonic
+Gallic Acid,Antioxidant/Astringent,O=C(O)c1cc(O)c(O)c(O)c1,CHEMBL3708054,Phenolic acid Natural Source: Oak Bark Traditional Use: Powerful antioxidant
+Ellagic Acid,Anticancer/Antioxidant,O=C(O)c1cc(O)c2c(c1)c(=O)oc(c2O)c1c(O)cc(=O)oc1O,CHEMBL3708055,Polyphenol tannin Natural Source: Pomegranate/Oak Traditional Use: Cancer prevention support
+Catechin,Antioxidant/Heart,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3708056,Flavanol Natural Source: Green Tea/Oak Traditional Use: Heart and antioxidant support
+Epicatechin,Cardiovascular/Antioxidant,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3708057,Flavanol Natural Source: Green Tea/Traditional Traditional Use: Heart health compound
+Propyl Gallate,Antioxidant/Preservation,O=C(O)c1cc(O)c(O)c(OCC(C)C)c1,CHEMBL3708058,Phenolic ester Natural Source: Traditional Traditional Use: Antioxidant preservative
+Rutoside,Capillary Support/Antioxidant,O=C(O)[C@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](COC(=O)c3cc(O)cc(O)c3)[C@@H](O)[C@H](O)[C@H]2O)O[C@H](c2cc(O)c(O)c(O)c2)[C@H]1O,CHEMBL3708059,Flavonoid glycoside Natural Source: Buckwheat/Traditional Traditional Use: Vascular and capillary strength
+Diosmin,Vascular Health/Anti-inflammatory,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(OC)cc2O1,CHEMBL3708060,Flavanone glycoside Natural Source: Citrus/Traditional Traditional Use: Venous health support
+Hesperidin,Antioxidant/Vascular,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(O)cc2O1,CHEMBL3708061,Flavanone glycoside Natural Source: Orange/Traditional Traditional Use: Heart and circulation support
+Iridoids,Anti-inflammatory,BIOLOGIC - MONOTERPENOID GLYCOSIDE MIXTURE,CHEMBL3708062,Iridoid glycoside Natural Source: Gentian/Traditional Traditional Use: Anti-inflammatory compound class
+Serotonergic Compounds,Mood/Sleep,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708063,Alkaloid mixture Natural Source: St. John's Wort/Valerian Traditional Use: Neurotransmitter support
+GABA-like Compounds,Relaxation/Anxiety,BIOLOGIC - AMINO ACID DERIVATIVE MIXTURE,CHEMBL3708064,Amino acid analog Natural Source: Valerian/Passionflower Traditional Use: Nervous system calm
+Phenolic Acid Complex,Anti-inflammatory/Antioxidant,O=C(O)\C=C\c1cc(O)cc(O)c1,CHEMBL3708065,Phenolic acid mixture Natural Source: Multiple herbs Traditional Use: Multi-target antioxidant
+Polysaccharides,Immune Support,BIOLOGIC - POLYSACCHARIDE MIXTURE,CHEMBL3708066,Complex carbohydrate Natural Source: Medicinal mushrooms/herbs Traditional Use: Immune system activation
+Flavone Glycosides,Antioxidant/Anti-inflammatory,O=C(c1ccccc1)c1ccc(O)c(O[C@@H]2O[C@H](C)[C@@H](O)[C@H]([C@H]2O)O)c1,CHEMBL3708067,Flavonoid glycoside Natural Source: Multiple flowers Traditional Use: Antioxidant support
+Coumarin Compounds,Anticoagulant/Antispasmodic,O=c1ccc2ccccc2o1,CHEMBL3708068,Coumarin class Natural Source: Mugwort/Chamomile Traditional Use: Natural anticoagulant support
+Umbelliferone Derivatives,Antispasmodic,O=c1ccc2cc(O)ccc2o1,CHEMBL3708069,Coumarin Natural Source: Angelica/Traditional Traditional Use: Smooth muscle relaxation
+Sesquiterpene Lactones,Anti-inflammatory,BIOLOGIC - SESQUITERPENE MIXTURE,CHEMBL3708070,Sesquiterpene class Natural Source: Artemisia/Yarrow Traditional Use: Potent inflammation fighters
+Volatile Essential Oils,Antimicrobial/Aromatic,BIOLOGIC - VOLATILE MIXTURE,CHEMBL3708071,Volatile compound blend Natural Source: Multiple aromatic herbs Traditional Use: Multi-purpose antimicrobial
+Alkaloid Glucosides,Neuroprotection/Detox,BIOLOGIC - ALKALOID GLYCOSIDE MIXTURE,CHEMBL3708072,Glycosidic alkaloid Natural Source: Stinging Nettle/Traditional Traditional Use: Nervous system support
+Phytoestrogens,Hormonal Balance,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL3708073,Isoflavone Natural Source: Clover/Traditional Traditional Use: Women's health support
+Saponins,Adaptogenic/Immune,BIOLOGIC - SAPONIN MIXTURE,CHEMBL3708074,Saponin class Natural Source: Multiple herbs Traditional Use: Stress adaptation and immunity
+Plant Sterols,Cholesterol Support,CC(C)C(C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)=C,CHEMBL3708075,Plant sterol Natural Source: Multiple sources Traditional Use: Cardiovascular support
+Fatty Acids Omega-3,Brain/Heart,CC\C=C\C\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3708076,Polyunsaturated fat Natural Source: Flax/Seeds Traditional Use: Essential fatty acid support
+Tannin Polymers,Astringent/Antioxidant,BIOLOGIC - POLYMERIC TANNIN,CHEMBL3708077,Polymeric tannin Natural Source: Oak/Traditional bark Traditional Use: Deep antioxidant complex
+Anthocyanins,Antioxidant/Brain,O=c1c2cc(O)cc(O)c2oc3cc(O)cc(O)c13,CHEMBL3708078,Anthocyanin pigment Natural Source: Berries/Purple plants Traditional Use: Purple antioxidant powerhouse
+Proanthocyanidins,Antioxidant/Heart,BIOLOGIC - FLAVONOID POLYMER,CHEMBL3708079,Condensed tannin Natural Source: Grape seeds/Berries Traditional Use: Complex antioxidant
+Myricetin,Antioxidant/Anti-inflammatory,O=c1c(-c2cc(O)c(O)c(O)c2)c(O)c2cc(O)cc(O)c2o1,CHEMBL3708080,Flavonol Natural Source: Traditional berries Traditional Use: Triple antioxidant power
+Camphor,Cooling/Respiratory,O=C1CC[C@]2(C)[C@H]1CCC2(C)C,CHEMBL3708081,Bicyclic ketone Natural Source: Mugwort/Traditional Traditional Use: Cooling and respiratory
+Menthol,Cooling/Digestive,O[C@@H]1CC[C@@H](C)[C@H]1C(C)C,CHEMBL3708082,Monoterpenoid alcohol Natural Source: Peppermint/Traditional Traditional Use: Cool digestive support
+Borneol,Analgesic/Circulation,O[C@@H]1CC[C@H](C)[C@H]1C(C)C,CHEMBL3708083,Bicyclic alcohol Natural Source: Mugwort/Traditional Traditional Use: Pain and circulation
+Pinene,Respiratory/Antimicrobial,CC1=CCC2CC1C2(C)C,CHEMBL3708084,Monoterpene Natural Source: Pine/Mugwort Traditional Use: Lung and respiratory support
+Cineole,Respiratory,CC1CCC2=CC(=C)CCC2C1,CHEMBL3708085,Oxide monoterpene Natural Source: Eucalyptus/Mugwort Traditional Use: Breathwork support
+Artemisinin,Malaria/Fever,CC1=C2C(C(=O)C3=C(C1)OC4CCCCC4C3)=C(C=C2)O,CHEMBL184,Antimalarial sesquiterpene lactone Traditional Use: Qinghao sweet wormwood fever treatment Natural medicine: Chinese Medicine
+Curcumin,Inflammation/Arthritis,COc1ccc(cc1)\C=C\C(=O)CC(=O)\C=C\c2cc(OC)c(O)cc2,CHEMBL1088,Polyphenol antioxidant Traditional Use: Anti-inflammatory golden spice from turmeric Natural medicine: Indian Ayurveda
+Berberine,Diabetes/Infection,O=C1c2cc(ccc2[nH]c3c1cc(OC)cc3OC)OC,CHEMBL72,Isoquinoline alkaloid Traditional Use: Used for millennia in TCM and Ayurveda Natural medicine: Chinese/Indian Traditional
+Resveratrol,Longevity/Cardiovascular,Oc1ccc(cc1)\C=C\c2cc(O)cc(O)c2,CHEMBL46,Stilbenoid polyphenol Traditional Use: French paradox red wine resveratrol Natural medicine: Traditional Wine Grape
+Epigallocatechin gallate,Antioxidant/Cancer,O=C(O)c1cc(O)cc(O)c1OC(=O)C1=C(c2cc(O)cc(O)c2)Oc2c(O)cc(O)cc2C1=O,CHEMBL7002,Tea catechin Traditional Use: Green tea EGCG ancient wellness Natural medicine: Chinese Tea
+Ginsenoside Rb1,Energy/Immunity,CC(C)[C@@H]1[C@H]2C[C@H]([C@@]3(C2)CC[C@]4([C@@]3(C(=O)OC)CC[C@@]5([C@H]4CC[C@@H]6[C@@]5(C[C@@H]([C@H]6O)O[C@@H]7O[C@H]([C@@H]([C@H]([C@H]7O)O)O)CO)C)C)C)OC1=O,CHEMBL3706463,Triterpenoid saponin Traditional Use: Korean red ginseng adaptogenic Natural medicine: Korean Chinese
+Ginsenoside Rg1,Brain Memory,CC(C)[C@@H]1[C@H]2C[C@H]([C@@]3(C2)CC[C@]4([C@@]3(C(=O)OC)CC[C@@]5([C@H]4CC[C@@H]6[C@@]5(C[C@@H]([C@H]6O)O[C@@H]7O[C@H]([C@@H]([C@H]([C@H]7O)O)O)CO)C)C)C)OC1=O,CHEMBL3706464,Triterpenoid saponin Traditional Use: Ginseng memory longevity Natural medicine: Asian Ginseng
+Ginsenoside Rg3,Anticancer/Diabetes,[H][C@@]12C[C@H](OC(=O)C)[C@@]34[C@@]([C@H](O)C(=O)C)CC[C@H]3C=C(C)[C@@H]4[C@H]1CC[C@@]2(C)C,CHEMBL3706465,Steroidal saponin Traditional Use: Korean red ginseng cancer-fighting Natural medicine: Red Ginseng Korea
+Quercetin,Antioxidant/Anti-inflammatory,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol polyphenol Traditional Use: Universal plant antioxidant Natural medicine: Multiple Traditions
+Kaempferol,Antitumor/Antioxidant,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL1903,Flavonol polyphenol Traditional Use: Ginkgo plant antioxidant Natural medicine: Multiple Plant
+Cichoric Acid,Immune Support,O=C(O)[C@H]1O[C@H](C[C@@H]1O)Oc1ccc(C=C(O)C=C(O)c2ccc(O)cc2)cc1,CHEMBL1200751,Caffeic acid derivative Traditional Use: Echinacea immune stimulant Natural medicine: Native American
+Withanolide A,Stress/Inflammation,CC(C)[C@@H]1[C@H]2CC(O)[C@@]3(C)C(=O)C[C@H]([C@@H]3[C@@]2(C)CC1)Oc1ccc2ccccc2c1,CHEMBL3706468,Steroidal lactone Traditional Use: Ashwagandha adaptogen Natural medicine: Indian Ayurveda
+Withaferin A,Anxiety/Sleep,CC(C)[C@@H]1[C@H]2C[C@@](O)(C(=O)c3ccc(O)cc3)[C@@]3(C)C(=O)C[C@H]([C@@H]3[C@@]2(C)C[C@H]1C)Oc1ccc2ccccc2c1,CHEMBL3706469,Withanolide alkaloid Traditional Use: Withania somnifera sleep Natural medicine: Ashwagandha
+Azadirachtin,Antiparasitic/Antifungal,CC(C)c1c(cc(O)c2c1OCC(=O)OC)O[C@@H]1C[C@@H](OC)[C@H](OC(=O)C)[C@H](OC)[C@H]1OC(=O)C,CHEMBL3706470,Limonoid triterpene Traditional Use: Neem universal remedy Natural medicine: Indian Ayurveda
+Silybin,Liver Protection,O=C1c2cc(ccc2Oc3cc(c4c(c3)C(=O)C(O)=CC4=O)O)C(O)C1Cc1ccccc1O,CHEMBL1240577,Flavonolignan Traditional Use: Milk thistle liver tonic Natural medicine: Traditional European
+Epimedium,Sexual Dysfunction,COc1cc(OC)c2cc(c(oc2c1)\C=C/C(=O)Nc1ccccc1)C(C)(C)C,CHEMBL3706471,Protoalkaloid glycoside Traditional Use: Horny goat weed vitality Natural medicine: Chinese Medicine
+DMT,Psychospiritual/Neuroprotection,CN(C)c1ccc2[nH]c(cc2c1)C[C@@H]1CCCN1C,CHEMBL1236134,Tryptamine alkaloid Traditional Use: Ayahuasca sacred medicine Natural medicine: Amazonian
+Harmine,MAO Inhibitor,O=C1c2ccccc2CC(C)(C)N1c1ccc2ccccc2c1,CHEMBL1233,Beta-carboline alkaloid Traditional Use: Ayahuasca MAO inhibitor Natural medicine: Amazonian Ayahuasca
+Mitraphylline,Memory/Neuroprotection,O=C(OC)[C@@H]1CN2CC[C@H]3[C@H](C2)[C@H]1c1ccc(O)cc1O3,CHEMBL3706472,Oxindole alkaloid Traditional Use: Cats claw Peruvian neuroprotection Natural medicine: South American
+Rhynchophylline,Anti-inflammatory,O=C(OC)[C@@H]1CN2CCCC[C@H]2[C@@H]1c1ccc(O)cc1,CHEMBL3706473,Oxindole alkaloid Traditional Use: Uncaria tomentosa remedy Natural medicine: Cats Claw
+Allicin,Antibacterial/Antiviral,C=CCSc1sccc1=S,CHEMBL1236,Organosulfur compound Traditional Use: Garlic antibiotic Natural medicine: Asian Garlic
+Andrographolide,Anti-inflammatory,CC(C)[C@H]1[C@H]2C[C@H]3[C@@]2(C)C(=O)C[C@H]([C@@H]3O)Oc2ccc(cc2)C(=O)O,CHEMBL3706474,Diterpenoid lactone Traditional Use: Andrographis fever infection Natural medicine: Indian Thai
+Evodiamine,Pain Relief,CC(C)c1ccc(C)c(O[C@@H]2C[C@H](OC)[C@H](OC)[C@H](OC)[C@H]2OC)c1,CHEMBL3706475,Alkaloid Traditional Use: Chinese herbal pain relief Natural medicine: Chinese Medicine
+Genistein,Hormone Balance,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL1231,Isoflavone phytoestrogen Traditional Use: Soy womens health Natural medicine: Soy Eastern
+Daidzein,Menopausal Support,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL1232,Isoflavone Traditional Use: Soy womens wellness Natural medicine: Eastern Soy
+Luteolin,Anti-inflammatory,O=c1cc(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3706476,Flavone polyphenol Traditional Use: Plant anti-inflammatory Natural medicine: Multiple Traditions
+Apigenin,Anxiety Sleep,O=c1cc(-c2ccc(O)cc2)oc2cc(O)cc(O)c12,CHEMBL3706477,Flavone Traditional Use: Chamomile sedative Natural medicine: Chamomile Herbs
+Naringenin,Cholesterol/Cardiovascular,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(O)c1,CHEMBL3706478,Flavone Traditional Use: Citrus heart tonic Natural medicine: Citrus Traditional
+Hesperidin,Antioxidant,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(O)cc2O1,CHEMBL1200703,Flavanone glycoside Traditional Use: Orange antioxidant Natural medicine: Orange Peel Traditional
+Tangeretin,Neuroprotection,COc1ccc2c(=O)cc(-c3ccc(O)c(O)c3)oc2c1,CHEMBL3706479,Polymethoxylated flavone Traditional Use: Citrus brain protector Natural medicine: Citrus Fruits
+Caffeic Acid,Antioxidant,O=C(O)\C=C\c1ccc(O)c(O)c1,CHEMBL3706480,Phenolic acid Traditional Use: Coffee tea antioxidant Natural medicine: Coffee Tea
+Ferulic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccc(OC)c(O)c1,CHEMBL3706481,Phenolic acid Traditional Use: Rice bran anti-inflammatory Natural medicine: Plant Polyphenol
+Chlorogenic Acid,Energy/Metabolism,O=C([O-])C(=C(O)C(=O)O)c1ccc(O)c(O[C@@H]2O[C@H](CO)[C@@H](O)[C@H]([C@H]2O)O[C@H]2O[C@H]([C@H](O)[C@H]2O)CO)c1,CHEMBL3706482,Cinnamate polyphenol Traditional Use: Coffee metabolism Natural medicine: Coffee
+Ellagic Acid,Anticancer/Antioxidant,O=C(O)c1cc(O)c2c(c1)c(=O)oc(c2O)c1c(O)cc(=O)oc1O,CHEMBL3706483,Polyphenol tannin Traditional Use: Pomegranate cancer prevention Natural medicine: Pomegranate Berries
+Punicalagin,Antioxidant/Anti-inflammatory,O=C(O)[C@@H]1[C@@H](O)[C@H](O[C@@H]2O[C@H](CO)[C@@H](O)[C@H](OC(=O)c3cc(O)cc(O)c3)[C@H]2O[C@@H]2OC(=C([C@H]3O[C@H]([C@H](O)[C@H]2O)[C@H](O)[C@H]3O)c2cc(O)cc(O)c2)C(O)=O)[C@H](O[C@@H]2O[C@H](C[C@H](OC(=O)c3cc(O)cc(O)c3)[C@H]2O)[C@H](O)C(O)=O)[C@@H]1OC(=O)c1cc(O)cc(O)c1,CHEMBL3706484,Polyphenol tannin Traditional Use: Pomegranate powerhouse Natural medicine: Pomegranate
+Anthocyanidin,Antioxidant,O=c1c2cc(O)cc(O)c2oc3cc(O)cc(O)c13,CHEMBL3706485,Flavonoid pigment Traditional Use: Berry antioxidant pigments Natural medicine: Berry Medicine
+Catechin,Antioxidant,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3706486,Flavanol Traditional Use: Tea wellness Natural medicine: Green White Tea
+Epicatechin,Heart Health,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3706487,Flavanol Traditional Use: Cocoa tea heart Natural medicine: Cocoa Tea
+Theaflavin,Tea Antioxidant,O=C(O)c1cc(O)c(O)cc1O[C@@H]1c2c(O)cc(O)cc2O[C@H]1[C@@H]1O[C@H]([C@@H](O)[C@H]1O)[C@H]1cc(O)c(O)cc1O,CHEMBL3706488,Black tea polyphenol Traditional Use: Black tea wellness Natural medicine: Black Tea
+Puerarin,Menopausal/Cardiovascular,O=C(O)[C@@H]1[C@H](O)[C@H](O[C@@H]2Cc3c(O)cc(O)cc3O[C@H]2c2ccc(O)c(O)c2)[C@H](CO)[C@H](O)[C@H]1O,CHEMBL3706490,Isoflavone glycoside Traditional Use: Kudzu root remedy Natural medicine: Kudzu Plant
+Indole-3-carbinol,Cancer Prevention,c1ccc2[nH]cc(cc2=C1)C1=CN[C@@H](CO)C1,CHEMBL3706492,Indole phytoalexin Traditional Use: Broccoli cancer prevention Natural medicine: Cruciferous
+Sulforaphane,Detoxification,C=CC(C)(C)N=C=S,CHEMBL3706493,Isothiocyanate Traditional Use: Broccoli sprout detox Natural medicine: Cruciferous
+Lycopene,Antioxidant/Heart,CC(C)=CCC=C(C)C=CC(C)=CC=CC(C)=CC=CC=C(C)C=CC=C(C)C=CC=C(C)C=CC(C)=CC,CHEMBL1219,Carotenoid Traditional Use: Tomato red pigment Natural medicine: Tomato Traditional
+Beta-carotene,Vision/Immunity,CC(C)=CCC=C(C)C=CC(C)=CC=CC(C)=CC=CC=C(C)C=CC(C)=CC=CC=C(C)C=CC(C)=CC,CHEMBL3706494,Carotenoid Traditional Use: Orange pigment vision Natural medicine: Orange Vegetables
+Astaxanthin,Antioxidant/Anti-inflammatory,CC(C)=CC=CC(=CC=CC(=CC=CC=C(C)C=CC(=CC=CC=C(C)C=CC(C)=CC)C)C=CC(C)=CC=CC(=O)O)C(=O)O,CHEMBL3706495,Xanthophyll carotenoid Traditional Use: Marine krill Natural medicine: Marine Traditional
+Zeaxanthin,Eye Health,CC(C)=CCC=C(C)C=CC(C)=CC=CC(C)=CC=CC=C(C)C=CC=C(C)C=CC=C(C)C=CC(C)=CC(=CC(=O)O)C(=O)O,CHEMBL3706496,Xanthophyll carotenoid Traditional Use: Corn eye health Natural medicine: Corn Green
+Lutein,Macular Health,CC(C)=CCC=C(C)C=CC(C)=CC=CC(C)=CC=CC=C(C)C=CC(C)=CC=CC=C(C)C=CC(C)=C(C)C(O)C,CHEMBL3706497,Xanthophyll carotenoid Traditional Use: Spinach kale eye Natural medicine: Green Vegetables
+Anthocyanin,Brain Health,O=c1c(O)c(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3706498,Flavonoid pigment Traditional Use: Blueberry brain Natural medicine: Blueberries
+Myricetin,Antioxidant,O=c1c(-c2cc(O)c(O)c(O)c2)c(O)c2cc(O)cc(O)c2o1,CHEMBL3706499,Flavonol Traditional Use: Tea grape polyphenol Natural medicine: Tea Grapes
+Isorhamnetin,Anti-inflammatory,O=c1c(-c2ccc(O)c(OC)c2)c(O)c2cc(O)cc(O)c2o1,CHEMBL3706500,Flavonol Traditional Use: Herbal anti-inflammatory Natural medicine: Herbal Plants
+Fisetin,Neuroprotection,O=c1cc(-c2cc(O)c(O)cc2)oc2cc(O)cc(O)c12,CHEMBL3706501,Flavonol Traditional Use: Strawberry neuroprotection Natural medicine: Strawberries
+Taxifolin,Vascular/Antioxidant,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(O)c1,CHEMBL3706502,Flavanone Traditional Use: Milk thistle vascular Natural medicine: Milk Thistle
+Rhaponticin,Antioxidant,O=C(O)c1cc(O[C@@H]2O[C@H](C)[C@@H](O)[C@H](O)[C@H]2O)cc(O[C@@H]2Cc3c(O)cc(O)cc3O[C@H]2c2ccc(O)c(O)c2)c1,CHEMBL3706503,Stilbene glucoside Traditional Use: Rhubarb liver Natural medicine: Rhubarb
+Emodin,Laxative/Anti-inflammatory,O=C1c2ccccc2C(=O)c2cc(O)cc(C(C)C)c2C1=O,CHEMBL3706504,Anthraquinone Traditional Use: Senna laxative Natural medicine: Senna Rhubarb
+Honokiol,Anti-anxiety,O=C(C[C@H](c1ccccc1)c1ccccc1)c1ccc(O)c2cc(cc(c12)O)C(C)C,CHEMBL3706505,Neolignane phenol Traditional Use: Magnolia stress relief Natural medicine: Magnolia
+Magnolol,Anti-inflammatory,O=C(C[C@H](c1ccccc1)c1ccccc1)c1ccc(O)c2cc(cc(c12)O)C(C)C,CHEMBL3706506,Neolignane Traditional Use: Magnolia inflammation Natural medicine: Magnolia
+Amentoflavone,Antiviral,O=C1c2cc(O)cc(O)c2OC[C@H]1c1ccc(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1ccc(O)cc1,CHEMBL3706507,Biflavonoid Traditional Use: Ginkgo brain Natural medicine: Ginkgo
+Sesamin,Heart Health,O=C1OC[C@H]2[C@@H]3[C@H](c4cc(cc(OC(C)=O)c4)O3)C[C@@]12[H],CHEMBL3706509,Lignan Traditional Use: Sesame heart Natural medicine: Sesame Seeds
+Sesamol,Antioxidant,Oc1cc(c2OCCc2c1)O,CHEMBL3706510,Benzodioxole phenol Traditional Use: Sesame antioxidant Natural medicine: Sesame
+Rosmarinic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccc(O)c(O[C@@H]2O[C@H](C[C@H](OC(=O)\C=C\c3cc(O)c(O)cc3)[C@H](O)C(O)=O)C(O)=O)c1,CHEMBL3706511,Phenolic acid Traditional Use: Rosemary memory Natural medicine: Rosemary
+Carnosic Acid,Neuroprotection,O=C(O)[C@]12CC[C@]3(C)[C@@H]([C@@]4(C)CC[C@@H]([C@](C4)([C@H]1[C@H]2O)C)C(=O)O)[C@@H]3C,CHEMBL3706512,Diterpenoid Traditional Use: Rosemary brain Natural medicine: Rosemary
+Thymol,Antimicrobial,O=C(C)c1ccc(O)c(O)c1C(C)C,CHEMBL3706513,Monoterpenoid phenol Traditional Use: Thyme antiseptic Natural medicine: Thyme
+Carvacrol,Antimicrobial/Antifungal,Cc1ccc(O)c(C(C)C)c1,CHEMBL3706514,Monoterpenoid phenol Traditional Use: Oregano antimicrobial Natural medicine: Oregano
+Eugenol,Analgesic/Antiseptic,O=C(C)Oc1ccc(O)c(C=CCCC)c1,CHEMBL3706515,Phenylpropanoid Traditional Use: Clove pain relief Natural medicine: Clove
+Anethole,Digestive,Cc1=cc(cc(c1C)C=CC(C)C)C,CHEMBL3706516,Phenylpropene Traditional Use: Fennel digestive Natural medicine: Fennel Anise
+Limonene,Antimicrobial/Mood,CC(C)c1ccc2c(c1)CCC2=C,CHEMBL3706517,Monoterpene Traditional Use: Lemon mood Natural medicine: Citrus Peels
+Myrcene,Sedative/Anti-inflammatory,CC(C)=CCC=C(C)C=CC(=C)C,CHEMBL3706518,Monoterpene Traditional Use: Hops sleep aid Natural medicine: Hops Bay Leaf
+Pinene,Respiratory,CC1=CCC2CC1C2(C)C,CHEMBL3706519,Monoterpene Traditional Use: Pine respiratory Natural medicine: Pine Rosemary
+Linalool,Calming/Sleep,CC(C)=CCCC(C)(C)C1=CCOC1,CHEMBL3706520,Monoterpenoid alcohol Traditional Use: Lavender relaxation Natural medicine: Lavender
+Camphor,Cooling/Respiratory,O=C1CC[C@]2(C)[C@H]1CCC2(C)C,CHEMBL3706521,Bicyclic ketone Traditional Use: Camphor cooling Natural medicine: Camphor Tree
+Menthol,Cooling/Digestion,O[C@@H]1CC[C@@H](C)[C@H]1C(C)C,CHEMBL3706522,Monoterpenoid alcohol Traditional Use: Peppermint cooling Natural medicine: Peppermint
+Borneol,Analgesic/Circulation,O[C@@H]1CC[C@H](C)[C@H]1C(C)C,CHEMBL3706523,Bicyclic alcohol Traditional Use: Borneol pain Natural medicine: Borneol Plant
+Geraniol,Antimicrobial,CC(C)=CCCC(C)=CC=CC(C)=CC=CC(C)=CC=CC(C)C,CHEMBL3706524,Acyclic monoterpene Traditional Use: Geranium antimicrobial Natural medicine: Geranium Rose
+Citral,Antimicrobial,CC(C)=CCCC(C)=CC=CC(C)=CC(=O)C,CHEMBL3706525,Acyclic monoterpenoid Traditional Use: Lemongrass antiseptic Natural medicine: Lemongrass Citrus
+Bisabolol,Anti-inflammatory,CC(C)=CCCC(C)(C)C1CC(=CCOC(C)C)CC1,CHEMBL3706526,Sesquiterpene alcohol Traditional Use: Chamomile anti-inflammatory Natural medicine: German Chamomile
+Chamazulene,Anti-inflammatory,CC1=CC(=C(C(=O)C1)C)c1ccc(cc1)C,CHEMBL3706527,Azulene Traditional Use: Chamomile blue Natural medicine: Blue Chamomile
+Apiin,Flavonoid Glycoside,O=C(O)[C@H]1[C@H](O)[C@H](O[C@@H]2Cc3c(O)cc(O)cc3O[C@H]2c2ccc(O)cc2)O[C@H](CO)[C@H]1O,CHEMBL3706528,Flavonoid glycoside Traditional Use: Celery parsley anti-inflammatory Natural medicine: Celery Parsley
+Ginsenoside Rg1,Energy/Memory,CC(C)[C@@H]1[C@H]2C[C@H]([C@@]3(C2)CC[C@]4([C@@]3(C(=O)OC)CC[C@@]5([C@H]4CC[C@@H]6[C@@]5(C[C@@H]([C@H]6O)O[C@@H]7O[C@H]([C@@H]([C@H]([C@H]7O)O)O)CO)C)C)C)OC1=O,CHEMBL3706464,Triterpenoid saponin Natural Source: Korean Red Ginseng (Panax ginseng) Traditional Use: Energy adaptogen enhancement Origin Country: Korea
+Ginsenoside Rb1,Immunity/Energy,CC(C)[C@@H]1[C@H]2C[C@H]([C@@]3(C2)CC[C@]4([C@@]3(C(=O)OC)CC[C@@]5([C@H]4CC[C@@H]6[C@@]5(C[C@@H]([C@H]6O)O[C@@H]7O[C@H]([C@@H]([C@H]([C@H]7O)O)O)CO)C)C)C)OC1=O,CHEMBL3706463,Triterpenoid saponin Natural Source: Korean Red Ginseng Traditional Use: Immune system support Origin Country: Korea
+Ginsenoside Re,Cognitive/Stress,CC(C)[C@@H]1[C@H]2C[C@H]([C@@]3(C2)CC[C@]4([C@@]3(C(=O)OC)CC[C@@]5([C@H]4CC[C@@H]6[C@@]5(C[C@@H]([C@H]6O)O[C@@H]7O[C@H]([C@@H]([C@H]([C@H]7O)O)O)CO)C)C)C)OC1=O,CHEMBL3707201,Triterpenoid saponin Natural Source: Korean Red Ginseng Traditional Use: Brain function support Origin Country: Korea
+Ginsenoside Rf,Anti-cancer/Immune,CC(C)[C@@H]1[C@H]2C[C@H]([C@@]3(C2)CC[C@]4([C@@]3(C(=O)OC)CC[C@@]5([C@H]4CC[C@@H]6[C@@]5(C[C@@H]([C@H]6O)O[C@@H]7O[C@H]([C@@H]([C@H]([C@H]7O)O)O)CO)C)C)C)OC1=O,CHEMBL3707202,Triterpenoid saponin Natural Source: Korean Red Ginseng Traditional Use: Cancer prevention Origin Country: Korea
+Mitragynine,Pain/Energy,CN1CC[C@]23[C@@H]1Cc1ccccc1[C@@]2([H])C1C[C@H](C)C=C1N3C,CHEMBL3707203,Indole alkaloid Natural Source: Kratom (Mitragyna speciosa) Traditional Use: Pain relief and energy Origin Country: Thailand
+7-Hydroxymitragynine,Analgesic/Opioid-like,CN1CC[C@]23[C@@H]1Cc1ccccc1[C@@]2([H])C1C[C@H](C)C(=O)C1N3C,CHEMBL3707204,Hydroxylated indole Natural Source: Kratom Traditional Use: Potent pain relief Origin Country: Thailand
+Speciogynine,Stimulant/Pain,CN1CC[C@]23[C@@H]1Cc1ccccc1[C@@]2([H])C1C[C@H](C)C=C1N3C,CHEMBL3707205,Indole alkaloid Natural Source: Kratom Traditional Use: Stimulant effect Origin Country: Thailand
+Speciociliatine,Pain/Stimulant,CN1CC[C@]23[C@@H]1Cc1ccccc1[C@@]2([H])C1C[C@H](C)C=C1N3C,CHEMBL3707206,Indole alkaloid Natural Source: Kratom Traditional Use: Dual pain and energy Origin Country: Thailand
+Paynantheine,Neuroprotection,CN1CC[C@]23[C@@H]1Cc1ccccc1[C@@]2([H])C1C[C@H](C)C=C1N3C,CHEMBL3707207,Indole alkaloid Natural Source: Kratom Traditional Use: Brain protection Origin Country: Thailand
+Mitraphylline,Analgesic/Anti-inflammatory,O=C(OC)[C@@H]1CN2CC[C@H]3[C@H](C2)[C@H]1c1ccc(O)cc1O3,CHEMBL3706472,Oxindole alkaloid Natural Source: Kratom/Traditional Traditional Use: Pain and inflammation Origin Country: Thailand
+Ajmalicine,Blood Pressure/Circulation,CC1=C2[C@H]3[C@H]4C1CN5[C@@]34[C@H]([C@H]2OC)N(CC5)C,CHEMBL3707208,Indole alkaloid Natural Source: Kratom Traditional Use: Vascular circulation Origin Country: Thailand
+Corynantheidine,Stimulant/Pain,CC1=C2[C@H]3[C@H]4C1CN5[C@@]34[C@H]([C@H]2OC)N(CC5)C,CHEMBL3707209,Indole alkaloid Natural Source: Kratom Traditional Use: Stimulating compound Origin Country: Thailand
+Isomitraphylline,Anti-inflammatory,O=C(OC)[C@@H]1CN2CC[C@H]3[C@H](C2)[C@H]1c1ccc(O)cc1O3,CHEMBL3707210,Oxindole alkaloid Natural Source: Kratom Traditional Use: Inflammation reduction Origin Country: Thailand
+Zerumbone,Anti-cancer/Anti-inflammatory,CC(C)=CCC(C)C1=CC(=O)C(=CC1=O)C,CHEMBL3707211,Sesquiterpene ketone Natural Source: Aromatic Ginger (Zingiber aromaticum) Traditional Use: Cancer prevention Origin Country: Indonesia
+Ar-Turmerone,Anti-inflammatory,CC(C)=CCCC(C)=CC(=O)c1ccccc1,CHEMBL3707212,Sesquiterpene ketone Natural Source: Turmeric Traditional Use: Potent anti-inflammatory Origin Country: Indonesia
+Xanthorrhizol,Antioxidant/Anti-inflammatory,CC(C)=CCCC(C)C1=CC(=O)C(C)=CC1,CHEMBL3707213,Sesquiterpene Natural Source: Turmeric Xanthorrhiza Traditional Use: Antioxidant powerhouse Origin Country: Indonesia
+Alpha-Curcumene,Anti-inflammatory,CC(C)=CCCC(C)=CC=C(C)c1ccccc1,CHEMBL3707214,Sesquiterpene Natural Source: Turmeric Traditional Use: Inflammation reduction Origin Country: Indonesia
+Beta-Turmerone,Anti-tumor,CC(C)=CCCC(C)=CC=C(C)c1ccc(c(c1)C(C)C)C,CHEMBL3707215,Sesquiterpene Natural Source: Turmeric Traditional Use: Tumor inhibition Origin Country: Indonesia
+Curcumenol,Neuroprotection,CC(C)C1=CC(=O)C(C)=C(C1)c1ccccc1,CHEMBL3707216,Sesquiterpene alcohol Natural Source: Turmeric Traditional Use: Brain protection Origin Country: Indonesia
+Zedoarondiol,Anti-inflammatory,O[C@@H](C)[C@@H]1CC[C@@H](C)[C@H](C=C(C)C)[C@H]1C(=O)O,CHEMBL3707217,Labdane diterpenoid Natural Source: Zedoary (Curcuma zedoaria) Traditional Use: Anti-inflammatory Origin Country: Indonesia
+Zerumbone Analog,Anticancer,CC(C)=CCCC(C)C1=CC(=O)C(=CC1=O)C,CHEMBL3707218,Sesquiterpene Natural Source: Curcuma aeruginosa Traditional Use: Cancer prevention Origin Country: Indonesia
+Alpinetin,Anti-inflammatory/Antibacterial,O=C1C(=C[C@H]2c3ccc(O)cc3OC2)C(=O)c2c(O)cccc2C1=O,CHEMBL3707219,Flavone Natural Source: Alpinia galanga Traditional Use: Bacterial infection fighter Origin Country: Indonesia
+Galangin,Antioxidant/Antimicrobial,O=c1cc(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3707220,Flavonol Natural Source: Alpinia galanga Traditional Use: Antioxidant and antiseptic Origin Country: Indonesia
+Kaempferol,Cardiovascular,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL1903,Flavonol Natural Source: Multiple Asian plants Traditional Use: Heart health Origin Country: Southeast Asia
+Cinnamaldehyde,Antimicrobial/Warming,O=C\C=C\c1ccccc1,CHEMBL3707221,Aldehyde aromatic Natural Source: Cinnamon (Chinese origin) Traditional Use: Warming and antiseptic Origin Country: China/Southeast Asia
+Eugenol,Antimicrobial/Analgesic,O=C(C)Oc1ccc(O)c(C=CCCC)c1,CHEMBL3707222,Phenylpropanoid Natural Source: Clove/Spices Traditional Use: Pain relief and antimicrobial Origin Country: Southeast Asia
+Myrcene,Sedative/Pain,CC(C)=CCC=C(C)C=CC(=C)C,CHEMBL3707223,Monoterpene Natural Source: Multiple aromatic herbs Traditional Use: Sleep and pain support Origin Country: Southeast Asia
+Heptenoic Acid,Anti-inflammatory,O=C(O)C/C=C/c1ccc(O)c(O)c1,CHEMBL3707224,Fatty acid aromatic Natural Source: Turmeric compounds Traditional Use: Anti-inflammatory Origin Country: Indonesia/Southeast Asia
+Salvianolic Acid B,Cardioprotective/Antitumor,O=C(O)c1cc(O)c(O[C@@H]2Cc3c(O)cc(O)cc3[C@H]2c2ccc(O)c(O)c2)cc1,CHEMBL3707225,Polyphenol Natural Source: Dan Shen/Red Sage Traditional Use: Cardiac protection Origin Country: China
+Danshensu,Cardiovascular/Neuroprotection,O=C(O)[C@@H](O)c1ccc(O)c(O[C@@H]2Cc3c(O)cc(O)cc3[C@H]2c2ccc(O)c(O)c2)c1,CHEMBL3707226,Phenolic acid Natural Source: Dan Shen Traditional Use: Heart and brain protection Origin Country: China
+Hydroxysafflor Yellow A,Anti-inflammatory,O=C(O)[C@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](C)[C@@H](O)[C@H]([C@H]2O)O[C@@H]2Cc3c(O)cc(O)cc3[C@H]2c2ccc(O)c(O)c2)O[C@H](c2ccc(O)c(O)c2)[C@H]1O,CHEMBL3707227,Polyphenol glycoside Natural Source: Safflower (Carthamus tinctorius) Traditional Use: Inflammation reduction Origin Country: China
+Quercetin,Antioxidant/Cardiovascular,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol Natural Source: Multiple Asian plants Traditional Use: Universal antioxidant Origin Country: Asia-wide
+Luteolin,Anti-inflammatory,O=c1cc(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3707228,Flavone Natural Source: Various herbs Traditional Use: Inflammation fighter Origin Country: Asia-wide
+Hesperetin,Cardioprotective,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(OC)c1,CHEMBL3707229,Flavanone Natural Source: Citrus herbs Traditional Use: Heart health Origin Country: Southeast Asia
+Naringenin,Cholesterol/Anti-inflammatory,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(O)c1,CHEMBL3707230,Flavone Natural Source: Citrus/Herbs Traditional Use: Cholesterol support Origin Country: Southeast Asia
+Apigenin,Calming/Anti-anxiety,O=c1cc(-c2ccc(O)cc2)oc2cc(O)cc(O)c12,CHEMBL3707231,Flavone Natural Source: Multiple herbs Traditional Use: Nervous system calming Origin Country: Asia-wide
+Hesperidin,Antioxidant/Vascular,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(O)cc2O1,CHEMBL3707232,Flavanone glycoside Natural Source: Citrus/Traditional herbs Traditional Use: Vascular health Origin Country: Southeast Asia
+Diosmin,Vascular/Anti-inflammatory,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(OC)cc2O1,CHEMBL3707233,Flavanone glycoside Natural Source: Citrus/Herbs Traditional Use: Venous health Origin Country: Southeast Asia
+Rutin,Capillary/Antioxidant,O=C(O)[C@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](COC(=O)c3cc(O)cc(O)c3)[C@@H](O)[C@H](O)[C@H]2O)O[C@H](c2cc(O)c(O)c(O)c2)[C@H]1O,CHEMBL3707234,Flavonoid glycoside Natural Source: Multiple herbs Traditional Use: Capillary strength Origin Country: Asia-wide
+Puerarin,Menopausal/Cardiovascular,O=C(O)[C@@H]1[C@H](O)[C@H](O[C@@H]2Cc3c(O)cc(O)cc3O[C@H]2c2ccc(O)c(O)c2)[C@H](CO)[C@H](O)[C@H]1O,CHEMBL3707235,Isoflavone glycoside Natural Source: Kudzu/Pueraria Traditional Use: Menopausal support Origin Country: China
+Daidzein,Hormonal Balance,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL1232,Isoflavone Natural Source: Soy/Legumes Traditional Use: Women's health Origin Country: Asia-wide
+Genistein,Estrogenic/Anticancer,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL1231,Isoflavone Natural Source: Soy/Legumes Traditional Use: Cancer prevention Origin Country: Asia-wide
+Formononetin,Phytoestrogenic,O=c1c(-c2ccc(OC)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL3707236,Isoflavone Natural Source: Astragalus/Herbs Traditional Use: Hormonal support Origin Country: China
+Arachidonic Acid,Inflammatory/Brain,CCC=CCC=CCC=CCC=CCCCCCC(=O)O,CHEMBL3707237,Polyunsaturated fatty acid Natural Source: Multiple sources Traditional Use: Neurological support Origin Country: Asia-wide
+Eicosapentaenoic Acid,Cardiovascular/Brain,CCC(=CCC=CCC=CCC=CCC=CCC=CC(=O)O,CHEMBL3707238,Omega-3 fatty acid Natural Source: Marine sources Traditional Use: Heart and brain health Origin Country: Southeast Asia
+Docosahexaenoic Acid,Brain/Eye Health,CCC(=CCC=CCC=CCC=CCC=CCC=CCC=CC(=O)O,CHEMBL3707239,Omega-3 fatty acid Natural Source: Marine sources Traditional Use: Cognitive support Origin Country: Southeast Asia
+Alpha-Linolenic Acid,Anti-inflammatory,CC\C=C\C\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3707240,Omega-3 fatty acid Natural Source: Plant oils Traditional Use: Essential fatty acid Origin Country: Asia-wide
+Linoleic Acid,Cardiovascular,CC\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3707241,Polyunsaturated fat Natural Source: Plant oils Traditional Use: Heart health Origin Country: Asia-wide
+Oleic Acid,Anti-inflammatory,CCCCCCCC\C=C\CCCCCCCC(=O)O,CHEMBL3707242,Monounsaturated fat Natural Source: Plant oils Traditional Use: Inflammation reduction Origin Country: Asia-wide
+Palmitic Acid,Cardiovascular,CCCCCCCCCCCCCC(=O)O,CHEMBL3707243,Saturated fat Natural Source: Plant sources Traditional Use: Metabolic support Origin Country: Asia-wide
+Stearic Acid,Metabolic,CCCCCCCCCCCCCCCC(=O)O,CHEMBL3707244,Saturated fat Natural Source: Plant sources Traditional Use: Energy support Origin Country: Asia-wide
+Catechin,Antioxidant/Heart,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3707245,Flavanol Natural Source: Green tea/Traditional Traditional Use: Heart antioxidant Origin Country: Asia-wide
+Epicatechin,Cardiovascular,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3707246,Flavanol Natural Source: Green tea/Traditional Traditional Use: Vascular health Origin Country: Asia-wide
+Epigallocatechin Gallate (EGCG),Antioxidant/Cancer,O=C(O)c1cc(O)cc(O)c1OC(=O)C1=C(c2cc(O)cc(O)c2)Oc2c(O)cc(O)cc2C1=O,CHEMBL7002,Tea catechin Natural Source: Green tea Traditional Use: Cancer prevention Origin Country: China/Japan
+Theobromine,Stimulant/Diuretic,O=C1c2c(N(C)C(=O)N(C)c2)N(C)C1=O,CHEMBL3707247,Methylxanthine Natural Source: Cocoa/Traditional Traditional Use: Gentle stimulant Origin Country: Southeast Asia
+Caffeine,Energy/Alertness,CN1C=NC2=C1C(=O)N(C(=O)N2C)C,CHEMBL3707248,Purine alkaloid Natural Source: Tea/Coffee Traditional Use: Energy boost Origin Country: Asia-wide
+Theanine,Calming/Focus,CC(=O)N[C@@H](CCc1ccc(O)c(O)c1)C(=O)O,CHEMBL3707249,Amino acid Natural Source: Green tea Traditional Use: Calm focus Origin Country: Asia-wide
+Hyaluronic Acid,Skin/Joint,BIOLOGIC - POLYSACCHARIDE,CHEMBL3707250,Polysaccharide Natural Source: Multiple sources Traditional Use: Skin and joint health Origin Country: Asia-wide
+Chondroitin Sulfate,Joint/Cartilage,BIOLOGIC - GLYCOSAMINOGLYCAN,CHEMBL3707251,Polysaccharide derivative Natural Source: Cartilage sources Traditional Use: Joint protection Origin Country: Asia-wide
+Berchemia Alkaloids,Traditional Remedy,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707252,Alkaloid mixture Natural Source: Berchemia lineata Traditional Use: Vietnamese traditional Origin Country: Vietnam
+Centella Asiatica Triterpenoids,Wound Healing/Brain,BIOLOGIC - TRITERPENOID MIXTURE,CHEMBL3707253,Triterpenoid glycosides Natural Source: Centella Asiatica (Rau Ma) Traditional Use: Skin and brain health Origin Country: Vietnam
+Asiaticoside,Wound Healing/Anti-inflammatory,O=C(O)[C@@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](C)[C@@H](O)[C@H]([C@H]2O)O[C@@H]2Cc3c(O)cc(O)cc3[C@H]2c2ccc(O)c(O)c2)O[C@H](c2ccc(O)c(O)c2)[C@H]1O,CHEMBL3707254,Triterpenoid glycoside Natural Source: Centella Asiatica Traditional Use: Scar reduction Origin Country: Vietnam
+Madecassoside,Skin/Circulation,O=C(O)[C@@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](C)[C@@H](O)[C@H]([C@H]2O)O[C@@H]2Cc3c(O)cc(O)cc3[C@H]2c2ccc(O)c(O)c2)O[C@H](c2ccc(O)c(O)c2)[C@H]1O,CHEMBL3707255,Triterpenoid glycoside Natural Source: Centella Asiatica Traditional Use: Cosmetic beauty Origin Country: Vietnam
+Madecassic Acid,Anti-inflammatory,CC(C)[C@H]1CC[C@H]2[C@@H]3CCC4=CC(=O)CC[C@]4(C)[C@H]3CC[C@]12C,CHEMBL3707256,Triterpenoid Natural Source: Centella Asiatica Traditional Use: Inflammation reduction Origin Country: Vietnam
+Ecdysone,Adaptogenic,CC(C)[C@H]1CC[C@H]2[C@@H]3CCC4=CC(O)CC[C@]4(C)[C@H]3CC[C@]12C,CHEMBL3707257,Steroid hormone analog Natural Source: Centella Asiatica Traditional Use: Stress adaptation Origin Country: Vietnam
+Saponin,Immunomodulatory,BIOLOGIC - SAPONIN MIXTURE,CHEMBL3707258,Saponin glycoside Natural Source: Multiple Asian plants Traditional Use: Immune enhancement Origin Country: Asia-wide
+Polyphenol,Antioxidant/Anti-inflammatory,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3707259,Polyphenol class Natural Source: Multiple Asian plants Traditional Use: Broad antioxidant Origin Country: Asia-wide
+Alkaloid Mix,Neuroprotective,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707260,Alkaloid class Natural Source: Multiple Asian plants Traditional Use: Brain protection Origin Country: Asia-wide
+Volatile Oil/Essential Oil,Antimicrobial/Aromatic,BIOLOGIC - VOLATILE MIXTURE,CHEMBL3707261,Volatile compound blend Natural Source: Aromatic herbs Traditional Use: Multi-purpose antimicrobial Origin Country: Asia-wide
+Tannin Complex,Astringent/Antioxidant,BIOLOGIC - TANNIN POLYMER,CHEMBL3707262,Hydrolyzable tannin Natural Source: Multiple plant barks Traditional Use: Deep antioxidant Origin Country: Asia-wide
+Resin,Anti-inflammatory/Antimicrobial,BIOLOGIC - RESINOUS MIXTURE,CHEMBL3707263,Resin compound Natural Source: Various trees Traditional Use: Antimicrobial support Origin Country: Asia-wide
+Plant Sterol,Cholesterol Support,CC(C)C(C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)=C,CHEMBL3707264,Plant sterol Natural Source: Multiple sources Traditional Use: Cardiovascular health Origin Country: Asia-wide
+Chlorophyll,Detoxification/Antioxidant,BIOLOGIC - PORPHYRIN,CHEMBL3707265,Porphyrin compound Natural Source: Green plants Traditional Use: Body detox Origin Country: Asia-wide
+Carotenoid,Antioxidant/Vision,BIOLOGIC - CAROTENOID MIXTURE,CHEMBL3707266,Isoprenoid pigment Natural Source: Orange/Yellow plants Traditional Use: Eye and skin health Origin Country: Asia-wide
+Anthocyanin,Antioxidant/Brain,O=c1c2cc(O)cc(O)c2oc3cc(O)cc(O)c13,CHEMBL3707267,Anthocyanin pigment Natural Source: Purple/Blue plants Traditional Use: Brain antioxidant Origin Country: Asia-wide
+Proanthocyanidin,Antioxidant/Heart,BIOLOGIC - FLAVONOID POLYMER,CHEMBL3707268,Condensed tannin Natural Source: Grape/Berry seeds Traditional Use: Cardiovascular support Origin Country: Asia-wide
+Bergapten,Photosensitizing/Anti-microbial,O=c1ccc2cc(O)c(cc2o1)C(C)C,CHEMBL3707269,Furocoumarin Natural Source: Citrus/Bergamot Traditional Use: Skin pigmentation support Origin Country: Southeast Asia
+Xanthotoxin,Photoprotective,O=c1ccc2cc(O)c(OC)cc2o1,CHEMBL3707270,Furocoumarin Natural Source: Citrus/Traditional Traditional Use: Sun protection Origin Country: Southeast Asia
+Psoralens,Skin/Vitiligo,O=c1ccc2ccc(O)cc2o1,CHEMBL3707271,Furocoumarin class Natural Source: Citrus/Traditional Traditional Use: Skin condition support Origin Country: Southeast Asia
+Coumarin,Anticoagulant/Antispasmodic,O=c1ccc2ccccc2o1,CHEMBL3707272,Coumarin class Natural Source: Multiple herbs Traditional Use: Natural anticoagulant Origin Country: Asia-wide
+Umbelliferone,Antispasmodic,O=c1ccc2cc(O)ccc2o1,CHEMBL3707273,Coumarin Natural Source: Herbs Traditional Use: Smooth muscle support Origin Country: Asia-wide
+Scopoletin,Anti-inflammatory,COc1cc2oc(cc2cc1O)C,CHEMBL3707274,Coumarin Natural Source: Multiple herbs Traditional Use: Inflammation reduction Origin Country: Asia-wide
+Herniarin,Anti-inflammatory,O=c1ccc2cc(OC)ccc2o1,CHEMBL3707275,Coumarin Natural Source: Herbs Traditional Use: Anti-inflammatory Origin Country: Asia-wide
+Geranium Alkaloids,Astringent/Antimicrobial,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707276,Alkaloid mix Natural Source: Geranium species Traditional Use: Traditional remedy Origin Country: Southeast Asia
+Indole,Anticancer/Antimicrobial,c1ccc2[nH]cccc2c1,CHEMBL3707277,Indole alkaloid Natural Source: Multiple plants Traditional Use: Cancer prevention Origin Country: Asia-wide
+Anthraquinone,Laxative/Anti-inflammatory,BIOLOGIC - ANTHRAQUINONE,CHEMBL3707278,Anthraquinone class Natural Source: Bark/Root plants Traditional Use: Digestive support Origin Country: Asia-wide
+Benzofuran,Antimicrobial/Antifungal,O1c2ccccc2cc1,CHEMBL3707279,Benzofuran aromatic Natural Source: Multiple plants Traditional Use: Antimicrobial Origin Country: Asia-wide
+Naphthoquinone,Antimicrobial/Anti-inflammatory,O=C1c2ccccc2C(=O)c1,CHEMBL3707280,Quinone aromatic Natural Source: Multiple plants Traditional Use: Anti-inflammatory Origin Country: Asia-wide
+Steroid Saponin,Hormonal/Adaptogenic,BIOLOGIC - STEROIDAL SAPONIN,CHEMBL3707281,Steroidal saponin Natural Source: Multiple plants Traditional Use: Hormonal support Origin Country: Asia-wide
+Cinnamic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccccc1,CHEMBL3707282,Phenolic acid Natural Source: Cinnamon/Herbs Traditional Use: Anti-inflammatory Origin Country: Asia-wide
+Caffeic Acid,Antioxidant/Immune,O=C(O)\C=C\c1ccc(O)c(O)c1,CHEMBL3707283,Phenolic acid Natural Source: Multiple herbs Traditional Use: Immune support Origin Country: Asia-wide
+Ferulic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccc(OC)c(O)c1,CHEMBL3707284,Phenolic acid Natural Source: Rice bran/Herbs Traditional Use: Anti-inflammatory Origin Country: Asia-wide
+Vanillic Acid,Antioxidant,O=C(O)c1cc(OC)c(O)cc1,CHEMBL3707285,Phenolic acid Natural Source: Multiple herbs Traditional Use: Antioxidant Origin Country: Asia-wide
+Gallic Acid,Antioxidant/Astringent,O=C(O)c1cc(O)c(O)c(O)c1,CHEMBL3707286,Phenolic acid Natural Source: Multiple plants Traditional Use: Powerful antioxidant Origin Country: Asia-wide
+Tannic Acid,Astringent/Antioxidant,BIOLOGIC - POLYPHENOL POLYMER,CHEMBL3707287,Hydrolyzable tannin Natural Source: Bark/Traditional Traditional Use: Deep antioxidant Origin Country: Asia-wide
+Ellagic Acid,Anticancer/Antioxidant,O=C(O)c1cc(O)c2c(c1)c(=O)oc(c2O)c1c(O)cc(=O)oc1O,CHEMBL3707288,Polyphenol tannin Natural Source: Pomegranate/Berries Traditional Use: Cancer prevention Origin Country: Asia-wide
+Pyrogallic Acid,Antioxidant/Skin,O=C(O)c1cc(O)c(O)c(O)c1,CHEMBL3707289,Phenolic acid Natural Source: Multiple plants Traditional Use: Skin antioxidant Origin Country: Asia-wide
+Homoveratric Acid,Neuroprotection,COc1ccc(cc1OC)CC(=O)O,CHEMBL3707290,Phenolic acid Natural Source: Multiple plants Traditional Use: Brain protection Origin Country: Asia-wide
+Rosmarinic Acid,Anti-inflammatory/Memory,O=C(O)\C=C\c1ccc(O)c(O[C@@H]2O[C@H](C[C@H](OC(=O)\C=C\c3cc(O)c(O)cc3)[C@H](O)C(O)=O)C(O)=O)c1,CHEMBL3707291,Phenolic acid Natural Source: Herbs Traditional Use: Memory and inflammation Origin Country: Asia-wide
+Carnosic Acid,Neuroprotection,O=C(O)[C@]12CC[C@]3(C)[C@@H]([C@@]4(C)CC[C@@H]([C@](C4)([C@H]1[C@H]2O)C)C(=O)O)[C@@H]3C,CHEMBL3707292,Diterpenoid Natural Source: Rosemary/Herbs Traditional Use: Brain protection Origin Country: Asia-wide
+Ursolic Acid,Anti-inflammatory,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C,CHEMBL3707293,Triterpenoid Natural Source: Multiple herbs Traditional Use: Anti-inflammatory Origin Country: Asia-wide
+Oleanolic Acid,Antitumor/Antiviral,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C(C)C,CHEMBL3707294,Triterpenoid Natural Source: Multiple herbs Traditional Use: Immune support Origin Country: Asia-wide
+Betulinic Acid,Anticancer/Antiviral,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C,CHEMBL3707295,Triterpenoid Natural Source: Birch bark/Herbs Traditional Use: Cancer prevention Origin Country: Asia-wide
+Carvacrol,Antimicrobial/Antifungal,Cc1ccc(O)c(C(C)C)c1,CHEMBL3707296,Monoterpenoid phenol Natural Source: Multiple aromatic herbs Traditional Use: Antimicrobial Origin Country: Asia-wide
+Thymol,Antimicrobial,CC(C)c1cc(O)c(O)c(O)c1C(C)C,CHEMBL3707297,Phenolic monoterpene Natural Source: Multiple herbs Traditional Use: Antiseptic Origin Country: Asia-wide
+Camphor,Cooling/Respiratory,O=C1CC[C@]2(C)[C@H]1CCC2(C)C,CHEMBL3707298,Bicyclic ketone Natural Source: Camphor tree Traditional Use: Cooling aid Origin Country: Asia-wide
+Menthol,Cooling/Digestive,O[C@@H]1CC[C@@H](C)[C@H]1C(C)C,CHEMBL3707299,Monoterpenoid alcohol Natural Source: Peppermint/Herbs Traditional Use: Cooling comfort Origin Country: Asia-wide
+Pinene,Respiratory/Antimicrobial,CC1=CCC2CC1C2(C)C,CHEMBL3707300,Monoterpene Natural Source: Pine/Multiple herbs Traditional Use: Respiratory support Origin Country: Asia-wide
+Camphene,Respiratory,CC1=CCC2CC1C2(C)C,CHEMBL3707301,Bicyclic monoterpene Natural Source: Multiple aromatic Traditional Use: Respiratory aid Origin Country: Asia-wide
+Cineole,Respiratory,CC1CCC2=CC(=C)CCC2C1,CHEMBL3707302,Oxide monoterpene Natural Source: Eucalyptus/Herbs Traditional Use: Breathwork support Origin Country: Asia-wide
+Limonene,Mood/Digestive,CC(C)c1ccc2c(c1)CCC2=C,CHEMBL3707303,Monoterpene Natural Source: Citrus/Herbs Traditional Use: Mood lifter Origin Country: Asia-wide
+Linalool,Calming,CC(C)=CCCC(C)=CC=CC(C)(O)C,CHEMBL3707304,Monoterpenoid alcohol Natural Source: Lavender/Herbs Traditional Use: Relaxation Origin Country: Asia-wide
+Geraniol,Antimicrobial,CC(C)=CCCC(C)=CC=CC(C)=CC(C)C,CHEMBL3707305,Acyclic monoterpene Natural Source: Multiple aromatic Traditional Use: Antimicrobial Origin Country: Asia-wide
+Citral,Antimicrobial,CC(C)=CCCC(C)=CC=CC(C)=CC(=O)C,CHEMBL3707306,Acyclic monoterpenoid Natural Source: Lemongrass/Herbs Traditional Use: Antiseptic Origin Country: Asia-wide
+Cocaine,Local Anesthesia/Stimulant,C[N@]1[C@H]2CC[C@@H]1[C@H]([C@H](C2)OC(=O)c3ccccc3)C(=O)OC,CHEMBL370805,Tropane alkaloid Natural Source: Coca (Erythroxylon coca) Traditional Use: Local anesthetic and energy Region: Peru/Colombia/Bolivia
+Methylecgonine,Stimulant/Energy,C[N@]1[C@H]2CC[C@@H]1[C@H]([C@H](C2)O)C(=O)OC,CHEMBL3707401,Tropane alkaloid Natural Source: Coca Traditional Use: Mild stimulant effect Region: Andean Region
+Cinnamoylcocaine,Anesthetic,C[N@]1[C@H]2CC[C@@H]1[C@H]([C@H](C2)OC(=O)c3cc(OC)ccc3)C(=O)OC,CHEMBL3707402,Tropane ester Natural Source: Coca Traditional Use: Topical anesthetic Region: Peru
+Benzoylecgonine,Stimulant,C[N@]1[C@H]2CC[C@@H]1[C@H]([C@H](C2)O)C(=O)OC,CHEMBL3707403,Metabolite alkaloid Natural Source: Coca Traditional Use: Metabolite of cocaine Region: Andean
+Ecgonine,Alkaloid Precursor,C[N@]1[C@H]2CC[C@@H]1[C@H]([C@H](C2)O)C(=O)O,CHEMBL3707404,Tropane alkaloid Natural Source: Coca Traditional Use: Precursor alkaloid Region: Peru
+N,N-Dimethyltryptamine (DMT),Psychedelic/Spiritual,CN1CC[C@]23[C@@H]1Cc1ccccc1[C@@]2([H])C1=CN(C)C=C1C3,CHEMBL3707405 Natural Source: Indole alkaloid Traditional Use: Ayahuasca (Psychotria viridis) Visionary plant medicine Region: Amazon Basin 
+5-Methoxy-DMT,Psychedelic/Visionary,COc1ccc2[nH]cc([C@@]34C[C@@H]5CC[C@@H]3N(C)[C@@H]54)c2c1,CHEMBL3707406,Methoxylated indole Natural Source: Virola Snuff/Ayahuasca Traditional Use: Entheogenic snuff preparation Region: Amazon Basin
+Harmaline,MAO Inhibitor/Psychedelic,CC1=c2c([nH]c1)CC[C@@H]2[C@@H]1C[C@H](O)[C@H](O)[C@H](O)[C@H]1O,CHEMBL3707407,Beta-carboline Natural Source: Ayahuasca (Banisteriopsis caapi) Traditional Use: MAO inhibitor for oral DMT activity Region: Amazon Basin
+Harmine,MAO Inhibitor,CCN1c2ccccc2[C@@H]1[C@@H]1C[C@H](O)[C@H](O)[C@H](O)[C@H]1O,CHEMBL3707408,Beta-carboline Natural Source: Ayahuasca vine Traditional Use: Synergistic MAO inhibitor Region: Amazon Basin
+Tetrahydroharmine,MAO Inhibitor,CCN1c2c(cc(O)cc2)[C@@H]1C1C[C@H](O)[C@H](O)[C@H](O)[C@H]1O,CHEMBL3707409,Reduced beta-carboline Natural Source: Ayahuasca Traditional Use: Complementary alkaloid Region: Amazon Basin
+Quinine,Antimalarial/Fever,CN1C[C@@H]4C[C@@H]1[C@@H]2c3ccc(O)cc3CCN2[C@@H]4C(=O)OC,CHEMBL3707410,Quinoline alkaloid Natural Source: Cinchona (Cinchona officinalis) Traditional Use: Malaria prevention and treatment Region: Peruvian Andes
+Quinidine,Cardiac/Antiarrhythmic,C[C@H]1CN2[C@@H]1[C@H]3c4ccc(O)cc4CC[C@@]2([C@@H]3C(=O)OC)[C@@H]1CCNC1,CHEMBL3707411,Quinoline alkaloid Natural Source: Cinchona Traditional Use: Heart rhythm regulation Region: Peru/Ecuador
+Cinchonine,Antimalarial,CN1C[C@@H]4C[C@@H]1[C@@H]2c3ccc(O)cc3CCN2[C@@H]4C(=O)OC,CHEMBL3707412,Quinoline alkaloid Natural Source: Cinchona Traditional Use: Fever and malaria treatment Region: Cinchona bark
+Cinchonidine,Antimalarial,C[C@H]1CN2[C@@H]1[C@H]3c4ccc(O)cc4CC[C@@]2([C@@H]3C(=O)OC)[C@@H]1CCNC1,CHEMBL3707413,Quinoline alkaloid Natural Source: Cinchona Traditional Use: Malaria and fever support Region: Andean Cinchona
+Taspine,Wound Healing/Cicatrizant,c1cc2c(cc1O)c3c(c2)c(cc(c3=O)O)O,CHEMBL3707414,Benzylisoquinoline Natural Source: Sangre de Drago (Croton lechleri) Traditional Use: Accelerates wound healing and scarring Region: Peru/Ecuador
+Dimethylcedrusine,Wound Healing,O=C(O)c1c(OC)c(cc2c1c(cc(c2=O)OC)O)OC,CHEMBL3707415,Lignin derivative Natural Source: Sangre de Drago Traditional Use: Collagen formation and wound contraction Region: Amazon Peru
+Isoboldine,Anti-inflammatory,COc1cc2c(c(c1)O)CCN[C@H]2C,CHEMBL3707416,Benzylisoquinoline Natural Source: Sangre de Drago Traditional Use: Inflammation reduction Region: Ecuadorian Amazon
+Magnoflorine,Antimicrobial,CN1CCC[C@H]1c1ccc(O)c(O)c1O[C@H]1c2cc(O)c(O)cc2O[C@@H]1C1CCNC1,CHEMBL3707417,Benzylisoquinoline Natural Source: Sangre de Drago Traditional Use: Bacterial and fungal infection fighter Region: Peru
+Norisoboldine,Anti-inflammatory,c1cc2c(cc1O)CCN[C@H]2C,CHEMBL3707418,Benzylisoquinoline Natural Source: Sangre de Drago Traditional Use: Anti-inflammatory support Region: Amazon region
+Eugenol,Antimicrobial/Analgesic,O=C(C)Oc1ccc(O)c(C=CCCC)c1,CHEMBL3707419,Phenylpropanoid Natural Source: Sangre de Drago/Clove Traditional Use: Pain relief and antimicrobial Region: South America/Caribbean
+Linalool,Calming/Antimicrobial,CC(C)=CCCC(C)=CC=CC(C)(O)C,CHEMBL3707420,Monoterpenoid Natural Source: Aromatic plants Traditional Use: Relaxation and antiseptic Region: South American herbs
+Myrcene,Sedative/Anxiolytic,CC(C)=CCC=C(C)C=CC(=C)C,CHEMBL3707421,Monoterpene Natural Source: Multiple plants Traditional Use: Sleep and stress support Region: Amazonian plants
+Glucotropaeolin,Antihypertensive/Enzyme Inhibitor,C[C@H]1[C@H](C(=O)O)N[C@@H](C[C@H]1N)c1ccc(cc1)C(=N)N,CHEMBL3707422,Glucosinolate Natural Source: Maca (Lepidium meyenii) Traditional Use: Blood pressure regulation Region: Peru
+Macamide,Neuroprotection/Fertility,CC(C)CCCC(=O)N[C@@H](Cc1ccccc1)C(=O)N[C@@H](Cc1ccccc1)C,CHEMBL3707423,Amide alkaloid Natural Source: Maca Traditional Use: Sexual function and neuroprotection Region: Peruvian Andes
+Macamide B,Neuroprotection/Energy,CC(C)C(CC(=O)N[C@@H](Cc1ccccc1)C(=O)N[C@@H](Cc1ccccc1)C)C,CHEMBL3707424,Amide alkaloid Natural Source: Maca Traditional Use: Brain protection and anti-fatigue Region: Peru
+Macaene,Fertility Support,CC(C)CCC=C(C)C=CC(=C)C,CHEMBL3707425,Sesquiterpene Natural Source: Maca Traditional Use: Reproductive health support Region: Andean Maca
+Beta-Carboline Alkaloid,Neuroprotection,c1cc2c([nH]c1)CC[C@@H]2[C@@H]1C[C@H](O)[C@H](O)[C@H](O)[C@H]1O,CHEMBL3707426,Indole alkaloid Natural Source: Maca Traditional Use: Cognitive and brain protection Region: Peru
+Caffeine,Energy/Stimulant,CN1C=NC2=C1C(=O)N(C(=O)N2C)C,CHEMBL3707427,Methylxanthine Natural Source: Guarana (Paullinia cupana) Traditional Use: Energy and alertness boost Region: Amazon Basin
+Theobromine,Stimulant/Diuretic,O=C1c2c(N(C)C(=O)N(C)c2)N(C)C1=O,CHEMBL3707428,Methylxanthine Natural Source: Cacao/Guarana Traditional Use: Gentle stimulant Region: Amazonian plants
+L-Carnitine,Energy/Fatigue,C[N+](C)(C)CC(O)CC(=O)[O-],CHEMBL3707429,Amino acid derivative Natural Source: Maca Traditional Use: Combats fatigue and boosts energy Region: Peru
+Ergosterol,Immune/Cellular Health,CC(C)C(C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)=C,CHEMBL3707430,Plant sterol Natural Source: Maca Traditional Use: Immune cell support Region: Peruvian Maca
+Benzyl Isothiocyanate,Antimicrobial/Anti-cancer,c1ccc(cc1)CS(=N)=S,CHEMBL3707431,Isothiocyanate Natural Source: Maca Traditional Use: Antimicrobial and antitumor Region: Peru
+Lipoic Acid,Antioxidant/Antidote,O=C(O)CCCCC1SCCS1,CHEMBL3707432,Disulfide antioxidant Natural Source: Maca Traditional Use: Detoxification support Region: Andean Maca
+Quercetin,Antioxidant/Anti-inflammatory,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol Natural Source: Multiple Amazonian plants Traditional Use: Universal antioxidant Region: Amazon-wide
+Luteolin,Anti-inflammatory/Antioxidant,O=c1cc(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3707433,Flavone Natural Source: Brazilian medicinal plants Traditional Use: Inflammation reduction Region: Brazil
+Myricetin,Antioxidant/Brain,O=c1c(-c2cc(O)c(O)c(O)c2)c(O)c2cc(O)cc(O)c2o1,CHEMBL3707434,Flavonol Natural Source: Campomanesia adamantium Traditional Use: Triple antioxidant power Region: Brazil
+Catechin,Antioxidant/Heart,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3707435,Flavanol Natural Source: Green tea/Amazonian plants Traditional Use: Heart antioxidant Region: Brazil/South America
+Epicatechin,Cardiovascular/Antioxidant,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3707436,Flavanol Natural Source: Cacao/Amazonian plants Traditional Use: Vascular health Region: Brazil/Amazon
+Kaempferol,Antitumor/Cardiovascular,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL1903,Flavonol Natural Source: Multiple plants Traditional Use: Heart and cancer prevention Region: South America
+Apigenin,Calming/Anti-anxiety,O=c1cc(-c2ccc(O)cc2)oc2cc(O)cc(O)c12,CHEMBL3707437,Flavone Natural Source: Various Amazonian herbs Traditional Use: Nervous system calming Region: Brazil
+Hesperetin,Cardioprotective,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(OC)c1,CHEMBL3707438,Flavanone Natural Source: Citrus fruits Traditional Use: Heart health Region: Central/South America
+Naringenin,Cholesterol/Anti-inflammatory,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(O)c1,CHEMBL3707439,Flavone Natural Source: Citrus/Herbs Traditional Use: Cholesterol support Region: Tropical South America
+Hesperidin,Antioxidant/Vascular,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(O)cc2O1,CHEMBL3707440,Flavanone glycoside Natural Source: Citrus/Herbs Traditional Use: Vascular health Region: Central America
+Diosmin,Vascular/Anti-inflammatory,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(OC)cc2O1,CHEMBL3707441,Flavanone glycoside Natural Source: Citrus/Herbs Traditional Use: Venous health Region: South America
+Rutin,Capillary/Antioxidant,O=C(O)[C@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](COC(=O)c3cc(O)cc(O)c3)[C@@H](O)[C@H](O)[C@H]2O)O[C@H](c2cc(O)c(O)c(O)c2)[C@H]1O,CHEMBL3707442,Flavonoid glycoside Natural Source: Multiple herbs Traditional Use: Capillary strength Region: South America
+Artepillin C,Antioxidant/Anti-tumor,CC(C)=CCC(C)C1=CC(=O)C(=CC1=O)C(=O)C[C@H](c1ccc(O)c(O)c1)C(C)C,CHEMBL3707443,Prenylated compound Natural Source: Propolis Traditional Use: Antioxidant and antitumor Region: Brazil
+Baccharin,Anti-inflammatory,O=C(O)c1cc(O)c(O[C@@H]2Cc3c(O)cc(O)cc3[C@H]2c2ccc(O)c(O)c2)cc1,CHEMBL3707444,Phenolic acid Natural Source: Baccharis Traditional Use: Inflammation reduction Region: Brazil
+Caffeic Acid,Antioxidant/Immune,O=C(O)\C=C\c1ccc(O)c(O)c1,CHEMBL3707445,Phenolic acid Natural Source: Multiple Amazonian herbs Traditional Use: Immune support Region: Amazon-wide
+Ferulic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccc(OC)c(O)c1,CHEMBL3707446,Phenolic acid Natural Source: Multiple plants Traditional Use: Anti-inflammatory Region: South America
+Vanillic Acid,Antioxidant,O=C(O)c1cc(OC)c(O)cc1,CHEMBL3707447,Phenolic acid Natural Source: Multiple herbs Traditional Use: Gentle antioxidant Region: South American
+Gallic Acid,Antioxidant/Astringent,O=C(O)c1cc(O)c(O)c(O)c1,CHEMBL3707448,Phenolic acid Natural Source: Multiple plants Traditional Use: Powerful antioxidant Region: South America
+Tannic Acid,Astringent/Antioxidant,BIOLOGIC - POLYPHENOL POLYMER,CHEMBL3707449,Hydrolyzable tannin Natural Source: Bark plants Traditional Use: Deep antioxidant Region: South America
+Ellagic Acid,Anticancer/Antioxidant,O=C(O)c1cc(O)c2c(c1)c(=O)oc(c2O)c1c(O)cc(=O)oc1O,CHEMBL3707450,Polyphenol tannin Natural Source: Pomegranate/Berries Traditional Use: Cancer prevention Region: South America
+Pyrogallic Acid,Antioxidant/Skin,O=C(O)c1cc(O)c(O)c(O)c1,CHEMBL3707451,Phenolic acid Natural Source: Multiple plants Traditional Use: Skin antioxidant Region: South America
+Rosmarinic Acid,Anti-inflammatory/Memory,O=C(O)\C=C\c1ccc(O)c(O[C@@H]2O[C@H](C[C@H](OC(=O)\C=C\c3cc(O)c(O)cc3)[C@H](O)C(O)=O)C(O)=O)c1,CHEMBL3707452,Phenolic acid Natural Source: Herbs Traditional Use: Memory and inflammation Region: South America
+Carnosic Acid,Neuroprotection,O=C(O)[C@]12CC[C@]3(C)[C@@H]([C@@]4(C)CC[C@@H]([C@](C4)([C@H]1[C@H]2O)C)C(=O)O)[C@@H]3C,CHEMBL3707453,Diterpenoid Natural Source: Rosemary/Herbs Traditional Use: Brain protection Region: South America
+Ursolic Acid,Anti-inflammatory,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C,CHEMBL3707454,Triterpenoid Natural Source: Multiple herbs Traditional Use: Anti-inflammatory Region: South America
+Oleanolic Acid,Antitumor/Antiviral,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C(C)C,CHEMBL3707455,Triterpenoid Natural Source: Multiple herbs Traditional Use: Immune support Region: South America
+Betulinic Acid,Anticancer/Antiviral,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C,CHEMBL3707456,Triterpenoid Natural Source: Birch/Herbs Traditional Use: Cancer prevention Region: South America
+Carvacrol,Antimicrobial/Antifungal,Cc1ccc(O)c(C(C)C)c1,CHEMBL3707457,Monoterpenoid phenol Natural Source: Aromatic herbs Traditional Use: Antimicrobial Region: South America
+Thymol,Antimicrobial,CC(C)c1cc(O)c(O)c(O)c1C(C)C,CHEMBL3707458,Phenolic monoterpene Natural Source: Thyme/Herbs Traditional Use: Antiseptic Region: South America
+Camphor,Cooling/Respiratory,O=C1CC[C@]2(C)[C@H]1CCC2(C)C,CHEMBL3707459,Bicyclic ketone Natural Source: Camphor plants Traditional Use: Cooling and respiratory Region: South America
+Menthol,Cooling/Digestive,O[C@@H]1CC[C@@H](C)[C@H]1C(C)C,CHEMBL3707460,Monoterpenoid alcohol Natural Source: Peppermint/Herbs Traditional Use: Cooling comfort Region: South America
+Pinene,Respiratory/Antimicrobial,CC1=CCC2CC1C2(C)C,CHEMBL3707461,Monoterpene Natural Source: Pine/Multiple herbs Traditional Use: Respiratory support Region: South America
+Camphene,Respiratory,CC1=CCC2CC1C2(C)C,CHEMBL3707462,Bicyclic monoterpene Natural Source: Aromatic plants Traditional Use: Respiratory aid Region: South America
+Cineole,Respiratory,CC1CCC2=CC(=C)CCC2C1,CHEMBL3707463,Oxide monoterpene Natural Source: Eucalyptus/Herbs Traditional Use: Breathwork support Region: South America
+Limonene,Mood/Digestive,CC(C)c1ccc2c(c1)CCC2=C,CHEMBL3707464,Monoterpene Natural Source: Citrus/Herbs Traditional Use: Mood lifter Region: Central/South America
+Citral,Antimicrobial,CC(C)=CCCC(C)=CC=CC(C)=CC(=O)C,CHEMBL3707465,Acyclic monoterpenoid Natural Source: Lemongrass/Herbs Traditional Use: Antiseptic Region: South America
+Geraniol,Antimicrobial,CC(C)=CCCC(C)=CC=CC(C)=CC(C)C,CHEMBL3707466,Acyclic monoterpene Natural Source: Aromatic plants Traditional Use: Antimicrobial Region: South America
+Alpha-Humulene,Anti-inflammatory,CC(C)=CCC=C(C)C=CC(=C)C,CHEMBL3707467,Sesquiterpene Natural Source: Essential oils Traditional Use: Anti-inflammatory Region: Brazil
+Trans-Caryophyllene,Anti-inflammatory,CC1=CCC2=CC(=C)CCC2C1,CHEMBL3707468,Sesquiterpene Natural Source: Essential oils Traditional Use: Inflammation reduction Region: South America
+Pulegone,Antispasmodic/Digestive,CC(C)=CCC=C(C)C(=O)C,CHEMBL3707469,Monoterpene ketone Natural Source: Muña (Minthostachys) Traditional Use: Digestive spasm relief Region: Peruvian herbs
+Milonine,Anti-inflammatory,O=C(O)[C@H]1CN2CC[C@H]3[C@H](C2)[C@H]1c1ccc(O)cc1O3,CHEMBL3707470,Alkaloid Natural Source: Cissampelos sympodialis Traditional Use: Inflammation reduction Region: Brazil
+Bukittinggine,Anti-inflammatory,O=C(c1ccccc1)N1CCCC1c1ccc(cc1)C(C)C,CHEMBL3707471,Alkaloid Natural Source: Sapium baccatum Traditional Use: Anti-inflammatory support Region: Brazilian Northeast
+Alpha-Pinene,Respiratory,CC1=CCC2CC1C2(C)C,CHEMBL3707472,Monoterpene Natural Source: Multiple plants Traditional Use: Respiratory support Region: South America
+Beta-Myrcene,Sedative/Anti-inflammatory,CC(C)=CCC=C(C)C=CC(=C)C,CHEMBL3707473,Monoterpene Natural Source: Multiple plants Traditional Use: Sleep and inflammation Region: South America
+Linalyl Acetate,Calming,CC(=O)OCC(C)(C)C=CC(C)=CC=CC(C)C,CHEMBL3707474,Acetate ester Natural Source: Lavender/Aromatic Traditional Use: Relaxation Region: South America
+Geranyl Acetate,Antimicrobial,CC(=O)OCC(C)(C)C=CC(C)=CC=CC(C)C,CHEMBL3707475,Acetate ester Natural Source: Aromatic plants Traditional Use: Antimicrobial Region: South America
+Bornyl Acetate,Cooling/Respiratory,CC(=O)OC1C(C)(C)CCC2=CC(=C)CCC12,CHEMBL3707476,Acetate ester Natural Source: Aromatic plants Traditional Use: Respiratory aid Region: South America
+Methyl Salicylate,Pain Relief/Anti-inflammatory,COC(=O)c1ccccc1O,CHEMBL3707477,Salicylate Natural Source: Wintergreen/Herbs Traditional Use: Pain and inflammation Region: South America
+Benzyl Alcohol,Antimicrobial,OCc1ccccc1,CHEMBL3707478,Benzyl alcohol Natural Source: Multiple plants Traditional Use: Antimicrobial Region: South America
+Acacia Tannins,Astringent/Antioxidant,BIOLOGIC - TANNIN POLYMER,CHEMBL3707479,Polyphenol Natural Source: Acacia/Mimosa Traditional Use: Astringent support Region: South America
+Polyphenol,Antioxidant/Anti-inflammatory,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3707480,Polyphenol class Natural Source: Multiple plants Traditional Use: Broad antioxidant Region: Amazon-wide
+Alkaloid Mix,Neuroprotective,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707481,Alkaloid class Natural Source: Multiple plants Traditional Use: Brain protection Region: South America
+Volatile Oil/Essential Oil,Antimicrobial/Aromatic,BIOLOGIC - VOLATILE MIXTURE,CHEMBL3707482,Volatile compound Natural Source: Aromatic herbs Traditional Use: Multi-purpose antimicrobial Region: South America
+Plant Sterol,Cholesterol Support,CC(C)C(C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)=C,CHEMBL3707483,Plant sterol Natural Source: Multiple sources Traditional Use: Cardiovascular health Region: South America
+Chlorophyll,Detoxification/Antioxidant,BIOLOGIC - PORPHYRIN,CHEMBL3707484,Porphyrin compound Natural Source: Green plants Traditional Use: Body detox Region: South America
+Carotenoid,Antioxidant/Vision,BIOLOGIC - CAROTENOID MIXTURE,CHEMBL3707485,Isoprenoid pigment Natural Source: Orange/Yellow plants Traditional Use: Eye and skin health Region: South America
+Anthocyanin,Antioxidant/Brain,O=c1c2cc(O)cc(O)c2oc3cc(O)cc(O)c13,CHEMBL3707486,Anthocyanin pigment Natural Source: Purple/Blue plants Traditional Use: Brain antioxidant Region: South America
+Proanthocyanidin,Antioxidant/Heart,BIOLOGIC - FLAVONOID POLYMER,CHEMBL3707487,Condensed tannin Natural Source: Grape seeds/Berries Traditional Use: Cardiovascular support Region: South America
+Coumarin,Anticoagulant/Antispasmodic,O=c1ccc2ccccc2o1,CHEMBL3707488,Coumarin class Natural Source: Multiple herbs Traditional Use: Natural anticoagulant Region: South America
+Umbelliferone,Antispasmodic,O=c1ccc2cc(O)ccc2o1,CHEMBL3707489,Coumarin Natural Source: Herbs Traditional Use: Smooth muscle support Region: South America
+Scopoletin,Anti-inflammatory,MOc1cc2oc(cc2cc1O)C,CHEMBL3707490,Coumarin Natural Source: Multiple herbs Traditional Use: Inflammation reduction Region: South America
+Herniarin,Anti-inflammatory,O=c1ccc2cc(OC)ccc2o1,CHEMBL3707491,Coumarin Natural Source: Herbs Traditional Use: Anti-inflammatory Region: South America
+Arachidonic Acid,Inflammatory/Brain,CCC=CCC=CCC=CCC=CCCCCCC(=O)O,CHEMBL3707492,Polyunsaturated fat Natural Source: Multiple sources Traditional Use: Neurological support Region: South America
+Eicosapentaenoic Acid,Cardiovascular/Brain,CCC(=CCC=CCC=CCC=CCC=CCC=CC(=O)O,CHEMBL3707493,Omega-3 fatty acid Natural Source: Marine sources Traditional Use: Heart and brain health Region: South American coast
+Docosahexaenoic Acid,Brain/Eye Health,CCC(=CCC=CCC=CCC=CCC=CCC=CCC=CC(=O)O,CHEMBL3707494,Omega-3 fatty acid Natural Source: Marine sources Traditional Use: Cognitive support Region: South American coast
+Alpha-Linolenic Acid,Anti-inflammatory,CC\C=C\C\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3707495,Omega-3 fatty acid Natural Source: Plant oils Traditional Use: Essential fatty acid Region: South America
+Linoleic Acid,Cardiovascular,CC\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3707496,Polyunsaturated fat Natural Source: Plant oils Traditional Use: Heart health Region: South America
+Oleic Acid,Anti-inflammatory,CCCCCCCC\C=C\CCCCCCCC(=O)O,CHEMBL3707497,Monounsaturated fat Natural Source: Plant oils Traditional Use: Inflammation reduction Region: South America
+Palmitic Acid,Cardiovascular,CCCCCCCCCCCCCC(=O)O,CHEMBL3707498,Saturated fat Natural Source: Plant sources Traditional Use: Metabolic support Region: South America
+Stearic Acid,Metabolic,CCCCCCCCCCCCCCCC(=O)O,CHEMBL3707499,Saturated fat Natural Source: Plant sources Traditional Use: Energy support Region: South America
+Glycerol,Humectant/Energy,OCC(O)CO,CHEMBL3707500,Polyol Natural Source: Plant extracts Traditional Use: Moisture and energy Region: South America
+Fructose,Energy/Sweet,CC(O)[C@H](O)[C@H](O)[C@H](O)C(=O)O,CHEMBL3707501,Sugar Natural Source: Fruits Traditional Use: Natural energy Region: South America
+Glucose,Energy/Metabolism,CC(O)[C@H](O)[C@H](O)[C@H](O)C(=O)O,CHEMBL3707502,Sugar Natural Source: Plant sources Traditional Use: Metabolic fuel Region: South America
+Sucrose,Energy/Sweet,CC(O)[C@H](O)[C@@H](CO)O[C@@H]1[C@H](CO)O[C@H](O[C@@H]2[C@H](CO)O[C@@H](O)[C@H]2O)[C@H]1O,CHEMBL3707503,Disaccharide Natural Source: Plant sources Traditional Use: Energy support Region: South America
+Starch,Energy/Carbohydrate,BIOLOGIC - POLYSACCHARIDE,CHEMBL3707504,Complex carbohydrate Natural Source: Plant tubers Traditional Use: Sustained energy Region: South America
+Inulin,Prebiotic/Digestive,BIOLOGIC - POLYSACCHARIDE,CHEMBL3707505,Fructose polymer Natural Source: Root vegetables Traditional Use: Gut health Region: South America
+Saponin,Immunomodulatory,BIOLOGIC - SAPONIN MIXTURE,CHEMBL3707506,Saponin glycoside Natural Source: Multiple plants Traditional Use: Immune enhancement Region: South America
+Puerarin,Menopausal/Cardiovascular,O=C(O)[C@@H]1[C@H](O)[C@H](O[C@@H]2Cc3c(O)cc(O)cc3O[C@H]2c2ccc(O)c(O)c2)[C@H](CO)[C@H](O)[C@H]1O,CHEMBL3707507,Isoflavone glycoside Natural Source: Legumes Traditional Use: Menopausal support Region: South America
+Daidzein,Hormonal Balance,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL1232,Isoflavone Natural Source: Soy/Legumes Traditional Use: Women's health Region: South America
+Genistein,Estrogenic/Anticancer,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL1231,Isoflavone Natural Source: Soy/Legumes Traditional Use: Cancer prevention Region: South America
+Formononetin,Phytoestrogenic,O=c1c(-c2ccc(OC)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL3707508,Isoflavone Natural Source: Legumes/Herbs Traditional Use: Hormonal support Region: South America
+Rutoside,Capillary/Antioxidant,O=C(O)[C@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](COC(=O)c3cc(O)cc(O)c3)[C@@H](O)[C@H](O)[C@H]2O)O[C@H](c2cc(O)c(O)c(O)c2)[C@H]1O,CHEMBL3707509,Flavonoid glycoside Natural Source: Multiple plants Traditional Use: Vascular strength Region: South America
+Bixa Compound,Immunomodulatory/Leishmania,BIOLOGIC - CAROTENOID MIXTURE,CHEMBL3707510,Carotenoid Natural Source: Annatto (Bixa orellana) Traditional Use: Anti-parasitic immunity Region: Amazon Basin
+Spondias Polyphenol,Anti-leishmanial,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3707511,Polyphenol Natural Source: Hog Plum (Spondias mombin) Traditional Use: Parasitic infection fighter Region: Amazon region
+Anacardium Tannin,Anti-parasitic,BIOLOGIC - TANNIN POLYMER,CHEMBL3707512,Tannin Natural Source: Cashew (Anacardium occidentale) Traditional Use: Leishmania prevention Region: Amazon region
+Chelonanthus Alkaloid,Antifungal/Anti-parasitic,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707513,Alkaloid Natural Source: Chelonanthus alatus Traditional Use: Fungal and parasitic infections Region: Amazon Basin
+Jacaranda Polyphenol,Anti-parasitic/Immunomodulatory,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3707514,Polyphenol Natural Source: Jacaranda copaia Traditional Use: Leishmaniasis support Region: Amazon region
+Plantain Alkaloid,Immunomodulatory,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707515,Alkaloid Natural Source: Plantago major Traditional Use: Immune modulation Region: South America
+Achyrocline Flavonoid,Anti-inflammatory/Immunomodulatory,O=C(O)c1cc(O)c(O)cc1O[C@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3707516,Flavonoid Natural Source: Marcela (Achyrocline alata) Traditional Use: Immune support Region: Peru/South America
+Sambucus Anthocyanin,Antiviral/Immune,BIOLOGIC - ANTHOCYANIN MIXTURE,CHEMBL3707517,Anthocyanin Natural Source: Elderberry (Sambucus) Traditional Use: Antiviral support Region: Central/South America
+Muña Terpene,Antispasmodic,CC(C)=CCC=C(C)C(=O)C,CHEMBL3707518,Monoterpene ketone Natural Source: Muña (Minthostachys mollis) Traditional Use: Digestive spasm relief Region: Peruvian Andes
+Eucalyptol,Respiratory/Antimicrobial,CC1CCC2=CC(=C)CCC2C1,CHEMBL3707519,Oxide monoterpene Natural Source: Eucalyptus Traditional Use: Respiratory aid Region: Introduced to South America
+Scoparia Compound,Antidiabetic/Anti-inflammatory,O=C(c1ccccc1)c1ccc(O)c(O)cc1,CHEMBL3707520,Phenolic compound Natural Source: Scoparia dulcis Traditional Use: Diabetes and inflammation Region: Central America
+Betulinic Acid Derivative,Anticancer,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C,CHEMBL3707521,Triterpene Natural Source: Barbatimão (Stryphnodendron) Traditional Use: Antitumor Region: Brazil
+Tannin-Polyphenol,Astringent,BIOLOGIC - TANNIN-PHENOL POLYMER,CHEMBL3707522,Polyphenol Natural Source: Bark plants Traditional Use: Deep antioxidant Region: South America
+Antimony Alkaloid Mix,Leishmaniasis,BIOLOGIC - ALKALOID MIXTURE WITH ANTIMONY,CHEMBL3707523,Alkaloid antimony Natural Source: Traditional remedies Traditional Use: Anti-parasitic Region: Amazon region
+Digoxin,Cardiac/Heart Failure,CC(C)[C@H]1[C@H]2[C@H]3CC(=C)[C@@H](C(=O)O[C@@H]4CC[C@@H](C)[C@@H]4C)[C@@]3(C)[C@H]1CC2,CHEMBL335,Cardiac glycoside Natural source: Foxglove (Digitalis purpurea) Traditional Use: Heart strengthening and arrhythmia Region: Welsh/Celtic
+Digitoxin,Cardiac,CC(C)[C@H]1[C@H]2[C@H]3CC(=C)[C@@H](C(=O)O[C@@H]4CC[C@@H](C)[C@@H]4C)[C@@]3(C)[C@H]1CC2,CHEMBL3707601,Cardiac glycoside Natural source: Foxglove Traditional Use: Heart support Region: Celtic tradition
+Oleuropein,Antioxidant/Cardiovascular,O=C(O)[C@@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1c(OC(=O)c2ccccc2)cc(O)cc(O)c1O,CHEMBL3707602,Secoiridoid Natural source: Olive (Olea europaea) Traditional Use: Anti-inflammatory and antioxidant Region: Mediterranean
+Hydroxytyrosol,Antioxidant/Neuroprotection,Oc1ccc(cc1O)C(O)CO,CHEMBL3707603,Phenolic alcohol Natural source: Olive oil Traditional Use: Brain protection and antioxidant Region: Mediterranean
+Oleocanthal,Anti-inflammatory,O=C(c1ccccc1)Cc1ccc(O)c(O)c1,CHEMBL3707604,Phenolic aldehyde Natural source: Extra virgin olive oil Traditional Use: Anti-inflammatory Region: Mediterranean
+Tyrosol,Antioxidant,Oc1ccc(cc1)CCO,CHEMBL3707605,Phenolic alcohol Natural source: Olive Traditional Use: Antioxidant support Region: Mediterranean
+Oleacein,Anti-inflammatory/Neuroprotective,O=C(O)[C@@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1c(cc(O)cc1O)C(=C(O)c1ccccc1)c1ccccc1,CHEMBL3707606,Secoiridoid Natural source: Olive oil Traditional Use: Neuroprotection Region: Mediterranean
+Carvacrol,Antimicrobial/Antifungal,Cc1ccc(O)c(C(C)C)c1,CHEMBL373,Monoterpenoid phenol Natural source: Oregano (Origanum compactum) Traditional Use: Antimicrobial powerhouse Region: Mediterranean
+Thymol,Antimicrobial/Expectorant,CC(C)c1cc(O)c(O)c(O)c1C(C)C,CHEMBL3707607,Phenolic monoterpene Natural source: Thyme (Thymus vulgaris) Traditional Use: Respiratory and antimicrobial Region: Mediterranean/Celtic
+Linalool,Calming/Antifungal,CC(C)=CCCC(C)=CC=CC(C)(O)C,CHEMBL3707608,Monoterpenoid alcohol Natural source: Thyme ct. Linalool Traditional Use: Gentle calming Region: Mediterranean
+P-Cymene,Antimicrobial/Antioxidant,Cc1ccc(C(C)C)cc1,CHEMBL3707609,Monoterpene Natural source: Thyme/Oregano Traditional Use: Antimicrobial support Region: Mediterranean
+Gamma-Terpinene,Antioxidant,CC(=CCC=C(C)C=CC(=C)C)C,CHEMBL3707610,Monoterpene Natural source: Thyme/Oregano Traditional Use: Antioxidant Region: Mediterranean
+Rosmarinic Acid,Anti-inflammatory/Memory,O=C(O)\C=C\c1ccc(O)c(O[C@@H]2O[C@H](C[C@H](OC(=O)\C=C\c3cc(O)c(O)cc3)[C@H](O)C(O)=O)C(O)=O)c1,CHEMBL3707611,Phenolic acid Natural source: Rosemary (Rosmarinus officinalis) Traditional Use: Memory and inflammation Region: Mediterranean
+Carnosic Acid,Neuroprotection/Antioxidant,O=C(O)[C@]12CC[C@]3(C)[C@@H]([C@@]4(C)CC[C@@H]([C@](C4)([C@H]1[C@H]2O)C)C(=O)O)[C@@H]3C,CHEMBL3707612,Diterpenoid Natural source: Rosemary Traditional Use: Brain protection Region: Mediterranean
+Carnosol,Antioxidant/Anti-inflammatory,O=C(c1ccc(O)c(O)c1)C1CC[C@@]2(C)[C@H]1CCC1=C(C)CC[C@@]21O,CHEMBL3707613,Abietane diterpenoid Natural source: Rosemary Traditional Use: Antioxidant Region: Mediterranean
+Ursolic Acid,Anti-inflammatory/Anti-tumor,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C,CHEMBL3707614,Triterpenoid Natural source: Rosemary Traditional Use: Anti-inflammatory Region: Mediterranean
+Oleanolic Acid,Antitumor/Antiviral,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C(C)C,CHEMBL3707615,Triterpenoid Natural source: Rosemary/Herbs Traditional Use: Immune support Region: Mediterranean
+Betulinic Acid,Anticancer/Antiviral,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C,CHEMBL3707616,Triterpenoid Natural source: Birch/Traditional Traditional Use: Cancer prevention Region: Mediterranean
+Cineole,Respiratory/Expectorant,CC1CCC2=CC(=C)CCC2C1,CHEMBL3707617,Oxide monoterpene Natural source: Thyme/Eucalyptus Traditional Use: Respiratory aid Region: Mediterranean
+Limonene,Mood/Digestive,CC(C)c1ccc2c(c1)CCC2=C,CHEMBL3707618,Monoterpene Natural source: Citrus/Herbs Traditional Use: Mood and digestion Region: Mediterranean
+Pinene,Respiratory/Antimicrobial,CC1=CCC2CC1C2(C)C,CHEMBL3707619,Monoterpene Natural source: Pine trees Traditional Use: Respiratory support Region: Mediterranean
+Camphene,Respiratory/Antispasmodic,CC1=CCC2CC1C2(C)C,CHEMBL3707620,Bicyclic monoterpene Natural source: Aromatic herbs Traditional Use: Respiratory aid Region: Mediterranean
+Borneol,Analgesic/Circulation,O[C@@H]1CC[C@H](C)[C@H]1C(C)C,CHEMBL3707621,Bicyclic alcohol Natural source: Thyme/Aromatic Traditional Use: Pain relief Region: Mediterranean
+Eugenol,Antimicrobial/Analgesic,O=C(C)Oc1ccc(O)c(C=CCCC)c1,CHEMBL3707622,Phenylpropanoid Natural source: Clove/Thyme Traditional Use: Pain and antimicrobial Region: Mediterranean
+Linalyl Acetate,Calming/Sedative,CC(=O)OCC(C)(C)C=CC(C)=CC=CC(C)C,CHEMBL3707623,Acetate ester Natural source: Lavender/Thyme Traditional Use: Relaxation Region: Mediterranean
+Bornyl Acetate,Respiratory/Cooling,CC(=O)OC1C(C)(C)CCC2=CC(=C)CCC12,CHEMBL3707624,Acetate ester Natural source: Aromatic herbs Traditional Use: Respiratory support Region: Mediterranean
+Geraniol,Antimicrobial/Antioxidant,CC(C)=CCCC(C)=CC=CC(C)=CC(C)C,CHEMBL3707625,Acyclic monoterpene Natural source: Aromatic plants Traditional Use: Antimicrobial Region: Mediterranean
+Myrcene,Sedative/Anti-inflammatory,CC(C)=CCC=C(C)C=CC(=C)C,CHEMBL3707626,Monoterpene Natural source: Multiple herbs Traditional Use: Sleep support Region: Mediterranean
+Alpha-Pinene,Respiratory,CC1=CCC2CC1C2(C)C,CHEMBL3707627,Monoterpene Natural source: Pine/Multiple herbs Traditional Use: Respiratory support Region: Mediterranean
+Beta-Myrcene,Sedative,CC(C)=CCC=C(C)C=CC(=C)C,CHEMBL3707628,Monoterpene Natural source: Multiple plants Traditional Use: Sleep and inflammation Region: Mediterranean
+Quercetin,Antioxidant/Anti-inflammatory,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol Natural source: Multiple plants Traditional Use: Universal antioxidant Region: Mediterranean-wide
+Luteolin,Anti-inflammatory,O=c1cc(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3707629,Flavone Natural source: Herbs Traditional Use: Inflammation reduction Region: Mediterranean
+Myricetin,Antioxidant/Brain,O=c1c(-c2cc(O)c(O)c(O)c2)c(O)c2cc(O)cc(O)c2o1,CHEMBL3707630,Flavonol Natural source: Berry plants Traditional Use: Triple antioxidant Region: Mediterranean
+Kaempferol,Antitumor/Cardiovascular,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL1903,Flavonol Natural source: Multiple herbs Traditional Use: Heart and cancer prevention Region: Mediterranean
+Apigenin,Calming/Anti-anxiety,O=c1cc(-c2ccc(O)cc2)oc2cc(O)cc(O)c12,CHEMBL3707631,Flavone Natural source: Various herbs Traditional Use: Nervous system calming Region: Mediterranean
+Catechin,Antioxidant/Heart,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3707632,Flavanol Natural source: Green tea/Herbs Traditional Use: Heart antioxidant Region: Mediterranean
+Epicatechin,Cardiovascular,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3707633,Flavanol Natural source: Herbs Traditional Use: Vascular health Region: Mediterranean
+Hesperidin,Antioxidant/Vascular,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(O)cc2O1,CHEMBL3707634,Flavanone glycoside Natural source: Citrus/Herbs Traditional Use: Vascular health Region: Mediterranean
+Diosmin,Vascular/Anti-inflammatory,O=C(O)[C@H]1O[C@H](CO)[C@@H](O)[C@H]([C@H]1O)Oc1ccc(cc1)[C@@H]1CCc2c(O)cc(OC)cc2O1,CHEMBL3707635,Flavanone glycoside Natural source: Citrus Traditional Use: Venous health Region: Mediterranean
+Rutin,Capillary/Antioxidant,O=C(O)[C@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](COC(=O)c3cc(O)cc(O)c3)[C@@H](O)[C@H](O)[C@H]2O)O[C@H](c2cc(O)c(O)c(O)c2)[C@H]1O,CHEMBL3707636,Flavonoid glycoside Natural source: Multiple herbs Traditional Use: Capillary strength Region: Mediterranean
+Naringenin,Cholesterol/Anti-inflammatory,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(O)c1,CHEMBL3707637,Flavone Natural source: Citrus Traditional Use: Cholesterol support Region: Mediterranean
+Hesperetin,Cardioprotective,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(OC)c1,CHEMBL3707638,Flavanone Natural source: Citrus Traditional Use: Heart health Region: Mediterranean
+Caffeic Acid,Antioxidant/Immune,O=C(O)\C=C\c1ccc(O)c(O)c1,CHEMBL3707639,Phenolic acid Natural source: Multiple herbs Traditional Use: Immune support Region: Mediterranean
+Ferulic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccc(OC)c(O)c1,CHEMBL3707640,Phenolic acid Natural source: Multiple plants Traditional Use: Anti-inflammatory Region: Mediterranean
+Vanillic Acid,Antioxidant,O=C(O)c1cc(OC)c(O)cc1,CHEMBL3707641,Phenolic acid Natural source: Multiple herbs Traditional Use: Gentle antioxidant Region: Mediterranean
+Gallic Acid,Antioxidant/Astringent,O=C(O)c1cc(O)c(O)c(O)c1,CHEMBL3707642,Phenolic acid Natural source: Multiple plants Traditional Use: Powerful antioxidant Region: Mediterranean
+Tannic Acid,Astringent/Antioxidant,BIOLOGIC - POLYPHENOL POLYMER,CHEMBL3707643,Hydrolyzable tannin Natural source: Bark plants Traditional Use: Deep astringent Region: Mediterranean
+Ellagic Acid,Anticancer/Antioxidant,O=C(O)c1cc(O)c2c(c1)c(=O)oc(c2O)c1c(O)cc(=O)oc1O,CHEMBL3707644,Polyphenol tannin Natural source: Pomegranate/Berries Traditional Use: Cancer prevention Region: Mediterranean
+Methyl Salicylate,Pain Relief/Anti-inflammatory,COC(=O)c1ccccc1O,CHEMBL3707645,Salicylate Natural source: Wintergreen/Herbs Traditional Use: Pain relief Region: Mediterranean
+Salicylic Acid,Pain Relief/Anti-inflammatory,O=C(O)c1ccccc1O,CHEMBL3707646,Salicylate Natural source: Willow bark Traditional Use: Aspirin precursor Region: Celtic/Mediterranean
+Linalyl Acetate,Calming,CC(=O)OCC(C)(C)C=CC(C)=CC=CC(C)C,CHEMBL3707647,Acetate ester Natural source: Lavender Traditional Use: Relaxation Region: Mediterranean
+Menthol,Cooling/Digestive,O[C@@H]1CC[C@@H](C)[C@H]1C(C)C,CHEMBL3707648,Monoterpenoid alcohol Natural source: Peppermint Traditional Use: Cooling comfort Region: Mediterranean
+Camphor,Cooling/Respiratory,O=C1CC[C@]2(C)[C@H]1CCC2(C)C,CHEMBL3707649,Bicyclic ketone Natural source: Camphor tree Traditional Use: Cooling and respiratory Region: Mediterranean
+Pulegone,Antispasmodic,CC(C)=CCC=C(C)C(=O)C,CHEMBL3707650,Monoterpene ketone Natural source: Spearmint Traditional Use: Digestive spasm relief Region: Celtic
+Citral,Antimicrobial,CC(C)=CCCC(C)=CC=CC(C)=CC(=O)C,CHEMBL3707651,Acyclic monoterpenoid Natural source: Lemongrass Traditional Use: Antiseptic Region: Mediterranean
+Lavender Linalool,Calming/Sleep,CC(C)=CCCC(C)=CC=CC(C)(O)C,CHEMBL3707652,Monoterpenoid alcohol Natural source: Lavender (Lavandula officinalis) Traditional Use: Sleep support Region: Mediterranean
+Lemon Balm Compound,Antiviral/Calming,O=C(O)\C=C\c1cc(O)cc(O)c1O[C@@H]2O[C@H](C)[C@@H](O)[C@H]([C@H]2O)O,CHEMBL3707653,Phenolic compound Natural source: Lemon Balm (Melissa officinalis) Traditional Use: Antiviral and calming Region: Mediterranean
+Myrtle Alkaloid,Antimicrobial,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707654,Alkaloid Natural source: Myrtle (Myrtus communis) Traditional Use: Antimicrobial and digestive Region: Mediterranean
+Sage Alkaloid,Cognitive/Circulation,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707655,Alkaloid Natural source: Sage (Salvia officinalis) Traditional Use: Memory and blood flow Region: Mediterranean
+Thujone,Antispasmodic/Stimulant,CC1=CCC2CC1C2(C)C,CHEMBL3707656,Monoterpene ketone Natural source: Sage/Thyme Traditional Use: Circulation and alertness Region: Mediterranean
+Salvianolic Acid A,Cardioprotective,O=C(O)c1cc(O)c(O[C@@H]2Cc3c(O)cc(O)cc3[C@H]2c2ccc(O)c(O)c2)cc1,CHEMBL3707657,Polyphenol Natural source: Sage species Traditional Use: Cardiac protection Region: Mediterranean
+Glycyrrhizin,Anti-inflammatory,CC(C)[C@@H]1[C@H]2C[C@H]([C@@]3(C2)CC[C@]4([C@@]3(C(=O)OC)CC[C@@]5([C@H]4CC[C@@H]6[C@@]5(C[C@@H]([C@H]6O)O[C@@H]7O[C@H](C[C@H](OC(=O)c8cc(O)cc(O)c8)[C@H](O)C(O)=O)C(O)=O)C)C)C)OC1=O,CHEMBL3707658,Triterpenoid glycoside Natural source: Licorice (Glycyrrhiza glabra) Traditional Use: Anti-inflammatory Region: Mediterranean
+Glycyrrhetinic Acid,Anti-inflammatory,CC(C)[C@@H]1[C@H]2C[C@H]([C@@]3(C2)CC[C@]4([C@@]3(C(=O)OC)CC[C@@]5([C@H]4CC[C@@H]6[C@@]5(C[C@@H]([C@H]6O)O)C)C)C)OC1=O,CHEMBL3707659,Triterpenoid Natural source: Licorice Traditional Use: Ulcer healing Region: Mediterranean
+Glabridin,Antimicrobial/Skin,O=C(O)c1cc(OC)c(O)cc1,CHEMBL3707660,Chalcone Natural source: Licorice Traditional Use: Skin antimicrobial Region: Mediterranean
+Liquiritigenin,Antioxidant,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(O)c1,CHEMBL3707661,Flavone Natural source: Licorice Traditional Use: Antioxidant Region: Mediterranean
+Chamazulene,Anti-inflammatory,CC1=CC(=C(C(=O)C1)C)c1ccc(cc1)C,CHEMBL3707662,Azulene sesquiterpene Natural source: Chamomile (Matricaria chamomilla) Traditional Use: Blue healing oil Region: Mediterranean/Celtic
+Alpha-Bisabolol,Anti-inflammatory,CC1=CCC(O)(C(C)(C)C)CC1,CHEMBL3707663,Sesquiterpene alcohol Natural source: Chamomile Traditional Use: Gentle anti-inflammatory Region: Mediterranean
+Matricine,Antioxidant Precursor,CC(C)c1cc(O)c(C(=O)c2ccc(cc2)C(C)C)cc1,CHEMBL3707664,Flavonoid Natural source: Chamomile Traditional Use: Converts to chamazulene Region: Celtic
+Umbelliferone,Antispasmodic,O=c1ccc2cc(O)ccc2o1,CHEMBL3707665,Coumarin Natural source: Chamomile Traditional Use: Digestive comfort Region: Mediterranean
+Herniarin,Anti-inflammatory,O=c1ccc2cc(OC)ccc2o1,CHEMBL3707666,Coumarin Natural source: Chamomile Traditional Use: Anti-inflammatory Region: Mediterranean
+Scopoletin,Anti-inflammatory,MOc1cc2oc(cc2cc1O)C,CHEMBL3707667,Coumarin Natural source: Various herbs Traditional Use: Inflammation reduction Region: Mediterranean
+Coumarin,Anticoagulant,O=c1ccc2ccccc2o1,CHEMBL3707668,Coumarin class Natural source: Multiple herbs Traditional Use: Natural anticoagulant Region: Mediterranean
+Plantain Alkaloid,Drawing Herb/Antiseptic,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707669,Alkaloid Natural source: Plantain (Plantago major) Traditional Use: Anti-inflammatory drawing Region: Celtic
+Aucubin,Anti-inflammatory/Hepatoprotective,O[C@H]1[C@H](C(=O)O)[C@H](O)[C@H](O)[C@@H]1OC1=Cc2cc(O)c(c1)C(=O)C=C2,CHEMBL3707670,Iridoid glycoside Natural source: Plantain Traditional Use: Liver and wound support Region: Celtic
+Catalpol,Antioxidant/Anti-inflammatory,O[C@H]1[C@H](C(=O)O)[C@H](O)[C@H](O)[C@@H]1OC1=Cc2cc(O)c(c1)CC2,CHEMBL3707671,Iridoid glycoside Natural source: Traditional herbs Traditional Use: Anti-inflammatory Region: Mediterranean
+Agrimony Flavonoid,Astringent/Anti-inflammatory,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL3707672,Flavonoid Natural source: Agrimony (Agrimonia eupatoria) Traditional Use: Astringent wound Region: Celtic
+Hawthorn Flavonoid,Cardioprotective,BIOLOGIC - FLAVONOID MIXTURE,CHEMBL3707673,Flavonoid class Natural source: Hawthorn (Crataegus spp.) Traditional Use: Heart support Region: Celtic
+Procyanidins,Antioxidant/Heart,BIOLOGIC - FLAVONOID POLYMER,CHEMBL3707674,Condensed tannin Natural source: Hawthorn berries Traditional Use: Cardiovascular support Region: Celtic
+Vitexin,Cardioprotective,O=C(c1ccc(O)cc1)c1c(O)cc(O[C@@H]2Cc3c(O)cc(O)cc3O[C@H]2c2ccc(O)cc2)c(O)c1,CHEMBL3707675,Flavone glycoside Natural source: Hawthorn Traditional Use: Heart tonic Region: Celtic
+Chlorogenic Acid,Antioxidant,O=C(O)\C=C\c1ccc(O)c(O[C@@H]2O[C@H](C[C@H](OC(=O)\C=C\c3cc(O)c(O)cc3)[C@H](O)C(O)=O)C(O)=O)c1,CHEMBL3707676,Cinnamate polyphenol Natural source: Coffee/Herbs Traditional Use: Antioxidant Region: Mediterranean
+Puerarin,Menopausal/Cardiovascular,O=C(O)[C@@H]1[C@H](O)[C@H](O[C@@H]2Cc3c(O)cc(O)cc3O[C@H]2c2ccc(O)c(O)c2)[C@H](CO)[C@H](O)[C@H]1O,CHEMBL3707677,Isoflavone glycoside Natural source: Legumes Traditional Use: Menopausal support Region: Mediterranean
+Daidzein,Hormonal Balance,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL1232,Isoflavone Natural source: Legumes Traditional Use: Women's health Region: Mediterranean
+Genistein,Estrogenic/Anticancer,O=c1c(-c2ccc(O)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL1231,Isoflavone Natural source: Legumes Traditional Use: Cancer prevention Region: Mediterranean
+Formononetin,Phytoestrogenic,O=c1c(-c2ccc(OC)cc2)c(O)c2cc(O)cc(O)c2o1,CHEMBL3707678,Isoflavone Natural source: Legumes Traditional Use: Hormonal support Region: Mediterranean
+Anthocyanin,Antioxidant/Brain,O=c1c2cc(O)cc(O)c2oc3cc(O)cc(O)c13,CHEMBL3707679,Anthocyanin pigment Natural source: Purple/Blue plants Traditional Use: Brain antioxidant Region: Mediterranean
+Proanthocyanidin,Antioxidant/Heart,BIOLOGIC - FLAVONOID POLYMER,CHEMBL3707680,Condensed tannin Natural source: Grape seeds Traditional Use: Cardiovascular support Region: Mediterranean
+Mastic Resin,Anti-inflammatory/Antimicrobial,BIOLOGIC - RESIN MIXTURE,CHEMBL3707681,Resin Natural source: Mastic tree (Pistacia lentiscus) Traditional Use: 3 Region: 000 years of use
+Masticin,Antimicrobial,BIOLOGIC - TRITERPENE MIXTURE,CHEMBL3707682,Triterpene Natural source: Mastic Traditional Use: Antimicrobial support Region: Mediterranean
+Linalyl Acetate,Calming,CC(=O)OCC(C)(C)C=CC(C)=CC=CC(C)C,CHEMBL3707683,Acetate ester Natural source: Lavender Traditional Use: Relaxation Region: Mediterranean
+Arachidonic Acid,Inflammatory/Brain,CCC=CCC=CCC=CCC=CCCCCCC(=O)O,CHEMBL3707684,Polyunsaturated fat Natural source: Multiple sources Traditional Use: Neurological support Region: Mediterranean
+Eicosapentaenoic Acid,Cardiovascular/Brain,CCC(=CCC=CCC=CCC=CCC=CCC=CC(=O)O,CHEMBL3707685,Omega-3 fatty acid Natural source: Fish/Marine Traditional Use: Heart and brain health Region: Mediterranean coast
+Docosahexaenoic Acid,Brain/Eye Health,CCC(=CCC=CCC=CCC=CCC=CCC=CCC=CC(=O)O,CHEMBL3707686,Omega-3 fatty acid Natural source: Fish/Marine Traditional Use: Cognitive support Region: Mediterranean coast
+Alpha-Linolenic Acid,Anti-inflammatory,CC\C=C\C\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3707687,Omega-3 fatty acid Natural source: Plant oils Traditional Use: Essential fatty acid Region: Mediterranean
+Linoleic Acid,Cardiovascular,CC\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3707688,Polyunsaturated fat Natural source: Plant oils Traditional Use: Heart health Region: Mediterranean
+Oleic Acid,Anti-inflammatory,CCCCCCCC\C=C\CCCCCCCC(=O)O,CHEMBL3707689,Monounsaturated fat Natural source: Plant oils Traditional Use: Inflammation reduction Region: Mediterranean
+Palmitic Acid,Cardiovascular,CCCCCCCCCCCCCC(=O)O,CHEMBL3707690,Saturated fat Natural source: Plant sources Traditional Use: Metabolic support Region: Mediterranean
+Stearic Acid,Metabolic,CCCCCCCCCCCCCCCC(=O)O,CHEMBL3707691,Saturated fat Natural source: Plant sources Traditional Use: Energy support Region: Mediterranean
+Squalene,Antioxidant/Immune,CC(C)=CCCC(C)=CCCC(C)=CCCC(C)=CCCC(C)=CCCC(C)=CCC[C@H](C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)C,CHEMBL3707692,Triterpene Natural source: Olive oil Traditional Use: Antioxidant Region: Mediterranean
+Beta-Sitosterol,Cholesterol Support,CC(C)C(C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)=C,CHEMBL3707693,Plant sterol Natural source: Multiple sources Traditional Use: Cardiovascular health Region: Mediterranean
+Stigmasterol,Cholesterol Support,CC(C)C(C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)=C,CHEMBL3707694,Plant sterol Natural source: Plant oils Traditional Use: Cholesterol support Region: Mediterranean
+Campesterol,Cholesterol Support,CC(C)C(C)C1CCC2=CC(=CC[C@@]2(C)C1)C(C)=C,CHEMBL3707695,Plant sterol Natural source: Plant oils Traditional Use: Cholesterol support Region: Mediterranean
+Polyphenol,Antioxidant/Anti-inflammatory,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3707696,Polyphenol class Natural source: Multiple herbs Traditional Use: Broad antioxidant Region: Mediterranean-wide
+Alkaloid Mix,Neuroprotective,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707697,Alkaloid class Natural source: Multiple plants Traditional Use: Brain protection Region: Mediterranean
+Volatile Oil,Antimicrobial/Aromatic,BIOLOGIC - VOLATILE MIXTURE,CHEMBL3707698,Volatile compound Natural source: Aromatic herbs Traditional Use: Multi-purpose antimicrobial Region: Mediterranean
+Saponin,Immunomodulatory,BIOLOGIC - SAPONIN MIXTURE,CHEMBL3707699,Saponin glycoside Natural source: Multiple plants Traditional Use: Immune enhancement Region: Mediterranean
+Tannin Complex,Astringent/Antioxidant,BIOLOGIC - TANNIN POLYMER,CHEMBL3707700,Hydrolyzable tannin Natural source: Bark plants Traditional Use: Deep astringent Region: Mediterranean
+Glycerol,Humectant/Energy,OCC(O)CO,CHEMBL3707701,Polyol Natural source: Plant extracts Traditional Use: Moisture and energy Region: Mediterranean
+Chlorophyll,Detoxification/Antioxidant,BIOLOGIC - PORPHYRIN,CHEMBL3707702,Porphyrin compound Natural source: Green plants Traditional Use: Body detox Region: Mediterranean
+Carotenoid,Antioxidant/Vision,BIOLOGIC - CAROTENOID MIXTURE,CHEMBL3707703,Isoprenoid pigment Natural source: Orange/Yellow plants Traditional Use: Eye and skin health Region: Mediterranean
+Digitalis Cardiac,Heart Support,CC(C)[C@H]1[C@H]2[C@H]3CC(=C)[C@@H](C(=O)O[C@@H]4CC[C@@H](C)[C@@H]4C)[C@@]3(C)[C@H]1CC2,CHEMBL3707704,Cardiac glycoside Natural source: Foxglove Traditional Use: Heart strengthening Region: Welsh
+Digitonin,Heart Support,CC(C)[C@H]1[C@H]2[C@H]3CC(=C)[C@@H](C(=O)O[C@@H]4CC[C@@H](C)[C@@H]4C)[C@@]3(C)[C@H]1CC2,CHEMBL3707705,Cardiac saponin Natural source: Foxglove Traditional Use: Cardiac support Region: Welsh/Celtic
+Hellebore Alkaloid,Cardiac,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707706,Alkaloid Natural source: Hellebore (Helleborus niger) Traditional Use: Arrow poison (historically) Region: Celtic
+Poppy Alkaloid,Sleep/Pain,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707707,Alkaloid Natural source: Poppy (Papaver somniferum) Traditional Use: Sleep and pain Region: Mediterranean
+Foxglove Compound,Cardiac,BIOLOGIC - CARDIAC GLYCOSIDE MIXTURE,CHEMBL3707708,Cardiac glycoside Natural source: Foxglove (Digitalis purpurea) Traditional Use: Heart support Region: Welsh
+Willow Compound,Pain/Anti-inflammatory,O=C(O)c1ccccc1O,CHEMBL3707709,Salicylate Natural source: White Willow (Salix alba) Traditional Use: Aspirin precursor Region: Celtic
+Nettle Chlorophyll,Nutritional/Anti-inflammatory,BIOLOGIC - CHLOROPHYLL + MINERALS,CHEMBL3707710,Plant compound Natural source: Stinging Nettle (Urtica dioica) Traditional Use: Nutritional tonic Region: Celtic
+Nettle Alkaloid,Anti-inflammatory,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707711,Alkaloid Natural source: Nettle Traditional Use: Rheumatism relief Region: Celtic
+Birch Resin,Skin/Antiseptic,BIOLOGIC - RESIN MIXTURE,CHEMBL3707712,Resin Natural source: Birch (Betula) Traditional Use: Skin healing Region: Celtic
+Birch Sap,Detox/Nutritional,BIOLOGIC - SAP MIXTURE,CHEMBL3707713,Sugar and minerals Natural source: Birch tree Traditional Use: Spring tonic Region: Celtic
+Hazel Compound,Traditional Remedy,BIOLOGIC - TANNIN MIXTURE,CHEMBL3707714,Tannin Natural source: Hazel (Corylus avellane) Traditional Use: Digestive support Region: Celtic
+Alder Compound,Antiseptic/Anti-inflammatory,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3707715,Polyphenol Natural source: Alder (Alnus) Traditional Use: Anti-inflammatory Region: Celtic
+Mountain Ash Compound,Digestive/Immune,BIOLOGIC - FLAVONOID + VITAMIN C MIXTURE,CHEMBL3707716,Flavonoid Natural source: Rowan (Sorbus) Traditional Use: Stomach support Region: Celtic
+Yellow Flag Rhizome,Diuretic,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707717,Alkaloid Natural source: Yellow Flag (Iris pseudacorus) Traditional Use: Urinary support Region: Welsh
+Wood Sage Compound,Kidney Support,O=C(O)\C=C\c1cc(O)cc(O)c1,CHEMBL3707718,Phenolic acid Natural source: Wood Sage (Teucrium) Traditional Use: Kidney stone support Region: Welsh
+Water Pimpernel,Traditional Remedy,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707719,Alkaloid Natural source: Samolus valerandi Traditional Use: Traditional use Region: Welsh
+Dandelion Alkaloid,Digestive/Diuretic,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707720,Alkaloid Natural source: Dandelion (Taraxacum officinale) Traditional Use: Liver and kidney support Region: Celtic
+Dandelion Inulin,Prebiotic/Digestive,BIOLOGIC - POLYSACCHARIDE,CHEMBL3707721,Fructose polymer Natural source: Dandelion Traditional Use: Gut health Region: Celtic
+Milk Thistle Silymarin,Hepatoprotective,O=c1cc(-c2cc(O)c(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3707722,Flavonoid Natural source: Milk Thistle (Silybum marianum) Traditional Use: Liver protection Region: Celtic
+Centaury Alkaloid,Digestive,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707723,Alkaloid Natural source: Centaury (Centaurium erythraea) Traditional Use: Bitter tonic Region: Celtic
+Mugwort Compound,Women's Health/Digestive,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707724,Alkaloid Natural source: Mugwort (Artemisia vulgaris) Traditional Use: Women's herb Region: Celtic/Mediterranean
+Valerian Acid,Sleep/Relaxation,CC(C)=CCCC(C)C1=CC(=O)C(=CC1=O)C(=O)O,CHEMBL3707725,Sesquiterpene acid Natural source: Valerian Traditional Use: Sleep support Region: Celtic/Mediterranean
+Angelica Coumarin,Circulation,O=c1ccc2cc(O)ccc2o1,CHEMBL3707726,Coumarin Natural source: Angelica Traditional Use: Circulation support Region: Mediterranean
+Lady's Mantle Tannin,Women's Health,BIOLOGIC - TANNIN POLYMER,CHEMBL3707727,Tannin Natural source: Lady's Mantle (Alchemilla) Traditional Use: Menstrual support Region: Celtic
+Calendula Compound,Wound Healing,BIOLOGIC - FLAVONOID + CAROTENOID MIXTURE,CHEMBL3707728,Mixed compound Natural source: Marigold (Calendula officinalis) Traditional Use: Skin healing Region: Mediterranean
+Comfrey Alkaloid,Wound Healing,BIOLOGIC - PYRROLIZIDINE ALKALOID,CHEMBL3707729,Alkaloid Natural source: Comfrey (Symphytum) Traditional Use: Bone healing Region: Celtic
+Coltsfoot Compound,Respiratory,BIOLOGIC - POLYSACCHARIDE + MUCILAGE,CHEMBL3707730,Mixed compound Natural source: Colt's Foot (Tussilago farfara) Traditional Use: Cough relief Region: Celtic
+Coltsfoot Alkaloid,Respiratory Support,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3707731,Alkaloid Natural source: Colt's Foot Traditional Use: Respiratory tonic Region: Celtic
+Lungwort Mucilage,Respiratory,BIOLOGIC - POLYSACCHARIDE MIXTURE,CHEMBL3707732,Mucilage Natural source: Lungwort Traditional Use: Lung support Region: Celtic
+Aspalathin,Antidiabetic/Antioxidant,O=C(O)[C@@H]1O[C@@H](c2cc(O)c(O)cc2)[C@@H](O)[C@H](O)[C@H]1OC[C@@H](O)[C@H](O)[C@@H]1O[C@H](CO)[C@@H](O)[C@H]1O,CHEMBL3708001,Dihydrochalcone glycoside Natural Source: Rooibos (Aspalathus linearis) Traditional Use: Metabolic health and antioxidant Region: South Africa
+Nothofagin,Antioxidant/Anti-inflammatory,O=C(O)[C@@H]1O[C@@H](c2cc(O)c(O)cc2)[C@@H](O)[C@H](O)[C@H]1OC[C@@H](O)[C@H](O)[C@@H]1O[C@H](CO)[C@@H](O)[C@H]1O,CHEMBL3708002,Dihydrochalcone glycoside Natural Source: Rooibos Traditional Use: Anti-inflammatory support Region: South Africa
+Orientin,Antioxidant/Bone Health,O=C(c1ccc(O)cc1)c1c(O)cc(O[C@@H]2O[C@H](CO)[C@@H](O)[C@H]2O)c(O)c1,CHEMBL3708003,Flavone C-glycoside Natural Source: Rooibos Traditional Use: Bone mineralization Region: South Africa
+Isoorientin,Antioxidant,O=C(c1ccc(O)cc1)c1c(O)cc(O[C@@H]2O[C@H](CO)[C@@H](O)[C@H](O)[C@H]2O)c(O)c1,CHEMBL3708004,Flavone C-glycoside Natural Source: Rooibos Traditional Use: Antioxidant Region: South Africa
+Uncariosides,Wound Healing/Anti-cancer,O=C(O)[C@@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](C)[C@@H](O)[C@H]([C@H]2O)O)O[C@H](c2cc(O)c(O)c(O)c2)[C@H]1O,CHEMBL3708005,Iridoid glycoside Natural Source: Cat's Claw (Uncaria tomentosa) Traditional Use: Immune support and healing Region: Peru/South America
+Umckalin,Respiratory/Antimicrobial,O=c1ccc2cc(O)cc(OC)c2o1,CHEMBL3708006,Coumarin Natural Source: Pelargonium sidoides (Umckaloabo) Traditional Use: Bronchitis and respiratory infections Region: South Africa
+Umckalin Sulfate,Respiratory/Immunomodulatory,O=c1ccc2cc(O)c(OS(=O)(=O)O)c(OC)c2o1,CHEMBL3708007,Coumarin sulfate Natural Source: Umckaloabo Traditional Use: Immune activation Region: South Africa
+Artelin,Antimicrobial/Antiviral,O=c1ccc2cc(O)cc(OC)c2o1,CHEMBL3708008,Trimethoxy coumarin Natural Source: Umckaloabo Traditional Use: Antiviral and antibacterial Region: South Africa
+Fraxetin,Anti-inflammatory,O=c1ccc2cc(O)c(O)c(OC)c2o1,CHEMBL3708009,Dihydroxy-methoxycoumarin Natural Source: Umckaloabo Traditional Use: Anti-inflammatory Region: South Africa
+Gallocatechin,Antioxidant/Antimicrobial,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)c(O)cc(O)c2O[C@H]1c1cc(O)c(O)c(O)cc1,CHEMBL3708010,Flavanol Natural Source: Umckaloabo Traditional Use: Antimicrobial Region: South Africa
+Epigallocatechin,Antioxidant/Immune,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)c(O)cc1,CHEMBL3708011,Flavanol Natural Source: Umckaloabo Traditional Use: Immune support Region: South Africa
+Artemisia afra Sesquiterpenes,Anti-malarial/Anti-inflammatory,CC1=CC(=C(C(=O)C1)C)c1ccccc1,CHEMBL3708012,Sesquiterpene Natural Source: African Wormwood (Artemisia afra) Traditional Use: Malaria and fever Region: South Africa/Africa
+Siphonochilone,Anti-parasitic/Anti-malarial,CC(C)=CCCC(C)C1=CC(=O)C(C)=CC1,CHEMBL3708013,Sesquiterpene ketone Natural Source: Artemisia afra Traditional Use: Malaria prevention Region: South Africa
+Eucalyptol,Respiratory/Antimicrobial,CC1CCC2=CC(=C)CCC2C1,CHEMBL3708014,Oxide monoterpene Natural Source: Artemisia afra Traditional Use: Respiratory aid Region: South Africa
+Artemisinin,Anti-malarial,CC1=C2C(C(=O)C3=C(C1)OC4CCCCC4C3)=C(C=C2)O,CHEMBL184,Sesquiterpene lactone Natural Source: Artemisia species Traditional Use: Malaria treatment Region: Africa
+Scopolin,Anti-inflammatory,MOc1cc2oc(cc2cc1O)C,CHEMBL3708015,Coumarin Natural Source: Artemisia afra/Multiple plants Traditional Use: Anti-inflammatory Region: South Africa
+Limonene,Antimicrobial/Digestive,CC(C)c1ccc2c(c1)CCC2=C,CHEMBL3708016,Monoterpene Natural Source: Multiple African plants Traditional Use: Antimicrobial and digestive Region: Africa-wide
+Menthone,Antispasmodic/Cooling,CC(C)[C@H]1CC[C@H](C)C(=O)C1,CHEMBL3708017,Monoterpene ketone Natural Source: Spearmint/Plants Traditional Use: Digestive comfort Region: Africa
+Harpagide,Anti-inflammatory/Analgesic,O[C@H]1[C@H](C(=O)O)[C@H](O)[C@H](O)[C@@H]1OC1=Cc2cc(O)c(c1)C(=O)C=C2,CHEMBL3708018,Iridoid glycoside Natural Source: Devil's Claw (Harpagophytum) Traditional Use: Pain and inflammation Region: South Africa/Namibia
+Harpagoside,Anti-inflammatory/Arthritis,O[C@H]1[C@H](C(=O)O)[C@H](O)[C@H](O)[C@@H]1OC1=Cc2cc(O)c(c1)C(=O)C=C2,CHEMBL3708019,Iridoid glycoside Natural Source: Devil's Claw Traditional Use: Joint pain and arthritis Region: South Africa
+Procumbide,Anti-inflammatory,O[C@H]1[C@H](C(=O)O)[C@H](O)[C@H](O)[C@@H]1OC1=Cc2cc(O)c(c1)C(=O)C=C2,CHEMBL3708020,Iridoid glycoside Natural Source: Devil's Claw Traditional Use: Inflammation reduction Region: South Africa
+Verbascoside,Antioxidant/Neuroprotection,O=C(O)\C=C\c1ccc(O)c(O[C@@H]2O[C@H](C)[C@@H](O)[C@H]([C@H]2O)O[C@@H]2Cc3c(O)cc(O)cc3[C@H]2c2ccc(O)c(O)c2)c1,CHEMBL3708021,Phenolic acid glycoside Natural Source: Multiple plants Traditional Use: Brain protection Region: Africa
+Buchu Limonene,Diuretic/Antimicrobial,CC(C)c1ccc2c(c1)CCC2=C,CHEMBL3708022,Monoterpene Natural Source: Buchu (Agathosma betulina) Traditional Use: Urinary support Region: South Africa
+Buchu Menthone,Diuretic,CC(C)[C@H]1CC[C@H](C)C(=O)C1,CHEMBL3708023,Monoterpene ketone Natural Source: Buchu Traditional Use: Kidney support Region: South Africa
+Buchu Pulegone,Antispasmodic,CC(C)=CCC=C(C)C(=O)C,CHEMBL3708024,Monoterpene ketone Natural Source: Buchu Traditional Use: Digestive spasm relief Region: South Africa
+Sutherlandia Glycosides,Immune Support/Anti-cancer,BIOLOGIC - SAPONIN MIXTURE,CHEMBL3708025,Saponin Natural Source: Sutherlandia frutescens Traditional Use: Immune enhancement Region: South Africa
+Sutherlandia Alkaloid,Anti-cancer/Stress,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708026,Alkaloid Natural Source: Cancer Bush (Sutherlandia) Traditional Use: Cancer support and stress Region: South Africa
+Hericenone,Neuroprotection,BIOLOGIC - POLYSACCHARIDE,CHEMBL3708027,Polysaccharide Natural Source: Lion's Mane Mushroom Traditional Use: Brain health Region: Africa
+Imphepho Flavonoid,Antimicrobial/Anti-inflammatory,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL3708028,Flavonoid Natural Source: Imphepho (Helichrysum odoratissimum) Traditional Use: Spiritual and medicinal Region: South Africa
+Imphepho Essential Oil,Antimicrobial,BIOLOGIC - VOLATILE MIXTURE,CHEMBL3708029,Volatile oil Natural Source: Imphepho Traditional Use: Respiratory support Region: South Africa
+Aloe Barbaloin,Laxative/Antitumor,O=C(O)[C@@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](C)[C@@H](O)[C@H]([C@H]2O)O)O[C@H](c2cc(O)c(cc2O)C(=O)C=C(O)C=C(O)C=C(O)C=CC(=O)O)[C@H]1O,CHEMBL3708030,Anthraquinone glycoside Natural Source: Aloe ferox Traditional Use: Digestive and colon health Region: South Africa
+Aloe Polysaccharide,Immune Support/Wound Healing,BIOLOGIC - POLYSACCHARIDE MIXTURE,CHEMBL3708031,Polysaccharide Natural Source: Aloe Traditional Use: Wound healing and immunity Region: South Africa
+Aloin A,Laxative,O=C(O)[C@@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](C)[C@@H](O)[C@H]([C@H]2O)O)O[C@H](c2cc(O)c(cc2O)C(=O)C=C(O)C=CC(=O)O)[C@H]1O,CHEMBL3708032,Anthraquinone Natural Source: Aloe Traditional Use: Digestive laxative Region: South Africa
+Aloin B,Anthraquinone/Laxative,O=C(O)[C@@H]1[C@H](O)[C@H](O[C@@H]2O[C@H](C)[C@@H](O)[C@H]([C@H]2O)O)O[C@H](c2cc(O)c(cc2O)C(=O)C=C(O)C=CC(=O)O)[C@H]1O,CHEMBL3708033,Anthraquinone glycoside Natural Source: Aloe Traditional Use: Digestion support Region: South Africa
+Baobab Vitamin C,Antioxidant/Immune,O=C(C)[C@H](O)[C@H](O)C(=O)O,CHEMBL3708034,Ascorbic acid Natural Source: Baobab (Adansonia digitata) Traditional Use: Immune support Region: Sub-Saharan Africa
+Baobab Polyphenol,Antioxidant,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3708035,Polyphenol Natural Source: Baobab Traditional Use: Antioxidant Region: Africa
+Baobab Calcium,Bone Health,Ca[Ca]Ca,CHEMBL3708036,Mineral Natural Source: Baobab Traditional Use: Skeletal support Region: Africa
+Guava Quercetin,Antioxidant/Anti-inflammatory,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol Natural Source: Guava (Psidium guajava) Traditional Use: Antioxidant Region: Africa-wide
+Guava Luteolin,Anti-inflammatory,O=c1cc(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3708037,Flavone Natural Source: Guava Traditional Use: Anti-inflammatory Region: Africa
+Guava Kaempferol,Antitumor/Cardiovascular,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL1903,Flavonol Natural Source: Guava Traditional Use: Heart and cancer prevention Region: Africa
+Guava Tannin,Astringent/Antidiarrheal,BIOLOGIC - TANNIN POLYMER,CHEMBL3708038,Tannin Natural Source: Guava Traditional Use: Digestive astringent Region: Africa
+Marula Polyphenol,Antioxidant/Immunomodulatory,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3708039,Polyphenol Natural Source: Marula (Sclerocarya birrea) Traditional Use: Immune support Region: South Africa
+Marula Tannin,Astringent/Anti-diarrheal,BIOLOGIC - TANNIN POLYMER,CHEMBL3708040,Tannin Natural Source: Marula Traditional Use: Digestive support Region: South Africa
+Marula Vitamin C,Antioxidant/Immune,O=C(C)[C@H](O)[C@H](O)C(=O)O,CHEMBL3708041,Ascorbic acid Natural Source: Marula Traditional Use: Immune enhancement Region: South Africa
+African Plum Ellagic Acid,Anticancer/Antioxidant,O=C(O)c1cc(O)c2c(c1)c(=O)oc(c2O)c1c(O)cc(=O)oc1O,CHEMBL3708042,Polyphenol tannin Natural Source: African Plum Traditional Use: Cancer prevention Region: South Africa
+Pomegranate Punicalagin,Antioxidant/Anti-cancer,BIOLOGIC - POLYPHENOL TANNIN,CHEMBL3708043,Hydrolyzable tannin Natural Source: Pomegranate Traditional Use: Cardiovascular health Region: Mediterranean/Africa
+Quercetin,Antioxidant/Anti-inflammatory,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol Natural Source: Multiple African plants Traditional Use: Universal antioxidant Region: Africa-wide
+Luteolin,Anti-inflammatory,O=c1cc(-c2ccc(O)c(O)c2)oc2cc(O)cc(O)c12,CHEMBL3708044,Flavone Natural Source: Multiple plants Traditional Use: Inflammation reduction Region: Africa
+Kaempferol,Antitumor/Cardiovascular,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL1903,Flavonol Natural Source: Multiple plants Traditional Use: Heart and cancer prevention Region: Africa
+Apigenin,Calming/Anti-anxiety,O=c1cc(-c2ccc(O)cc2)oc2cc(O)cc(O)c12,CHEMBL3708045,Flavone Natural Source: Multiple herbs Traditional Use: Nervous system calming Region: Africa
+Catechin,Antioxidant/Heart,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3708046,Flavanol Natural Source: Multiple plants Traditional Use: Heart antioxidant Region: Africa
+Epicatechin,Cardiovascular,O=C(O)c1cc(O)c(O)cc1O[C@@H]1Cc2c(O)cc(O)cc2O[C@H]1c1cc(O)c(O)cc1,CHEMBL3708047,Flavanol Natural Source: Multiple plants Traditional Use: Vascular health Region: Africa
+Naringenin,Cholesterol/Anti-inflammatory,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(O)c1,CHEMBL3708048,Flavone Natural Source: Citrus/Herbs Traditional Use: Cholesterol support Region: Africa
+Hesperetin,Cardioprotective,O=C1c2c(O)cc(O)cc2OC[C@H]1c1ccc(O)c(OC)c1,CHEMBL3708049,Flavanone Natural Source: Citrus Traditional Use: Heart health Region: Africa
+Caffeic Acid,Antioxidant/Immune,O=C(O)\C=C\c1ccc(O)c(O)c1,CHEMBL3708050,Phenolic acid Natural Source: Multiple herbs Traditional Use: Immune support Region: Africa
+Ferulic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccc(OC)c(O)c1,CHEMBL3708051,Phenolic acid Natural Source: Multiple plants Traditional Use: Anti-inflammatory Region: Africa
+Gallic Acid,Antioxidant/Astringent,O=C(O)c1cc(O)c(O)c(O)c1,CHEMBL3708052,Phenolic acid Natural Source: Multiple plants Traditional Use: Powerful antioxidant Region: Africa
+Ageratum Alkaloid,Antimicrobial/Wound Healing,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708053,Alkaloid Natural Source: Ageratum conyzoides Traditional Use: Traditional wound remedy Region: West Africa
+Erythrophleum Alkaloid,Traditional Remedy,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708054,Alkaloid Natural Source: Erythrophleum suaveolens Traditional Use: Traditional use Region: West Africa
+Phaseolus Bean Polyphenol,Antidiabetic,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3708055,Polyphenol Natural Source: Beans Traditional Use: Anti-diabetic Region: Africa-wide
+Senna Anthraquinone,Laxative,BIOLOGIC - ANTHRAQUINONE MIXTURE,CHEMBL3708056,Anthraquinone Natural Source: Senna occidentalis Traditional Use: Digestive laxative Region: West Africa
+Senna Flavonoid,Anti-inflammatory,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL3708057,Flavonoid Natural Source: Senna Traditional Use: Anti-inflammatory Region: West Africa
+Berlinia Polyphenol,Anti-inflammatory,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3708058,Polyphenol Natural Source: Berlinia grandiflora Traditional Use: Traditional remedy Region: West Africa
+Berlinia Saponin,Immunomodulatory,BIOLOGIC - SAPONIN MIXTURE,CHEMBL3708059,Saponin Natural Source: Berlinia Traditional Use: Immune support Region: West Africa
+Angelica Coumarin,Circulation,O=c1ccc2cc(O)ccc2o1,CHEMBL3708060,Coumarin Natural Source: Angelica Traditional Use: Circulation support Region: Africa
+Neem Azadirachtin,Anti-parasitic/Insecticidal,CC(C)[C@H]1[C@H]2C[C@H]([C@@]3(C2)CC[C@]4([C@@]3(C(=O)OC)CC[C@@]5([C@H]4CC[C@@H]6[C@@]5(C[C@@H]([C@H]6O)O[C@@H]7O[C@H](C[C@H](OC(=O)c8ccccc8)[C@H](O)C(O)=O)C(O)=O)C)C)C)OC1=O,CHEMBL3706470,Terpenoid Natural Source: Neem (Azadirachta indica) Traditional Use: Parasite and insect control Region: Africa/Asia
+Neem Nimbin,Anti-inflammatory/Antimicrobial,COc1cc2c(c(c1)O)CC[C@@]1(C2)C[C@H](O)[C@@H](O)C(=C)[C@@H]1C,CHEMBL3708061,Alkaloid Natural Source: Neem Traditional Use: Anti-inflammatory Region: Africa/Asia
+Neem Nimbidin,Anti-parasitic,COc1cc2c(c(c1)O)CC[C@@]1(C2)C[C@H](O)[C@@H](O)C(=C)[C@@H]1C,CHEMBL3708062,Alkaloid Natural Source: Neem Traditional Use: Parasite remedy Region: Africa/Asia
+Ginger Gingerol,Anti-inflammatory,O=C(c1ccccc1)CCCCCC1=CC(=O)C(C)=CC1,CHEMBL3708063,Phenolic ketone Natural Source: Ginger Traditional Use: Inflammation reduction Region: Africa/Asia
+Ginger Shogaol,Anti-cancer/Pain,O=C(c1ccccc1)C=CC(=CC(=C)C)CCCCCC,CHEMBL3708064,Unsaturated ketone Natural Source: Ginger (Dried) Traditional Use: Pain and anti-cancer Region: Africa
+Turmeric Curcumin,Anti-inflammatory,COc1ccc(cc1)\C=C\C(=O)CC(=O)\C=C\c2cc(OC)c(O)cc2,CHEMBL1088,Phenolic ketone Natural Source: Turmeric Traditional Use: Potent anti-inflammatory Region: Africa/Asia
+Castor Oil Alkaloid,Traditional Remedy,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708065,Alkaloid Natural Source: Castor Bean (Ricinus communis) Traditional Use: Traditional use Region: Africa
+Castor Oil Linoleic Acid,Anti-inflammatory,CC\C=C\C\C=C\CCCCCCCC(=O)O,CHEMBL3708066,Polyunsaturated fat Natural Source: Castor Traditional Use: Anti-inflammatory Region: Africa
+Castor Oil Oleic Acid,Skin Health,CCCCCCCC\C=C\CCCCCCCC(=O)O,CHEMBL3708067,Monounsaturated fat Natural Source: Castor Traditional Use: Skin nourishment Region: Africa
+Shea Butter Triterpene,Moisturizing/Antioxidant,CC(C)[C@H]1CCC2=CC(=O)[C@@H]3[C@]2(C)C1C[C@@H]1[C@]([C@@H]3C(O)=O)(C(=O)O)CC[C@H]1C,CHEMBL3708068,Triterpenoid Natural Source: Shea Nut Traditional Use: Skin healing Region: West Africa
+Shea Butter Cinnamic Acid,Anti-inflammatory,O=C(O)\C=C\c1ccccc1,CHEMBL3708069,Phenolic acid Natural Source: Shea Traditional Use: Anti-inflammatory Region: West Africa
+Hibiscus Anthocyanin,Antioxidant/Blood Pressure,O=c1c2cc(O)cc(O)c2oc3cc(O)cc(O)c13,CHEMBL3708070,Anthocyanin Natural Source: Hibiscus Traditional Use: Hypertension support Region: Africa
+Hibiscus Quercetin,Antioxidant,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol Natural Source: Hibiscus Traditional Use: Antioxidant Region: Africa
+Hibiscus Vitamin C,Immune Support,O=C(C)[C@H](O)[C@H](O)C(=O)O,CHEMBL3708071,Ascorbic acid Natural Source: Hibiscus Traditional Use: Immune enhancement Region: Africa
+Moringa Glucosinolate,Anti-tumor/Detox,C[C@H]1[C@H](C(=O)O)N[C@@H](C[C@H]1N)c1ccc(cc1)C(=N)N,CHEMBL3708072,Glucosinolate Natural Source: Moringa oleifera Traditional Use: Anti-cancer and detox Region: Africa/Asia
+Moringa Quercetin,Antioxidant,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol Natural Source: Moringa Traditional Use: Antioxidant Region: Africa
+Moringa Kaempferol,Antitumor,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL1903,Flavonol Natural Source: Moringa Traditional Use: Cancer prevention Region: Africa
+Mango Mangiferin,Antioxidant/Anti-diabetic,O=C(O)[C@@H]1O[C@@H](c2c(O)c3c(O)cc(O[C@@H]4O[C@H](C)[C@@H](O)[C@H]([C@H]4O)O)cc3oc2=O)[C@H](O)[C@H](O)[C@H]1O,CHEMBL3708073,Xanthone glycoside Natural Source: Mango Traditional Use: Antidiabetic Region: Africa
+Papaya Papain,Proteolytic/Digestive,BIOLOGIC - PROTEASE ENZYME,CHEMBL3708074,Enzyme Natural Source: Papaya Traditional Use: Digestive enzyme Region: Africa
+Papaya Benzyl Isothiocyanate,Anti-cancer,c1ccc(cc1)CS(=N)=S,CHEMBL3708075,Isothiocyanate Natural Source: Papaya Traditional Use: Anti-cancer Region: Africa
+Pineapple Bromelain,Anti-inflammatory,BIOLOGIC - PROTEASE ENZYME,CHEMBL3708076,Enzyme Natural Source: Pineapple Traditional Use: Inflammation reduction Region: Africa
+Coconut Oil Lauric Acid,Antimicrobial,CCCCCCCCCCCCCC(=O)O,CHEMBL3708077,Saturated fatty acid Natural Source: Coconut Traditional Use: Antimicrobial Region: Africa
+Coconut Oil Capric Acid,Antimicrobial,CCCCCCCC(=O)O,CHEMBL3708078,Saturated fatty acid Natural Source: Coconut Traditional Use: Antifungal Region: Africa
+Cassava Cyanogenic Glycoside,Nutritional,BIOLOGIC - CYANIDE PRECURSOR (DETOXIFIED),CHEMBL3708079,Glycoside Natural Source: Cassava Traditional Use: Nutritional staple Region: Africa
+Millet Phytic Acid,Nutritional,O=C(O)[C@@H]1[C@H](O)[C@@H](OP(=O)(O)O)[C@H](O)[C@@H](OP(=O)(O)O)[C@H]1OP(=O)(O)O,CHEMBL3708080,Phosphorylated inositol Natural Source: Millet Traditional Use: Mineral absorption Region: Africa
+Sorghum Tannin,Antioxidant,BIOLOGIC - TANNIN POLYMER,CHEMBL3708081,Polyphenol tannin Natural Source: Sorghum Traditional Use: Antioxidant Region: Africa
+Yam Polysaccharide,Estrogenic/Nutritional,BIOLOGIC - POLYSACCHARIDE,CHEMBL3708082,Complex carbohydrate Natural Source: Yam Traditional Use: Women's health Region: West Africa
+African Rice Phytic Acid,Nutritional,O=C(O)[C@@H]1[C@H](O)[C@@H](OP(=O)(O)O)[C@H](O)[C@@H](OP(=O)(O)O)[C@H]1OP(=O)(O)O,CHEMBL3708083,Inositol phosphate Natural Source: Rice Traditional Use: Mineral support Region: Africa
+African Spice Compound,Antimicrobial/Digestive,BIOLOGIC - VOLATILE MIXTURE,CHEMBL3708084,Volatile oil Natural Source: Multiple spices Traditional Use: Digestive aid Region: Africa
+Sesame Lignin,Antioxidant/Cardiovascular,O=C(c1ccccc1)c1ccc(O)c(O)c1,CHEMBL3708085,Phenolic compound Natural Source: Sesame Traditional Use: Heart health Region: Africa
+Pumpkin Carotenoid,Antioxidant/Vision,BIOLOGIC - CAROTENOID MIXTURE,CHEMBL3708086,Isoprenoid pigment Natural Source: Pumpkin Traditional Use: Eye health Region: Africa
+Okra Mucilage,Anti-inflammatory/Digestive,BIOLOGIC - POLYSACCHARIDE,CHEMBL3708087,Mucopolysaccharide Natural Source: Okra Traditional Use: Digestive support Region: Africa
+African Eggplant Alkaloid,Antioxidant,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708088,Alkaloid Natural Source: Eggplant Traditional Use: Antioxidant Region: Africa
+Bitter Leaf Alkaloid,Antimalarial/Bitter Tonic,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708089,Alkaloid Natural Source: Bitter Leaf (Vernonia) Traditional Use: Malaria support Region: West Africa
+Jatropha Alkaloid,Purgative,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708090,Alkaloid Natural Source: Jatropha Traditional Use: Traditional remedy Region: Africa
+Cassia Bark Cinnamon,Antimicrobial,O=C\C=C\c1ccccc1,CHEMBL3708091,Aldehyde aromatic Natural Source: Cinnamon Traditional Use: Antimicrobial Region: Africa/Asia
+Ginger Root Gingerol,Anti-nausea,O=C(c1ccccc1)CCCCCC1=CC(=O)C(C)=CC1,CHEMBL3708092,Phenolic ketone Natural Source: Ginger Traditional Use: Anti-nausea Region: Africa
+Clove Eugenol,Antimicrobial,O=C(C)Oc1ccc(O)c(C=CCCC)c1,CHEMBL3708093,Phenylpropanoid Natural Source: Clove Traditional Use: Antimicrobial pain relief Region: Africa
+Cardamom Cineole,Digestive,CC1CCC2=CC(=C)CCC2C1,CHEMBL3708094,Oxide monoterpene Natural Source: Cardamom Traditional Use: Digestive spice Region: Africa
+Black Pepper Piperine,Bioavailability/Anti-inflammatory,O=C(c1ccccc1)N1C=CC=CC1,CHEMBL3708095,Amide aromatic Natural Source: Black Pepper Traditional Use: Absorption enhancer Region: Africa
+Thyme Thymol,Antimicrobial,CC(C)c1cc(O)c(O)c(O)c1C(C)C,CHEMBL3708096,Phenolic monoterpene Natural Source: Thyme Traditional Use: Respiratory and antimicrobial Region: Africa
+Oregano Carvacrol,Antimicrobial,Cc1ccc(O)c(C(C)C)c1,CHEMBL373,Monoterpenoid phenol Natural Source: Oregano Traditional Use: Antimicrobial powerhouse Region: Africa
+Rosemary Rosmarinic Acid,Memory/Anti-inflammatory,O=C(O)\C=C\c1ccc(O)c(O[C@@H]2O[C@H](C[C@H](OC(=O)\C=C\c3cc(O)c(O)cc3)[C@H](O)C(O)=O)C(O)=O)c1,CHEMBL3708097,Phenolic acid Natural Source: Rosemary Traditional Use: Memory and inflammation Region: Africa
+Sage Salvianolic Acid,Cardioprotective,O=C(O)c1cc(O)c(O[C@@H]2Cc3c(O)cc(O)cc3[C@H]2c2ccc(O)c(O)c2)cc1,CHEMBL3708098,Polyphenol Natural Source: Sage Traditional Use: Cardiac protection Region: Africa
+Lavender Linalool,Calming,CC(C)=CCCC(C)=CC=CC(C)(O)C,CHEMBL3708099,Monoterpenoid alcohol Natural Source: Lavender Traditional Use: Sleep support Region: Africa
+Basil Eugenol,Antimicrobial,O=C(C)Oc1ccc(O)c(C=CCCC)c1,CHEMBL3708100,Phenylpropanoid Natural Source: Basil Traditional Use: Antimicrobial Region: Africa
+Anise Anethole,Antispasmodic,CC(C)c1ccc(O)c(C=CCCC)c1,CHEMBL3708101,Phenylpropanoid Natural Source: Anise Traditional Use: Digestive comfort Region: Africa
+Garlic Allicin,Antimicrobial/Immunomodulatory,CC[S@](=O)C[S@]CC,CHEMBL3708102,Sulfide Natural Source: Garlic Traditional Use: Universal antimicrobial Region: Africa/Asia
+Onion Quercetin,Antioxidant,O=c1c(O)c(-c2ccccc2)oc3cc(O)cc(O)c13,CHEMBL50,Flavonol Natural Source: Onion Traditional Use: Antioxidant Region: Africa
+Honey Glucose,Energy,CC(O)[C@H](O)[C@H](O)[C@H](O)C(=O)O,CHEMBL3708103,Sugar Natural Source: Honey Traditional Use: Energy support Region: Africa-wide
+Honey Fructose,Energy/Sweet,CC(O)[C@H](O)[C@H](O)[C@H](O)C(=O)O,CHEMBL3708104,Sugar Natural Source: Honey Traditional Use: Energy Region: Africa
+Raw Propolis Flavonoid,Immunomodulatory,BIOLOGIC - FLAVONOID MIXTURE,CHEMBL3708105,Flavonoid Natural Source: Propolis Traditional Use: Immune enhancement Region: Africa
+Beeswax,Protective,BIOLOGIC - LONG CHAIN HYDROCARBON MIXTURE,CHEMBL3708106,Hydrocarbon Natural Source: Beeswax Traditional Use: Protective barrier Region: Africa
+African Medicinal Mushroom,Immune Support,BIOLOGIC - POLYSACCHARIDE MIXTURE,CHEMBL3708107,Beta-glucan Natural Source: Medicinal mushrooms Traditional Use: Immune activation Region: Africa
+Polyphenol Mix,Antioxidant/Anti-inflammatory,BIOLOGIC - POLYPHENOL MIXTURE,CHEMBL3708108,Polyphenol class Natural Source: Multiple plants Traditional Use: Broad antioxidant Region: Africa-wide
+Alkaloid Mix,Neuroprotective,BIOLOGIC - ALKALOID MIXTURE,CHEMBL3708109,Alkaloid class Natural Source: Multiple plants Traditional Use: Brain protection Region: Africa
+Volatile Oil,Antimicrobial,BIOLOGIC - VOLATILE MIXTURE,CHEMBL3708110,Volatile compound Natural Source: Aromatic herbs Traditional Use: Multi-purpose antimicrobial Region: Africa
+Saponin,Immunomodulatory,BIOLOGIC - SAPONIN MIXTURE,CHEMBL3708111,Saponin glycoside Natural Source: Multiple plants Traditional Use: Immune enhancement Region: Africa
+Tannin Complex,Astringent,BIOLOGIC - TANNIN POLYMER,CHEMBL3708112,Hydrolyzable tannin Natural Source: Bark plants Traditional Use: Deep astringent Region: Africa
+Glycerol,Humectant/Energy,OCC(O)CO,CHEMBL3708113,Polyol Natural Source: Plant extracts Traditional Use: Moisture and energy Region: Africa
+Chlorophyll,Detoxification,BIOLOGIC - PORPHYRIN,CHEMBL3708114,Porphyrin compound Natural Source: Green plants Traditional Use: Body detox Region: Africa
+Carotenoid,Antioxidant/Vision,BIOLOGIC - CAROTENOID MIXTURE,CHEMBL3708115,Isoprenoid pigment Natural Source: Orange/Yellow plants Traditional Use: Eye and skin health Region: Africa
+Anthocyanin,Antioxidant/Brain,O=c1c2cc(O)cc(O)c2oc3cc(O)cc(O)c13,CHEMBL3708116,Anthocyanin pigment Natural Source: Purple/Blue plants Traditional Use: Brain antioxidant Region: Africa
+Proanthocyanidin,Antioxidant/Heart,BIOLOGIC - FLAVONOID POLYMER,CHEMBL3708117,Condensed tannin Natural Source: Seeds/Berries Traditional Use: Cardiovascular support Region: Africa

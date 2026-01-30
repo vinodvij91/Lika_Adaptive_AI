@@ -865,6 +865,131 @@ export async function registerRoutes(
     }
   });
 
+  // Seed Naturally Occurring Compounds library from CSV
+  app.post("/api/libraries/seed-natural-compounds", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "system";
+      
+      // Check if library already exists
+      const existingLibraries = await storage.getCuratedLibraries();
+      const existing = existingLibraries.find(lib => lib.name === "Naturally Occurring Compounds");
+      if (existing) {
+        return res.json({ 
+          message: "Library already exists", 
+          libraryId: existing.id, 
+          moleculeCount: existing.moleculeCount 
+        });
+      }
+      
+      // Read and parse CSV file
+      const csvPath = path.join(process.cwd(), "attached_assets", "Naturally_Occuring_Compounds_1769804406411.csv");
+      if (!fs.existsSync(csvPath)) {
+        return res.status(404).json({ error: "Natural compounds CSV file not found" });
+      }
+      
+      const csvContent = fs.readFileSync(csvPath, "utf-8");
+      const lines = csvContent.split("\n").filter(line => line.trim());
+      const header = lines[0].split(",");
+      
+      // Parse compounds (skip header, skip entries with "BIOLOGIC" in SMILES)
+      const compounds: Array<{name: string; disease: string; smiles: string; chemblId: string; category: string}> = [];
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        // Handle CSV with quoted fields properly
+        const parts = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
+        if (parts.length >= 5) {
+          const name = parts[0]?.replace(/^"|"$/g, "").trim() || "Unknown";
+          const disease = parts[1]?.replace(/^"|"$/g, "").trim() || "";
+          const smiles = parts[2]?.replace(/^"|"$/g, "").trim() || "";
+          const chemblId = parts[3]?.replace(/^"|"$/g, "").trim() || "";
+          const category = parts[4]?.replace(/^"|"$/g, "").trim() || "";
+          
+          // Skip entries where SMILES is marked as biologic polymer or empty
+          if (smiles && !smiles.includes("BIOLOGIC") && smiles.length > 0) {
+            compounds.push({ name, disease, smiles, chemblId, category });
+          }
+        }
+      }
+      
+      // Create the library
+      const library = await storage.createCuratedLibrary({
+        name: "Naturally Occurring Compounds",
+        description: "A curated collection of ~800 natural compounds including polyphenols, alkaloids, terpenes, flavonoids, and other bioactive molecules from traditional medicinal plants. Includes compounds from turmeric, ashwagandha, brahmi, neem, ginger, tulsi, licorice, triphala, and many other sources.",
+        domainType: "Other",
+        libraryType: "internal",
+        status: "curated",
+        ownerId: userId,
+        isPublic: true,
+        moleculeCount: 0,
+        scaffoldCount: 0,
+        version: 1,
+        tags: ["natural", "herbal", "traditional-medicine", "polyphenol", "alkaloid", "flavonoid", "terpene"],
+        metadata: {
+          source: "Curated natural compounds database",
+          categories: ["Polyphenol", "Alkaloid", "Terpene", "Flavonoid", "Saponin", "Phenolic acid", "Plant sterol"],
+          totalRaw: lines.length - 1,
+          validSmiles: compounds.length
+        }
+      });
+      
+      // Create molecules in batches (100 at a time to avoid memory issues)
+      const batchSize = 100;
+      let totalCreated = 0;
+      
+      for (let i = 0; i < compounds.length; i += batchSize) {
+        const batch = compounds.slice(i, i + batchSize);
+        
+        const moleculesToCreate = batch.map(c => ({
+          smiles: c.smiles,
+          name: c.name,
+          source: "uploaded" as const,
+        }));
+        
+        const createdMolecules = await storage.bulkCreateMolecules(moleculesToCreate);
+        
+        // Link molecules to library with metadata
+        const libraryMoleculeEntries = createdMolecules.map((mol, idx) => ({
+          libraryId: library.id,
+          moleculeId: mol.id,
+          canonicalSmiles: mol.smiles,
+          cleaningStatus: "validated" as const,
+          tags: [batch[idx].disease, batch[idx].chemblId].filter(Boolean),
+          metadata: {
+            diseaseCondition: batch[idx].disease,
+            chemblId: batch[idx].chemblId,
+            category: batch[idx].category,
+            naturalSource: extractNaturalSource(batch[idx].category),
+          }
+        }));
+        
+        await storage.bulkAddLibraryMolecules(libraryMoleculeEntries);
+        totalCreated += createdMolecules.length;
+      }
+      
+      // Update library molecule count
+      await storage.updateCuratedLibrary(library.id, {
+        moleculeCount: totalCreated,
+        status: "curated"
+      });
+      
+      res.status(201).json({
+        message: "Naturally Occurring Compounds library created successfully",
+        libraryId: library.id,
+        moleculeCount: totalCreated,
+        skippedBiologics: compounds.length - totalCreated > 0 ? lines.length - 1 - compounds.length : 0
+      });
+    } catch (error: any) {
+      console.error("Error seeding natural compounds library:", error);
+      res.status(500).json({ error: "Failed to seed natural compounds library", details: error.message });
+    }
+  });
+  
+  // Helper function to extract natural source from category
+  function extractNaturalSource(category: string): string | undefined {
+    const match = category?.match(/Natural source:\s*([^(]+)/i);
+    return match ? match[1].trim() : undefined;
+  }
+
   app.get("/api/libraries/pdb-uploads", requireAuth, async (req, res) => {
     try {
       res.json(pdbUploads.slice().reverse());
