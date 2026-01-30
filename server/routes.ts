@@ -28,9 +28,47 @@ interface PdbUpload {
   uploadedBy: string;
   uploadedAt: string;
   fileSize: number;
+  purpose?: string;
 }
 
 const pdbUploads: PdbUpload[] = [];
+
+function extractSequenceFromPdb(pdbContent: string): string {
+  const threeToOne: Record<string, string> = {
+    ALA: 'A', ARG: 'R', ASN: 'N', ASP: 'D', CYS: 'C',
+    GLN: 'Q', GLU: 'E', GLY: 'G', HIS: 'H', ILE: 'I',
+    LEU: 'L', LYS: 'K', MET: 'M', PHE: 'F', PRO: 'P',
+    SER: 'S', THR: 'T', TRP: 'W', TYR: 'Y', VAL: 'V'
+  };
+  
+  const residues: Array<{ resNum: number; resName: string; chainId: string }> = [];
+  const seenResidues = new Set<string>();
+  
+  const lines = pdbContent.split('\n');
+  for (const line of lines) {
+    if (line.startsWith('ATOM') || line.startsWith('HETATM')) {
+      const resName = line.substring(17, 20).trim();
+      const chainId = line.substring(21, 22).trim() || 'A';
+      const resNum = parseInt(line.substring(22, 26).trim());
+      
+      if (threeToOne[resName]) {
+        const key = `${chainId}-${resNum}`;
+        if (!seenResidues.has(key)) {
+          seenResidues.add(key);
+          residues.push({ resNum, resName, chainId });
+        }
+      }
+    }
+  }
+  
+  residues.sort((a, b) => {
+    if (a.chainId !== b.chainId) {
+      return a.chainId.localeCompare(b.chainId);
+    }
+    return a.resNum - b.resNum;
+  });
+  return residues.map(r => threeToOne[r.resName] || 'X').join('');
+}
 import { db } from "./db";
 import { eq, count, sql } from "drizzle-orm";
 import { materialEntities } from "@shared/schema";
@@ -2926,20 +2964,99 @@ Provide scientific analysis in JSON format.`
   // VACCINE DISCOVERY ENDPOINTS
   // ============================================
 
+  // Upload PDB file for vaccine discovery
+  app.post("/api/compute/vaccine/upload-pdb", requireAuth, upload.single("file"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "No PDB file provided" });
+      }
+
+      const userId = (req.user as any)?.id || "anonymous";
+      const description = req.body.description || "Vaccine discovery structure";
+      const purpose = req.body.purpose || "vaccine_pipeline";
+      const timestamp = Date.now();
+      const safeFileName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+      const pdbUploadDir = "/tmp/vaccine_pdb_uploads";
+      if (!fs.existsSync(pdbUploadDir)) {
+        fs.mkdirSync(pdbUploadDir, { recursive: true });
+      }
+
+      const storedPath = path.join(pdbUploadDir, `${timestamp}_${safeFileName}`);
+      fs.renameSync(file.path, storedPath);
+
+      const pdbRecord: PdbUpload = {
+        id: `vaccine-pdb-${timestamp}`,
+        fileName: file.originalname,
+        storedPath,
+        description,
+        uploadedBy: userId,
+        uploadedAt: new Date().toISOString(),
+        fileSize: file.size,
+        purpose,
+      };
+
+      pdbUploads.push(pdbRecord);
+
+      const pdbContent = fs.readFileSync(storedPath, "utf-8");
+      const extractedSequence = extractSequenceFromPdb(pdbContent);
+
+      console.log("Vaccine PDB file uploaded:", pdbRecord);
+      res.json({
+        ...pdbRecord,
+        extractedSequence,
+        sequenceLength: extractedSequence.length,
+      });
+    } catch (error: any) {
+      console.error("Error uploading vaccine PDB file:", error);
+      res.status(500).json({ error: error.message || "Failed to upload PDB file" });
+    }
+  });
+
+  // Get vaccine PDB uploads
+  app.get("/api/compute/vaccine/pdb-uploads", requireAuth, async (req, res) => {
+    try {
+      const vaccinePdbs = pdbUploads.filter(p => p.purpose === "vaccine_pipeline" || p.purpose?.startsWith("vaccine"));
+      res.json(vaccinePdbs.slice().reverse());
+    } catch (error: any) {
+      console.error("Error fetching vaccine PDB uploads:", error);
+      res.status(500).json({ error: "Failed to fetch vaccine PDB uploads" });
+    }
+  });
+
   // Run full vaccine discovery pipeline
   app.post("/api/compute/vaccine/pipeline", requireAuth, async (req, res) => {
     try {
       const { 
         pathogenName,
         proteinSequences,
+        pdbFileId,
         mhcAlleles = ['HLA-A*02:01', 'HLA-A*01:01', 'HLA-B*07:02'],
         runMD = false,
         organism = 'human',
         nodeId 
       } = req.body;
 
-      if (!pathogenName || !proteinSequences || proteinSequences.length === 0) {
-        return res.status(400).json({ error: "Pathogen name and protein sequences are required" });
+      let sequences = proteinSequences || [];
+      let pdbStructure: string | null = null;
+
+      if (pdbFileId) {
+        const pdbRecord = pdbUploads.find(p => p.id === pdbFileId);
+        if (pdbRecord && fs.existsSync(pdbRecord.storedPath)) {
+          const pdbContent = fs.readFileSync(pdbRecord.storedPath, "utf-8");
+          pdbStructure = pdbContent;
+          const extractedSeq = extractSequenceFromPdb(pdbContent);
+          if (extractedSeq && extractedSeq.length > 0) {
+            sequences = [extractedSeq, ...sequences];
+          }
+        } else {
+          return res.status(404).json({ error: "PDB file not found" });
+        }
+      }
+
+      if (!pathogenName || sequences.length === 0) {
+        return res.status(400).json({ error: "Pathogen name and protein sequences (or PDB file) are required" });
       }
 
       const nodes = await storage.getComputeNodes();
@@ -2954,14 +3071,15 @@ Provide scientific analysis in JSON format.`
 
       const params = JSON.stringify({ 
         pathogen_name: pathogenName,
-        proteins: proteinSequences.map((seq: string, i: number) => ({
+        proteins: sequences.map((seq: string, i: number) => ({
           name: `Protein_${i+1}`,
           sequence: seq,
           type: 'surface'
         })),
         mhc_alleles: mhcAlleles,
         run_md: runMD,
-        organism: organism
+        organism: organism,
+        has_pdb_structure: !!pdbStructure
       });
       const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
 
@@ -2993,10 +3111,24 @@ Provide scientific analysis in JSON format.`
   // Predict protein structure (GPU-intensive)
   app.post("/api/compute/vaccine/structure", requireAuth, async (req, res) => {
     try {
-      const { sequence, method = 'esmfold', nodeId, simulated = true } = req.body;
+      const { sequence, pdbFileId, method = 'esmfold', nodeId, simulated = true } = req.body;
 
-      if (!sequence) {
-        return res.status(400).json({ error: "Protein sequence is required" });
+      let inputSequence = sequence;
+      let existingPdb: string | null = null;
+
+      if (pdbFileId) {
+        const pdbRecord = pdbUploads.find(p => p.id === pdbFileId);
+        if (pdbRecord && fs.existsSync(pdbRecord.storedPath)) {
+          const pdbContent = fs.readFileSync(pdbRecord.storedPath, "utf-8");
+          existingPdb = pdbContent;
+          inputSequence = extractSequenceFromPdb(pdbContent);
+        } else {
+          return res.status(404).json({ error: "PDB file not found" });
+        }
+      }
+
+      if (!inputSequence) {
+        return res.status(400).json({ error: "Protein sequence or PDB file is required" });
       }
 
       const nodes = await storage.getComputeNodes();
@@ -3004,7 +3136,7 @@ Provide scientific analysis in JSON format.`
 
       // Simulated mode - return realistic demo results for vaccine structure prediction
       if (simulated) {
-        const seqLength = sequence.length;
+        const seqLength = inputSequence.length;
         const simulatedResult = {
           success: true,
           step: "structure_prediction",
@@ -3403,13 +3535,25 @@ Provide scientific analysis in JSON format.`
     try {
       const { 
         structurePdb, 
+        pdbFileId,
         nanoseconds = 10,
         temperature = 310,
         nodeId 
       } = req.body;
 
-      if (!structurePdb) {
-        return res.status(400).json({ error: "PDB structure is required" });
+      let pdbContent = structurePdb;
+
+      if (pdbFileId && !pdbContent) {
+        const pdbRecord = pdbUploads.find(p => p.id === pdbFileId);
+        if (pdbRecord && fs.existsSync(pdbRecord.storedPath)) {
+          pdbContent = fs.readFileSync(pdbRecord.storedPath, "utf-8");
+        } else {
+          return res.status(404).json({ error: "PDB file not found" });
+        }
+      }
+
+      if (!pdbContent) {
+        return res.status(400).json({ error: "PDB structure or file ID is required" });
       }
 
       const nodes = await storage.getComputeNodes();
@@ -3423,7 +3567,7 @@ Provide scientific analysis in JSON format.`
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ 
-        structure_pdb: structurePdb, 
+        structure_pdb: pdbContent, 
         nanoseconds,
         temperature
       });

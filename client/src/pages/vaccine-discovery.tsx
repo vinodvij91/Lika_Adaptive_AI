@@ -31,9 +31,26 @@ import {
   Clock,
   DollarSign,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Upload,
+  FileText,
+  X
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { queryClient } from "@/lib/queryClient";
+
+interface PdbUpload {
+  id: string;
+  fileName: string;
+  storedPath: string;
+  description: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  fileSize: number;
+  purpose?: string;
+  extractedSequence?: string;
+  sequenceLength?: number;
+}
 
 interface HardwareReport {
   totalNodes: number;
@@ -116,6 +133,11 @@ export default function VaccineDiscoveryPage() {
   const [codonResult, setCodonResult] = useState<VaccineResult | null>(null);
   const [mrnaResult, setMrnaResult] = useState<VaccineResult | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  
+  const [selectedPdbFileId, setSelectedPdbFileId] = useState<string | null>(null);
+  const [structurePdbFileId, setStructurePdbFileId] = useState<string | null>(null);
+  const [pdbDescription, setPdbDescription] = useState("");
+  const [uploadingPdb, setUploadingPdb] = useState(false);
 
   const { data: hardwareReport, isLoading: hardwareLoading } = useQuery<HardwareReport>({
     queryKey: ["/api/compute/vaccine/hardware"],
@@ -124,6 +146,49 @@ export default function VaccineDiscoveryPage() {
   const { data: taskMatrix, isLoading: taskMatrixLoading } = useQuery<TaskMatrixData>({
     queryKey: ["/api/compute/vaccine/task-matrix"],
   });
+
+  const { data: pdbUploads, isLoading: pdbLoading } = useQuery<PdbUpload[]>({
+    queryKey: ["/api/compute/vaccine/pdb-uploads"],
+  });
+
+  const handlePdbUpload = async (file: File) => {
+    setUploadingPdb(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("description", pdbDescription || "Vaccine discovery structure");
+      formData.append("purpose", "vaccine_pipeline");
+
+      const res = await fetch("/api/compute/vaccine/upload-pdb", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
+      }
+
+      const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/compute/vaccine/pdb-uploads"] });
+      setSelectedPdbFileId(data.id);
+      
+      if (data.extractedSequence) {
+        setProteinSequences(data.extractedSequence);
+      }
+      
+      toast({ 
+        title: "PDB file uploaded", 
+        description: `${data.fileName} - ${data.sequenceLength || 0} residues extracted` 
+      });
+      setPdbDescription("");
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    } finally {
+      setUploadingPdb(false);
+    }
+  };
 
   const toggleCategory = (category: string) => {
     const newSet = new Set(expandedCategories);
@@ -151,6 +216,7 @@ export default function VaccineDiscoveryPage() {
       const res = await apiRequest("POST", "/api/compute/vaccine/pipeline", {
         pathogenName,
         proteinSequences: proteinSequences.split("\n").filter(s => s.trim()),
+        pdbFileId: selectedPdbFileId,
         mhcAlleles,
         runMD,
         organism,
@@ -170,6 +236,7 @@ export default function VaccineDiscoveryPage() {
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/compute/vaccine/structure", {
         sequence: structureSequence,
+        pdbFileId: structurePdbFileId,
         method: structureMethod,
       });
       return res.json();
@@ -330,11 +397,86 @@ export default function VaccineDiscoveryPage() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label>PDB Structure File (Optional)</Label>
+                    <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                      {selectedPdbFileId && pdbUploads ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-purple-500" />
+                            <span className="text-sm font-medium">
+                              {pdbUploads.find(p => p.id === selectedPdbFileId)?.fileName || "Selected PDB"}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {pdbUploads.find(p => p.id === selectedPdbFileId)?.sequenceLength || 0} residues
+                            </Badge>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setSelectedPdbFileId(null)}
+                            data-testid="button-remove-pdb"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <label className="flex-1">
+                            <input
+                              type="file"
+                              accept=".pdb"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handlePdbUpload(file);
+                                e.target.value = "";
+                              }}
+                              disabled={uploadingPdb}
+                              data-testid="input-pdb-file"
+                            />
+                            <Button 
+                              variant="outline" 
+                              className="w-full cursor-pointer" 
+                              disabled={uploadingPdb}
+                              asChild
+                            >
+                              <span>
+                                {uploadingPdb ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Upload className="h-4 w-4 mr-2" />
+                                )}
+                                {uploadingPdb ? "Uploading..." : "Upload PDB File"}
+                              </span>
+                            </Button>
+                          </label>
+                          {pdbUploads && pdbUploads.length > 0 && (
+                            <Select value={selectedPdbFileId || ""} onValueChange={setSelectedPdbFileId}>
+                              <SelectTrigger className="w-[180px]" data-testid="select-existing-pdb">
+                                <SelectValue placeholder="Or select existing" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {pdbUploads.map((pdb) => (
+                                  <SelectItem key={pdb.id} value={pdb.id}>
+                                    {pdb.fileName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Upload a PDB file to automatically extract protein sequences for analysis
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Protein Sequence(s)</Label>
                     <Textarea
                       value={proteinSequences}
                       onChange={(e) => setProteinSequences(e.target.value)}
-                      placeholder="Enter protein sequence(s), one per line..."
+                      placeholder="Enter protein sequence(s), one per line, or upload a PDB file above..."
                       rows={6}
                       className="font-mono text-xs"
                       data-testid="textarea-protein-sequences"
@@ -425,12 +567,44 @@ export default function VaccineDiscoveryPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {pdbUploads && pdbUploads.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Use Existing PDB Structure (Optional)</Label>
+                      <div className="flex items-center gap-2">
+                        <Select value={structurePdbFileId || ""} onValueChange={(v) => {
+                          setStructurePdbFileId(v || null);
+                          if (v) {
+                            const pdb = pdbUploads.find(p => p.id === v);
+                            if (pdb?.extractedSequence) {
+                              setStructureSequence(pdb.extractedSequence);
+                            }
+                          }
+                        }}>
+                          <SelectTrigger className="flex-1" data-testid="select-structure-pdb">
+                            <SelectValue placeholder="Select uploaded PDB file..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {pdbUploads.map((pdb) => (
+                              <SelectItem key={pdb.id} value={pdb.id}>
+                                {pdb.fileName} ({pdb.sequenceLength || 0} residues)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {structurePdbFileId && (
+                          <Button variant="ghost" size="icon" onClick={() => setStructurePdbFileId(null)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Protein Sequence</Label>
                     <Textarea
                       value={structureSequence}
                       onChange={(e) => setStructureSequence(e.target.value)}
-                      placeholder="Enter amino acid sequence..."
+                      placeholder="Enter amino acid sequence or select PDB file above..."
                       rows={4}
                       className="font-mono text-xs"
                       data-testid="textarea-structure-sequence"
@@ -450,7 +624,7 @@ export default function VaccineDiscoveryPage() {
                   </div>
                   <Button
                     onClick={() => structureMutation.mutate()}
-                    disabled={structureMutation.isPending || !structureSequence.trim()}
+                    disabled={structureMutation.isPending || (!structureSequence.trim() && !structurePdbFileId)}
                     className="w-full"
                     data-testid="button-predict-structure"
                   >

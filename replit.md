@@ -40,13 +40,16 @@ The platform integrates production-grade Python pipelines for both drug discover
     - **CPU_INTENSIVE**: Epitope prediction (NetMHCpan), sequence alignment, Rosetta design, immune simulation
     - **CPU_ONLY**: Codon optimization, file I/O, structure quality assessment
     - **HYBRID**: Antibody-antigen docking, free energy calculations
+  - **PDB File Support**: All vaccine pipeline endpoints now support PDB file input. Upload PDB files to extract protein sequences automatically for pipeline processing.
   - **API Endpoints**:
-    - `POST /api/compute/vaccine/pipeline` - Run full vaccine discovery pipeline
-    - `POST /api/compute/vaccine/structure` - Predict protein structure (GPU-intensive)
+    - `POST /api/compute/vaccine/upload-pdb` - Upload PDB structure file (extracts sequence automatically)
+    - `GET /api/compute/vaccine/pdb-uploads` - List uploaded PDB files for vaccine discovery
+    - `POST /api/compute/vaccine/pipeline` - Run full vaccine discovery pipeline (accepts `pdbFileId` parameter)
+    - `POST /api/compute/vaccine/structure` - Predict protein structure (GPU-intensive, accepts `pdbFileId` parameter)
     - `POST /api/compute/vaccine/epitopes` - Predict MHC binding/epitopes (CPU-intensive)
     - `POST /api/compute/vaccine/codon-optimize` - Codon optimization (CPU-only)
     - `POST /api/compute/vaccine/mrna-design` - mRNA construct design (CPU-intensive)
-    - `POST /api/compute/vaccine/md-simulation` - Molecular dynamics (GPU-intensive)
+    - `POST /api/compute/vaccine/md-simulation` - Molecular dynamics (GPU-intensive, accepts `pdbFileId` parameter)
     - `GET /api/compute/vaccine/hardware` - Get hardware performance report
     - `GET /api/compute/vaccine/task-matrix` - Get full task classification matrix with hardware requirements and cost analysis
 - **Materials Science Pipeline**: Includes Magpie and SOAP descriptors, Graph Neural Networks (CGCNN, Multi-Property GNN), Multi-task Neural Networks, GPU acceleration, materials generation, element substitution, synthesis planning, and atomistic simulations (VASP, Quantum ESPRESSO). It also incorporates specialized designers for various material types (e.g., Battery, Photovoltaic, Structural) and discovery workflows (e.g., Superconductor, Catalyst).
