@@ -227,6 +227,38 @@ export async function assetExists(key: string): Promise<boolean> {
   }
 }
 
+export async function getAssetAsBuffer(key: string): Promise<Buffer> {
+  const config = getSpacesConfig();
+  if (!config) {
+    throw new Error("DO Spaces not configured. Set DO_SPACES_* environment variables.");
+  }
+
+  const client = createS3Client(config);
+
+  const command = new GetObjectCommand({
+    Bucket: config.bucket,
+    Key: key,
+  });
+
+  const response = await client.send(command);
+  
+  if (!response.Body) {
+    throw new Error(`No content found for key: ${key}`);
+  }
+
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+    chunks.push(chunk);
+  }
+  
+  return Buffer.concat(chunks);
+}
+
+export async function getAssetAsString(key: string): Promise<string> {
+  const buffer = await getAssetAsBuffer(key);
+  return buffer.toString("utf-8");
+}
+
 export function getCdnUrl(key: string): string | null {
   const config = getSpacesConfig();
   if (!config) return null;

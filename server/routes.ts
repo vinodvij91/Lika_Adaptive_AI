@@ -989,6 +989,184 @@ export async function registerRoutes(
     const match = category?.match(/Natural source:\s*([^(]+)/i);
     return match ? match[1].trim() : undefined;
   }
+  
+  // Import SMILES library from DigitalOcean Spaces CSV file
+  // Expected CSV format: Drug_Name, Disease_Condition, SMILES, ChEMBL_ID, Category
+  app.post("/api/libraries/import-from-spaces", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id || "system";
+      const { spacesKey, libraryName, description, tags } = req.body;
+      
+      if (!spacesKey) {
+        return res.status(400).json({ error: "spacesKey is required (path to CSV file in DigitalOcean Spaces)" });
+      }
+      if (!libraryName) {
+        return res.status(400).json({ error: "libraryName is required" });
+      }
+      
+      // Check if library already exists
+      const existingLibraries = await storage.getCuratedLibraries();
+      const existing = existingLibraries.find(lib => lib.name === libraryName);
+      if (existing) {
+        return res.status(409).json({ 
+          error: "Library with this name already exists", 
+          libraryId: existing.id, 
+          moleculeCount: existing.moleculeCount 
+        });
+      }
+      
+      // Import the getAssetAsString function from spaces-storage
+      const { getAssetAsString, isSpacesConfigured } = await import("./spaces-storage");
+      
+      if (!isSpacesConfigured()) {
+        return res.status(503).json({ error: "DigitalOcean Spaces is not configured. Set DO_SPACES_* environment variables." });
+      }
+      
+      // Download CSV from Spaces
+      let csvContent: string;
+      try {
+        csvContent = await getAssetAsString(spacesKey);
+      } catch (err: any) {
+        return res.status(404).json({ error: `Failed to download file from Spaces: ${err.message}` });
+      }
+      
+      // Parse CSV - handle tab or comma delimiters
+      const lines = csvContent.split("\n").filter(line => line.trim());
+      if (lines.length < 2) {
+        return res.status(400).json({ error: "CSV file is empty or has no data rows" });
+      }
+      
+      // Detect delimiter (tab or comma)
+      const headerLine = lines[0];
+      const delimiter = headerLine.includes("\t") ? "\t" : ",";
+      
+      // Parse header to find column indices
+      const headerParts = headerLine.split(delimiter).map(h => h.replace(/^"|"$/g, "").trim().toLowerCase());
+      const nameIdx = headerParts.findIndex(h => h.includes("drug") || h.includes("name"));
+      const diseaseIdx = headerParts.findIndex(h => h.includes("disease") || h.includes("condition"));
+      const smilesIdx = headerParts.findIndex(h => h.includes("smiles"));
+      const chemblIdx = headerParts.findIndex(h => h.includes("chembl") || h.includes("id"));
+      const categoryIdx = headerParts.findIndex(h => h.includes("category") || h.includes("type"));
+      
+      if (smilesIdx === -1) {
+        return res.status(400).json({ error: "CSV must have a SMILES column" });
+      }
+      
+      // Parse compounds
+      const compounds: Array<{name: string; disease: string; smiles: string; chemblId: string; category: string}> = [];
+      const skippedRows: string[] = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        let parts: string[];
+        if (delimiter === "\t") {
+          parts = line.split("\t");
+        } else {
+          // Handle CSV with quoted fields for comma delimiter
+          parts = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
+        }
+        
+        const smiles = (parts[smilesIdx]?.replace(/^"|"$/g, "").trim() || "");
+        
+        // Skip entries without valid SMILES or with BIOLOGIC marker
+        if (!smiles || smiles.includes("BIOLOGIC") || smiles.length < 2) {
+          skippedRows.push(`Row ${i + 1}: No valid SMILES`);
+          continue;
+        }
+        
+        compounds.push({
+          name: nameIdx >= 0 ? (parts[nameIdx]?.replace(/^"|"$/g, "").trim() || `Compound_${i}`) : `Compound_${i}`,
+          disease: diseaseIdx >= 0 ? (parts[diseaseIdx]?.replace(/^"|"$/g, "").trim() || "") : "",
+          smiles,
+          chemblId: chemblIdx >= 0 ? (parts[chemblIdx]?.replace(/^"|"$/g, "").trim() || "") : "",
+          category: categoryIdx >= 0 ? (parts[categoryIdx]?.replace(/^"|"$/g, "").trim() || "") : ""
+        });
+      }
+      
+      if (compounds.length === 0) {
+        return res.status(400).json({ error: "No valid compounds found in CSV file", skippedRows: skippedRows.slice(0, 10) });
+      }
+      
+      // Get unique diseases for metadata
+      const uniqueDiseases = [...new Set(compounds.map(c => c.disease).filter(Boolean))];
+      
+      // Create the library
+      const library = await storage.createCuratedLibrary({
+        name: libraryName,
+        description: description || `Imported from ${spacesKey} with ${compounds.length} compounds`,
+        domainType: "Other",
+        libraryType: "internal",
+        status: "curated",
+        ownerId: userId,
+        isPublic: true,
+        moleculeCount: 0,
+        scaffoldCount: 0,
+        version: 1,
+        tags: tags || ["imported", "smiles"],
+        metadata: {
+          source: `DigitalOcean Spaces: ${spacesKey}`,
+          importedAt: new Date().toISOString(),
+          totalRows: lines.length - 1,
+          validSmiles: compounds.length,
+          skippedRows: skippedRows.length,
+          diseases: uniqueDiseases
+        }
+      });
+      
+      // Create molecules in batches
+      const batchSize = 100;
+      let totalCreated = 0;
+      
+      for (let i = 0; i < compounds.length; i += batchSize) {
+        const batch = compounds.slice(i, i + batchSize);
+        
+        const moleculesToCreate = batch.map(c => ({
+          smiles: c.smiles,
+          name: c.name,
+          source: "uploaded" as const,
+        }));
+        
+        const createdMolecules = await storage.bulkCreateMolecules(moleculesToCreate);
+        
+        // Link molecules to library with disease metadata
+        const libraryMoleculeEntries = createdMolecules.map((mol, idx) => ({
+          libraryId: library.id,
+          moleculeId: mol.id,
+          canonicalSmiles: mol.smiles,
+          cleaningStatus: "validated" as const,
+          tags: [batch[idx].disease, batch[idx].chemblId].filter(Boolean),
+          metadata: {
+            diseaseCondition: batch[idx].disease,
+            chemblId: batch[idx].chemblId,
+            category: batch[idx].category,
+            naturalSource: extractNaturalSource(batch[idx].category),
+          }
+        }));
+        
+        await storage.bulkAddLibraryMolecules(libraryMoleculeEntries);
+        totalCreated += createdMolecules.length;
+      }
+      
+      // Update library molecule count
+      await storage.updateCuratedLibrary(library.id, {
+        moleculeCount: totalCreated,
+        status: "curated"
+      });
+      
+      res.status(201).json({
+        message: `Library "${libraryName}" created successfully`,
+        libraryId: library.id,
+        moleculeCount: totalCreated,
+        skippedRows: skippedRows.length,
+        diseases: uniqueDiseases
+      });
+    } catch (error: any) {
+      console.error("Error importing library from Spaces:", error);
+      res.status(500).json({ error: "Failed to import library from Spaces", details: error.message });
+    }
+  });
 
   app.get("/api/libraries/pdb-uploads", requireAuth, async (req, res) => {
     try {
