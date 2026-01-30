@@ -24,7 +24,8 @@ import {
   FlaskConical,
   Beaker,
   Layers,
-  Zap
+  Zap,
+  AlertTriangle
 } from "lucide-react";
 import MoleculeViewer3D, {
   generateWaterMolecule,
@@ -67,6 +68,7 @@ export default function MolecularViewerPage() {
   const [showCrystalLabels, setShowCrystalLabels] = useState(false);
   const [autoRotateCrystal, setAutoRotateCrystal] = useState(true);
   const [showUnitCell, setShowUnitCell] = useState(true);
+  const [isPseudoLattice, setIsPseudoLattice] = useState(false);
 
   const handleMoleculeChange = (name: string) => {
     const example = EXAMPLE_MOLECULES.find(m => m.name === name);
@@ -81,6 +83,7 @@ export default function MolecularViewerPage() {
     if (example) {
       setSelectedCrystal(example.generator());
       setSelectedCrystalName(name);
+      setIsPseudoLattice(false);
     }
   };
 
@@ -105,6 +108,7 @@ export default function MolecularViewerPage() {
       );
       setSelectedCrystal(crystal);
       setSelectedCrystalName(`${selectedMoleculeName} Crystal`);
+      setIsPseudoLattice(true);
       setActiveTab("crystals");
     }
   };
@@ -327,6 +331,12 @@ export default function MolecularViewerPage() {
                         </Badge>
                       </div>
                     </div>
+                    {isPseudoLattice && (
+                      <div className="mt-3 flex items-center gap-2 rounded-md bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-sm text-amber-600 dark:text-amber-400" data-testid="warning-pseudo-lattice">
+                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                        <span>Pseudo-lattice (non-physical, for visualization only)</span>
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent>
                     <CrystalViewer3D
