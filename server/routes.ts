@@ -3204,22 +3204,31 @@ Provide scientific analysis in JSON format.`
       const { getComputeAdapter } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
       
-      // Install bioinformatics tools
+      // Install bioinformatics tools including MHCflurry
       const installJob = {
         id: `install-tools-${Date.now()}`,
         type: "command",
-        command: `apt-get update && apt-get install -y mafft dssp && pip3 install biopython numpy 2>&1 | tail -20`,
-        timeout: 300000, // 5 minutes
+        command: `apt-get update && apt-get install -y mafft dssp && pip3 install biopython numpy mhcflurry tensorflow 2>&1 | tail -20`,
+        timeout: 600000, // 10 minutes for MHCflurry
       };
       
       const result = await adapter.runJob(node, installJob as any);
+      
+      // Download MHCflurry models
+      const downloadModelsJob = {
+        id: `download-mhcflurry-models-${Date.now()}`,
+        type: "command",
+        command: `mhcflurry-downloads fetch 2>&1 | tail -10`,
+        timeout: 300000, // 5 minutes
+      };
+      const modelsResult = await adapter.runJob(node, downloadModelsJob as any);
       
       // Verify installations
       const verifyJob = {
         id: `verify-tools-${Date.now()}`,
         type: "command",
-        command: `which mafft && mafft --version; which mkdssp; python3 -c "import Bio; print('Biopython:', Bio.__version__)"`,
-        timeout: 30000,
+        command: `which mafft && mafft --version; which mkdssp; python3 -c "import Bio; print('Biopython:', Bio.__version__)"; python3 -c "from mhcflurry import Class1PresentationPredictor; print('MHCflurry:', 'OK')"`,
+        timeout: 60000,
       };
       const verifyResult = await adapter.runJob(node, verifyJob as any);
       
@@ -3227,6 +3236,7 @@ Provide scientific analysis in JSON format.`
         success: result.success,
         node: node.name,
         installOutput: result.output,
+        mhcflurryModels: modelsResult.output,
         verification: verifyResult.output
       });
     } catch (error: any) {
@@ -3271,6 +3281,56 @@ Provide scientific analysis in JSON format.`
       });
     } catch (error: any) {
       console.error("Run command error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Test MHCflurry directly
+  app.post("/api/compute/test-mhcflurry", requireAuth, async (req, res) => {
+    try {
+      const nodes = await storage.getComputeNodes();
+      const node = nodes.find(n => n.status === "active");
+      if (!node) {
+        return res.status(503).json({ error: "No compute nodes available" });
+      }
+      
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(node);
+      
+      const testCommand = `cd /root/compute && CUDA_VISIBLE_DEVICES='' python3 -c "
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+from mhcflurry import Class1PresentationPredictor
+import pandas as pd
+print('Loading MHCflurry predictor (CPU mode)...')
+p = Class1PresentationPredictor.load()
+print('Predictor loaded')
+peptides = ['SIINFEKL', 'GILGFVFTL', 'LLMLLVLFL', 'IILLMLLL']
+alleles = ['HLA-A*02:01'] * len(peptides)
+print(f'Testing {len(peptides)} peptides')
+df = p.predict(peptides=peptides, alleles=alleles, include_affinity_percentile=True)
+print(f'Result rows: {len(df)}')
+print(f'Columns: {list(df.columns)}')
+print(df.to_string())
+"`;
+      
+      const job = {
+        id: `test-mhcflurry-${Date.now()}`,
+        type: "command",
+        command: testCommand,
+        timeout: 120000,
+      };
+      
+      const result = await adapter.runJob(node, job as any);
+      
+      res.json({
+        success: result.success,
+        output: result.output,
+        error: result.error
+      });
+    } catch (error: any) {
+      console.error("Test MHCflurry error:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -3333,8 +3393,13 @@ Provide scientific analysis in JSON format.`
       await adapter.runJob(node, writeParamsJob as any);
 
       // Use remote compute path on GPU instance
+      // Set CUDA_VISIBLE_DEVICES='' to force CPU mode for TensorFlow/MHCflurry
+      // This avoids CuDNN version mismatch issues on some GPU instances
       const remotePath = "/root/compute";
-      const command = `cd ${remotePath} && python3 -c "
+      const command = `cd ${remotePath} && CUDA_VISIBLE_DEVICES='' python3 -c "
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import json
 import sys
 sys.path.insert(0, '.')

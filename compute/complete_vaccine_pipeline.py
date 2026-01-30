@@ -347,6 +347,189 @@ class NetMHCpanPredictor:
         }
 
 
+class MHCflurryPredictor:
+    """
+    MHCflurry wrapper for T-cell epitope prediction
+    
+    Free, open-source deep learning predictor (2019+)
+    pip install mhcflurry && mhcflurry-downloads fetch
+    
+    Status: ✅ IMPLEMENTED
+    Time to implement: 1 hour
+    GPU: GPU_PREFERRED (deep learning, benefits from GPU)
+    """
+    
+    def __init__(self):
+        self.predictor = None
+        self._check_installation()
+    
+    def _check_installation(self):
+        """Check MHCflurry installation and load predictor"""
+        self.load_error = None
+        try:
+            # Force TensorFlow to use CPU only to avoid CuDNN version mismatch issues
+            os.environ['CUDA_VISIBLE_DEVICES'] = ''
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TF warnings
+            
+            from mhcflurry import Class1PresentationPredictor
+            self.predictor = Class1PresentationPredictor.load()
+            logger.info("MHCflurry loaded successfully (CPU mode)")
+        except ImportError as e:
+            self.load_error = f"ImportError: {e}"
+            logger.warning("MHCflurry not installed. Install: pip install mhcflurry && mhcflurry-downloads fetch")
+        except Exception as e:
+            import traceback
+            self.load_error = f"Exception: {e}\n{traceback.format_exc()}"
+            logger.warning(f"MHCflurry load failed: {e}")
+    
+    def predict_mhc1_epitopes(
+        self, 
+        sequence: str, 
+        alleles: List[str] = None,
+        peptide_lengths: List[int] = None,
+        affinity_threshold: float = 500.0  # nM threshold for binders
+    ) -> Dict[str, Any]:
+        """
+        Predict MHC-I binding peptides using MHCflurry
+        
+        Args:
+            sequence: Protein sequence
+            alleles: HLA alleles (e.g., ["HLA-A*02:01", "HLA-A*01:01"])
+            peptide_lengths: Peptide lengths to test (default: [8, 9, 10, 11])
+            affinity_threshold: nM threshold for strong binders (default: 500nM)
+        
+        Returns:
+            Dictionary with predictions per allele
+        """
+        if alleles is None:
+            # Common alleles for population coverage
+            alleles = [
+                "HLA-A*02:01", "HLA-A*01:01", "HLA-A*03:01",
+                "HLA-B*07:02", "HLA-B*08:01", "HLA-C*07:02"
+            ]
+        
+        if peptide_lengths is None:
+            peptide_lengths = [8, 9, 10, 11]
+        
+        if self.predictor is None:
+            print("[DEBUG] MHCflurry predictor is None - using mock", file=sys.stderr)
+            logger.warning("MHCflurry not loaded - returning mock predictions")
+            return self._mock_predictions(sequence, alleles)
+        
+        print(f"[DEBUG] MHCflurry predictor loaded: {type(self.predictor)}", file=sys.stderr)
+        
+        debug_info = {"alleles_attempted": [], "alleles_with_predictions": [], "errors": []}
+        
+        try:
+            all_predictions = {}
+            
+            # Generate all peptides of specified lengths
+            peptides = []
+            peptide_positions = []
+            for length in peptide_lengths:
+                for i in range(len(sequence) - length + 1):
+                    peptide = sequence[i:i+length]
+                    # Skip peptides with unusual amino acids
+                    if all(aa in 'ACDEFGHIKLMNPQRSTVWY' for aa in peptide):
+                        peptides.append(peptide)
+                        peptide_positions.append((i, length))
+            
+            debug_info["peptides_generated"] = len(peptides)
+            
+            if not peptides:
+                logger.warning("No valid peptides generated from sequence")
+                return self._mock_predictions(sequence, alleles)
+            
+            for allele in alleles:
+                debug_info["alleles_attempted"].append(allele)
+                try:
+                    # MHCflurry's Class1PresentationPredictor.predict() expects alleles to be
+                    # a list of up to 6 alleles (representing a genotype), not a list matching peptides.
+                    # Pass a single-element list for the allele we want to predict.
+                    logger.info(f"Running MHCflurry for {allele} with {len(peptides)} peptides")
+                    predictions_df = self.predictor.predict(
+                        peptides=peptides,
+                        alleles=[allele],  # Single allele - the predictor will apply it to all peptides
+                        include_affinity_percentile=True
+                    )
+                    print(f"[DEBUG] MHCflurry returned {len(predictions_df)} rows", file=sys.stderr)
+                    logger.info(f"MHCflurry returned {len(predictions_df)} rows, columns: {list(predictions_df.columns)}")
+                    if len(predictions_df) > 0:
+                        logger.info(f"First row sample: {predictions_df.iloc[0].to_dict()}")
+                    
+                    # Convert to list of dicts - use enumerate for correct indexing
+                    predictions = []
+                    for idx, (_, row) in enumerate(predictions_df.iterrows()):
+                        pos, pep_len = peptide_positions[idx]
+                        affinity = float(row["affinity"]) if "affinity" in row else 50000.0
+                        percentile = float(row["affinity_percentile"]) if "affinity_percentile" in row else 50.0
+                        presentation = float(row["presentation_score"]) if "presentation_score" in row else 0.0
+                        pred = {
+                            "position": pos,
+                            "peptide": str(row["peptide"]) if "peptide" in row else peptides[idx],
+                            "length": pep_len,
+                            "affinity_nm": affinity,
+                            "percentile_rank": percentile,
+                            "presentation_score": presentation,
+                            "binder": "SB" if affinity < affinity_threshold else ("WB" if affinity < 5000 else "NB")
+                        }
+                        predictions.append(pred)
+                    
+                    # Sort by affinity (lower is better)
+                    predictions.sort(key=lambda x: x["affinity_nm"])
+                    all_predictions[allele] = predictions
+                    if predictions:
+                        debug_info["alleles_with_predictions"].append(allele)
+                    
+                    strong_binders = [p for p in predictions if p["affinity_nm"] < affinity_threshold]
+                    logger.info(f"{allele}: {len(strong_binders)} strong binders (< {affinity_threshold}nM)")
+                    
+                except Exception as e:
+                    import traceback
+                    error_msg = f"{allele}: {e}"
+                    debug_info["errors"].append(error_msg)
+                    logger.error(f"MHCflurry prediction failed for {allele}: {e}")
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    all_predictions[allele] = []
+            
+            # Filter to only return strong binders (< threshold)
+            filtered_predictions = {}
+            for allele, preds in all_predictions.items():
+                strong_binders = [p for p in preds if p["affinity_nm"] < affinity_threshold]
+                filtered_predictions[allele] = strong_binders
+            
+            return {
+                "predictions": filtered_predictions,
+                "alleles_tested": alleles,
+                "method": "MHCflurry",
+                "threshold_nm": affinity_threshold,
+                "total_peptides_tested": len(peptides),
+                "total_predictions_before_filter": sum(len(v) for v in all_predictions.values()),
+                "total_strong_binders": sum(len(v) for v in filtered_predictions.values()),
+                "predictor_loaded": self.predictor is not None,
+                "load_error": self.load_error,
+                "debug": debug_info
+            }
+            
+        except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
+            logger.error(f"MHCflurry prediction failed: {e}")
+            result = self._mock_predictions(sequence, alleles)
+            result["prediction_error"] = f"{e}\n{error_traceback}"
+            result["load_error"] = self.load_error
+            return result
+    
+    def _mock_predictions(self, sequence: str, alleles: List[str]) -> Dict:
+        """Mock predictions if MHCflurry not available"""
+        return {
+            "predictions": {allele: [] for allele in alleles},
+            "method": "mock",
+            "warning": "MHCflurry not installed",
+            "load_error": getattr(self, 'load_error', None)
+        }
+
+
 class ConservationAnalyzer:
     """
     Conservation analysis using MAFFT + alignment scoring
@@ -1039,7 +1222,8 @@ class CompleteVaccinePipeline:
         # Initialize all tools
         self.dssp = DSSPAnalyzer()
         self.discotope = DiscoTopePredictor()
-        self.netmhcpan = NetMHCpanPredictor()
+        self.mhcflurry = MHCflurryPredictor()  # Free deep learning predictor
+        self.netmhcpan = NetMHCpanPredictor()  # Fallback if MHCflurry not available
         self.conservation = ConservationAnalyzer()
         self.linker = LinkerDesigner()
         self.codon_opt = CodonOptimizer()
@@ -1106,8 +1290,11 @@ class CompleteVaccinePipeline:
             
             os.unlink(pdb_path)
         
-        # T-cell epitopes
-        mhc1_results = self.netmhcpan.predict_mhc1_epitopes(ref_sequence)
+        # T-cell epitopes - Use MHCflurry (free deep learning) with NetMHCpan fallback
+        mhc1_results = self.mhcflurry.predict_mhc1_epitopes(ref_sequence)
+        if mhc1_results.get("method") == "mock":
+            # Fallback to NetMHCpan if MHCflurry not available
+            mhc1_results = self.netmhcpan.predict_mhc1_epitopes(ref_sequence)
         results["stages"]["mhc1_epitopes"] = mhc1_results
         
         # STAGE 3: Epitope Selection
