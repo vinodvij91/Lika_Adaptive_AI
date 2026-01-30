@@ -3824,7 +3824,9 @@ print(json.dumps(result, default=str))
             esmfold_prediction: { type: "GPU_INTENSIVE", reason: "Deep learning inference, attention mechanisms", gpuMemoryGb: 16, cpuCores: 8, memoryGb: 32, estimatedTimeMinutes: 15, speedup: "100x", tools: ["ESMFold", "BioNeMo"] },
             alphafold2_prediction: { type: "GPU_INTENSIVE", reason: "Multi-stage deep learning, MSA generation", gpuMemoryGb: 24, cpuCores: 16, memoryGb: 64, estimatedTimeMinutes: 45, speedup: "200x", tools: ["AlphaFold2", "OpenFold"] },
             homology_modeling: { type: "CPU_INTENSIVE", reason: "Template search, alignment, energy minimization", cpuCores: 8, memoryGb: 16, estimatedTimeMinutes: 120, tools: ["MODELLER", "SWISS-MODEL"] },
-            structure_quality_assessment: { type: "CPU_ONLY", reason: "Geometry checks, Ramachandran analysis", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 2, tools: ["MolProbity", "ProCheck"] }
+            structure_quality_assessment: { type: "CPU_ONLY", reason: "Geometry checks, Ramachandran analysis", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 2, tools: ["MolProbity", "ProCheck"] },
+            dssp_surface_analysis: { type: "CPU_ONLY", reason: "Secondary structure assignment and surface accessibility", cpuCores: 1, memoryGb: 4, estimatedTimeMinutes: 5, tools: ["DSSP", "Biopython"] },
+            pdb_parsing_extraction: { type: "CPU_ONLY", reason: "Parse PDB files and extract protein sequences", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 1, tools: ["Biopython", "PDB Parser"] }
           }
         },
         conservation_analysis: {
@@ -3841,7 +3843,8 @@ print(json.dumps(result, default=str))
           stageName: "Epitope Prediction & Design",
           tasks: {
             linear_epitope_bepipred: { type: "CPU_ONLY", reason: "Rule-based prediction, no heavy computation", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 1, tools: ["BepiPred 3.0"] },
-            conformational_epitope_ellipro: { type: "CPU_INTENSIVE", reason: "Surface accessibility calculations", cpuCores: 8, memoryGb: 8, estimatedTimeMinutes: 10, tools: ["ElliPro", "DiscoTope"] },
+            conformational_epitope_ellipro: { type: "CPU_INTENSIVE", reason: "Surface accessibility calculations", cpuCores: 8, memoryGb: 8, estimatedTimeMinutes: 10, tools: ["ElliPro"] },
+            discotope_prediction: { type: "CPU_ONLY", reason: "Structure-based B-cell epitope prediction", cpuCores: 4, memoryGb: 8, estimatedTimeMinutes: 15, tools: ["DiscoTope-3.0"] },
             dl_based_epitope_prediction: { type: "GPU_PREFERRED", reason: "Neural network inference, benefits from GPU but works on CPU", gpuMemoryGb: 4, cpuCores: 8, memoryGb: 16, speedup: "5x" }
           }
         },
@@ -3867,15 +3870,25 @@ print(json.dumps(result, default=str))
             aggregation_prediction: { type: "CPU_ONLY", reason: "Sequence-based algorithms", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 5, tools: ["AGGRESCAN", "Zyggregator"] }
           }
         },
+        multi_epitope_design: {
+          stage: 3,
+          stageName: "Antigen Design & Optimization",
+          tasks: {
+            linker_design: { type: "CPU_ONLY", reason: "Rule-based linker sequence design between epitopes", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 1, tools: ["Linker Designer", "GGGGS/EAAAK"] },
+            construct_assembly: { type: "CPU_ONLY", reason: "Multi-epitope construct assembly with signal peptides", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 1, tools: ["Sequence Builder"] },
+            epitope_selection: { type: "CPU_ONLY", reason: "Score-based epitope ranking and selection", cpuCores: 4, memoryGb: 4, estimatedTimeMinutes: 5, tools: ["Epitope Ranker"] }
+          }
+        },
         mrna_vaccine_design: {
           stage: 3,
           stageName: "Antigen Design & Optimization",
           tasks: {
-            codon_optimization: { type: "CPU_ONLY", reason: "Lookup table operations, no parallelization benefit", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 1, tools: ["Python CodonW", "OPTIMIZER"] },
-            rna_secondary_structure: { type: "CPU_INTENSIVE", reason: "Dynamic programming, can parallelize multiple sequences", cpuCores: 16, memoryGb: 16, estimatedTimeMinutes: 15, tools: ["ViennaRNA", "RNAfold"] },
+            codon_optimization: { type: "CPU_ONLY", reason: "Lookup table operations, no parallelization benefit", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 1, tools: ["JCat Algorithm", "Python CodonW"] },
+            rna_secondary_structure: { type: "CPU_ONLY", reason: "Minimum free energy prediction for mRNA stability", cpuCores: 4, memoryGb: 8, estimatedTimeMinutes: 10, tools: ["ViennaRNA", "RNAfold"] },
             rna_secondary_structure_gpu: { type: "GPU_PREFERRED", reason: "Can be accelerated with GPU for large sequences", gpuMemoryGb: 4, cpuCores: 4, memoryGb: 8, speedup: "5x" },
-            utr_optimization: { type: "CPU_INTENSIVE", reason: "Sequence search and optimization", cpuCores: 8, memoryGb: 8, estimatedTimeMinutes: 30 },
-            gc_content_adjustment: { type: "CPU_ONLY", reason: "Simple sequence manipulation", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 2 }
+            utr_optimization: { type: "CPU_INTENSIVE", reason: "5' and 3' UTR sequence optimization", cpuCores: 8, memoryGb: 8, estimatedTimeMinutes: 30, tools: ["UTR Designer"] },
+            gc_content_adjustment: { type: "CPU_ONLY", reason: "Simple sequence manipulation for GC balance", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 2 },
+            cai_calculation: { type: "CPU_ONLY", reason: "Codon Adaptation Index calculation", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 1, tools: ["CAI Calculator"] }
           }
         },
         immune_simulation: {
