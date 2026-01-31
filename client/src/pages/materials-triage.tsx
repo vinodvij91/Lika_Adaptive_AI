@@ -129,16 +129,16 @@ function PredictionScore({ score, method, unit }: { score: number | null; method
     return <span className="text-muted-foreground text-sm">--</span>;
   }
   
-  const stars = score >= 80 ? 3 : score >= 60 ? 2 : score >= 40 ? 1 : 0;
+  const stars = score >= 90 ? 5 : score >= 80 ? 4 : score >= 70 ? 3 : score >= 60 ? 2 : score >= 50 ? 1 : 0;
   const color = method === "aqaffinity" ? "text-purple-600 dark:text-purple-400" : "text-blue-600 dark:text-blue-400";
   
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1.5">
       <span className={`font-medium ${color}`}>
-        {score.toFixed(1)}{unit || ""}
+        {Math.round(score)} {unit || "MPa"}
       </span>
       <div className="flex">
-        {[...Array(3)].map((_, i) => (
+        {[...Array(5)].map((_, i) => (
           <Star
             key={i}
             className={`h-3 w-3 ${i < stars ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`}
@@ -209,14 +209,16 @@ export default function MaterialsTriagePage() {
     const formulas = ["Li₃PS₄", "LiCoO₂", "TiO₂-Al₂O₃", "PVDF-HFP", "Si₀.₈Ge₀.₂", "MgAl₂O₄", "BaTiO₃", "ZrO₂-Y₂O₃"];
     
     return Array.from({ length: 50 }, (_, i) => {
-      const aqScore = 40 + Math.random() * 55;
-      const dftScore = 35 + Math.random() * 60;
+      const baseTensile = 850 - i * 5 + Math.random() * 20;
+      const aqScore = baseTensile;
+      const dftVariance = i < 3 ? 10 : i < 10 ? 20 : 80 + Math.random() * 50;
+      const dftScore = baseTensile - dftVariance + Math.random() * dftVariance * 0.5;
       const diff = Math.abs(aqScore - dftScore);
-      const agreement = diff < 10 ? "strong" : diff < 20 ? "good" : "mixed";
+      const agreement = diff < 15 ? "strong" : diff < 40 ? "good" : "mixed";
       
       return {
         id: `mat-${i + 1}`,
-        materialId: `M-${1000 + i}`,
+        materialId: `MAT_${String(i).padStart(4, "0")}`,
         materialName: formulas[i % formulas.length],
         formula: formulas[i % formulas.length],
         materialType: types[i % types.length],
@@ -224,8 +226,8 @@ export default function MaterialsTriagePage() {
         dftScore: dftScore,
         agreementLevel: agreement as "strong" | "good" | "mixed",
         mechanicalScore: 50 + Math.random() * 45,
-        electricalScore: 40 + Math.random() * 55,
-        thermalScore: 45 + Math.random() * 50,
+        electricalScore: 1.2e5 * (0.5 + Math.random() * 0.5),
+        thermalScore: 280 + Math.random() * 100,
         chemicalScore: 55 + Math.random() * 40,
         overallScore: (aqScore + dftScore) / 2,
         manufacturabilityScore: 30 + Math.random() * 65,
@@ -426,174 +428,57 @@ export default function MaterialsTriagePage() {
           )}
 
           <div className="flex-1 flex flex-col gap-4 min-w-0">
-            <div className="grid grid-cols-6 gap-4">
-              <Card>
-                <CardContent className="pt-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Summary:</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="font-mono text-sm space-y-1">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-green-500/20 rounded-md">
-                      <Target className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{summaryStats?.topMaterials || 0}</p>
-                      <p className="text-xs text-muted-foreground">Top Materials</p>
-                    </div>
+                    <span className="text-muted-foreground">|--</span>
+                    <span>Total materials screened:</span>
+                    <span className="font-semibold">10,000 variants</span>
                   </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-blue-500/20 rounded-md">
-                      <CheckCircle className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{summaryStats?.consensusMaterials || 0}</p>
-                      <p className="text-xs text-muted-foreground">Consensus</p>
-                    </div>
+                    <span className="text-muted-foreground">|--</span>
+                    <span>Top candidates identified:</span>
+                    <span className="font-semibold text-green-600">{summaryStats?.topMaterials || 0}</span>
                   </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-yellow-500/20 rounded-md">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{summaryStats?.flaggedForReview || 0}</p>
-                      <p className="text-xs text-muted-foreground">Flagged</p>
-                    </div>
+                    <span className="text-muted-foreground">|--</span>
+                    <span>Consensus predictions (both methods agree):</span>
+                    <span className="font-semibold text-blue-600">{summaryStats?.consensusMaterials || 0}</span>
                   </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-purple-500/20 rounded-md">
-                      <Filter className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{summaryStats?.afterFilters || 0}</p>
-                      <p className="text-xs text-muted-foreground">After Filters</p>
-                    </div>
+                    <span className="text-muted-foreground">|__</span>
+                    <span>Flagged for review (methods disagree):</span>
+                    <span className="font-semibold text-yellow-600">{summaryStats?.flaggedForReview || 0}</span>
                   </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-orange-500/20 rounded-md">
-                      <Factory className="h-4 w-4 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{summaryStats?.manufacturable || 0}</p>
-                      <p className="text-xs text-muted-foreground">Manufacturable</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-emerald-500/20 rounded-md">
-                      <FlaskConical className="h-4 w-4 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{summaryStats?.validated || 0}</p>
-                      <p className="text-xs text-muted-foreground">Validated</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                variant="default"
-                size="sm"
-                disabled={selectedMaterials.size === 0}
-                onClick={() => toast({ title: "Sent to lab", description: `${selectedMaterials.size} materials queued for synthesis` })}
-                data-testid="button-send-to-lab"
-              >
-                <FlaskConical className="h-4 w-4 mr-2" />
-                Send to Lab ({selectedMaterials.size})
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exportCSV}
-                data-testid="button-export"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const top20 = materials?.slice(0, 20) || [];
-                  if (top20.length > 0) {
-                    const headers = ["Rank", "Material", "Formula", "AQAffinity", "DFT", "Agreement", "Manufacturability", "Cost"];
-                    const rows = top20.map((m, i) => [
-                      i + 1,
-                      m.materialName || m.materialId,
-                      m.formula || "",
-                      m.aqaffinityScore?.toFixed(1) || "",
-                      m.dftScore?.toFixed(1) || "",
-                      m.agreementLevel || "",
-                      m.manufacturabilityScore?.toFixed(1) || "",
-                      m.costEstimate?.toFixed(2) || "",
-                    ]);
-                    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-                    const blob = new Blob([csv], { type: "text/csv" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `top20-synthesis-${campaignId}-${Date.now()}.csv`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }
-                }}
-                data-testid="button-download-top20"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download Top 20 for Synthesis
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/materials/campaigns/new")}
-                data-testid="button-new-campaign"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Start New Campaign
-              </Button>
-              {selectedMaterials.size > 0 && (
-                <span className="text-sm text-muted-foreground">
-                  {selectedMaterials.size} selected
-                </span>
-              )}
-            </div>
-
-            <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-200 dark:border-purple-800">
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-500/20 rounded-md">
-                      <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">Adaptive AI</p>
-                      <p className="text-xs text-muted-foreground">Upload experimental validation results to improve predictions</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" data-testid="button-upload-results">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Validation Results
-                  </Button>
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="flex-1">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center justify-between">
+                  <span>Top 20 Materials - Ranked by Target Properties</span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" data-testid="button-filter-property">
+                      <Filter className="h-4 w-4 mr-1" />
+                      Filter by Property
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={exportCSV} data-testid="button-export-lab">
+                      <Download className="h-4 w-4 mr-1" />
+                      Export for Lab Testing
+                    </Button>
+                    <Button variant="outline" size="sm" data-testid="button-3d-visualize">
+                      <Eye className="h-4 w-4 mr-1" />
+                      3D Visualize
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
 
             <ScrollArea className="flex-1">
               {materialsLoading ? (
@@ -613,51 +498,31 @@ export default function MaterialsTriagePage() {
                           data-testid="checkbox-select-all"
                         />
                       </TableHead>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Material</TableHead>
+                      <TableHead className="w-12">Rank</TableHead>
+                      <TableHead>Material ID</TableHead>
                       <TableHead>
-                        <div className="flex items-center gap-1">
-                          <Zap className="h-3 w-3 text-purple-500" />
-                          AQAffinity
+                        <div className="flex flex-col">
+                          <span className="flex items-center gap-1">
+                            <Zap className="h-3 w-3 text-purple-500" />
+                            AQAffinity
+                          </span>
+                          <span className="text-xs font-normal text-muted-foreground">Tensile (MPa)</span>
                         </div>
                       </TableHead>
                       <TableHead>
-                        <div className="flex items-center gap-1">
-                          <Calculator className="h-3 w-3 text-blue-500" />
-                          DFT
+                        <div className="flex flex-col">
+                          <span className="flex items-center gap-1">
+                            <Calculator className="h-3 w-3 text-blue-500" />
+                            DFT
+                          </span>
+                          <span className="text-xs font-normal text-muted-foreground">Tensile (MPa)</span>
                         </div>
                       </TableHead>
                       <TableHead>Agreement</TableHead>
-                      <TableHead>
-                        <div className="flex items-center gap-1">
-                          <Gauge className="h-3 w-3" />
-                          Mech
-                        </div>
-                      </TableHead>
-                      <TableHead>
-                        <div className="flex items-center gap-1">
-                          <Zap className="h-3 w-3" />
-                          Elec
-                        </div>
-                      </TableHead>
-                      <TableHead>
-                        <div className="flex items-center gap-1">
-                          <Thermometer className="h-3 w-3" />
-                          Therm
-                        </div>
-                      </TableHead>
-                      <TableHead>
-                        <div className="flex items-center gap-1">
-                          <Factory className="h-3 w-3" />
-                          Mfg
-                        </div>
-                      </TableHead>
-                      <TableHead>Cost</TableHead>
-                      <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {materials?.map((material, index) => (
+                    {materials?.slice(0, 20).map((material, index) => (
                       <TableRow 
                         key={material.id}
                         className={selectedMaterials.has(material.id) ? "bg-primary/5" : ""}
@@ -671,61 +536,105 @@ export default function MaterialsTriagePage() {
                         </TableCell>
                         <TableCell className="font-medium">{index + 1}</TableCell>
                         <TableCell>
-                          <div>
-                            <p className="font-medium text-sm">
-                              {material.materialName || generateMaterialName(material.formula, material.id)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">{material.materialType}</p>
-                          </div>
+                          <span className="font-medium text-sm">{material.materialId}</span>
                         </TableCell>
                         <TableCell>
-                          <PredictionScore score={material.aqaffinityScore} method="aqaffinity" />
+                          <PredictionScore score={material.aqaffinityScore} method="aqaffinity" unit=" MPa" />
                         </TableCell>
                         <TableCell>
-                          <PredictionScore score={material.dftScore} method="dft" />
+                          <PredictionScore score={material.dftScore} method="dft" unit=" MPa" />
                         </TableCell>
                         <TableCell>
                           <AgreementBadge level={material.agreementLevel} />
-                        </TableCell>
-                        <TableCell>
-                          <PropertyScore score={material.mechanicalScore} icon={Gauge} />
-                        </TableCell>
-                        <TableCell>
-                          <PropertyScore score={material.electricalScore} icon={Zap} />
-                        </TableCell>
-                        <TableCell>
-                          <PropertyScore score={material.thermalScore} icon={Thermometer} />
-                        </TableCell>
-                        <TableCell>
-                          <PropertyScore score={material.manufacturabilityScore} icon={Factory} />
-                        </TableCell>
-                        <TableCell>
-                          {material.costEstimate !== null ? (
-                            <span className="text-sm">${material.costEstimate.toFixed(0)}/kg</span>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">--</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              material.status === "validated" ? "default" :
-                              material.status === "pending" ? "secondary" : "outline"
-                            }
-                            className={
-                              material.status === "validated" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
-                              material.status === "pending" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" : ""
-                            }
-                          >
-                            {material.status}
-                          </Badge>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               )}
+              
+              {materials && materials.length > 0 && (
+                <div className="mt-4 p-3 bg-muted/50 rounded-md">
+                  <p className="text-sm font-medium mb-1">Additional Properties:</p>
+                  <p className="text-sm text-muted-foreground">
+                    {materials[0].materialId}: Conductivity: {(materials[0].electricalScore || 0).toExponential(1)} S/m, Thermal: {Math.round(materials[0].thermalScore || 0)}C
+                  </p>
+                </div>
+              )}
             </ScrollArea>
+              </CardContent>
+            </Card>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium text-muted-foreground">Actions:</span>
+              <Button
+                variant="default"
+                onClick={() => {
+                  const top20 = materials?.slice(0, 20) || [];
+                  if (top20.length > 0) {
+                    const headers = ["Rank", "Material ID", "AQAffinity (MPa)", "DFT (MPa)", "Agreement", "Conductivity", "Thermal"];
+                    const rows = top20.map((m, i) => [
+                      i + 1,
+                      m.materialId,
+                      m.aqaffinityScore?.toFixed(0) || "",
+                      m.dftScore?.toFixed(0) || "",
+                      m.agreementLevel || "",
+                      m.electricalScore?.toExponential(1) || "",
+                      m.thermalScore?.toFixed(0) || "",
+                    ]);
+                    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+                    const blob = new Blob([csv], { type: "text/csv" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `top20-synthesis-${campaignId}-${Date.now()}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast({ title: "Downloaded", description: "Top 20 materials exported for synthesis" });
+                  }
+                }}
+                data-testid="button-download-top20"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Top 20 for Synthesis
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => toast({ title: "FEA Simulations", description: "Starting finite element analysis on selected materials..." })}
+                data-testid="button-run-fea"
+              >
+                <Box className="h-4 w-4 mr-2" />
+                Run FEA Simulations
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/materials/campaigns/new")}
+                data-testid="button-new-campaign"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Campaign
+              </Button>
+            </div>
+
+            <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-200 dark:border-purple-800">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-500/20 rounded-md">
+                      <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">Adaptive AI:</p>
+                      <p className="text-sm text-muted-foreground">Upload experimental test results to improve predictions</p>
+                    </div>
+                  </div>
+                  <Button variant="default" data-testid="button-upload-lab-results">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Lab Test Results
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
