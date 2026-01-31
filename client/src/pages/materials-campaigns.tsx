@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "wouter";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -235,12 +236,22 @@ function CampaignCard({ campaign }: { campaign: CampaignMetrics }) {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-2 border-t">
+        <div className="flex items-center justify-between pt-2 border-t gap-2">
           <span className="text-xs text-muted-foreground">Created {campaign.createdAt}</span>
-          <Button variant="ghost" size="sm" data-testid={`button-view-campaign-${campaign.id}`}>
-            View Details
-            <ArrowRight className="h-3.5 w-3.5 ml-1" />
-          </Button>
+          <div className="flex gap-2">
+            {campaign.status === "completed" && (
+              <Link href={`/materials/campaigns/${campaign.id}/triage`}>
+                <Button variant="default" size="sm" data-testid={`button-triage-${campaign.id}`}>
+                  <Target className="h-3.5 w-3.5 mr-1" />
+                  View Triage
+                </Button>
+              </Link>
+            )}
+            <Button variant="ghost" size="sm" data-testid={`button-view-campaign-${campaign.id}`}>
+              View Details
+              <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -323,10 +334,12 @@ export default function MaterialsCampaignsPage() {
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
-            <Button data-testid="button-new-campaign">
-              <Plus className="h-4 w-4 mr-2" />
-              New Campaign
-            </Button>
+            <Link href="/materials/campaigns/new">
+              <Button data-testid="button-new-campaign">
+                <Plus className="h-4 w-4 mr-2" />
+                New Campaign
+              </Button>
+            </Link>
           </div>
         }
       />

@@ -54,6 +54,8 @@ const HitTriagePage = lazy(() => import("@/pages/hit-triage"));
 const PropertyPipelinesPage = lazy(() => import("@/pages/property-pipelines"));
 const StructurePropertyPage = lazy(() => import("@/pages/structure-property"));
 const MaterialsCampaignsPage = lazy(() => import("@/pages/materials-campaigns"));
+const MaterialsCampaignNewPage = lazy(() => import("@/pages/materials-campaign-new"));
+const MaterialsTriagePage = lazy(() => import("@/pages/materials-triage"));
 const MultiScaleRepresentationsPage = lazy(() => import("@/pages/multi-scale-representations"));
 const PropertyPredictionPage = lazy(() => import("@/pages/property-prediction"));
 const ManufacturabilitySccoringPage = lazy(() => import("@/pages/manufacturability-scoring"));
@@ -135,6 +137,8 @@ function AuthenticatedRoutes() {
         <Route path="/property-pipelines" component={PropertyPipelinesPage} />
         <Route path="/structure-property" component={StructurePropertyPage} />
         <Route path="/materials-campaigns" component={MaterialsCampaignsPage} />
+        <Route path="/materials/campaigns/new" component={MaterialsCampaignNewPage} />
+        <Route path="/materials/campaigns/:id/triage" component={MaterialsTriagePage} />
         <Route path="/multi-scale-representations" component={MultiScaleRepresentationsPage} />
         <Route path="/materials-library" component={MaterialsLibraryPage} />
         <Route path="/materials" component={MaterialsRedirect} />
