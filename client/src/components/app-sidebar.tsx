@@ -136,17 +136,13 @@ export function AppSidebar() {
         <Link href={isDrugDomain ? "/dashboard/drug" : "/dashboard/materials"}>
           <div className="flex items-center gap-3 cursor-pointer group">
             <div className="relative">
-              <div className={`absolute inset-0 rounded-xl blur-md opacity-60 ${
+              <div className={`absolute inset-0 rounded-xl blur-md opacity-40 ${
                 isDrugDomain 
-                  ? "bg-gradient-to-br from-cyan-500 to-teal-600" 
-                  : "bg-gradient-to-br from-emerald-500 to-amber-500"
+                  ? "bg-gradient-to-br from-cyan-400 to-teal-500" 
+                  : "bg-gradient-to-br from-emerald-400 to-amber-400"
               }`} />
-              <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${
-                isDrugDomain 
-                  ? "bg-gradient-to-br from-cyan-500 via-teal-500 to-emerald-600" 
-                  : "bg-gradient-to-br from-emerald-500 via-teal-500 to-amber-500"
-              }`}>
-                <LikaLogoLeafGradient size={26} className="drop-shadow-sm" />
+              <div className="relative w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-slate-900 dark:bg-slate-800 border border-slate-700">
+                <LikaLogoLeafGradient size={26} className="drop-shadow-md" />
               </div>
             </div>
             <div className="flex flex-col">
