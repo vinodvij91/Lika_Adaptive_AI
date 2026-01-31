@@ -4910,6 +4910,347 @@ print(json.dumps(result, default=str))
   });
 
   // ============================================
+  // AQAFFINITY GPU ENDPOINTS (VAST.AI EXECUTION)
+  // Real OpenFold3-based predictions on GPU nodes
+  // ============================================
+
+  app.post("/api/compute/aqaffinity/gpu/rank-epitopes", requireAuth, async (req, res) => {
+    try {
+      const schema = z.object({
+        epitopes: z.array(z.string()).min(1).max(50),
+        targetSequence: z.string().min(10),
+        useGpu: z.boolean().default(true)
+      });
+
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+
+      const { epitopes, targetSequence, useGpu } = parsed.data;
+
+      if (!useGpu) {
+        // Fall back to simulation mode
+        const predictions = epitopes.map((epitope, index) => {
+          const hashVal = parseInt(
+            crypto.createHash("sha256")
+              .update(`${targetSequence.slice(0, 50)}:${epitope}`)
+              .digest("hex")
+              .slice(0, 8),
+            16
+          );
+          const kdNm = (hashVal % 50000) + 100;
+          return {
+            rank: 0,
+            epitope,
+            predictedAffinityNm: kdNm,
+            confidenceScore: 0.57,
+            isStrongBinder: kdNm < 500
+          };
+        });
+        predictions.sort((a, b) => a.predictedAffinityNm - b.predictedAffinityNm);
+        predictions.forEach((p, i) => p.rank = i + 1);
+        
+        return res.json({
+          success: true,
+          mode: "simulation",
+          predictions,
+          rankedEpitopes: predictions.map(p => p.epitope),
+          hardware: { mode: "simulation" },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Get Vast.ai GPU node
+      const nodes = await storage.getComputeNodes();
+      const gpuNode = nodes.find(n => n.provider === "vast" && n.status === "active");
+      
+      if (!gpuNode) {
+        return res.status(503).json({ 
+          error: "No active Vast.ai GPU node available",
+          suggestion: "Ensure your Vast.ai instance is running and configured"
+        });
+      }
+
+      // Prepare input for remote execution
+      const fs = await import("fs");
+      const path = await import("path");
+      const os = await import("os");
+      
+      const inputData = {
+        mode: "epitope_ranking",
+        protein_sequence: targetSequence,
+        epitopes: epitopes,
+        pipeline: "vaccine"
+      };
+      
+      const tempDir = os.tmpdir();
+      const inputFileName = `aqaffinity_input_${Date.now()}.json`;
+      const outputFileName = `aqaffinity_output_${Date.now()}.json`;
+      const localInputPath = path.join(tempDir, inputFileName);
+      const localOutputPath = path.join(tempDir, outputFileName);
+      
+      fs.writeFileSync(localInputPath, JSON.stringify(inputData, null, 2));
+
+      // Execute on GPU node via ComputeExecutor
+      const { ComputeExecutor } = await import("./compute-executor");
+      const { getComputeAdapter } = await import("./compute-adapters");
+      
+      const adapter = getComputeAdapter(gpuNode);
+      
+      // Upload input file
+      const remoteInputPath = `/root/lika-compute/${inputFileName}`;
+      const remoteOutputPath = `/root/lika-compute/${outputFileName}`;
+      const remotePipelinePath = `/root/lika-compute/aqaffinity_remote.py`;
+      
+      // Upload the pipeline script
+      const pipelineScriptPath = "./compute/aqaffinity_remote.py";
+      if (adapter.uploadFile && fs.existsSync(pipelineScriptPath)) {
+        await adapter.uploadFile(gpuNode, pipelineScriptPath, remotePipelinePath);
+        await adapter.uploadFile(gpuNode, localInputPath, remoteInputPath);
+      }
+      
+      // Run AQAffinity on GPU
+      const command = `mkdir -p /root/lika-compute && cd /root/lika-compute && pip install -q git+https://huggingface.co/SandboxAQ/aqaffinity 2>/dev/null || true && python3 aqaffinity_remote.py --input ${inputFileName} --output ${outputFileName}`;
+      
+      const job = {
+        id: `aqaffinity-epitope-${Date.now()}`,
+        type: "aqaffinity_epitope_ranking",
+        command,
+        environment: {
+          PYTHONUNBUFFERED: "1",
+          CUDA_VISIBLE_DEVICES: "0,1"
+        },
+        timeout: 600000 // 10 minutes
+      };
+      
+      console.log(`[AQAffinity-GPU] Running epitope ranking on ${gpuNode.name}`);
+      const result = await adapter.runJob(gpuNode, job);
+      
+      // Download and parse results
+      if (result.success && adapter.downloadFile) {
+        await adapter.downloadFile(gpuNode, remoteOutputPath, localOutputPath);
+        
+        if (fs.existsSync(localOutputPath)) {
+          const outputData = JSON.parse(fs.readFileSync(localOutputPath, 'utf8'));
+          
+          // Clean up temp files
+          fs.unlinkSync(localInputPath);
+          fs.unlinkSync(localOutputPath);
+          
+          if (outputData.success) {
+            return res.json({
+              success: true,
+              mode: "gpu",
+              predictions: outputData.predictions.map((p: any, i: number) => ({
+                rank: i + 1,
+                epitope: p.sequence,
+                predictedAffinityNm: p.predicted_affinity_nm,
+                confidenceScore: p.confidence_score,
+                isStrongBinder: p.is_strong_binder
+              })),
+              rankedEpitopes: outputData.ranked_epitopes,
+              hardware: outputData.hardware,
+              executionTimeSeconds: outputData.execution_time_seconds,
+              gpuNode: gpuNode.name,
+              timestamp: new Date().toISOString()
+            });
+          } else {
+            return res.status(500).json({ 
+              error: outputData.error || "AQAffinity execution failed",
+              details: outputData
+            });
+          }
+        }
+      }
+      
+      // If we couldn't get results, return the raw output
+      return res.status(500).json({
+        error: "Failed to execute AQAffinity on GPU",
+        nodeOutput: result.output,
+        nodeError: result.error
+      });
+      
+    } catch (error: any) {
+      console.error("AQAffinity GPU epitope ranking error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/compute/aqaffinity/gpu/predict", requireAuth, async (req, res) => {
+    try {
+      const schema = z.object({
+        proteinSequence: z.string().min(10),
+        ligandSmiles: z.string().min(1),
+        pipeline: z.enum(["drug_discovery", "vaccine_discovery", "materials_discovery"]).default("drug_discovery"),
+        useGpu: z.boolean().default(true)
+      });
+
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+
+      const { proteinSequence, ligandSmiles, pipeline, useGpu } = parsed.data;
+
+      // Get Vast.ai GPU node
+      const nodes = await storage.getComputeNodes();
+      const gpuNode = nodes.find(n => n.provider === "vast" && n.status === "active");
+      
+      if (!gpuNode || !useGpu) {
+        // Fall back to simulation
+        const hashVal = parseInt(
+          crypto.createHash("sha256")
+            .update(`${proteinSequence.slice(0, 50)}:${ligandSmiles}`)
+            .digest("hex")
+            .slice(0, 8),
+          16
+        );
+        const baseAffinity = (hashVal % 10000) + 1;
+        const confidence = Math.min(0.95, 0.5 + (proteinSequence.length / 1000));
+        
+        return res.json({
+          success: true,
+          mode: "simulation",
+          prediction: {
+            predictedAffinityNm: baseAffinity,
+            confidenceScore: confidence,
+            isStrongBinder: baseAffinity < 100,
+            ligandSmiles,
+            proteinLength: proteinSequence.length
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Prepare GPU execution
+      const fs = await import("fs");
+      const path = await import("path");
+      const os = await import("os");
+      
+      const inputData = {
+        mode: "single",
+        protein_sequence: proteinSequence,
+        ligand_smiles: ligandSmiles,
+        pipeline: pipeline.replace("_discovery", "")
+      };
+      
+      const tempDir = os.tmpdir();
+      const inputFileName = `aqaffinity_input_${Date.now()}.json`;
+      const outputFileName = `aqaffinity_output_${Date.now()}.json`;
+      const localInputPath = path.join(tempDir, inputFileName);
+      const localOutputPath = path.join(tempDir, outputFileName);
+      
+      fs.writeFileSync(localInputPath, JSON.stringify(inputData, null, 2));
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(gpuNode);
+      
+      const remoteInputPath = `/root/lika-compute/${inputFileName}`;
+      const remoteOutputPath = `/root/lika-compute/${outputFileName}`;
+      const remotePipelinePath = `/root/lika-compute/aqaffinity_remote.py`;
+      
+      if (adapter.uploadFile) {
+        const pipelineScriptPath = "./compute/aqaffinity_remote.py";
+        if (fs.existsSync(pipelineScriptPath)) {
+          await adapter.uploadFile(gpuNode, pipelineScriptPath, remotePipelinePath);
+        }
+        await adapter.uploadFile(gpuNode, localInputPath, remoteInputPath);
+      }
+      
+      const command = `mkdir -p /root/lika-compute && cd /root/lika-compute && pip install -q git+https://huggingface.co/SandboxAQ/aqaffinity 2>/dev/null || true && python3 aqaffinity_remote.py --input ${inputFileName} --output ${outputFileName}`;
+      
+      const job = {
+        id: `aqaffinity-single-${Date.now()}`,
+        type: "aqaffinity_single",
+        command,
+        environment: { PYTHONUNBUFFERED: "1", CUDA_VISIBLE_DEVICES: "0,1" },
+        timeout: 300000
+      };
+      
+      console.log(`[AQAffinity-GPU] Running single prediction on ${gpuNode.name}`);
+      const result = await adapter.runJob(gpuNode, job);
+      
+      if (result.success && adapter.downloadFile) {
+        await adapter.downloadFile(gpuNode, remoteOutputPath, localOutputPath);
+        
+        if (fs.existsSync(localOutputPath)) {
+          const outputData = JSON.parse(fs.readFileSync(localOutputPath, 'utf8'));
+          fs.unlinkSync(localInputPath);
+          fs.unlinkSync(localOutputPath);
+          
+          if (outputData.success && outputData.predictions?.length > 0) {
+            const pred = outputData.predictions[0];
+            return res.json({
+              success: true,
+              mode: "gpu",
+              prediction: {
+                predictedAffinityNm: pred.predicted_affinity_nm,
+                confidenceScore: pred.confidence_score,
+                isStrongBinder: pred.is_strong_binder,
+                ligandSmiles,
+                proteinLength: proteinSequence.length
+              },
+              hardware: outputData.hardware,
+              executionTimeSeconds: outputData.execution_time_seconds,
+              gpuNode: gpuNode.name,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      }
+      
+      return res.status(500).json({
+        error: "GPU prediction failed",
+        nodeOutput: result.output,
+        nodeError: result.error
+      });
+      
+    } catch (error: any) {
+      console.error("AQAffinity GPU predict error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/compute/aqaffinity/gpu/status", requireAuth, async (req, res) => {
+    try {
+      const nodes = await storage.getComputeNodes();
+      const gpuNode = nodes.find(n => n.provider === "vast" && n.status === "active");
+      
+      if (!gpuNode) {
+        return res.json({
+          available: false,
+          reason: "No active Vast.ai GPU node configured",
+          simulationMode: true
+        });
+      }
+
+      const { getComputeAdapter } = await import("./compute-adapters");
+      const adapter = getComputeAdapter(gpuNode);
+      const isHealthy = await adapter.checkHealth(gpuNode);
+      
+      res.json({
+        available: isHealthy,
+        gpuNode: {
+          name: gpuNode.name,
+          provider: gpuNode.provider,
+          gpuType: gpuNode.gpuType,
+          specs: gpuNode.specs,
+          status: gpuNode.status
+        },
+        simulationMode: !isHealthy,
+        endpoints: [
+          { path: "/api/compute/aqaffinity/gpu/predict", method: "POST", description: "Single prediction on GPU" },
+          { path: "/api/compute/aqaffinity/gpu/rank-epitopes", method: "POST", description: "Rank epitopes by binding affinity on GPU" }
+        ]
+      });
+    } catch (error: any) {
+      console.error("AQAffinity GPU status error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================
   // USER SSH KEYS ENDPOINTS
   // ============================================
 

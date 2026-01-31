@@ -647,6 +647,58 @@ export class VastAiComputeAdapter implements ComputeAdapter {
       return [];
     }
   }
+
+  private async getSshNode(node: ComputeNode): Promise<ComputeNode> {
+    const sshHost = node.sshHost;
+    const sshPort = node.sshPort || "22";
+    
+    if (sshHost) {
+      return {
+        ...node,
+        sshHost,
+        sshPort: String(sshPort),
+        sshUsername: node.sshUsername || "root",
+      };
+    }
+    
+    // Get SSH info from Vast.ai API if not configured
+    const instances = await this.apiRequest("/instances");
+    const instanceId = (node.specs as any)?.vastInstanceId;
+    const instanceInfo = instances.instances?.find((i: any) => i.id === instanceId);
+    
+    if (instanceInfo) {
+      return {
+        ...node,
+        sshHost: instanceInfo.ssh_host || instanceInfo.public_ipaddr,
+        sshPort: String(instanceInfo.ssh_port || "22"),
+        sshUsername: "root",
+      };
+    }
+    
+    return node;
+  }
+
+  async uploadFile(node: ComputeNode, localPath: string, remotePath: string): Promise<boolean> {
+    try {
+      const sshNode = await this.getSshNode(node);
+      const sshAdapter = new SshComputeAdapter("vast");
+      return sshAdapter.uploadFile(sshNode, localPath, remotePath);
+    } catch (err: any) {
+      console.error(`[VastAiAdapter] uploadFile error:`, err.message);
+      return false;
+    }
+  }
+
+  async downloadFile(node: ComputeNode, remotePath: string, localPath: string): Promise<boolean> {
+    try {
+      const sshNode = await this.getSshNode(node);
+      const sshAdapter = new SshComputeAdapter("vast");
+      return sshAdapter.downloadFile(sshNode, remotePath, localPath);
+    } catch (err: any) {
+      console.error(`[VastAiAdapter] downloadFile error:`, err.message);
+      return false;
+    }
+  }
 }
 
 export class CloudApiComputeAdapter implements ComputeAdapter {
