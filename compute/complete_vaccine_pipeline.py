@@ -1169,6 +1169,18 @@ VACCINE_TASK_REGISTRY = {
         tool="MAFFT"
     ),
     
+    "aqaffinity_ranking": VaccineTask(
+        name="AQAffinity Epitope Ranking",
+        task_type=TaskType.CPU_INTENSIVE,
+        description="Rank epitopes by predicted antibody binding affinity (KD)",
+        cpu_cores=8,
+        gpu_memory_gb=8,
+        estimated_time_cpu_hours=0.5,
+        speedup_gpu_vs_cpu=3.0,
+        implementation_status="implemented",
+        tool="SandboxAQ AQAffinity (OpenFold3)"
+    ),
+    
     # ========================================================================
     # VACCINE DESIGN
     # ========================================================================
@@ -1228,6 +1240,17 @@ class CompleteVaccinePipeline:
         self.linker = LinkerDesigner()
         self.codon_opt = CodonOptimizer()
         self.rna_fold = ViennaRNAWrapper()
+        
+        # Initialize AQAffinity for epitope ranking
+        try:
+            from aqaffinity_integration import VaccineDiscoveryAQAffinity
+            self.aqaffinity = VaccineDiscoveryAQAffinity()
+            self.has_aqaffinity = True
+            logger.info("AQAffinity integration loaded successfully")
+        except ImportError:
+            self.aqaffinity = None
+            self.has_aqaffinity = False
+            logger.warning("AQAffinity not available - epitope ranking will use fallback scoring")
         
         logger.info("="*80)
         logger.info("COMPLETE VACCINE DISCOVERY PIPELINE - PRODUCTION READY")
@@ -1305,8 +1328,18 @@ class CompleteVaccinePipeline:
         )
         results["stages"]["selected_epitopes"] = selected_epitopes
         
-        # STAGE 4: Vaccine Design
-        logger.info("\n--- STAGE 4: VACCINE DESIGN ---")
+        # STAGE 4: AQAffinity Epitope Ranking
+        logger.info("\n--- STAGE 4: AQAFFINITY EPITOPE RANKING ---")
+        aqaffinity_results = self._rank_epitopes_with_aqaffinity(selected_epitopes, ref_sequence)
+        results["stages"]["aqaffinity_ranking"] = aqaffinity_results
+        
+        # Re-sort epitopes by AQAffinity binding score if available
+        if aqaffinity_results.get("success") and aqaffinity_results.get("ranked_epitopes"):
+            selected_epitopes = aqaffinity_results["ranked_epitopes"]
+            results["stages"]["selected_epitopes"] = selected_epitopes
+        
+        # STAGE 5: Vaccine Design
+        logger.info("\n--- STAGE 5: VACCINE DESIGN ---")
         
         if vaccine_type == "multi_epitope":
             vaccine_design = self._design_multi_epitope(selected_epitopes)
@@ -1317,8 +1350,8 @@ class CompleteVaccinePipeline:
         
         results["stages"]["vaccine_design"] = vaccine_design
         
-        # STAGE 5: Optimization
-        logger.info("\n--- STAGE 5: OPTIMIZATION ---")
+        # STAGE 6: Optimization
+        logger.info("\n--- STAGE 6: OPTIMIZATION ---")
         optimization = self._optimize_vaccine(vaccine_design, vaccine_type)
         results["stages"]["optimization"] = optimization
         
@@ -1370,6 +1403,128 @@ class CompleteVaccinePipeline:
         logger.info(f"Selected {len(selected)} epitopes from {len(epitopes)} candidates")
         
         return selected
+    
+    def _rank_epitopes_with_aqaffinity(
+        self,
+        epitopes: List[Dict],
+        reference_sequence: str
+    ) -> Dict[str, Any]:
+        """
+        Rank epitopes using AQAffinity predicted antibody binding affinity.
+        
+        This is Step 4 in the 7-step vaccine pipeline:
+        1. Input PDB/Sequence → 2. Epitope Prediction → 3. Conservation Analysis
+        → 4. AQAffinity Ranking → 5. Multi-epitope Construct Assembly
+        → 6. Codon Optimization → 7. mRNA Design
+        
+        Args:
+            epitopes: List of selected epitopes with peptide sequences
+            reference_sequence: Full protein sequence for context
+        
+        Returns:
+            AQAffinity ranking results with re-ranked epitopes
+        """
+        if not epitopes:
+            return {
+                "success": False,
+                "error": "No epitopes to rank",
+                "method": "aqaffinity",
+                "ranked_epitopes": []
+            }
+        
+        # Extract peptide sequences
+        peptide_sequences = [ep.get("peptide", "") for ep in epitopes if ep.get("peptide")]
+        
+        if not peptide_sequences:
+            return {
+                "success": False,
+                "error": "No valid peptide sequences found",
+                "method": "aqaffinity",
+                "ranked_epitopes": epitopes
+            }
+        
+        try:
+            if self.has_aqaffinity and self.aqaffinity:
+                # Use AQAffinity for epitope-antibody binding prediction
+                # Use representative human antibody heavy chain framework as reference
+                # This simulates binding between epitope and neutralizing antibody
+                antibody_framework = "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYWMSWVRQAPGKGLEWVANIKQDGSEKYYVDSVKG"
+                
+                aqaffinity_result = self.aqaffinity.predict_epitope_binding(
+                    mhc_sequence=antibody_framework,
+                    epitope_peptides=peptide_sequences,
+                    mhc_class="antibody"
+                )
+                
+                # Merge AQAffinity predictions with epitope data
+                ranked_epitopes = []
+                predictions = aqaffinity_result.get("predictions", [])
+                pred_map = {p["epitope"]: p for p in predictions}
+                
+                for ep in epitopes:
+                    peptide = ep.get("peptide", "")
+                    if peptide in pred_map:
+                        pred = pred_map[peptide]
+                        ep["aqaffinity_kd_nm"] = pred.get("predicted_affinity", 999999)
+                        ep["aqaffinity_confidence"] = pred.get("confidence", 0.0)
+                        ep["aqaffinity_strong_binder"] = pred.get("strong_binder", False)
+                        # Update score with AQAffinity weighting
+                        original_score = ep.get("score", 0)
+                        affinity_score = max(0, 1 - (pred.get("predicted_affinity", 1000) / 1000))
+                        ep["score"] = original_score * 0.5 + affinity_score * 0.5
+                    else:
+                        ep["aqaffinity_kd_nm"] = None
+                        ep["aqaffinity_confidence"] = None
+                        ep["aqaffinity_strong_binder"] = None
+                    ranked_epitopes.append(ep)
+                
+                # Re-sort by combined score
+                ranked_epitopes.sort(key=lambda x: x.get("score", 0), reverse=True)
+                
+                strong_binders = [ep for ep in ranked_epitopes if ep.get("aqaffinity_strong_binder")]
+                
+                logger.info(f"AQAffinity ranked {len(ranked_epitopes)} epitopes, {len(strong_binders)} strong binders")
+                
+                return {
+                    "success": True,
+                    "method": "aqaffinity",
+                    "tool": "SandboxAQ AQAffinity (OpenFold3)",
+                    "total_epitopes": len(ranked_epitopes),
+                    "strong_binders": len(strong_binders),
+                    "ranked_epitopes": ranked_epitopes,
+                    "top_candidates": ranked_epitopes[:5]
+                }
+            else:
+                # Fallback: use heuristic scoring based on peptide properties
+                logger.info("AQAffinity not available, using fallback heuristic scoring")
+                
+                ranked_epitopes = []
+                for ep in epitopes:
+                    peptide = ep.get("peptide", "")
+                    # Simple heuristic: hydrophobic/aromatic residues improve binding
+                    hydrophobic_score = sum(1 for aa in peptide if aa in "AVILMFYWP") / max(len(peptide), 1)
+                    ep["heuristic_binding_score"] = hydrophobic_score
+                    ep["score"] = ep.get("score", 0) * 0.7 + hydrophobic_score * 0.3
+                    ranked_epitopes.append(ep)
+                
+                ranked_epitopes.sort(key=lambda x: x.get("score", 0), reverse=True)
+                
+                return {
+                    "success": True,
+                    "method": "heuristic_fallback",
+                    "note": "AQAffinity not installed - using hydrophobicity heuristic",
+                    "total_epitopes": len(ranked_epitopes),
+                    "ranked_epitopes": ranked_epitopes
+                }
+                
+        except Exception as e:
+            logger.error(f"AQAffinity ranking failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "method": "aqaffinity",
+                "ranked_epitopes": epitopes
+            }
     
     def _design_multi_epitope(self, epitopes: List[Dict]) -> Dict:
         """Design multi-epitope construct"""
