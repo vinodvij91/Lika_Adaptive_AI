@@ -565,6 +565,91 @@ export default function MaterialsTriagePage() {
               </CardContent>
             </Card>
 
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Property Prediction (AQAffinity) results feed into:</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card 
+                    className="cursor-pointer hover-elevate border-blue-200 dark:border-blue-800"
+                    onClick={() => toast({ title: "Structure-Property Analysis", description: "Analyzing why MAT_0042 has high tensile strength..." })}
+                    data-testid="card-structure-property"
+                  >
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-blue-500/20 rounded-md">
+                          <Activity className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <span className="font-medium text-sm">Structure-Property Analysis</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground font-mono space-y-1 ml-2">
+                        <p>|-- "Why does MAT_0042 have high tensile strength?"</p>
+                        <p>|__ Identify key structural features</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card 
+                    className="cursor-pointer hover-elevate border-purple-200 dark:border-purple-800"
+                    onClick={() => toast({ title: "3D Viewer", description: "Opening 3D visualization of top materials..." })}
+                    data-testid="card-3d-viewer"
+                  >
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-purple-500/20 rounded-md">
+                          <Eye className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <span className="font-medium text-sm">3D Viewer</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground font-mono space-y-1 ml-2">
+                        <p>|-- Visualize top materials in 3D</p>
+                        <p>|__ Interactive exploration of crystal structure</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card 
+                    className="cursor-pointer hover-elevate border-orange-200 dark:border-orange-800"
+                    onClick={() => toast({ title: "FEA Simulations", description: "Starting stress/strain simulations on selected materials..." })}
+                    data-testid="card-fea-simulations"
+                  >
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-orange-500/20 rounded-md">
+                          <Box className="h-4 w-4 text-orange-600" />
+                        </div>
+                        <span className="font-medium text-sm">FEA Simulations</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground font-mono space-y-1 ml-2">
+                        <p>|-- Run detailed stress/strain simulations</p>
+                        <p>|__ Validate AQAffinity predictions</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card 
+                    className="cursor-pointer hover-elevate border-green-200 dark:border-green-800"
+                    onClick={() => toast({ title: "Reports", description: "Generating comprehensive material report..." })}
+                    data-testid="card-reports"
+                  >
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-green-500/20 rounded-md">
+                          <Download className="h-4 w-4 text-green-600" />
+                        </div>
+                        <span className="font-medium text-sm">Reports</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground font-mono space-y-1 ml-2">
+                        <p>|-- Generate comprehensive material report</p>
+                        <p>|__ Include AQAffinity + DFT + FEA</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-sm font-medium text-muted-foreground">Actions:</span>
               <Button
