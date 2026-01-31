@@ -4554,6 +4554,7 @@ print(json.dumps(result, default=str))
           stage: 3,
           stageName: "Antigen Design & Optimization",
           tasks: {
+            aqaffinity_epitope_ranking: { type: "CPU_INTENSIVE", reason: "AI-based binding affinity prediction using OpenFold3 for epitope-antibody interactions", cpuCores: 8, memoryGb: 16, gpuMemoryGb: 8, estimatedTimeMinutes: 10, speedup: "3x", tools: ["SandboxAQ AQAffinity", "OpenFold3"] },
             linker_design: { type: "CPU_ONLY", reason: "Rule-based linker sequence design between epitopes", cpuCores: 1, memoryGb: 1, estimatedTimeMinutes: 1, tools: ["Linker Designer", "GGGGS/EAAAK"] },
             construct_assembly: { type: "CPU_ONLY", reason: "Multi-epitope construct assembly with signal peptides", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 1, tools: ["Sequence Builder"] },
             epitope_selection: { type: "CPU_ONLY", reason: "Score-based epitope ranking and selection", cpuCores: 4, memoryGb: 4, estimatedTimeMinutes: 5, tools: ["Epitope Ranker"] }
