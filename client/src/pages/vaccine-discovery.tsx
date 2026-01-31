@@ -549,38 +549,35 @@ export default function VaccineDiscoveryPage() {
                   </div>
                   <div className="border rounded-lg p-3 bg-muted/30">
                     <div className="text-sm font-medium mb-2">Pipeline Stages:</div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="space-y-1 text-xs">
                       <div className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        <span className="w-4 h-4 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-600">1</span>
+                        Input PDB/Sequence Processing
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="w-4 h-4 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-600">2</span>
+                        Epitope Prediction (MHCflurry, DiscoTope)
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="w-4 h-4 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-600">3</span>
                         Conservation Analysis (MAFFT)
                       </div>
                       <div className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />
-                        DSSP Surface Analysis
+                        <span className="w-4 h-4 rounded-full bg-amber-500/20 flex items-center justify-center text-[10px] font-bold text-amber-600">4</span>
+                        <Zap className="h-3 w-3 text-amber-500" />
+                        <span className="font-medium text-amber-600">AQAffinity Epitope Ranking</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />
-                        DiscoTope B-cell Epitopes
+                        <span className="w-4 h-4 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-600">5</span>
+                        Multi-Epitope Construct Assembly
                       </div>
                       <div className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />
-                        NetMHCpan T-cell Epitopes
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />
-                        Linker Design
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                        <span className="w-4 h-4 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-600">6</span>
                         JCat Codon Optimization
                       </div>
                       <div className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />
-                        ViennaRNA Structure
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />
-                        Vaccine Construct Design
+                        <span className="w-4 h-4 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-600">7</span>
+                        mRNA Design (ViennaRNA)
                       </div>
                     </div>
                   </div>

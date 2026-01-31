@@ -3918,6 +3918,14 @@ print(json.dumps(result, default=str))
             tool: "MAFFT",
             status: "implemented"
           },
+          aqaffinity_ranking: {
+            name: "AQAffinity Epitope Ranking",
+            type: "cpu_intensive",
+            description: "Rank epitopes by predicted antibody binding affinity (KD)",
+            tool: "SandboxAQ AQAffinity (OpenFold3)",
+            speedup: "2-3x with GPU",
+            status: "implemented"
+          },
           linker_design: {
             name: "Linker Design for Multi-epitope",
             type: "cpu_only",
