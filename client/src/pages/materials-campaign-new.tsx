@@ -162,6 +162,7 @@ export default function MaterialsCampaignNewPage() {
   const [enableFea, setEnableFea] = useState(false);
   const [feaSimulationType, setFeaSimulationType] = useState("structural");
   const [feaMeshDensity, setFeaMeshDensity] = useState("medium");
+  const [librarySize, setLibrarySize] = useState(10000);
 
   const { data: programs } = useQuery<MaterialsProgram[]>({
     queryKey: ["/api/materials-programs"],
@@ -582,159 +583,195 @@ export default function MaterialsCampaignNewPage() {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Property Prediction (AQAffinity)</h3>
+              <h3 className="text-lg font-semibold mb-2">Property Prediction Configuration</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Configure AI and physics-based prediction methods for material properties
               </p>
             </div>
 
-            <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-200 dark:border-yellow-800">
+            <Card className="bg-muted/50">
               <CardContent className="pt-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-yellow-500/20 rounded-md">
-                    <Zap className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Material Type:</span>
+                    <span className="ml-2 font-medium">{materialTypes.find(m => m.id === materialType)?.label || "Not selected"}</span>
+                    <span className="text-xs text-muted-foreground ml-1">(from Step 3)</span>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold">Core Value: Property Prediction</h4>
-                    <p className="text-sm text-muted-foreground">Predict properties for ALL material variants using AI</p>
+                  <div>
+                    <span className="text-muted-foreground">Variants:</span>
+                    <span className="ml-2 font-medium">{librarySize.toLocaleString()} compositions</span>
+                    <span className="text-xs text-muted-foreground ml-1">(from Step 4)</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-md">
+              <h4 className="font-medium">Select Prediction Methods:</h4>
+              
+              <Card className={`cursor-pointer hover-elevate ${ppAqaffinity ? "ring-2 ring-primary" : ""}`}
+                onClick={() => setPpAqaffinity(!ppAqaffinity)}
+                data-testid="card-aqaffinity"
+              >
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <Checkbox 
+                      checked={ppAqaffinity} 
+                      onCheckedChange={(checked) => setPpAqaffinity(!!checked)}
+                      data-testid="checkbox-aqaffinity"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">AQAffinity (AI-based property prediction)</span>
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          <Cpu className="h-3 w-3 mr-1" />
+                          GPU
+                        </Badge>
+                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground/60">|--</span>
+                          <span>GPU: NVIDIA A100</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground/60">|--</span>
+                          <Clock className="h-3 w-3" />
+                          <span>Estimated time: 6 hours</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className={`cursor-pointer hover-elevate ${ppDft ? "ring-2 ring-primary" : ""}`}
+                onClick={() => setPpDft(!ppDft)}
+                data-testid="card-dft"
+              >
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <Checkbox 
+                      checked={ppDft} 
+                      onCheckedChange={(checked) => setPpDft(!!checked)}
+                      data-testid="checkbox-dft"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">DFT Calculations (physics-based)</span>
+                        <Badge variant="secondary">
+                          <Calculator className="h-3 w-3 mr-1" />
+                          CPU
+                        </Badge>
+                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground/60">|--</span>
+                          <span>CPU: 64 cores</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground/60">|--</span>
+                          <Clock className="h-3 w-3" />
+                          <span>Estimated time: 200 hours</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className={`flex items-center justify-between p-4 border-2 rounded-md ${ppDualPrediction ? "border-primary bg-primary/5" : "border-dashed"}`}>
                 <div className="flex items-center gap-3">
-                  <Switch 
+                  <Checkbox 
                     checked={ppDualPrediction} 
                     onCheckedChange={handleDualPredictionToggle}
-                    data-testid="switch-dual-prediction"
+                    data-testid="checkbox-dual-prediction"
                   />
                   <div>
-                    <p className="font-medium">Dual Prediction (Recommended)</p>
-                    <p className="text-sm text-muted-foreground">Run both AQAffinity and DFT, compare results</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Dual Prediction + Comparison (RECOMMENDED)
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Find consensus predictions with higher experimental validation rate
+                    </p>
                   </div>
                 </div>
-                <Badge variant="default">Best Accuracy</Badge>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Card className={`${ppAqaffinity ? "ring-2 ring-primary" : ""}`}>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Checkbox 
-                          checked={ppAqaffinity} 
-                          onCheckedChange={(checked) => setPpAqaffinity(!!checked)}
-                          data-testid="checkbox-aqaffinity"
-                        />
-                        <span className="font-medium">AQAffinity (AI)</span>
-                      </div>
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                        <Cpu className="h-3 w-3 mr-1" />
-                        GPU
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Structure-free AI prediction using SandboxAQ technology
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>~4 hours for 10K materials</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className={`${ppDft ? "ring-2 ring-primary" : ""}`}>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Checkbox 
-                          checked={ppDft} 
-                          onCheckedChange={(checked) => setPpDft(!!checked)}
-                          data-testid="checkbox-dft"
-                        />
-                        <span className="font-medium">DFT Calculations</span>
-                      </div>
-                      <Badge variant="secondary">
-                        <Calculator className="h-3 w-3 mr-1" />
-                        CPU
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Physics-based density functional theory calculations
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>~48 hours for 10K materials</span>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Property Weights</CardTitle>
+                  <CardTitle className="text-sm">Target Properties:</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Mechanical Properties</span>
-                      <span className="font-medium">{Math.round(wMechanical * 100)}%</span>
-                    </div>
-                    <Slider
-                      value={[wMechanical]}
-                      onValueChange={([v]) => setWMechanical(v)}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      data-testid="slider-mechanical"
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Checkbox 
+                      id="prop-tensile" 
+                      checked={selectedProperties.includes("tensile_strength")}
+                      onCheckedChange={(checked) => {
+                        if (checked) setSelectedProperties([...selectedProperties, "tensile_strength"]);
+                        else setSelectedProperties(selectedProperties.filter(p => p !== "tensile_strength"));
+                      }}
+                      data-testid="checkbox-tensile"
                     />
+                    <Label htmlFor="prop-tensile" className="cursor-pointer">Tensile strength (MPa)</Label>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Electrical Properties</span>
-                      <span className="font-medium">{Math.round(wElectrical * 100)}%</span>
-                    </div>
-                    <Slider
-                      value={[wElectrical]}
-                      onValueChange={([v]) => setWElectrical(v)}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      data-testid="slider-electrical"
+                  <div className="flex items-center gap-3">
+                    <Checkbox 
+                      id="prop-conductivity" 
+                      checked={selectedProperties.includes("conductivity")}
+                      onCheckedChange={(checked) => {
+                        if (checked) setSelectedProperties([...selectedProperties, "conductivity"]);
+                        else setSelectedProperties(selectedProperties.filter(p => p !== "conductivity"));
+                      }}
+                      data-testid="checkbox-conductivity"
                     />
+                    <Label htmlFor="prop-conductivity" className="cursor-pointer">Electrical conductivity (S/m)</Label>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Thermal Properties</span>
-                      <span className="font-medium">{Math.round(wThermal * 100)}%</span>
-                    </div>
-                    <Slider
-                      value={[wThermal]}
-                      onValueChange={([v]) => setWThermal(v)}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      data-testid="slider-thermal"
+                  <div className="flex items-center gap-3">
+                    <Checkbox 
+                      id="prop-thermal" 
+                      checked={selectedProperties.includes("melting_point")}
+                      onCheckedChange={(checked) => {
+                        if (checked) setSelectedProperties([...selectedProperties, "melting_point"]);
+                        else setSelectedProperties(selectedProperties.filter(p => p !== "melting_point"));
+                      }}
+                      data-testid="checkbox-thermal"
                     />
+                    <Label htmlFor="prop-thermal" className="cursor-pointer">Thermal stability (C)</Label>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Chemical Properties</span>
-                      <span className="font-medium">{Math.round(wChemical * 100)}%</span>
-                    </div>
-                    <Slider
-                      value={[wChemical]}
-                      onValueChange={([v]) => setWChemical(v)}
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      data-testid="slider-chemical"
+                  <div className="flex items-center gap-3">
+                    <Checkbox 
+                      id="prop-chemical" 
+                      checked={selectedProperties.includes("stability")}
+                      onCheckedChange={(checked) => {
+                        if (checked) setSelectedProperties([...selectedProperties, "stability"]);
+                        else setSelectedProperties(selectedProperties.filter(p => p !== "stability"));
+                      }}
+                      data-testid="checkbox-chemical"
                     />
+                    <Label htmlFor="prop-chemical" className="cursor-pointer">Chemical resistance (pH range)</Label>
                   </div>
                 </CardContent>
               </Card>
+
+              <div className="flex items-center gap-3 pt-2">
+                <Button 
+                  variant="default" 
+                  className="flex-1"
+                  disabled={!ppAqaffinity && !ppDft}
+                  data-testid="button-run-prediction"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Run Property Prediction
+                </Button>
+                <Button 
+                  variant="outline"
+                  data-testid="button-configure-advanced"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Configure Advanced
+                </Button>
+              </div>
             </div>
           </div>
         );
