@@ -220,14 +220,14 @@ export default function DiseaseDiscovery() {
       const projectRes = await apiRequest("POST", "/api/projects", {
         name: `${disease} Drug Discovery`,
         description: `Automated screening of ChEMBL compounds against ${disease} protein targets`,
-        diseaseArea: getDiseaseAreaLabel(disease),
+        diseaseArea: getDiseaseAreaId(disease),
       });
       const project = await projectRes.json();
       
       const campaignRes = await apiRequest("POST", "/api/campaigns", {
         name: `${disease} SMILES Screening`,
         projectId: project.id,
-        domainType: getDiseaseAreaLabel(disease),
+        domainType: getDiseaseAreaId(disease),
         modality: "small_molecule",
         pipelineConfig: {
           diseaseCondition: disease,
@@ -264,10 +264,23 @@ export default function DiseaseDiscovery() {
     },
   });
 
-  const getDiseaseAreaLabel = (disease: string): string => {
+  const getDiseaseAreaId = (disease: string): string => {
     const area = DISEASE_AREA_MAP[disease];
-    const areaObj = THERAPEUTIC_AREAS.find(a => a.id === area);
-    return areaObj?.label || "Other";
+    if (area && area !== "other") {
+      // Map to valid enum values
+      const areaMap: Record<string, string> = {
+        "cns": "CNS",
+        "oncology": "Oncology",
+        "rare": "Rare",
+        "infectious": "Infectious",
+        "cardiometabolic": "Cardiometabolic",
+        "autoimmune": "Autoimmune",
+        "respiratory": "Respiratory",
+        "other": "Other"
+      };
+      return areaMap[area] || "Other";
+    }
+    return "Other";
   };
 
   const allDiseases = (() => {
