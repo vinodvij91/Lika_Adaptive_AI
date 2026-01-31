@@ -12,6 +12,7 @@ import {
   materialProperties,
   materialsCampaigns,
   materialsOracleScores,
+  processingJobs,
 } from "@shared/schema";
 
 const DEMO_OWNER_ID = "demo-system";
@@ -252,7 +253,7 @@ const DEMO_ASSAYS = [
   { name: "Cell Viability (MTT)", type: "functional" as const, readoutType: "percent_inhibition" as const, units: "%", category: "functional_cellular" as const, direction: "higher_is_better" as const, description: "General cytotoxicity assay in neuronal cells" },
   { name: "Amyloid-beta Binding", type: "binding" as const, readoutType: "Kd" as const, units: "nM", category: "target_engagement" as const, direction: "lower_is_better" as const, description: "Amyloid-beta peptide binding affinity" },
   { name: "PK Mouse Brain Exposure", type: "pk" as const, readoutType: "percent_inhibition" as const, units: "ng/g", category: "advanced_in_vivo" as const, direction: "higher_is_better" as const, description: "Pharmacokinetics - brain tissue concentration at 2h post-dose" },
-  { name: "Morris Water Maze Efficacy", type: "efficacy" as const, readoutType: "percent_inhibition" as const, units: "%", category: "advanced_in_vivo" as const, direction: "higher_is_better" as const, description: "Cognitive improvement in transgenic AD mouse model" },
+  { name: "Morris Water Maze Efficacy", type: "in_vivo" as const, readoutType: "percent_inhibition" as const, units: "%", category: "advanced_in_vivo" as const, direction: "higher_is_better" as const, description: "Cognitive improvement in transgenic AD mouse model" },
 ];
 
 const MATERIAL_TYPES = ["polymer", "crystal", "composite", "catalyst", "coating", "membrane"] as const;
@@ -623,6 +624,211 @@ export async function seedDemoData(): Promise<void> {
     }
     console.log(`Created ${oracleScoreData.length} materials oracle scores`);
 
+    // Seed processing jobs for all three discovery domains
+    const now = new Date();
+    const demoProcessingJobs = await db.insert(processingJobs).values([
+      // Drug Discovery Pipeline
+      {
+        id: "job-drug-discovery-001",
+        type: "full_pipeline",
+        status: "succeeded",
+        inputPayload: {
+          campaignName: "JAK2 Kinase Inhibitors",
+          targetSequence: "MKKYSAGSGLRRSRAQDVRNLL",
+          moleculesCount: 5000,
+          methods: ["aqaffinity", "autodock"],
+          diseaseArea: "oncology",
+        },
+        outputPayload: {
+          stages: {
+            aqaffinity_prediction: {
+              total_screened: 5000,
+              strong_binders: 127,
+              moderate_binders: 345,
+              weak_binders: 892,
+              estimated_time: "4.2 hours",
+            },
+            autodock_docking: {
+              total_docked: 472,
+              top_hits: 23,
+              avg_binding_energy: -8.4,
+              best_binding_energy: -11.2,
+              estimated_time: "18.6 hours",
+            },
+            consensus_analysis: {
+              strong_agreement: 18,
+              good_agreement: 5,
+              mixed: 0,
+            },
+            admet_filtering: {
+              passed: 15,
+              failed: 8,
+              top_candidates: [
+                { id: "MOL_0042", name: "JK-127", bindingAffinity: -10.8, admetScore: 0.92 },
+                { id: "MOL_0156", name: "JK-284", bindingAffinity: -10.2, admetScore: 0.88 },
+                { id: "MOL_0089", name: "JK-512", bindingAffinity: -9.7, admetScore: 0.91 },
+              ],
+            },
+          },
+          summary: {
+            totalMolecules: 5000,
+            topHits: 15,
+            consensusCandidates: 18,
+            estimatedTotalTime: "22.8 hours",
+            gpuUtilization: "94%",
+          },
+        },
+        createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+        completedAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 + 22.8 * 60 * 60 * 1000),
+      },
+      // Vaccine Discovery Pipeline
+      {
+        id: "job-vaccine-discovery-001",
+        type: "vaccine_discovery",
+        status: "succeeded",
+        inputPayload: {
+          sequence: "MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLHSTQDLFLPFFSNVTWFHAIHVSGTNGTKRFDNPVLPFNDGVYFASTEKSNIIRGWIFGTTLDSKTQSLLIVNNATNVVIKVCEFQFCNDPFLGVYYHKNNKSWMESEFRVYSSANNCTFEYVSQPFLMDLEGKQGNFKNLREFVFKNIDGYFKIYSKHTPINLVRDLPQGFSALEPLVDLPIGINITRFQTLLALHRSYLTPGDSSSGWTAGAAAYYVGYLQPRTFLLKYNENGTITDAVDCALDPLSETKCTLKSFTVEKGIYQTSNFRVQPTESIVRFPNITNLCPFGEVFNATRFASVYAWNRKRISNCVADYSVLYNSASFSTFKCYGVSPTKLNDLCFTNVYADSFVIRGDEVRQIAPGQTGKIADYNYKLPDDFTGCVIAWNSNNLDSKVGGNYNYLYRLFRKSNLKPFERDISTEIYQAGSTPCNGVEGFNCYFPLQSYGFQPTNGVGYQPYRVVVLSFELLHAPATVCGPKKSTNLVKNKCVNFNFNGLTGTGVLTESNKKFLPFQQFGRDIADTTDAVRDPQTLEILDITPCSFGGVSVITPGTNTSNQVAVLYQDVNCTEVPVAIHADQLTPTWRVYSTGSNVFQTRAGCLIGAEHVNNSYECDIPIGAGICASYQTQTNSPRRARS",
+          sequenceLength: 1273,
+          vaccineType: "protein_subunit",
+          targetPathogen: "SARS-CoV-2",
+          mhcAlleles: ["HLA-A*02:01", "HLA-A*24:02", "HLA-B*07:02"],
+        },
+        outputPayload: {
+          stages: {
+            structure_prediction: {
+              method: "ESMFold",
+              confidence_score: 0.89,
+              processing_time: "45 minutes",
+            },
+            mhc1_epitopes: {
+              method: "NetMHCpan-4.1",
+              total_peptides_tested: 1264,
+              total_strong_binders: 47,
+              threshold_nm: 50,
+              predictions: {
+                "HLA-A*02:01": [
+                  { peptide: "YLQPRTFLL", position: 269, affinity_nm: 12.4, percentile_rank: 0.15, presentation_score: 0.92 },
+                  { peptide: "FIAGLIAIV", position: 1220, affinity_nm: 18.7, percentile_rank: 0.28, presentation_score: 0.88 },
+                ],
+                "HLA-A*24:02": [
+                  { peptide: "QYIKWPWYI", position: 1208, affinity_nm: 8.2, percentile_rank: 0.08, presentation_score: 0.95 },
+                ],
+                "HLA-B*07:02": [
+                  { peptide: "SPRRARSVA", position: 680, affinity_nm: 22.1, percentile_rank: 0.35, presentation_score: 0.84 },
+                ],
+              },
+            },
+            bcell_epitopes: {
+              method: "DiscoTope-3.0",
+              total_conformational: 12,
+              total_linear: 8,
+              top_epitopes: [
+                { region: "RBD", start: 331, end: 362, score: 0.94 },
+                { region: "NTD", start: 14, end: 26, score: 0.87 },
+              ],
+            },
+            conservation: {
+              method: "MAFFT",
+              alignment_length: 1273,
+              num_sequences: 150,
+              conserved_regions: [[1, 50], [319, 541], [1100, 1200]],
+            },
+            vaccine_design: {
+              num_epitopes: 12,
+              total_length: 285,
+              sequence: "MFVFLVLLPLVSSQCVNLTTRTQL-GPGPG-YLQPRTFLL-GPGPG-FIAGLIAIV-GPGPG-QYIKWPWYI-AAY-KIADYNYKLPDDFTGCVIAW",
+              linker_type: "flexible",
+              predicted_immunogenicity: 0.91,
+            },
+          },
+          summary: {
+            targetPathogen: "SARS-CoV-2",
+            vaccineType: "protein_subunit",
+            strongEpitopes: 47,
+            selectedEpitopes: 12,
+            predictedEfficacy: "91%",
+            processingTime: "3.2 hours",
+          },
+        },
+        createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+        completedAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000 + 3.2 * 60 * 60 * 1000),
+      },
+      // Materials Discovery Pipeline
+      {
+        id: "job-materials-discovery-001",
+        type: "mat_aerospace",
+        status: "succeeded",
+        inputPayload: {
+          campaignName: "High-Strength Polymers",
+          materialType: "polymer",
+          variantsCount: 10000,
+          methods: ["aqaffinity", "dft"],
+          targetProperties: ["tensile_strength", "conductivity", "thermal_stability", "chemical_resistance"],
+          industry: "Aerospace",
+        },
+        outputPayload: {
+          stages: {
+            aqaffinity_prediction: {
+              total_screened: 10000,
+              estimated_time: "6 hours",
+              top_performers: 50,
+              property_predictions: {
+                tensile_strength: { min: 420, max: 850, unit: "MPa" },
+                conductivity: { min: 1.0e4, max: 1.5e5, unit: "S/m" },
+                thermal_stability: { min: 280, max: 380, unit: "C" },
+              },
+            },
+            dft_calculations: {
+              total_calculated: 500,
+              estimated_time: "200 hours",
+              converged: 485,
+              failed: 15,
+              property_validations: {
+                tensile_strength: { correlation_with_aq: 0.89 },
+                conductivity: { correlation_with_aq: 0.82 },
+              },
+            },
+            consensus_analysis: {
+              strong_agreement: 12,
+              good_agreement: 8,
+              mixed: 30,
+              top_materials: [
+                { id: "MAT_0042", formula: "PVDF-HFP", tensile_aq: 850, tensile_dft: 842, agreement: "strong" },
+                { id: "MAT_0018", formula: "LiCoO2", tensile_aq: 820, tensile_dft: 815, agreement: "strong" },
+                { id: "MAT_0156", formula: "TiO2-Al2O3", tensile_aq: 795, tensile_dft: 780, agreement: "good" },
+                { id: "MAT_0089", formula: "Si0.8Ge0.2", tensile_aq: 780, tensile_dft: 650, agreement: "mixed" },
+              ],
+            },
+            manufacturability: {
+              assessed: 50,
+              manufacturable: 35,
+              cost_effective: 22,
+              synthesis_routes_identified: 28,
+            },
+            fea_simulations: {
+              materials_simulated: 20,
+              stress_strain_validated: 18,
+              fatigue_tested: 12,
+              passed_all_tests: 10,
+            },
+          },
+          summary: {
+            totalVariants: 10000,
+            topCandidates: 50,
+            consensusMaterials: 12,
+            flaggedForReview: 30,
+            manufacturable: 35,
+            validated: 10,
+            estimatedTotalTime: "206 hours",
+          },
+        },
+        createdAt: new Date(now.getTime() - 5 * 60 * 60 * 1000),
+        completedAt: now,
+      },
+    ]).returning();
+
+    console.log(`Created ${demoProcessingJobs.length} demo processing jobs (pipeline reports)`);
+
     console.log("Demo data seeding completed successfully!");
     console.log("Summary:");
     console.log(`- ${demoProjects.length} projects`);
@@ -636,6 +842,7 @@ export async function seedDemoData(): Promise<void> {
     console.log(`- ${propertyData.length} material properties`);
     console.log(`- ${materialsCampaignsData.length} materials campaigns`);
     console.log(`- ${oracleScoreData.length} materials oracle scores`);
+    console.log(`- ${demoProcessingJobs.length} processing jobs (pipeline reports)`);
 
   } catch (error) {
     console.error("Error seeding demo data:", error);
