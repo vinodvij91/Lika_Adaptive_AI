@@ -5,6 +5,7 @@ description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
     "ase>=3.27.0",
+    "biopython>=1.86",
     "dask>=2026.1.1",
     "distributed>=2026.1.1",
     "mp-api>=0.45.15",
