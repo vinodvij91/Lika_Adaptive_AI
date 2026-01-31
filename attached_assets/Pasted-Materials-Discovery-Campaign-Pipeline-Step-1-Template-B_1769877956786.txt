@@ -1,0 +1,64 @@
+Materials Discovery Campaign Pipeline:
+
+Step 1: Template (Battery, Polymer, Catalyst, etc.)
+Step 2: Basic Info (project name, industry)
+Step 3: Material Targets (define material requirements)
+├─ Material type: Polymer, Metal Alloy, Composite, etc.
+├─ Structure: Upload crystal structure (CIF) or molecular structure
+└─ Target properties: Tensile strength, conductivity, etc.
+
+Step 4: Material Library/Generator
+├─ Option A: Select from existing materials database
+├─ Option B: Generate variants (substitutions, doping)
+└─ Option C: Upload custom material compositions
+
+Step 5: Multi-Scale Representation ← NEW: Generate representations
+├─ Atomic-level (DFT)
+├─ Molecular-level (molecular dynamics)
+└─ Macro-level (FEA mesh)
+
+Step 6: 🧬 Property Prediction (AQAffinity) ← CORE VALUE
+├─ Predict properties for ALL material variants
+├─ Methods:
+│   ☑ AQAffinity (AI-based, GPU, fast)
+│   ☑ DFT calculations (physics-based, CPU, slow)
+│   ☑ Dual prediction + comparison (recommended)
+├─ Properties predicted:
+│   • Mechanical (tensile strength, hardness, elasticity)
+│   • Electrical (conductivity, dielectric constant)
+│   • Thermal (melting point, thermal conductivity)
+│   • Chemical (stability, corrosion resistance)
+└─ Output: Ranked materials by predicted properties
+
+Step 7: Structure-Property Analysis
+├─ Analyze WHY certain materials perform better
+├─ Identify key structural features
+└─ Suggest design rules
+
+Step 8: Manufacturability Assessment
+├─ Can this be manufactured?
+├─ Cost estimation
+└─ Scalability analysis
+
+Step 9: FEA Simulations (Optional)
+├─ Run detailed simulations on top candidates
+├─ Validate mechanical properties under load
+└─ Optimize geometry
+
+Step 10: Review & Launch
+└─ Execute full workflow
+
+EXECUTION - Real-time progress:
+├─ Material Variant Generation
+├─ Multi-Scale Representation
+├─ Property Prediction (AQAffinity): ████████░░ 80%
+├─ Property Prediction (DFT):        ███░░░░░░░ 30%
+├─ Structure-Property Analysis
+├─ Manufacturability Assessment
+└─ COMPLETE → "View Results" → Materials Triage Page
+
+Materials Triage Page:
+├─ Top 20 materials ranked by properties
+├─ Comparison: AQAffinity vs DFT predictions
+├─ Export for lab synthesis/testing
+└─ Upload experimental results (adaptive AI loop)
