@@ -1,5 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import crypto from "crypto";
 import multer from "multer";
 import * as path from "path";
 import * as fs from "fs";
@@ -4682,7 +4683,7 @@ print(json.dumps(result, default=str))
 
       // Simulate AQAffinity prediction (in production, calls Python module)
       const hashVal = parseInt(
-        require("crypto")
+        crypto
           .createHash("sha256")
           .update(`${proteinSequence.slice(0, 50)}:${ligandSmiles}`)
           .digest("hex")
@@ -4738,7 +4739,6 @@ print(json.dumps(result, default=str))
       }
 
       const { proteinSequence, ligandSmilesList, pipeline, topN } = parsed.data;
-      const crypto = require("crypto");
 
       const predictions = ligandSmilesList.map((smiles, index) => {
         const hashVal = parseInt(
@@ -4805,7 +4805,6 @@ print(json.dumps(result, default=str))
       }
 
       const { proteinSequence, compoundLibrary, affinityThresholdNm, pipeline } = parsed.data;
-      const crypto = require("crypto");
 
       const results = compoundLibrary.map(compound => {
         const hashVal = parseInt(
