@@ -84,6 +84,9 @@ interface HitCandidate {
   overallUncertainty: number | null;
   lastAssayOutcome: string | null;
   bestAssayValue: number | null;
+  aqaffinityScore: number | null;
+  autodockScore: number | null;
+  agreementLevel: "strong" | "good" | "mixed" | null;
 }
 
 interface HitTriageFilters {
@@ -95,6 +98,7 @@ interface HitTriageFilters {
   maxUncertainty: number;
   ipSafeOnly: boolean;
   assayFilter: "all" | "tested" | "untested";
+  agreementFilter: "all" | "strong" | "good" | "mixed";
 }
 
 interface Campaign {
@@ -119,6 +123,7 @@ const defaultFilters: HitTriageFilters = {
   maxUncertainty: 100,
   ipSafeOnly: false,
   assayFilter: "all",
+  agreementFilter: "all",
 };
 
 function ScoreBar({ score, max = 100, color = "primary" }: { score: number | null; max?: number; color?: string }) {
@@ -195,6 +200,67 @@ function AssayStatusBadge({ outcome }: { outcome: string | null }) {
   );
 }
 
+function AgreementBadge({ level }: { level: "strong" | "good" | "mixed" | null }) {
+  if (!level) return <span className="text-muted-foreground text-xs">-</span>;
+  
+  const config = {
+    strong: { 
+      color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200", 
+      label: "STRONG",
+      icon: CheckCircle,
+    },
+    good: { 
+      color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", 
+      label: "GOOD",
+      icon: CheckCircle,
+    },
+    mixed: { 
+      color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200", 
+      label: "MIXED",
+      icon: AlertTriangle,
+    },
+  };
+  
+  const cfg = config[level];
+  const Icon = cfg.icon;
+  
+  return (
+    <Badge variant="secondary" className={`text-xs ${cfg.color}`}>
+      <Icon className="h-3 w-3 mr-1" />
+      {cfg.label}
+    </Badge>
+  );
+}
+
+function AffinityScore({ score, unit = "nM" }: { score: number | null; unit?: string }) {
+  if (score === null) return <span className="text-muted-foreground text-xs">N/A</span>;
+  
+  const stars = score < 10 ? 3 : score < 50 ? 2 : 1;
+  const starDisplay = "★".repeat(stars) + "☆".repeat(3 - stars);
+  
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs tabular-nums font-medium">{score.toFixed(1)} {unit}</span>
+      <span className="text-xs text-amber-500">{starDisplay}</span>
+    </div>
+  );
+}
+
+function DockingScore({ score }: { score: number | null }) {
+  if (score === null) return <span className="text-muted-foreground text-xs">N/A</span>;
+  
+  const absScore = Math.abs(score);
+  const stars = absScore > 8 ? 3 : absScore > 6 ? 2 : 1;
+  const starDisplay = "★".repeat(stars) + "☆".repeat(3 - stars);
+  
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs tabular-nums font-medium">{score.toFixed(1)}</span>
+      <span className="text-xs text-amber-500">{starDisplay}</span>
+    </div>
+  );
+}
+
 export default function HitTriagePage() {
   const params = useParams<{ id: string }>();
   const campaignId = params.id;
@@ -225,6 +291,7 @@ export default function HitTriagePage() {
     if (debouncedFilters.ipSafeOnly) params.set("ip_safe_only", "true");
     if (debouncedFilters.assayFilter === "tested") params.set("has_assay_data", "true");
     if (debouncedFilters.assayFilter === "untested") params.set("has_assay_data", "false");
+    if (debouncedFilters.agreementFilter !== "all") params.set("agreement_level", debouncedFilters.agreementFilter);
     return params.toString();
   }, [debouncedFilters]);
   
@@ -311,12 +378,14 @@ export default function HitTriagePage() {
   }, []);
   
   const summary = useMemo(() => {
-    if (!hits) return { total: 0, filtered: 0, tested: 0, active: 0 };
+    if (!hits) return { total: 0, filtered: 0, tested: 0, active: 0, consensusHits: 0, flaggedForReview: 0 };
     return {
       total: hits.length,
       filtered: hits.length,
       tested: hits.filter(h => h.lastAssayOutcome).length,
       active: hits.filter(h => h.lastAssayOutcome === "active").length,
+      consensusHits: hits.filter(h => h.agreementLevel === "strong" || h.agreementLevel === "good").length,
+      flaggedForReview: hits.filter(h => h.agreementLevel === "mixed").length,
     };
   }, [hits]);
   
@@ -459,6 +528,24 @@ export default function HitTriagePage() {
               </Select>
             </div>
             
+            <div className="space-y-2">
+              <Label className="text-xs">Method Agreement</Label>
+              <Select
+                value={filters.agreementFilter}
+                onValueChange={(v: "all" | "strong" | "good" | "mixed") => setFilters(f => ({ ...f, agreementFilter: v }))}
+              >
+                <SelectTrigger data-testid="select-agreement-filter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All compounds</SelectItem>
+                  <SelectItem value="strong">Strong agreement</SelectItem>
+                  <SelectItem value="good">Good agreement</SelectItem>
+                  <SelectItem value="mixed">Mixed (review)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
             <Button
               variant="outline"
               size="sm"
@@ -489,7 +576,7 @@ export default function HitTriagePage() {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
@@ -498,7 +585,35 @@ export default function HitTriagePage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold tabular-nums" data-testid="stat-total">{summary.total}</p>
-                    <p className="text-xs text-muted-foreground">Hit Candidates</p>
+                    <p className="text-xs text-muted-foreground">Top Hits</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500/10 rounded-md">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold tabular-nums" data-testid="stat-consensus">{summary.consensusHits}</p>
+                    <p className="text-xs text-muted-foreground">Consensus Hits</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-500/10 rounded-md">
+                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold tabular-nums" data-testid="stat-flagged">{summary.flaggedForReview}</p>
+                    <p className="text-xs text-muted-foreground">Flagged for Review</p>
                   </div>
                 </div>
               </CardContent>
@@ -521,8 +636,8 @@ export default function HitTriagePage() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-500/10 rounded-md">
-                    <Beaker className="h-5 w-5 text-amber-500" />
+                  <div className="p-2 bg-purple-500/10 rounded-md">
+                    <Beaker className="h-5 w-5 text-purple-500" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold tabular-nums" data-testid="stat-tested">{summary.tested}</p>
@@ -535,8 +650,8 @@ export default function HitTriagePage() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-500/10 rounded-md">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  <div className="p-2 bg-emerald-500/10 rounded-md">
+                    <Activity className="h-5 w-5 text-emerald-500" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold tabular-nums" data-testid="stat-active">{summary.active}</p>
@@ -556,7 +671,7 @@ export default function HitTriagePage() {
               data-testid="button-send-to-assay"
             >
               <Beaker className="h-4 w-4 mr-2" />
-              Send to Assay ({selectedHits.size})
+              Send to Lab ({selectedHits.size})
             </Button>
             <Button
               variant="outline"
@@ -567,12 +682,71 @@ export default function HitTriagePage() {
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const top20 = hits?.slice(0, 20) || [];
+                if (top20.length > 0) {
+                  const headers = ["Rank", "Compound", "SMILES", "AQAffinity (nM)", "AutoDock", "Agreement", "ADMET", "Synthesis"];
+                  const rows = top20.map((h, i) => [
+                    i + 1,
+                    h.moleculeName || generateMoleculeName(h.smiles, String(h.moleculeId)),
+                    h.smiles || "",
+                    h.aqaffinityScore ?? "",
+                    h.autodockScore ?? "",
+                    h.agreementLevel || "",
+                    h.admetScore ?? "",
+                    h.synthesisScore ?? "",
+                  ]);
+                  const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+                  const blob = new Blob([csv], { type: "text/csv" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `top20-synthesis-${campaignId}-${Date.now()}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }
+              }}
+              data-testid="button-download-top20"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download Top 20 for Synthesis
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/campaigns/new")}
+              data-testid="button-new-campaign"
+            >
+              Start New Campaign
+            </Button>
             {selectedHits.size > 0 && (
               <span className="text-sm text-muted-foreground">
                 {selectedHits.size} selected
               </span>
             )}
           </div>
+          
+          <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-200 dark:border-purple-800">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500/20 rounded-md">
+                    <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Adaptive AI</p>
+                    <p className="text-xs text-muted-foreground">Upload lab validation results to improve predictions</p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" data-testid="button-upload-assay">
+                  Upload Assay Results
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         
         <ScrollArea className="flex-1">
@@ -601,19 +775,19 @@ export default function HitTriagePage() {
                       data-testid="checkbox-select-all"
                     />
                   </TableHead>
-                  <TableHead>Molecule</TableHead>
-                  <TableHead>SMILES</TableHead>
-                  <TableHead>Oracle</TableHead>
-                  <TableHead>Docking</TableHead>
+                  <TableHead>Rank</TableHead>
+                  <TableHead>Compound</TableHead>
+                  <TableHead>AQAffinity</TableHead>
+                  <TableHead>AutoDock</TableHead>
+                  <TableHead>Agreement</TableHead>
                   <TableHead>ADMET</TableHead>
                   <TableHead>Synthesis</TableHead>
-                  <TableHead>Translational</TableHead>
                   <TableHead className="w-10">Conf.</TableHead>
                   <TableHead>Assay Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {hits.map((hit) => (
+                {hits.map((hit, index) => (
                   <TableRow 
                     key={hit.moleculeId} 
                     className={selectedHits.has(hit.moleculeId) ? "bg-muted/50" : ""}
@@ -625,6 +799,9 @@ export default function HitTriagePage() {
                         onCheckedChange={() => toggleSelectHit(hit.moleculeId)}
                         data-testid={`checkbox-hit-${hit.moleculeId}`}
                       />
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-bold text-lg tabular-nums">{index + 1}</span>
                     </TableCell>
                     <TableCell>
                       <div>
@@ -640,24 +817,19 @@ export default function HitTriagePage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <code className="text-xs font-mono bg-muted px-1 py-0.5 rounded max-w-[120px] truncate block">
-                        {hit.smiles ? (hit.smiles.length > 25 ? hit.smiles.slice(0, 25) + "..." : hit.smiles) : "-"}
-                      </code>
+                      <AffinityScore score={hit.aqaffinityScore} unit="nM" />
                     </TableCell>
                     <TableCell>
-                      <ScoreBar score={hit.oracleScore} color="primary" />
+                      <DockingScore score={hit.autodockScore} />
                     </TableCell>
                     <TableCell>
-                      <ScoreBar score={hit.dockingScore} />
+                      <AgreementBadge level={hit.agreementLevel} />
                     </TableCell>
                     <TableCell>
                       <ScoreBar score={hit.admetScore} color="success" />
                     </TableCell>
                     <TableCell>
                       <ScoreBar score={hit.synthesisScore} color="warning" />
-                    </TableCell>
-                    <TableCell>
-                      <ScoreBar score={hit.translationalScore} />
                     </TableCell>
                     <TableCell>
                       <UncertaintyIndicator uncertainty={hit.overallUncertainty} />
