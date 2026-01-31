@@ -9,7 +9,7 @@ export const diseaseAreaEnum = pgEnum("disease_area", ["CNS", "Oncology", "Rare"
 export const moleculeSourceEnum = pgEnum("molecule_source", ["generated", "uploaded", "screened"]);
 export const structureSourceEnum = pgEnum("structure_source", ["uploaded", "bionemo_predicted", "other"]);
 export const campaignStatusEnum = pgEnum("campaign_status", ["pending", "running", "completed", "failed"]);
-export const jobTypeEnum = pgEnum("job_type", ["generation", "filtering", "docking", "scoring", "quantum_optimization", "quantum_scoring", "other"]);
+export const jobTypeEnum = pgEnum("job_type", ["generation", "filtering", "docking", "scoring", "quantum_optimization", "quantum_scoring", "vs_aqaffinity", "vs_autodock", "vs_consensus", "other"]);
 export const jobStatusEnum = pgEnum("job_status", ["pending", "running", "completed", "failed"]);
 export const providerTypeEnum = pgEnum("provider_type", ["bionemo", "ml", "docking", "quantum", "ip", "literature", "smiles_library", "agent", "materials_library", "simulation", "oracle", "selection"]);
 export const outcomeEnum = pgEnum("outcome_label", ["promising", "dropped", "hit", "unknown"]);
@@ -243,6 +243,7 @@ export const jobs = pgTable("jobs", {
   campaignId: varchar("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
   type: jobTypeEnum("type").notNull(),
   status: jobStatusEnum("status").default("pending"),
+  progress: integer("progress").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   startedAt: timestamp("started_at"),
   finishedAt: timestamp("finished_at"),
@@ -1305,6 +1306,24 @@ export interface SeedSource {
   };
 }
 
+export interface VirtualScreeningConfig {
+  methods: {
+    aqaffinity: boolean;  // GPU-accelerated, structure-free
+    autodock: boolean;    // CPU-based, structure-required
+  };
+  dualScreeningEnabled: boolean;  // Run both and compare
+  scoringWeights: {
+    bindingAffinity: number;    // 40% default
+    admetProperties: number;    // 30% default
+    selectivity: number;        // 20% default
+    syntheticAccessibility: number; // 10% default
+  };
+  estimatedTime?: {
+    aqaffinity: string;   // e.g., "4 hours"
+    autodock: string;     // e.g., "48 hours"
+  };
+}
+
 export interface PipelineConfig {
   generator: "bionemo_molmim" | "upload_library" | "curated_library";
   generatorParams?: {
@@ -1337,6 +1356,7 @@ export interface PipelineConfig {
   diseaseArea?: DiseaseArea;
   templateId?: string;
   templateTargets?: { name: string; role: TargetRole | null; category: string | null }[];
+  virtualScreening?: VirtualScreeningConfig;
 }
 
 export interface MaterialsPipelineStep {

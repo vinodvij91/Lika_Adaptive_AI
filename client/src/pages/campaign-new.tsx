@@ -34,6 +34,12 @@ import {
   Activity,
   Dna,
   Heart,
+  Zap,
+  Cpu,
+  Layers,
+  Gauge,
+  Eye,
+  Clock,
 } from "lucide-react";
 import type { Project, Target as TargetType, DiseaseArea, PipelineConfig, CuratedLibrary, PipelineTemplate, PipelineTemplateTarget } from "@shared/schema";
 
@@ -97,6 +103,15 @@ export default function CampaignNewPage() {
   const [enableQuantum, setEnableQuantum] = useState(false);
   const [quantumObjective, setQuantumObjective] = useState("maximize_oracle_score");
   const [quantumMaxMolecules, setQuantumMaxMolecules] = useState(200);
+
+  // Virtual Screening Configuration (Step 6)
+  const [vsAqaffinity, setVsAqaffinity] = useState(true);
+  const [vsAutodock, setVsAutodock] = useState(false);
+  const [vsDualScreening, setVsDualScreening] = useState(false);
+  const [vsBindingAffinity, setVsBindingAffinity] = useState(0.4);
+  const [vsAdmetProperties, setVsAdmetProperties] = useState(0.3);
+  const [vsSelectivity, setVsSelectivity] = useState(0.2);
+  const [vsSyntheticAccessibility, setVsSyntheticAccessibility] = useState(0.1);
 
   const { data: projects } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -182,9 +197,11 @@ export default function CampaignNewPage() {
     { id: 0, title: "Template", icon: FileStack, completed: true },
     { id: 1, title: "Basic Info", icon: Beaker, completed: !!name && !!projectId },
     { id: 2, title: "Targets", icon: Target, completed: selectedTargets.length > 0 || templateTargets.length > 0 },
-    { id: 3, title: "Generator", icon: Sparkles, completed: true },
+    { id: 3, title: "Compounds", icon: Sparkles, completed: true },
     { id: 4, title: "Filtering", icon: FlaskConical, completed: true },
-    { id: 5, title: "Scoring", icon: Target, completed: true },
+    { id: 5, title: "Scoring", icon: Gauge, completed: true },
+    { id: 6, title: "Virtual Screening", icon: Zap, completed: vsAqaffinity || vsAutodock },
+    { id: 7, title: "Review & Launch", icon: Eye, completed: false },
   ];
 
   const handleSubmit = () => {
@@ -213,6 +230,23 @@ export default function CampaignNewPage() {
         role: t.role,
         category: t.category,
       })) : undefined,
+      virtualScreening: {
+        methods: {
+          aqaffinity: vsAqaffinity,
+          autodock: vsAutodock,
+        },
+        dualScreeningEnabled: vsDualScreening,
+        scoringWeights: {
+          bindingAffinity: vsBindingAffinity,
+          admetProperties: vsAdmetProperties,
+          selectivity: vsSelectivity,
+          syntheticAccessibility: vsSyntheticAccessibility,
+        },
+        estimatedTime: {
+          aqaffinity: "4 hours",
+          autodock: "48 hours",
+        },
+      },
     };
 
     createMutation.mutate({
@@ -228,8 +262,21 @@ export default function CampaignNewPage() {
       case 0: return true;
       case 1: return !!name && !!projectId;
       case 2: return selectedTargets.length > 0 || templateTargets.length > 0;
+      case 6: return vsAqaffinity || vsAutodock;
       default: return true;
     }
+  };
+
+  const handleDualScreeningToggle = (enabled: boolean) => {
+    setVsDualScreening(enabled);
+    if (enabled) {
+      setVsAqaffinity(true);
+      setVsAutodock(true);
+    }
+  };
+
+  const getTotalVsWeight = () => {
+    return vsBindingAffinity + vsAdmetProperties + vsSelectivity + vsSyntheticAccessibility;
   };
 
   const toggleTarget = (targetId: string) => {
@@ -833,6 +880,300 @@ export default function CampaignNewPage() {
                           </p>
                         </div>
                       )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {currentStep === 6 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-primary" />
+                      Virtual Screening & Docking
+                    </CardTitle>
+                    <CardDescription>
+                      Configure screening methods and scoring weights for hit identification
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <Label className="text-base font-semibold mb-4 block">Select Screening Methods</Label>
+                      <div className="space-y-3">
+                        <div
+                          onClick={() => !vsDualScreening && setVsAqaffinity(!vsAqaffinity)}
+                          className={`flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                            vsAqaffinity
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover-elevate"
+                          } ${vsDualScreening ? "opacity-80" : ""}`}
+                          data-testid="vs-option-aqaffinity"
+                        >
+                          <Checkbox
+                            checked={vsAqaffinity}
+                            onCheckedChange={(checked) => !vsDualScreening && setVsAqaffinity(checked === true)}
+                            disabled={vsDualScreening}
+                            data-testid="checkbox-vs-aqaffinity"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">AQAffinity</h3>
+                              <Badge variant="secondary" className="text-xs">GPU</Badge>
+                              <Badge className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Structure-free</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              SandboxAQ's AI model for fast binding affinity prediction. No protein structure required.
+                            </p>
+                            <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              <span>Estimated: 4 hours</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => !vsDualScreening && setVsAutodock(!vsAutodock)}
+                          className={`flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                            vsAutodock
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover-elevate"
+                          } ${vsDualScreening ? "opacity-80" : ""}`}
+                          data-testid="vs-option-autodock"
+                        >
+                          <Checkbox
+                            checked={vsAutodock}
+                            onCheckedChange={(checked) => !vsDualScreening && setVsAutodock(checked === true)}
+                            disabled={vsDualScreening}
+                            data-testid="checkbox-vs-autodock"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">AutoDock Vina</h3>
+                              <Badge variant="secondary" className="text-xs">CPU</Badge>
+                              <Badge variant="outline" className="text-xs">Structure-based</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Physics-based molecular docking. Requires protein structure (PDB).
+                            </p>
+                            <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              <span>Estimated: 48 hours</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => handleDualScreeningToggle(!vsDualScreening)}
+                          className={`flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                            vsDualScreening
+                              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
+                              : "border-border hover-elevate"
+                          }`}
+                          data-testid="vs-option-dual"
+                        >
+                          <Checkbox
+                            checked={vsDualScreening}
+                            onCheckedChange={(checked) => handleDualScreeningToggle(checked === true)}
+                            data-testid="checkbox-vs-dual"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">Dual Screening + Comparison</h3>
+                              <Badge className="text-xs bg-emerald-600 text-white">RECOMMENDED</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Run both methods and compare results. Consensus scoring improves hit quality.
+                            </p>
+                            <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                              <Layers className="h-3 w-3" />
+                              <span>Parallel execution with consensus analysis</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t">
+                      <Label className="text-base font-semibold mb-4 block">Scoring Weights</Label>
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex justify-between mb-2">
+                            <Label className="flex items-center gap-2">
+                              <Target className="h-4 w-4 text-primary" />
+                              Binding Affinity
+                            </Label>
+                            <span className="text-sm font-mono">{(vsBindingAffinity * 100).toFixed(0)}%</span>
+                          </div>
+                          <Slider
+                            value={[vsBindingAffinity]}
+                            onValueChange={([v]) => setVsBindingAffinity(v)}
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            data-testid="slider-vs-binding"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex justify-between mb-2">
+                            <Label className="flex items-center gap-2">
+                              <FlaskConical className="h-4 w-4 text-chart-2" />
+                              ADMET Properties
+                            </Label>
+                            <span className="text-sm font-mono">{(vsAdmetProperties * 100).toFixed(0)}%</span>
+                          </div>
+                          <Slider
+                            value={[vsAdmetProperties]}
+                            onValueChange={([v]) => setVsAdmetProperties(v)}
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            data-testid="slider-vs-admet"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex justify-between mb-2">
+                            <Label className="flex items-center gap-2">
+                              <Layers className="h-4 w-4 text-chart-3" />
+                              Selectivity
+                            </Label>
+                            <span className="text-sm font-mono">{(vsSelectivity * 100).toFixed(0)}%</span>
+                          </div>
+                          <Slider
+                            value={[vsSelectivity]}
+                            onValueChange={([v]) => setVsSelectivity(v)}
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            data-testid="slider-vs-selectivity"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex justify-between mb-2">
+                            <Label className="flex items-center gap-2">
+                              <Beaker className="h-4 w-4 text-chart-4" />
+                              Synthetic Accessibility
+                            </Label>
+                            <span className="text-sm font-mono">{(vsSyntheticAccessibility * 100).toFixed(0)}%</span>
+                          </div>
+                          <Slider
+                            value={[vsSyntheticAccessibility]}
+                            onValueChange={([v]) => setVsSyntheticAccessibility(v)}
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            data-testid="slider-vs-synthetic"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-4 p-3 bg-muted/50 rounded-md">
+                        <p className="text-sm text-muted-foreground">
+                          Total: <span className="font-mono font-medium">{(getTotalVsWeight() * 100).toFixed(0)}%</span>
+                          {Math.abs(getTotalVsWeight() - 1) > 0.01 && (
+                            <span className="text-amber-600 dark:text-amber-400 ml-2">
+                              (Weights should sum to 100%)
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {currentStep === 7 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Eye className="h-5 w-5 text-primary" />
+                      Review & Launch
+                    </CardTitle>
+                    <CardDescription>
+                      Review your campaign configuration before launching
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 rounded-lg bg-muted/50">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Campaign</h4>
+                        <p className="font-semibold">{name || "Untitled"}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{domainType}</p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-muted/50">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Targets</h4>
+                        <p className="font-semibold">
+                          {templateTargets.length > 0 
+                            ? `${templateTargets.length} template targets`
+                            : `${selectedTargets.length} selected`}
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-muted/50">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Compound Source</h4>
+                        <p className="font-semibold">
+                          {generator === "bionemo_molmim" ? "BioNeMo MolMIM" : 
+                           generator === "curated_library" ? "Curated Library" : "Upload Library"}
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-muted/50">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Filters</h4>
+                        <p className="font-semibold">{selectedFilters.length} filters applied</p>
+                      </div>
+                    </div>
+
+                    <div className="border rounded-lg p-4">
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-primary" />
+                        Virtual Screening Configuration
+                      </h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between py-2 border-b">
+                          <span className="text-sm">Methods</span>
+                          <div className="flex gap-2">
+                            {vsAqaffinity && (
+                              <Badge variant="secondary" className="text-xs">AQAffinity (GPU)</Badge>
+                            )}
+                            {vsAutodock && (
+                              <Badge variant="secondary" className="text-xs">AutoDock (CPU)</Badge>
+                            )}
+                            {vsDualScreening && (
+                              <Badge className="text-xs bg-emerald-600 text-white">Dual Screening</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b">
+                          <span className="text-sm">Estimated Time</span>
+                          <span className="text-sm font-medium">
+                            {vsDualScreening ? "~48 hours (parallel)" : 
+                             vsAutodock ? "~48 hours" : "~4 hours"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between py-2">
+                          <span className="text-sm">Scoring Weights</span>
+                          <span className="text-sm font-mono">
+                            {(vsBindingAffinity * 100).toFixed(0)}% / {(vsAdmetProperties * 100).toFixed(0)}% / {(vsSelectivity * 100).toFixed(0)}% / {(vsSyntheticAccessibility * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {enableQuantum && (
+                      <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
+                        <h4 className="font-medium mb-2 flex items-center gap-2">
+                          <Cpu className="h-4 w-4 text-purple-600" />
+                          Quantum Optimization Enabled
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          Objective: {quantumObjective.replace(/_/g, " ")} | Max molecules: {quantumMaxMolecules}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                      <h4 className="font-medium text-emerald-800 dark:text-emerald-300 mb-2">Ready to Launch</h4>
+                      <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                        Your campaign is configured and ready. Click "Create & Start" to begin virtual screening.
+                        Results will be available in Hit Triage once screening is complete.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

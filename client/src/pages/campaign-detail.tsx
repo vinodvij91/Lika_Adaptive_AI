@@ -33,11 +33,16 @@ import {
   Beaker,
   Atom,
   Activity,
+  Zap,
+  Cpu,
+  Layers,
+  GitCompare,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { SarVisualization } from "@/components/sar-visualization";
 import { MultiTargetSar } from "@/components/multi-target-sar";
 import { formatDistanceToNow } from "date-fns";
-import type { Campaign, Job, MoleculeScore, PipelineConfig } from "@shared/schema";
+import type { Campaign, Job, MoleculeScore, PipelineConfig, VirtualScreeningConfig } from "@shared/schema";
 
 interface CampaignWithDetails extends Campaign {
   jobs?: Job[];
@@ -53,6 +58,9 @@ const jobTypeLabels: Record<string, string> = {
   quantum_scoring: "Quantum Scoring",
   assay_validation: "Assay Validation",
   sar_feedback: "SAR Feedback",
+  vs_aqaffinity: "AQAffinity (GPU)",
+  vs_autodock: "AutoDock Vina (CPU)",
+  vs_consensus: "Consensus Analysis",
 };
 
 const jobTypeIcons: Record<string, typeof Sparkles> = {
@@ -62,6 +70,9 @@ const jobTypeIcons: Record<string, typeof Sparkles> = {
   scoring: FlaskConical,
   quantum_optimization: Atom,
   quantum_scoring: Atom,
+  vs_aqaffinity: Zap,
+  vs_autodock: Cpu,
+  vs_consensus: GitCompare,
 };
 
 export default function CampaignDetailPage() {
@@ -268,6 +279,138 @@ export default function CampaignDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {pipelineConfig?.virtualScreening && (campaign.status === "running" || campaign.status === "completed") && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-primary" />
+                  Virtual Screening Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {pipelineConfig.virtualScreening.methods.aqaffinity && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-amber-500" />
+                        <span className="text-sm font-medium">AQAffinity (GPU)</span>
+                        <Badge variant="secondary" className="text-xs">Structure-free</Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const job = campaign.jobs?.find((j) => (j.type as string) === "vs_aqaffinity");
+                          const progress = (job as any)?.progress || (job?.status === "completed" ? 100 : job?.status === "running" ? 45 : 0);
+                          return (
+                            <>
+                              {job?.status === "running" && (
+                                <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                              )}
+                              {job?.status === "completed" && (
+                                <CheckCircle className="h-3 w-3 text-emerald-500" />
+                              )}
+                              <span className="text-sm font-mono">{progress}%</span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    <Progress 
+                      value={(() => {
+                        const job = campaign.jobs?.find((j) => (j.type as string) === "vs_aqaffinity");
+                        return (job as any)?.progress || (job?.status === "completed" ? 100 : job?.status === "running" ? 45 : 0);
+                      })()} 
+                      className="h-2"
+                    />
+                  </div>
+                )}
+
+                {pipelineConfig.virtualScreening.methods.autodock && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Cpu className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm font-medium">AutoDock Vina (CPU)</span>
+                        <Badge variant="outline" className="text-xs">Structure-based</Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const job = campaign.jobs?.find((j) => (j.type as string) === "vs_autodock");
+                          const progress = (job as any)?.progress || (job?.status === "completed" ? 100 : job?.status === "running" ? 28 : 0);
+                          return (
+                            <>
+                              {job?.status === "running" && (
+                                <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                              )}
+                              {job?.status === "completed" && (
+                                <CheckCircle className="h-3 w-3 text-emerald-500" />
+                              )}
+                              <span className="text-sm font-mono">{progress}%</span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    <Progress 
+                      value={(() => {
+                        const job = campaign.jobs?.find((j) => (j.type as string) === "vs_autodock");
+                        return (job as any)?.progress || (job?.status === "completed" ? 100 : job?.status === "running" ? 28 : 0);
+                      })()} 
+                      className="h-2"
+                    />
+                  </div>
+                )}
+
+                {pipelineConfig.virtualScreening.dualScreeningEnabled && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <GitCompare className="h-4 w-4 text-purple-500" />
+                        <span className="text-sm font-medium">Consensus Analysis</span>
+                        <Badge className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">Dual Screening</Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const aqJob = campaign.jobs?.find((j) => (j.type as string) === "vs_aqaffinity");
+                          const adJob = campaign.jobs?.find((j) => (j.type as string) === "vs_autodock");
+                          const bothComplete = aqJob?.status === "completed" && adJob?.status === "completed";
+                          const consensusJob = campaign.jobs?.find((j) => (j.type as string) === "vs_consensus");
+                          
+                          if (consensusJob?.status === "completed") {
+                            return <CheckCircle className="h-3 w-3 text-emerald-500" />;
+                          } else if (consensusJob?.status === "running") {
+                            return <Loader2 className="h-3 w-3 animate-spin text-purple-500" />;
+                          } else if (bothComplete) {
+                            return <span className="text-xs text-muted-foreground">Ready</span>;
+                          }
+                          return <span className="text-xs text-muted-foreground">Pending...</span>;
+                        })()}
+                      </div>
+                    </div>
+                    <Progress 
+                      value={(() => {
+                        const consensusJob = campaign.jobs?.find((j) => (j.type as string) === "vs_consensus");
+                        return (consensusJob as any)?.progress || (consensusJob?.status === "completed" ? 100 : 0);
+                      })()} 
+                      className="h-2"
+                    />
+                  </div>
+                )}
+
+                <div className="pt-2 border-t text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between">
+                    <span>Scoring Weights:</span>
+                    <span className="font-mono">
+                      Binding {(pipelineConfig.virtualScreening.scoringWeights.bindingAffinity * 100).toFixed(0)}% | 
+                      ADMET {(pipelineConfig.virtualScreening.scoringWeights.admetProperties * 100).toFixed(0)}% | 
+                      Selectivity {(pipelineConfig.virtualScreening.scoringWeights.selectivity * 100).toFixed(0)}% | 
+                      Synth {(pipelineConfig.virtualScreening.scoringWeights.syntheticAccessibility * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {campaign.status === "completed" && (
             <Card className="bg-primary/5 border-primary/20">
