@@ -589,7 +589,7 @@ class SupabaseSyncService {
         const [totalResult, categoriesResult, conditionsResult] = await Promise.all([
           poolClient.query(`SELECT COUNT(*) FROM smiles`),
           poolClient.query(`SELECT category, COUNT(*) as count FROM smiles WHERE category IS NOT NULL GROUP BY category ORDER BY count DESC`),
-          poolClient.query(`SELECT disease_condition, COUNT(*) as count FROM smiles WHERE disease_condition IS NOT NULL GROUP BY disease_condition ORDER BY count DESC LIMIT 50`)
+          poolClient.query(`SELECT disease_condition, COUNT(*) as count FROM smiles WHERE disease_condition IS NOT NULL GROUP BY disease_condition ORDER BY count DESC LIMIT 500`)
         ]);
         
         return {
