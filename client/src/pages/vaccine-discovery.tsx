@@ -402,6 +402,24 @@ export default function VaccineDiscoveryPage() {
           </TabsList>
 
           <TabsContent value="complete" className="space-y-6">
+            {/* AQAffinity Integration Banner */}
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-lg p-4" data-testid="aqaffinity-banner">
+              <div className="flex items-center gap-3">
+                <div className="bg-amber-500/20 p-2 rounded-lg">
+                  <Zap className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                    SandboxAQ AQAffinity Integration
+                    <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">Step 4</Badge>
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    AI-powered epitope ranking using OpenFold3 for protein-antibody binding affinity prediction
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
