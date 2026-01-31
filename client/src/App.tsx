@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -13,59 +13,71 @@ import { Loader2 } from "lucide-react";
 import { GlobalFooter } from "@/components/global-footer";
 import { AIAssistant } from "@/components/ai-assistant";
 
+// Loading component for lazy-loaded pages
+function PageLoader() {
+  return (
+    <div className="h-full flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+// Eager load only critical pages for fast initial load
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import DomainSelectionPage from "@/pages/domain-selection";
-import DrugDashboardPage from "@/pages/dashboard-drug";
-import MaterialsDashboardPage from "@/pages/dashboard-materials";
-import DashboardPage from "@/pages/dashboard";
-import ProjectsPage from "@/pages/projects";
-import ProjectDetailPage from "@/pages/project-detail";
-import LibrariesPage from "@/pages/libraries";
-import LibraryDetailPage from "@/pages/library-detail";
-import TargetsPage from "@/pages/targets";
-import TargetDetailPage from "@/pages/target-detail";
-import MoleculesPage from "@/pages/molecules";
-import MoleculeDetailPage from "@/pages/molecule-detail";
-import CampaignsPage from "@/pages/campaigns";
-import CampaignNewPage from "@/pages/campaign-new";
-import CampaignDetailPage from "@/pages/campaign-detail";
-import ReportsPage from "@/pages/reports";
-import LearningGraphPage from "@/pages/learning-graph";
-import ComputeNodesPage from "@/pages/compute-nodes";
-import ComputeNodeDetailPage from "@/pages/compute-node-detail";
-import UsagePage from "@/pages/usage";
-import AssaysPage from "@/pages/assays";
-import AssayDetailPage from "@/pages/assay-detail";
-import HitTriagePage from "@/pages/hit-triage";
-import PropertyPipelinesPage from "@/pages/property-pipelines";
-import StructurePropertyPage from "@/pages/structure-property";
-import MaterialsCampaignsPage from "@/pages/materials-campaigns";
-import MultiScaleRepresentationsPage from "@/pages/multi-scale-representations";
-import PropertyPredictionPage from "@/pages/property-prediction";
-import ManufacturabilitySccoringPage from "@/pages/manufacturability-scoring";
-import DockingPage from "@/pages/docking";
-import AdmetPage from "@/pages/admet";
-import SimulationRunsPage from "@/pages/simulation-runs";
-import MaterialsLibraryPage from "@/pages/materials-library";
-import ExternalSmilesLibraryPage from "@/pages/external-smiles-library";
-import MaterialVariantsPage from "@/pages/material-variants";
-import ImportHubPage from "@/pages/import-hub";
-import ImportWizardPage from "@/pages/import-wizard";
-import ImportHistoryPage from "@/pages/import-history";
-import IntegrationsPage from "@/pages/integrations";
-import LikaAgentPage from "@/pages/lika-agent";
-import QuantumComputePage from "@/pages/quantum-compute";
-import PipelineLauncherPage from "@/pages/pipeline-launcher";
-import PipelineResultsDetailPage from "@/pages/pipeline-results-detail";
-import FEASimulationsPage from "@/pages/fea-simulations";
-import MolecularViewerPage from "@/pages/molecular-viewer";
-import UseCasesPage from "@/pages/use-cases";
-import BioNemoPage from "@/pages/bionemo";
-import ExternalDataPage from "@/pages/external-data";
-import VaccineDiscoveryPage from "@/pages/vaccine-discovery";
-import DiseaseDiscoveryPage from "@/pages/disease-discovery";
 import NotFound from "@/pages/not-found";
+
+// Lazy load all other pages for faster initial bundle
+const DrugDashboardPage = lazy(() => import("@/pages/dashboard-drug"));
+const MaterialsDashboardPage = lazy(() => import("@/pages/dashboard-materials"));
+const DashboardPage = lazy(() => import("@/pages/dashboard"));
+const ProjectsPage = lazy(() => import("@/pages/projects"));
+const ProjectDetailPage = lazy(() => import("@/pages/project-detail"));
+const LibrariesPage = lazy(() => import("@/pages/libraries"));
+const LibraryDetailPage = lazy(() => import("@/pages/library-detail"));
+const TargetsPage = lazy(() => import("@/pages/targets"));
+const TargetDetailPage = lazy(() => import("@/pages/target-detail"));
+const MoleculesPage = lazy(() => import("@/pages/molecules"));
+const MoleculeDetailPage = lazy(() => import("@/pages/molecule-detail"));
+const CampaignsPage = lazy(() => import("@/pages/campaigns"));
+const CampaignNewPage = lazy(() => import("@/pages/campaign-new"));
+const CampaignDetailPage = lazy(() => import("@/pages/campaign-detail"));
+const ReportsPage = lazy(() => import("@/pages/reports"));
+const LearningGraphPage = lazy(() => import("@/pages/learning-graph"));
+const ComputeNodesPage = lazy(() => import("@/pages/compute-nodes"));
+const ComputeNodeDetailPage = lazy(() => import("@/pages/compute-node-detail"));
+const UsagePage = lazy(() => import("@/pages/usage"));
+const AssaysPage = lazy(() => import("@/pages/assays"));
+const AssayDetailPage = lazy(() => import("@/pages/assay-detail"));
+const HitTriagePage = lazy(() => import("@/pages/hit-triage"));
+const PropertyPipelinesPage = lazy(() => import("@/pages/property-pipelines"));
+const StructurePropertyPage = lazy(() => import("@/pages/structure-property"));
+const MaterialsCampaignsPage = lazy(() => import("@/pages/materials-campaigns"));
+const MultiScaleRepresentationsPage = lazy(() => import("@/pages/multi-scale-representations"));
+const PropertyPredictionPage = lazy(() => import("@/pages/property-prediction"));
+const ManufacturabilitySccoringPage = lazy(() => import("@/pages/manufacturability-scoring"));
+const DockingPage = lazy(() => import("@/pages/docking"));
+const AdmetPage = lazy(() => import("@/pages/admet"));
+const SimulationRunsPage = lazy(() => import("@/pages/simulation-runs"));
+const MaterialsLibraryPage = lazy(() => import("@/pages/materials-library"));
+const ExternalSmilesLibraryPage = lazy(() => import("@/pages/external-smiles-library"));
+const MaterialVariantsPage = lazy(() => import("@/pages/material-variants"));
+const ImportHubPage = lazy(() => import("@/pages/import-hub"));
+const ImportWizardPage = lazy(() => import("@/pages/import-wizard"));
+const ImportHistoryPage = lazy(() => import("@/pages/import-history"));
+const IntegrationsPage = lazy(() => import("@/pages/integrations"));
+const LikaAgentPage = lazy(() => import("@/pages/lika-agent"));
+const QuantumComputePage = lazy(() => import("@/pages/quantum-compute"));
+const PipelineLauncherPage = lazy(() => import("@/pages/pipeline-launcher"));
+const PipelineResultsDetailPage = lazy(() => import("@/pages/pipeline-results-detail"));
+const FEASimulationsPage = lazy(() => import("@/pages/fea-simulations"));
+const MolecularViewerPage = lazy(() => import("@/pages/molecular-viewer"));
+const UseCasesPage = lazy(() => import("@/pages/use-cases"));
+const BioNemoPage = lazy(() => import("@/pages/bionemo"));
+const ExternalDataPage = lazy(() => import("@/pages/external-data"));
+const VaccineDiscoveryPage = lazy(() => import("@/pages/vaccine-discovery"));
+const DiseaseDiscoveryPage = lazy(() => import("@/pages/disease-discovery"));
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -79,7 +91,9 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-auto">
-            {children}
+            <Suspense fallback={<PageLoader />}>
+              {children}
+            </Suspense>
           </div>
           <GlobalFooter />
         </div>
@@ -211,7 +225,11 @@ function Router() {
           <Switch>
             <Route path="/" component={LandingPage} />
             <Route path="/login" component={LoginPage} />
-            <Route path="/use-cases" component={UseCasesPage} />
+            <Route path="/use-cases">
+              <Suspense fallback={<PageLoader />}>
+                <UseCasesPage />
+              </Suspense>
+            </Route>
             <Route>
               <LandingPage />
             </Route>
