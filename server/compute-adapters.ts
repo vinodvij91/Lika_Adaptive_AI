@@ -418,13 +418,22 @@ export class SshComputeAdapter implements ComputeAdapter {
           const readStream = sftp.createReadStream(remotePath);
           const writeStream = fs.createWriteStream(localPath);
 
+          readStream.on("error", (readErr: any) => {
+            console.error(`[SSH] Read stream error:`, readErr.message);
+            try { writeStream.destroy(); } catch {}
+            try { conn.end(); } catch {}
+            resolve(false);
+          });
+
           writeStream.on("close", () => {
-            conn.end();
+            try { conn.end(); } catch {}
             resolve(true);
           });
 
-          writeStream.on("error", () => {
-            conn.end();
+          writeStream.on("error", (writeErr: any) => {
+            console.error(`[SSH] Write stream error:`, writeErr.message);
+            try { readStream.destroy(); } catch {}
+            try { conn.end(); } catch {}
             resolve(false);
           });
 

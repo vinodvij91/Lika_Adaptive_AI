@@ -5166,13 +5166,24 @@ print(json.dumps(result, default=str))
         await adapter.uploadFile(gpuNode, localInputPath, remoteInputPath);
       }
       
-      const command = `mkdir -p /root/lika-compute && cd /root/lika-compute && pip install -q git+https://huggingface.co/SandboxAQ/aqaffinity 2>/dev/null || true && python3 aqaffinity_remote.py --input ${inputFileName} --output ${outputFileName}`;
+      // Use HuggingFace token for authentication when installing AQAffinity
+      const hfTokenSingle = process.env.HF_TOKEN || process.env.HUGGINGFACE_TOKEN || "";
+      const installCmdSingle = hfTokenSingle 
+        ? `pip install -q git+https://user:${hfTokenSingle}@huggingface.co/SandboxAQ/aqaffinity 2>/dev/null || true`
+        : `pip install -q git+https://huggingface.co/SandboxAQ/aqaffinity 2>/dev/null || true`;
+      
+      const command = `mkdir -p /root/lika-compute && cd /root/lika-compute && ${installCmdSingle} && python3 aqaffinity_remote.py --input ${inputFileName} --output ${outputFileName}`;
       
       const job = {
         id: `aqaffinity-single-${Date.now()}`,
         type: "aqaffinity_single",
         command,
-        environment: { PYTHONUNBUFFERED: "1", CUDA_VISIBLE_DEVICES: "0,1" },
+        environment: { 
+          PYTHONUNBUFFERED: "1", 
+          CUDA_VISIBLE_DEVICES: "0,1",
+          HF_TOKEN: hfTokenSingle,
+          HUGGINGFACE_TOKEN: hfTokenSingle
+        },
         timeout: 300000
       };
       
