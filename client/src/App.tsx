@@ -139,6 +139,7 @@ function AuthenticatedRoutes() {
         <Route path="/assays/:id" component={AssayDetailPage} />
         <Route path="/assay-harvesting" component={AssayHarvestingPage} />
         <Route path="/trajectory-analysis" component={TrajectoryAnalysisPage} />
+        <Route path="/trajectory" component={TrajectoryAnalysisPage} />
         <Route path="/docking" component={DockingPage} />
         <Route path="/admet" component={AdmetPage} />
         <Route path="/campaigns/:id/hit-triage" component={HitTriagePage} />
