@@ -695,9 +695,11 @@ export default function AssayHarvestingPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <TrendingUp className="w-4 h-4 text-green-500" />
                         <span className="text-sm font-medium">Top Hits</span>
-                        <Badge variant="secondary" className="text-xs">
-                          Best IC50: {pred.topHits[0]?.predictedValue.toFixed(3)} {pred.topHits[0]?.unit}
-                        </Badge>
+                        {pred.topHits && pred.topHits.length > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            Best: {pred.topHits[0].predictedValue.toFixed(3)} {pred.topHits[0].unit || "µM"}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <Table>

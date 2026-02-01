@@ -73,6 +73,13 @@ export const ASSAY_CONTEXTS: Record<string, BioNemoConfig> = {
 const NVIDIA_NIM_BASE_URL = process.env.NVIDIA_NIM_URL || "https://integrate.api.nvidia.com/v1";
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 
+// Model endpoint mappings for NVIDIA NIM
+const MODEL_ENDPOINTS: Record<string, string> = {
+  megamolbart: "/biology/nvidia/megamolbart",
+  esm2: "/biology/nvidia/esm2",
+  molmim: "/biology/nvidia/molmim"
+};
+
 /**
  * Predict molecular properties using BioNeMo models
  * Falls back to simulation mode if API key is not configured
@@ -80,14 +87,19 @@ const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 export async function bionemoPredict(
   context: string,
   smiles: string[],
-  model: "megamolbart" | "esm2" | "molmim" = "megamolbart"
+  model: "megamolbart" | "esm2" | "molmim" = "megamolbart",
+  readout: "pIC50" | "IC50" | "Ki" | "Kd" | "percent_inhibition" = "IC50"
 ): Promise<PredictionResult[]> {
   const startTime = Date.now();
+  
+  // Determine unit based on readout type
+  const unit = getUnitForReadout(readout);
 
   // If NVIDIA API key is available, use real API
   if (NVIDIA_API_KEY) {
     try {
-      const response = await fetch(`${NVIDIA_NIM_BASE_URL}/biology/nvidia/megamolbart`, {
+      const endpoint = MODEL_ENDPOINTS[model] || MODEL_ENDPOINTS.megamolbart;
+      const response = await fetch(`${NVIDIA_NIM_BASE_URL}${endpoint}`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${NVIDIA_API_KEY}`,
@@ -97,14 +109,15 @@ export async function bionemoPredict(
           sequences: smiles,
           parameters: {
             context: context,
-            task: "property_prediction"
+            task: "property_prediction",
+            readout_type: readout
           }
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        return processNimResponse(data, smiles);
+        return processNimResponse(data, smiles, model, unit);
       }
     } catch (error) {
       console.error("BioNeMo API error, falling back to simulation:", error);
@@ -112,19 +125,37 @@ export async function bionemoPredict(
   }
 
   // Simulation mode: Generate deterministic predictions based on SMILES structure
-  return simulatePredictions(smiles, context, model);
+  return simulatePredictions(smiles, context, model, readout);
+}
+
+/**
+ * Get the appropriate unit for a readout type
+ */
+function getUnitForReadout(readout: string): string {
+  switch (readout) {
+    case "pIC50":
+      return "";
+    case "IC50":
+    case "Ki":
+    case "Kd":
+      return "µM";
+    case "percent_inhibition":
+      return "%";
+    default:
+      return "µM";
+  }
 }
 
 /**
  * Process NVIDIA NIM API response into standardized format
  */
-function processNimResponse(data: any, smiles: string[]): PredictionResult[] {
+function processNimResponse(data: any, smiles: string[], model: string, unit: string): PredictionResult[] {
   return smiles.map((smi, idx) => ({
     smiles: smi,
     predictedValue: data.predictions?.[idx]?.value || Math.random() * 10,
     confidence: data.predictions?.[idx]?.confidence || 0.8,
-    unit: "µM",
-    modelUsed: "megamolbart"
+    unit,
+    modelUsed: model
   }));
 }
 
@@ -135,8 +166,11 @@ function processNimResponse(data: any, smiles: string[]): PredictionResult[] {
 function simulatePredictions(
   smiles: string[],
   context: string,
-  model: string
+  model: string,
+  readout: string = "IC50"
 ): PredictionResult[] {
+  const unit = getUnitForReadout(readout);
+  
   return smiles.map(smi => {
     // Generate deterministic prediction based on SMILES hash
     const hash = simpleHash(smi + context);
@@ -145,11 +179,20 @@ function simulatePredictions(
     // Adjust based on molecular properties inferred from SMILES
     const ringCount = (smi.match(/c1|C1|n1|N1/g) || []).length;
     const heteroatoms = (smi.match(/[NOSnos]/g) || []).length;
-    const molWeight = smi.length * 12; // Rough approximation
     
     // Better drug-likeness gives lower IC50 (more potent)
     const drugLikeness = Math.min(5, ringCount) * 0.2 + Math.min(8, heteroatoms) * 0.1;
-    const adjustedValue = Math.max(0.001, baseValue - drugLikeness);
+    let adjustedValue = Math.max(0.001, baseValue - drugLikeness);
+    
+    // Transform value based on readout type
+    if (readout === "pIC50") {
+      // Convert to pIC50 scale (higher = more potent)
+      adjustedValue = 9 - Math.log10(adjustedValue * 1000);
+      adjustedValue = Math.max(4, Math.min(10, adjustedValue));
+    } else if (readout === "percent_inhibition") {
+      // Convert to percentage (0-100)
+      adjustedValue = Math.min(100, 100 - adjustedValue * 10);
+    }
     
     // Confidence based on structural features
     const confidence = 0.6 + Math.min(0.35, (ringCount + heteroatoms) * 0.05);
@@ -158,7 +201,7 @@ function simulatePredictions(
       smiles: smi,
       predictedValue: parseFloat(adjustedValue.toFixed(3)),
       confidence: parseFloat(confidence.toFixed(2)),
-      unit: "µM",
+      unit,
       modelUsed: `${model} (simulation)`
     };
   });
@@ -195,7 +238,7 @@ export async function predictForAssay(
     readout: "IC50" as const
   };
   
-  const predictions = await bionemoPredict(config.context, smiles, config.model);
+  const predictions = await bionemoPredict(config.context, smiles, config.model, config.readout);
   
   // Sort by predicted value to get top hits (lower IC50 = better)
   const sortedPredictions = [...predictions].sort((a, b) => a.predictedValue - b.predictedValue);
