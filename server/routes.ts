@@ -1048,7 +1048,7 @@ export async function registerRoutes(
       const delimiter = headerLine.includes("\t") ? "\t" : ",";
       
       // Robust CSV parsing function that handles empty fields and quoted values
-      function parseCSVLine(line: string, delim: string): string[] {
+      const parseCSVLine = (line: string, delim: string): string[] => {
         if (delim === "\t") {
           return line.split("\t").map(f => f.replace(/^"|"$/g, "").trim());
         }
@@ -1129,7 +1129,7 @@ export async function registerRoutes(
       }
       
       // Get unique diseases for metadata
-      const uniqueDiseases = [...new Set(compounds.map(c => c.disease).filter(Boolean))];
+      const uniqueDiseases = Array.from(new Set(compounds.map(c => c.disease).filter(Boolean)));
       
       // Create the library
       const library = await storage.createCuratedLibrary({
@@ -4093,7 +4093,7 @@ print(json.dumps(result, default=str))
         };
 
         const allEpitopes = mhcAlleles.flatMap((allele: string) => generateEpitopes(allele, 5));
-        const strongBinders = allEpitopes.filter(e => e.binding_level === "Strong");
+        const strongBinders = allEpitopes.filter((e: any) => e.binding_level === "Strong");
         
         const simulatedResult = {
           success: true,
@@ -4104,7 +4104,7 @@ print(json.dumps(result, default=str))
             summary: {
               total_epitopes: allEpitopes.length,
               strong_binders: strongBinders.length,
-              weak_binders: allEpitopes.filter(e => e.binding_level === "Weak").length,
+              weak_binders: allEpitopes.filter((e: any) => e.binding_level === "Weak").length,
               alleles_tested: mhcAlleles.length,
               population_coverage: Math.round((60 + Math.random() * 35) * 10) / 10,
             },
@@ -10400,7 +10400,7 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
           version: algorithmInfo.version,
           config,
           moleculeIds,
-          activeTargets: config.activeTargets || algorithmInfo.targets.map((t: any) => t.name),
+          activeTargets: config.activeTargets || (algorithmInfo as any).targets?.map((t: any) => t.name) || [],
           targetCount: algorithmInfo.activeTargetCount,
           pathways: algorithmInfo.pathways,
           executionPlan
