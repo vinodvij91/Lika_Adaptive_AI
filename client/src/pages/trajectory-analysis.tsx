@@ -170,8 +170,44 @@ export default function TrajectoryAnalysisPage() {
   const [newCampaignName, setNewCampaignName] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [pipelineType, setPipelineType] = useState<"drug" | "vaccine">("drug");
+  const [selectedReadouts, setSelectedReadouts] = useState<Set<string>>(new Set());
   
   const isVaccineMode = pipelineType === "vaccine";
+
+  const IMMUNE_READOUTS = {
+    humoral: [
+      { id: "neutralizing_titer", name: "Neutralizing antibody titer (MNA/PNA)", description: "Microneutralization or pseudovirus neutralization assay vs target strain", biomarkers: ["IGHG1", "IGHG3", "IGHA1"], timepoints: ["D0", "D14", "D28", "D56", "D180"] },
+      { id: "spike_igg_elisa", name: "Spike/RBD IgG ELISA titer", description: "Binding antibody levels against spike or receptor-binding domain", biomarkers: ["IGHG1", "CD27", "PRDM1"], timepoints: ["D0", "D7", "D14", "D28", "D90"] },
+      { id: "antibody_avidity", name: "Antibody avidity index", description: "Measure of antibody binding strength/maturation", biomarkers: ["AICDA", "BCL6", "CD38"], timepoints: ["D28", "D56", "D180"] },
+      { id: "memory_bcell", name: "Antigen-specific memory B cells", description: "Flow cytometry for memory B cell frequencies", biomarkers: ["CD27", "CD38", "PAX5"], timepoints: ["D14", "D28", "D90", "D180"] },
+      { id: "systems_serology", name: "Systems serology panel", description: "Comprehensive antibody profiling (Fc effector functions, subclasses)", biomarkers: ["FCGR3A", "IGHG1", "IGHG3", "IGHA1"], timepoints: ["D0", "D14", "D28", "D56"] },
+    ],
+    cellular: [
+      { id: "ifng_elispot", name: "IFN-γ ELISpot (CD4/CD8)", description: "T cell IFN-γ secretion upon antigen stimulation", biomarkers: ["IFNG", "CD4", "CD8A"], timepoints: ["D0", "D14", "D28", "D56"] },
+      { id: "polyfunctional_cd4", name: "Polyfunctional CD4 T cells (ICS)", description: "Intracellular cytokine staining for multi-cytokine producers", biomarkers: ["IL2", "IFNG", "TNF", "CD4"], timepoints: ["D14", "D28", "D56"] },
+      { id: "cytotoxic_cd8", name: "Cytotoxic CD8+ T cell response", description: "Granzyme/perforin-expressing CD8 T cells", biomarkers: ["GZMB", "PRF1", "CD8A"], timepoints: ["D14", "D28", "D56"] },
+      { id: "tfh_cells", name: "Circulating Tfh cell frequencies", description: "CXCR5+ PD-1+ helper T cells in blood", biomarkers: ["CXCR5", "PDCD1", "BCL6", "IL21"], timepoints: ["D7", "D14", "D28"] },
+    ],
+    innate: [
+      { id: "ifn_signature", name: "Innate IFN signature score (D1-D3)", description: "Type I/III interferon gene expression from scRNA trajectories", biomarkers: ["IFITM1", "ISG15", "MX1", "OAS1"], timepoints: ["D1", "D2", "D3", "D7"] },
+      { id: "cytokine_panel", name: "Serum IL-6, CRP, IP-10 panel", description: "Pro-inflammatory cytokine and chemokine levels", biomarkers: ["IL6", "CRP", "CXCL10"], timepoints: ["D0", "D1", "D3", "D7"] },
+      { id: "monocyte_activation", name: "Monocyte/DC activation score", description: "CD14+ monocyte and dendritic cell activation markers", biomarkers: ["CD14", "CD80", "CD86", "HLA-DRA"], timepoints: ["D1", "D3", "D7"] },
+    ],
+  };
+
+  const toggleReadout = (id: string) => {
+    setSelectedReadouts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const allReadouts = [...IMMUNE_READOUTS.humoral, ...IMMUNE_READOUTS.cellular, ...IMMUNE_READOUTS.innate];
 
   const { data: diseases, isLoading: diseasesLoading, refetch: refetchDiseases } = useQuery<DiseaseInfo[]>({
     queryKey: ["/api/trajectory/diseases", { pipelineType }],
@@ -1059,70 +1095,247 @@ export default function TrajectoryAnalysisPage() {
           </TabsContent>
 
           <TabsContent value="targets" className="space-y-4">
-            {trajectoryResult && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(trajectoryResult.targets || []).map((target) => {
-                  const biomarker = (trajectoryResult.biomarkers || []).find(b => b.gene === target);
-                  return (
-                    <Card key={target} className="hover-elevate">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg font-mono">{target}</CardTitle>
-                          <Badge variant="default" className="gap-1">
-                            <Target className="w-3 h-3" />
-                            {isVaccineMode ? "Predictive" : "Druggable"}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        {biomarker && (
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Expression Peak</span>
-                              <span>t = {biomarker.pseudotimeExpression.toFixed(2)}</span>
+            {isVaccineMode ? (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Dna className="w-5 h-5" />
+                          Immune Readouts
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          Immune readouts link your scRNA biomarkers to actual vaccine efficacy measurements (antibody titers, T cell responses, innate signatures).
+                        </CardDescription>
+                      </div>
+                      <Badge variant="secondary" className="text-sm">
+                        {selectedReadouts.size}/{allReadouts.length} readouts selected
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                </Card>
+
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                      <FlaskConical className="w-4 h-4" />
+                      Humoral Responses
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {IMMUNE_READOUTS.humoral.map((readout) => (
+                        <Card 
+                          key={readout.id} 
+                          className={`cursor-pointer transition-all ${selectedReadouts.has(readout.id) ? "ring-2 ring-primary bg-primary/5" : "hover-elevate"}`}
+                          onClick={() => toggleReadout(readout.id)}
+                          data-testid={`readout-${readout.id}`}
+                        >
+                          <CardHeader className="pb-2">
+                            <div className="flex items-start gap-3">
+                              <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center ${selectedReadouts.has(readout.id) ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
+                                {selectedReadouts.has(readout.id) && <Check className="w-3 h-3 text-primary-foreground" />}
+                              </div>
+                              <div className="flex-1">
+                                <CardTitle className="text-sm font-medium">{readout.name}</CardTitle>
+                                <CardDescription className="text-xs mt-1">{readout.description}</CardDescription>
+                              </div>
                             </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Fold Change</span>
-                              <span className="flex items-center gap-1">
-                                {biomarker.direction === "up" ? (
-                                  <TrendingUp className="w-3 h-3 text-green-500" />
-                                ) : (
-                                  <TrendingDown className="w-3 h-3 text-red-500" />
-                                )}
-                                {biomarker.foldChange.toFixed(1)}x
-                              </span>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {readout.biomarkers.slice(0, 3).map((b) => (
+                                <Badge key={b} variant="outline" className="text-xs font-mono">{b}</Badge>
+                              ))}
+                              {readout.biomarkers.length > 3 && (
+                                <Badge variant="outline" className="text-xs">+{readout.biomarkers.length - 3}</Badge>
+                              )}
                             </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Cell Type</span>
-                              <Badge variant="outline" className="text-xs">{biomarker.cluster}</Badge>
+                            <div className="text-xs text-muted-foreground">
+                              Timepoints: {readout.timepoints.join(", ")}
                             </div>
-                          </div>
-                        )}
-                        <div className="flex gap-2 pt-2">
-                          <Button
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => handleGenerateTemplate(target)}
-                            data-testid={`button-create-assay-${target}`}
-                          >
-                            <FlaskConical className="w-3 h-3 mr-1" />
-                            {isVaccineMode ? "Create Readout" : "Create Assay"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenPredictionDialog(target)}
-                            data-testid={`button-predict-${target}`}
-                          >
-                            <Zap className="w-3 h-3 mr-1" />
-                            BioNeMo
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                      <Target className="w-4 h-4" />
+                      Cellular Responses
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {IMMUNE_READOUTS.cellular.map((readout) => (
+                        <Card 
+                          key={readout.id} 
+                          className={`cursor-pointer transition-all ${selectedReadouts.has(readout.id) ? "ring-2 ring-primary bg-primary/5" : "hover-elevate"}`}
+                          onClick={() => toggleReadout(readout.id)}
+                          data-testid={`readout-${readout.id}`}
+                        >
+                          <CardHeader className="pb-2">
+                            <div className="flex items-start gap-3">
+                              <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center ${selectedReadouts.has(readout.id) ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
+                                {selectedReadouts.has(readout.id) && <Check className="w-3 h-3 text-primary-foreground" />}
+                              </div>
+                              <div className="flex-1">
+                                <CardTitle className="text-sm font-medium">{readout.name}</CardTitle>
+                                <CardDescription className="text-xs mt-1">{readout.description}</CardDescription>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {readout.biomarkers.slice(0, 3).map((b) => (
+                                <Badge key={b} variant="outline" className="text-xs font-mono">{b}</Badge>
+                              ))}
+                              {readout.biomarkers.length > 3 && (
+                                <Badge variant="outline" className="text-xs">+{readout.biomarkers.length - 3}</Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Timepoints: {readout.timepoints.join(", ")}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                      <Zap className="w-4 h-4" />
+                      Innate Responses
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {IMMUNE_READOUTS.innate.map((readout) => (
+                        <Card 
+                          key={readout.id} 
+                          className={`cursor-pointer transition-all ${selectedReadouts.has(readout.id) ? "ring-2 ring-primary bg-primary/5" : "hover-elevate"}`}
+                          onClick={() => toggleReadout(readout.id)}
+                          data-testid={`readout-${readout.id}`}
+                        >
+                          <CardHeader className="pb-2">
+                            <div className="flex items-start gap-3">
+                              <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center ${selectedReadouts.has(readout.id) ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
+                                {selectedReadouts.has(readout.id) && <Check className="w-3 h-3 text-primary-foreground" />}
+                              </div>
+                              <div className="flex-1">
+                                <CardTitle className="text-sm font-medium">{readout.name}</CardTitle>
+                                <CardDescription className="text-xs mt-1">{readout.description}</CardDescription>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {readout.biomarkers.slice(0, 3).map((b) => (
+                                <Badge key={b} variant="outline" className="text-xs font-mono">{b}</Badge>
+                              ))}
+                              {readout.biomarkers.length > 3 && (
+                                <Badge variant="outline" className="text-xs">+{readout.biomarkers.length - 3}</Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Timepoints: {readout.timepoints.join(", ")}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <Card className="bg-muted/30">
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{selectedReadouts.size} readouts selected</p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedReadouts.size > 0 
+                            ? "Ready to create vaccine campaign with chosen readouts and biomarkers"
+                            : "Select readouts above to build your vaccine efficacy panel"}
+                        </p>
+                      </div>
+                      <Button
+                        disabled={selectedReadouts.size === 0}
+                        onClick={() => {
+                          setShowCampaignDialog(true);
+                          setCampaignMode("new");
+                        }}
+                        data-testid="button-add-readouts-campaign"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Selected to Campaign
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
+            ) : (
+              trajectoryResult && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {(trajectoryResult.targets || []).map((target) => {
+                    const biomarker = (trajectoryResult.biomarkers || []).find(b => b.gene === target);
+                    return (
+                      <Card key={target} className="hover-elevate">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg font-mono">{target}</CardTitle>
+                            <Badge variant="default" className="gap-1">
+                              <Target className="w-3 h-3" />
+                              Druggable
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {biomarker && (
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Expression Peak</span>
+                                <span>t = {biomarker.pseudotimeExpression.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Fold Change</span>
+                                <span className="flex items-center gap-1">
+                                  {biomarker.direction === "up" ? (
+                                    <TrendingUp className="w-3 h-3 text-green-500" />
+                                  ) : (
+                                    <TrendingDown className="w-3 h-3 text-red-500" />
+                                  )}
+                                  {biomarker.foldChange.toFixed(1)}x
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Cell Type</span>
+                                <Badge variant="outline" className="text-xs">{biomarker.cluster}</Badge>
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => handleGenerateTemplate(target)}
+                              data-testid={`button-create-assay-${target}`}
+                            >
+                              <FlaskConical className="w-3 h-3 mr-1" />
+                              Create Assay
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenPredictionDialog(target)}
+                              data-testid={`button-predict-${target}`}
+                            >
+                              <Zap className="w-3 h-3 mr-1" />
+                              BioNeMo
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )
             )}
           </TabsContent>
         </Tabs>
