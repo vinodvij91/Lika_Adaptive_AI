@@ -4501,8 +4501,8 @@ print(json.dumps(result, default=str))
           stage: 1,
           stageName: "Target Identification & Antigen Selection",
           tasks: {
-            esmfold_prediction: { type: "GPU_INTENSIVE", reason: "Deep learning inference, attention mechanisms", gpuMemoryGb: 16, cpuCores: 8, memoryGb: 32, estimatedTimeMinutes: 15, speedup: "100x", tools: ["ESMFold", "BioNeMo"] },
-            alphafold2_prediction: { type: "GPU_INTENSIVE", reason: "Multi-stage deep learning, MSA generation", gpuMemoryGb: 24, cpuCores: 16, memoryGb: 64, estimatedTimeMinutes: 45, speedup: "200x", tools: ["AlphaFold2", "OpenFold"] },
+            esmfold_prediction: { type: "GPU_INTENSIVE", reason: "PRIMARY - Deep learning inference, no MSA required", gpuMemoryGb: 16, cpuCores: 8, memoryGb: 32, estimatedTimeMinutes: 15, speedup: "100x", tools: ["ESMFold", "BioNeMo"], priority: "PRIMARY", supportedPipelines: ["drug_discovery", "vaccine_discovery", "materials_science"], maxSequenceLength: 400 },
+            alphafold2_prediction: { type: "GPU_INTENSIVE", reason: "FALLBACK - Multi-stage deep learning for long sequences (>400 residues)", gpuMemoryGb: 24, cpuCores: 16, memoryGb: 64, estimatedTimeMinutes: 45, speedup: "200x", tools: ["AlphaFold2", "OpenFold"], priority: "FALLBACK" },
             homology_modeling: { type: "CPU_INTENSIVE", reason: "Template search, alignment, energy minimization", cpuCores: 8, memoryGb: 16, estimatedTimeMinutes: 120, tools: ["MODELLER", "SWISS-MODEL"] },
             structure_quality_assessment: { type: "CPU_ONLY", reason: "Geometry checks, Ramachandran analysis", cpuCores: 1, memoryGb: 2, estimatedTimeMinutes: 2, tools: ["MolProbity", "ProCheck"] },
             dssp_surface_analysis: { type: "CPU_ONLY", reason: "Secondary structure assignment and surface accessibility", cpuCores: 1, memoryGb: 4, estimatedTimeMinutes: 5, tools: ["DSSP", "Biopython"] },
@@ -8403,6 +8403,191 @@ print(json.dumps(result, default=str))
     } catch (error: any) {
       console.error("Error getting OpenFold3 info:", error);
       res.status(500).json({ error: error.message || "Failed to get OpenFold3 info" });
+    }
+  });
+
+  // ============================================================================
+  // ESMFold Endpoints for Drug Discovery and Materials Science
+  // ============================================================================
+
+  // ESMFold info endpoint
+  app.get("/api/structures/esmfold/info", requireAuth, async (req, res) => {
+    try {
+      const { getESMFoldInfo } = await import("./services/esmfold");
+      res.json(getESMFoldInfo());
+    } catch (error: any) {
+      console.error("Error getting ESMFold info:", error);
+      res.status(500).json({ error: error.message || "Failed to get ESMFold info" });
+    }
+  });
+
+  // ESMFold domain-specific info
+  app.get("/api/structures/esmfold/info/:domain", requireAuth, async (req, res) => {
+    try {
+      const { domain } = req.params;
+      const validDomains = ['drug_discovery', 'materials_science', 'vaccine_discovery'];
+      if (!validDomains.includes(domain)) {
+        return res.status(400).json({ error: `Invalid domain. Must be one of: ${validDomains.join(', ')}` });
+      }
+      const { getESMFoldDomainInfo } = await import("./services/esmfold");
+      res.json(getESMFoldDomainInfo(domain as any));
+    } catch (error: any) {
+      console.error("Error getting ESMFold domain info:", error);
+      res.status(500).json({ error: error.message || "Failed to get ESMFold domain info" });
+    }
+  });
+
+  // ESMFold Drug Discovery - Single prediction
+  app.post("/api/structures/esmfold/drug-discovery/predict", requireAuth, async (req, res) => {
+    try {
+      const { targetId, targetName, sequence, pipelineStep = 'target_validation' } = req.body;
+      
+      if (!targetId || !sequence) {
+        return res.status(400).json({ error: "targetId and sequence are required" });
+      }
+
+      const validSteps = ['target_validation', 'binding_site_analysis', 'virtual_screening', 'lead_optimization'];
+      if (!validSteps.includes(pipelineStep)) {
+        return res.status(400).json({ error: `Invalid pipeline step. Must be one of: ${validSteps.join(', ')}` });
+      }
+
+      const { predictStructureForDrugDiscovery } = await import("./services/esmfold");
+      const result = await predictStructureForDrugDiscovery(
+        targetId,
+        targetName || `Target ${targetId}`,
+        sequence,
+        pipelineStep as any
+      );
+
+      res.json({
+        success: true,
+        prediction: result,
+        message: `ESMFold structure prediction completed for drug discovery (${pipelineStep})`,
+      });
+    } catch (error: any) {
+      console.error("ESMFold drug discovery prediction error:", error);
+      res.status(500).json({ error: error.message || "Structure prediction failed" });
+    }
+  });
+
+  // ESMFold Drug Discovery - Batch prediction
+  app.post("/api/structures/esmfold/drug-discovery/batch", requireAuth, async (req, res) => {
+    try {
+      const { targets, pipelineStep = 'virtual_screening' } = req.body;
+      
+      if (!targets || !Array.isArray(targets) || targets.length === 0) {
+        return res.status(400).json({ error: "targets array is required and must not be empty" });
+      }
+
+      if (targets.length > 10) {
+        return res.status(400).json({ error: "Maximum 10 targets per batch request" });
+      }
+
+      const validSteps = ['target_validation', 'binding_site_analysis', 'virtual_screening', 'lead_optimization'];
+      if (!validSteps.includes(pipelineStep)) {
+        return res.status(400).json({ error: `Invalid pipeline step. Must be one of: ${validSteps.join(', ')}` });
+      }
+
+      // Validate each target has required fields
+      for (let i = 0; i < targets.length; i++) {
+        const target = targets[i];
+        if (!target.targetId || !target.sequence) {
+          return res.status(400).json({ error: `Target at index ${i} missing required fields (targetId, sequence)` });
+        }
+      }
+
+      const { batchPredictForDrugDiscovery } = await import("./services/esmfold");
+      const result = await batchPredictForDrugDiscovery(targets, pipelineStep as any);
+
+      res.json({
+        success: true,
+        total: targets.length,
+        successful: result.results.length,
+        failed: result.failed.length,
+        results: result.results,
+        errors: result.failed,
+        message: `Batch ESMFold prediction completed: ${result.results.length}/${targets.length} successful`,
+      });
+    } catch (error: any) {
+      console.error("ESMFold batch drug discovery error:", error);
+      res.status(500).json({ error: error.message || "Batch prediction failed" });
+    }
+  });
+
+  // ESMFold Materials Science - Single prediction
+  app.post("/api/structures/esmfold/materials/predict", requireAuth, async (req, res) => {
+    try {
+      const { targetId, targetName, sequence, pipelineStep = 'protein_materials' } = req.body;
+      
+      if (!targetId || !sequence) {
+        return res.status(400).json({ error: "targetId and sequence are required" });
+      }
+
+      const validSteps = ['protein_materials', 'enzyme_design', 'biocatalyst_optimization', 'biomaterial_engineering'];
+      if (!validSteps.includes(pipelineStep)) {
+        return res.status(400).json({ error: `Invalid pipeline step. Must be one of: ${validSteps.join(', ')}` });
+      }
+
+      const { predictStructureForMaterialsScience } = await import("./services/esmfold");
+      const result = await predictStructureForMaterialsScience(
+        targetId,
+        targetName || `Material ${targetId}`,
+        sequence,
+        pipelineStep as any
+      );
+
+      res.json({
+        success: true,
+        prediction: result,
+        message: `ESMFold structure prediction completed for materials science (${pipelineStep})`,
+      });
+    } catch (error: any) {
+      console.error("ESMFold materials science prediction error:", error);
+      res.status(500).json({ error: error.message || "Structure prediction failed" });
+    }
+  });
+
+  // ESMFold Materials Science - Batch prediction
+  app.post("/api/structures/esmfold/materials/batch", requireAuth, async (req, res) => {
+    try {
+      const { targets, pipelineStep = 'protein_materials' } = req.body;
+      
+      if (!targets || !Array.isArray(targets) || targets.length === 0) {
+        return res.status(400).json({ error: "targets array is required and must not be empty" });
+      }
+
+      if (targets.length > 10) {
+        return res.status(400).json({ error: "Maximum 10 targets per batch request" });
+      }
+
+      const validSteps = ['protein_materials', 'enzyme_design', 'biocatalyst_optimization', 'biomaterial_engineering'];
+      if (!validSteps.includes(pipelineStep)) {
+        return res.status(400).json({ error: `Invalid pipeline step. Must be one of: ${validSteps.join(', ')}` });
+      }
+
+      // Validate each target has required fields
+      for (let i = 0; i < targets.length; i++) {
+        const target = targets[i];
+        if (!target.targetId || !target.sequence) {
+          return res.status(400).json({ error: `Target at index ${i} missing required fields (targetId, sequence)` });
+        }
+      }
+
+      const { batchPredictForMaterialsScience } = await import("./services/esmfold");
+      const result = await batchPredictForMaterialsScience(targets, pipelineStep as any);
+
+      res.json({
+        success: true,
+        total: targets.length,
+        successful: result.results.length,
+        failed: result.failed.length,
+        results: result.results,
+        errors: result.failed,
+        message: `Batch ESMFold prediction completed: ${result.results.length}/${targets.length} successful`,
+      });
+    } catch (error: any) {
+      console.error("ESMFold batch materials science error:", error);
+      res.status(500).json({ error: error.message || "Batch prediction failed" });
     }
   });
 

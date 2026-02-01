@@ -44,7 +44,7 @@ The platform integrates production-grade Python pipelines for both drug discover
     - **Stage 4 - Immunogenicity**: Immune simulation (C-ImmSim), antibody prediction, safety assessment
     - **Stage 5 - Advanced Analysis**: Molecular dynamics, visualization
   - **Task Compute Types**:
-    - **GPU_INTENSIVE** (15-200x speedup): Structure prediction (ESMFold/AlphaFold2), MD simulation, ProteinMPNN design
+    - **GPU_INTENSIVE** (15-200x speedup): Structure prediction (ESMFold PRIMARY, AlphaFold2 fallback for >400 residues), MD simulation, ProteinMPNN design
     - **GPU_PREFERRED** (2-6x speedup): MHC binding prediction, toxicity prediction, RNA secondary structure
     - **CPU_INTENSIVE**: Epitope prediction (NetMHCpan), sequence alignment, Rosetta design, immune simulation
     - **CPU_ONLY**: Codon optimization, file I/O, structure quality assessment
@@ -63,7 +63,20 @@ The platform integrates production-grade Python pipelines for both drug discover
     - `POST /api/compute/vaccine/md-simulation` - Molecular dynamics (GPU-intensive, accepts `pdbFileId` parameter)
     - `GET /api/compute/vaccine/hardware` - Get hardware performance report
     - `GET /api/compute/vaccine/task-matrix` - Get full task classification matrix with hardware requirements and cost analysis
-- **OpenFold3 NIM Integration** (`server/services/openfold3.ts`): AlphaFold3-compatible structure prediction for protein-ligand complexes via NVIDIA NIM API. Features GPU-accelerated inference with automatic result caching.
+- **ESMFold Integration** (`server/services/esmfold.ts`): PRIMARY structure prediction service using Meta's free API. Supports Drug Discovery, Vaccine Discovery, and Materials Science pipelines. No API key required, fast inference, max 400 residues.
+  - **API Endpoints**:
+    - `GET /api/structures/esmfold/info` - Get ESMFold service info and capabilities
+    - `GET /api/structures/esmfold/info/:domain` - Get domain-specific info (drug_discovery, materials_science, vaccine_discovery)
+    - `POST /api/structures/esmfold/drug-discovery/predict` - Single structure prediction for drug discovery with binding site analysis
+    - `POST /api/structures/esmfold/drug-discovery/batch` - Batch predictions for drug discovery (max 10)
+    - `POST /api/structures/esmfold/materials/predict` - Single structure prediction for materials science with property analysis
+    - `POST /api/structures/esmfold/materials/batch` - Batch predictions for materials science (max 10)
+  - **Drug Discovery Metrics**: druggabilityScore, potentialBindingResidues, surfaceAccessibility, hydrophobicPockets
+  - **Materials Science Metrics**: structuralStability, thermalStabilityEstimate, mechanicalRigidity, catalyticPotential, selfAssemblyPropensity
+  - **Pipeline Steps**:
+    - Drug Discovery: target_validation, binding_site_analysis, virtual_screening, lead_optimization
+    - Materials Science: protein_materials, enzyme_design, biocatalyst_optimization, biomaterial_engineering
+- **OpenFold3 NIM Integration** (`server/services/openfold3.ts`): AlphaFold3-compatible structure prediction for protein-ligand complexes via NVIDIA NIM API. Features GPU-accelerated inference with automatic result caching. **FALLBACK** for sequences >400 residues or complex multi-chain predictions.
   - **API Endpoints**:
     - `POST /api/structures/openfold3/predict` - Predict protein-ligand complex structure (with caching)
     - `POST /api/structures/openfold3/batch` - Batch predictions (max 10)

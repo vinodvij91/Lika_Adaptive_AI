@@ -90,7 +90,7 @@ TASK_CLASSIFICATION: Dict[str, Any] = {
         "tasks": {
             "esmfold_prediction": {
                 "type": "GPU_INTENSIVE",
-                "reason": "Deep learning inference, attention mechanisms",
+                "reason": "Primary structure prediction - Deep learning inference, attention mechanisms, no MSA required",
                 "gpu_memory_gb": 16,
                 "cpu_cores": 8,
                 "memory_gb": 32,
@@ -98,17 +98,24 @@ TASK_CLASSIFICATION: Dict[str, Any] = {
                 "speedup_gpu_vs_cpu": "100x",
                 "structures_per_hour_gpu": 4,
                 "structures_per_hour_cpu": 0.04,
-                "tools": ["ESMFold", "BioNeMo"]
+                "tools": ["ESMFold", "BioNeMo"],
+                "priority": "PRIMARY",
+                "supported_pipelines": ["drug_discovery", "vaccine_discovery", "materials_science"],
+                "max_sequence_length": 400,
+                "api_key_required": False,
+                "notes": "Recommended for all structure predictions. Fast, free, and accurate."
             },
             "alphafold2_prediction": {
                 "type": "GPU_INTENSIVE",
-                "reason": "Multi-stage deep learning, MSA generation",
+                "reason": "Alternative for long sequences (>400 residues) - Multi-stage deep learning, MSA generation",
                 "gpu_memory_gb": 24,
                 "cpu_cores": 16,
                 "memory_gb": 64,
                 "estimated_time_minutes": 45,
                 "speedup_gpu_vs_cpu": "200x",
-                "tools": ["AlphaFold2", "OpenFold"]
+                "tools": ["AlphaFold2", "OpenFold"],
+                "priority": "FALLBACK",
+                "notes": "Use only when sequence exceeds ESMFold limit (400 residues) or requires MSA for accuracy"
             },
             "homology_modeling": {
                 "type": "CPU_INTENSIVE",
