@@ -167,14 +167,14 @@ export default function TrajectoryAnalysisPage() {
   const analyzeMutation = useMutation({
     mutationFn: async (datasetId: string) => {
       const response = await apiRequest("POST", `/api/trajectory/analyze/${datasetId}`, { smoothingAlpha: smoothingAlpha[0], detectBiomarkers: true });
-      return response as unknown as TrajectoryResult;
+      return await response.json() as TrajectoryResult;
     },
     onSuccess: (data) => {
       setTrajectoryResult(data);
       setActiveTab("trajectory");
       toast({
         title: "Analysis Complete",
-        description: `Found ${data.biomarkers.length} biomarkers and ${data.targets.length} druggable targets`,
+        description: `Found ${(data.biomarkers || []).length} biomarkers and ${(data.targets || []).length} druggable targets`,
       });
     },
     onError: () => {
@@ -189,7 +189,7 @@ export default function TrajectoryAnalysisPage() {
   const generateTemplateMutation = useMutation({
     mutationFn: async (params: { gene: string; disease: string; pseudotime?: number; cellState?: string }) => {
       const response = await apiRequest("POST", "/api/trajectory/assay-template", params);
-      return response as unknown as AssayTemplate;
+      return await response.json() as AssayTemplate;
     },
     onSuccess: (data) => {
       setAssayTemplate(data);
@@ -207,7 +207,7 @@ export default function TrajectoryAnalysisPage() {
   const predictInhibitorsMutation = useMutation({
     mutationFn: async (params: { gene: string; disease: string; smilesList: string[] }) => {
       const response = await apiRequest("POST", "/api/trajectory/predict-inhibitors", params);
-      return response as unknown as InhibitorResult;
+      return await response.json() as InhibitorResult;
     },
     onSuccess: (data) => {
       setInhibitorResult(data);
