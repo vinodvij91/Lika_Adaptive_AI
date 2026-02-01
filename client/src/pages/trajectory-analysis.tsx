@@ -305,21 +305,43 @@ export default function TrajectoryAnalysisPage() {
       </div>
 
       <div className="flex-1 p-4 overflow-auto">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(value) => {
+            if (!trajectoryResult && value !== "datasets") {
+              toast({
+                title: "Analysis Required",
+                description: "Please select and load a dataset first, then run PGD analysis",
+                variant: "destructive",
+              });
+              return;
+            }
+            setActiveTab(value);
+          }}>
           <TabsList className="mb-4">
             <TabsTrigger value="datasets" data-testid="tab-datasets">
               <Database className="w-4 h-4 mr-2" />
               Datasets
             </TabsTrigger>
-            <TabsTrigger value="trajectory" disabled={!trajectoryResult} data-testid="tab-trajectory">
+            <TabsTrigger 
+              value="trajectory" 
+              className={!trajectoryResult ? "opacity-50" : ""} 
+              data-testid="tab-trajectory"
+            >
               <GitBranch className="w-4 h-4 mr-2" />
               Trajectory
             </TabsTrigger>
-            <TabsTrigger value="biomarkers" disabled={!trajectoryResult} data-testid="tab-biomarkers">
+            <TabsTrigger 
+              value="biomarkers" 
+              className={!trajectoryResult ? "opacity-50" : ""} 
+              data-testid="tab-biomarkers"
+            >
               <Dna className="w-4 h-4 mr-2" />
               Biomarkers
             </TabsTrigger>
-            <TabsTrigger value="targets" disabled={!trajectoryResult} data-testid="tab-targets">
+            <TabsTrigger 
+              value="targets" 
+              className={!trajectoryResult ? "opacity-50" : ""} 
+              data-testid="tab-targets"
+            >
               <Target className="w-4 h-4 mr-2" />
               Targets
             </TabsTrigger>
@@ -361,10 +383,16 @@ export default function TrajectoryAnalysisPage() {
                   {selectedDisease && (
                     <div className="mt-4 space-y-3">
                       <div className="p-3 bg-muted/50 rounded-lg space-y-2">
-                        <div className="flex justify-between text-sm">
+                        <button 
+                          className="flex justify-between text-sm w-full hover:text-primary transition-colors cursor-pointer"
+                          onClick={() => document.getElementById('datasets-panel')?.scrollIntoView({ behavior: 'smooth' })}
+                          data-testid="link-view-datasets"
+                        >
                           <span className="text-muted-foreground">Datasets</span>
-                          <span className="font-medium">{diseases?.find(d => d.disease === selectedDisease)?.datasetCount}</span>
-                        </div>
+                          <span className="font-medium text-primary underline underline-offset-2">
+                            {diseases?.find(d => d.disease === selectedDisease)?.datasetCount} available →
+                          </span>
+                        </button>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Total Cells</span>
                           <span className="font-medium">
@@ -376,12 +404,36 @@ export default function TrajectoryAnalysisPage() {
                           <span className="font-medium">{diseases?.find(d => d.disease === selectedDisease)?.biomarkers}</span>
                         </div>
                       </div>
+                      
+                      {selectedDataset && selectedDatasetInfo && (
+                        <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-primary" />
+                              <span className="text-sm font-medium">Active: {selectedDatasetInfo.name}</span>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              onClick={handleRunAnalysis}
+                              disabled={analyzeMutation.isPending}
+                              data-testid="button-proceed-trajectory"
+                            >
+                              {analyzeMutation.isPending ? (
+                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              ) : (
+                                <ArrowRight className="w-3 h-3 mr-1" />
+                              )}
+                              Run Analysis
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              <Card className="lg:col-span-2">
+              <Card className="lg:col-span-2" id="datasets-panel">
                 <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
                   <div>
                     <CardTitle className="text-base flex items-center gap-2">
@@ -389,7 +441,7 @@ export default function TrajectoryAnalysisPage() {
                       Public Datasets
                     </CardTitle>
                     <CardDescription>
-                      {selectedDisease ? `${datasets.length} datasets available` : "Select a disease to view datasets"}
+                      {selectedDisease ? `${datasets.length} datasets available for ${selectedDisease}` : "Select a disease to view datasets"}
                     </CardDescription>
                   </div>
                   {selectedDataset && (
@@ -419,18 +471,22 @@ export default function TrajectoryAnalysisPage() {
                         <Skeleton key={i} className="h-16 w-full" />
                       ))}
                     </div>
+                  ) : datasets.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Database className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>No datasets found for {selectedDisease}</p>
+                    </div>
                   ) : (
                     <ScrollArea className="h-[400px]">
                       <div className="space-y-2">
                         {datasets.map((dataset) => (
                           <div
                             key={dataset.id}
-                            className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                            className={`p-3 rounded-lg border transition-colors ${
                               selectedDataset === dataset.id
                                 ? "border-primary bg-primary/5"
                                 : "border-border hover-elevate"
                             }`}
-                            onClick={() => setSelectedDataset(dataset.id)}
                             data-testid={`dataset-${dataset.id}`}
                           >
                             <div className="flex items-start justify-between gap-2">
@@ -453,9 +509,30 @@ export default function TrajectoryAnalysisPage() {
                                   <span>{dataset.publicationYear}</span>
                                 </div>
                               </div>
-                              {selectedDataset === dataset.id && (
-                                <Check className="w-5 h-5 text-primary shrink-0" />
-                              )}
+                              <div className="flex items-center gap-2 shrink-0">
+                                {selectedDataset === dataset.id ? (
+                                  <Badge variant="default" className="gap-1">
+                                    <Check className="w-3 h-3" />
+                                    Active
+                                  </Badge>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedDataset(dataset.id);
+                                      toast({
+                                        title: "Dataset Selected",
+                                        description: `${dataset.name} is now active. Click "Run PGD Analysis" to proceed.`,
+                                      });
+                                    }}
+                                    data-testid={`button-load-${dataset.id}`}
+                                  >
+                                    <Database className="w-3 h-3 mr-1" />
+                                    Load
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
