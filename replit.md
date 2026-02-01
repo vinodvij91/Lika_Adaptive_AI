@@ -63,6 +63,17 @@ The platform integrates production-grade Python pipelines for both drug discover
     - `POST /api/compute/vaccine/md-simulation` - Molecular dynamics (GPU-intensive, accepts `pdbFileId` parameter)
     - `GET /api/compute/vaccine/hardware` - Get hardware performance report
     - `GET /api/compute/vaccine/task-matrix` - Get full task classification matrix with hardware requirements and cost analysis
+- **OpenFold3 NIM Integration** (`server/services/openfold3.ts`): AlphaFold3-compatible structure prediction for protein-ligand complexes via NVIDIA NIM API. Features GPU-accelerated inference with automatic result caching.
+  - **API Endpoints**:
+    - `POST /api/structures/openfold3/predict` - Predict protein-ligand complex structure (with caching)
+    - `POST /api/structures/openfold3/batch` - Batch predictions (max 10)
+    - `GET /api/structures/openfold3/cached` - List cached predictions
+    - `GET /api/structures/openfold3/:id` - Get specific cached prediction
+    - `GET /api/structures/openfold3/info` - Get OpenFold3 capabilities info
+  - **UI Integration**:
+    - Targets page: "Predict 3D Complex" action in dropdown menu for each target
+    - Vaccine/Drug Discovery: "Predict 3D Complex" button in assay template dialog
+  - **Result Caching**: Structure predictions cached in `structure_predictions` table with unique cache key per target-ligand pair
 - **SandboxAQ AQAffinity Integration** (`compute/aqaffinity_integration.py`): Open-source AI model for fast, structure-free prediction of protein-ligand binding affinities, built on OpenFold3. **Note:** Currently in simulation mode - returns deterministic predictions based on input hashing. Real AQAffinity integration requires installing the package (`pip install git+https://huggingface.co/SandboxAQ/aqaffinity`) and GPU compute resources.
   - **Key Features**:
     - Structure-free prediction (sequence + SMILES only, no protein structure required)

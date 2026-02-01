@@ -8016,7 +8016,14 @@ print(json.dumps(result, default=str))
       const { structurePredictions } = await import("@shared/schema");
       
       // Generate cache key
-      const cacheKey = `of3_${Math.abs([...`${proteinSequence}:${ligandSmiles || ""}`].reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)).toString(36)}`;
+      const inputStr = `${proteinSequence}:${ligandSmiles || ""}`;
+      let hash = 0;
+      for (let i = 0; i < inputStr.length; i++) {
+        const char = inputStr.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      const cacheKey = `of3_${Math.abs(hash).toString(36)}`;
       
       // Check cache first
       const cached = await db.select().from(structurePredictions).where(eq(structurePredictions.cacheKey, cacheKey)).limit(1);

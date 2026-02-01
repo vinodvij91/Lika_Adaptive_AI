@@ -52,6 +52,7 @@ import {
   Settings2,
   Plus,
   FolderPlus,
+  Boxes,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useLocation } from "wouter";
@@ -171,6 +172,17 @@ export default function TrajectoryAnalysisPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [pipelineType, setPipelineType] = useState<"drug" | "vaccine">("drug");
   const [selectedReadouts, setSelectedReadouts] = useState<Set<string>>(new Set());
+  const [showStructureDialog, setShowStructureDialog] = useState(false);
+  const [structureLigandSmiles, setStructureLigandSmiles] = useState("");
+  const [structureResult, setStructureResult] = useState<{
+    id: string;
+    confidenceScore: number;
+    metrics: { pLDDT: number; pTM: number; iPTM?: number; numResidues: number; numAtoms: number };
+    ligandBindingSite?: { residues: string[]; bindingPocketVolume: number; interactionType: string[] };
+    modelVersion: string;
+    isSimulated: boolean;
+    fromCache?: boolean;
+  } | null>(null);
   
   const isVaccineMode = pipelineType === "vaccine";
 
@@ -318,6 +330,51 @@ export default function TrajectoryAnalysisPage() {
       });
     },
   });
+
+  const structurePredictionMutation = useMutation({
+    mutationFn: async (params: { proteinSequence: string; ligandSmiles?: string; name?: string }) => {
+      const response = await apiRequest("POST", "/api/structures/openfold3/predict", params);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      setStructureResult(data);
+      logAnalysisRun(
+        "3D Structure Predicted",
+        `pLDDT: ${data.metrics.pLDDT.toFixed(1)}, pTM: ${data.metrics.pTM.toFixed(2)}`,
+        "target",
+        selectedTargetForPrediction || undefined,
+        { pLDDT: data.metrics.pLDDT, pTM: data.metrics.pTM, fromCache: data.fromCache }
+      );
+      toast({
+        title: data.fromCache ? "Structure Retrieved from Cache" : "3D Structure Predicted",
+        description: `pLDDT: ${data.metrics.pLDDT.toFixed(1)}, pTM: ${data.metrics.pTM.toFixed(2)}${data.isSimulated ? " (simulated)" : ""}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Prediction Error",
+        description: "Failed to predict 3D structure",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleOpenStructureDialog = (gene: string) => {
+    setSelectedTargetForPrediction(gene);
+    setStructureLigandSmiles("");
+    setStructureResult(null);
+    setShowStructureDialog(true);
+  };
+
+  const handlePredictStructure = () => {
+    if (!selectedTargetForPrediction) return;
+    const mockSequence = "MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPILSRVGDGTQDNLSGAEKAVQVKVKALPDAQFEVVHSLAKWKRQQIAAALEHHHHHH";
+    structurePredictionMutation.mutate({
+      proteinSequence: mockSequence,
+      ligandSmiles: structureLigandSmiles || undefined,
+      name: `${selectedTargetForPrediction} Complex`,
+    });
+  };
 
   const { data: campaignsData } = useQuery<Campaign[]>({
     queryKey: ["/api/campaigns"],
@@ -1478,6 +1535,16 @@ export default function TrajectoryAnalysisPage() {
                 <Button variant="outline" onClick={() => setShowAssayDialog(false)} data-testid="button-close-assay">
                   Close
                 </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    if (assayTemplate) handleOpenStructureDialog(assayTemplate.targetGene);
+                  }}
+                  data-testid="button-predict-structure-assay"
+                >
+                  <Boxes className="w-4 h-4 mr-2" />
+                  Predict 3D Complex
+                </Button>
                 <Button onClick={openCampaignDialog} data-testid="button-add-to-campaign">
                   <FolderPlus className="w-4 h-4 mr-2" />
                   Add to Campaign
@@ -1719,6 +1786,115 @@ export default function TrajectoryAnalysisPage() {
                 {campaignMode === "new" ? "Create Campaign" : "Add to Campaign"}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showStructureDialog} onOpenChange={setShowStructureDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Boxes className="w-5 h-5" />
+              Predict 3D Complex - OpenFold3 NIM
+            </DialogTitle>
+            <DialogDescription>
+              Predict the 3D structure of <strong>{selectedTargetForPrediction}</strong> with optional ligand using NVIDIA OpenFold3 NIM (AlphaFold3-compatible).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Target Gene</Label>
+              <div className="p-3 bg-muted rounded-md">
+                <code className="text-sm font-mono">{selectedTargetForPrediction}</code>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Structure will be predicted using a representative protein sequence
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="structureLigand">Ligand SMILES (optional)</Label>
+              <Input
+                id="structureLigand"
+                placeholder="e.g., CC(=O)Nc1ccc(O)cc1"
+                value={structureLigandSmiles}
+                onChange={(e) => setStructureLigandSmiles(e.target.value)}
+                className="font-mono"
+                data-testid="input-structure-ligand"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter a SMILES string to predict protein-ligand complex structure
+              </p>
+            </div>
+            {structureResult && (
+              <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="font-medium">Prediction Results</h4>
+                  <div className="flex gap-2">
+                    {structureResult.fromCache && (
+                      <Badge variant="secondary" className="text-xs">From Cache</Badge>
+                    )}
+                    {structureResult.isSimulated && (
+                      <Badge variant="outline" className="text-xs">Simulated</Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">pLDDT Score:</span>
+                    <span className="ml-2 font-medium">{structureResult.metrics.pLDDT.toFixed(1)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">pTM Score:</span>
+                    <span className="ml-2 font-medium">{structureResult.metrics.pTM.toFixed(3)}</span>
+                  </div>
+                  {structureResult.metrics.iPTM !== undefined && (
+                    <div>
+                      <span className="text-muted-foreground">iPTM Score:</span>
+                      <span className="ml-2 font-medium">{structureResult.metrics.iPTM.toFixed(3)}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">Atoms:</span>
+                    <span className="ml-2 font-medium">{structureResult.metrics.numAtoms}</span>
+                  </div>
+                </div>
+                {structureResult.ligandBindingSite && (
+                  <div className="pt-2 border-t">
+                    <p className="text-sm font-medium mb-1">Binding Site</p>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>Residues: {structureResult.ligandBindingSite.residues.slice(0, 5).join(", ")}{structureResult.ligandBindingSite.residues.length > 5 ? "..." : ""}</p>
+                      <p>Pocket Volume: {structureResult.ligandBindingSite.bindingPocketVolume.toFixed(0)} Å³</p>
+                      <p>Interactions: {structureResult.ligandBindingSite.interactionType.join(", ")}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">Model: {structureResult.modelVersion}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowStructureDialog(false)}>
+              Close
+            </Button>
+            <Button 
+              onClick={handlePredictStructure}
+              disabled={structurePredictionMutation.isPending}
+              data-testid="button-run-structure-prediction"
+            >
+              {structurePredictionMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Predicting...
+                </>
+              ) : (
+                <>
+                  <Boxes className="h-4 w-4 mr-2" />
+                  Predict Structure
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
