@@ -958,7 +958,9 @@ export default function TrajectoryAnalysisPage() {
                   <div>
                     <CardTitle className="text-base">Detected Biomarkers</CardTitle>
                     <CardDescription>
-                      Genes with significant expression changes along the trajectory
+                      {isVaccineMode 
+                        ? "Genes associated with differential vaccine-induced immune responses over pseudotime"
+                        : "Genes with significant expression changes along the trajectory"}
                     </CardDescription>
                   </div>
                   <Badge variant="secondary">{(trajectoryResult.biomarkers || []).length} genes</Badge>
@@ -1044,7 +1046,7 @@ export default function TrajectoryAnalysisPage() {
                               ) : (
                                 <FlaskConical className="w-3 h-3 mr-1" />
                               )}
-                              Assay
+                              {isVaccineMode ? "Readout" : "Assay"}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1104,7 +1106,7 @@ export default function TrajectoryAnalysisPage() {
                             data-testid={`button-create-assay-${target}`}
                           >
                             <FlaskConical className="w-3 h-3 mr-1" />
-                            Create Assay
+                            {isVaccineMode ? "Create Readout" : "Create Assay"}
                           </Button>
                           <Button
                             size="sm"
@@ -1131,10 +1133,12 @@ export default function TrajectoryAnalysisPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FlaskConical className="w-5 h-5" />
-              Assay Template for {assayTemplate?.targetGene}
+              {isVaccineMode ? "Immune Readout" : "Assay Template"} for {assayTemplate?.targetGene}
             </DialogTitle>
             <DialogDescription>
-              Auto-generated from trajectory analysis biomarker detection
+              {isVaccineMode 
+                ? "Auto-generated immune correlate readout from vaccine response trajectory"
+                : "Auto-generated from trajectory analysis biomarker detection"}
             </DialogDescription>
           </DialogHeader>
           {assayTemplate && (
