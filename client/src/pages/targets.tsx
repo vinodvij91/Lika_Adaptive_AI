@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { PageHeader } from "@/components/page-header";
@@ -52,7 +52,15 @@ import {
   MoreVertical,
   Boxes,
   Loader2,
+  Eye,
+  RotateCw,
 } from "lucide-react";
+
+declare global {
+  interface Window {
+    $3Dmol: any;
+  }
+}
 import type { Target as TargetType } from "@shared/schema";
 
 type TargetWithDiseases = TargetType & { diseases: string[] };
@@ -89,7 +97,44 @@ export default function TargetsPage() {
   const [manualSequence, setManualSequence] = useState("");
   const [fetchingSequence, setFetchingSequence] = useState(false);
   const [predictionResult, setPredictionResult] = useState<StructurePrediction | null>(null);
+  const [show3DViewer, setShow3DViewer] = useState(false);
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const viewerInstanceRef = useRef<any>(null);
   const { toast } = useToast();
+
+  // Load 3Dmol.js script
+  useEffect(() => {
+    if (!window.$3Dmol) {
+      const script = document.createElement("script");
+      script.src = "https://3dmol.org/build/3Dmol-min.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  // Initialize 3D viewer when dialog opens
+  useEffect(() => {
+    if (show3DViewer && predictionResult?.pdbData && viewerContainerRef.current && window.$3Dmol) {
+      // Clear any existing viewer
+      if (viewerInstanceRef.current) {
+        viewerInstanceRef.current.clear();
+      }
+      
+      // Create new viewer
+      const viewer = window.$3Dmol.createViewer(viewerContainerRef.current, {
+        backgroundColor: 'black'
+      });
+      
+      // Add the PDB structure
+      viewer.addModel(predictionResult.pdbData, "pdb");
+      viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
+      viewer.zoomTo();
+      viewer.spin(true);
+      viewer.render();
+      
+      viewerInstanceRef.current = viewer;
+    }
+  }, [show3DViewer, predictionResult?.pdbData]);
 
   const { data: diseases } = useQuery<{ disease: string; count: number }[]>({
     queryKey: ["/api/diseases"],
@@ -633,8 +678,17 @@ export default function TargetsPage() {
                     </div>
                   </div>
                 )}
-                <div className="pt-2 border-t">
+                <div className="pt-2 border-t flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">Model: {predictionResult.modelVersion}</p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShow3DViewer(true)}
+                    data-testid="button-view-3d"
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    View 3D
+                  </Button>
                 </div>
               </div>
             )}
@@ -659,6 +713,54 @@ export default function TargetsPage() {
                   Predict Structure
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={show3DViewer} onOpenChange={setShow3DViewer}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Boxes className="h-5 w-5" />
+              3D Structure Viewer
+            </DialogTitle>
+            <DialogDescription>
+              Predicted 3D structure for {selectedTarget?.name || "Unknown Target"}
+              {predictionResult?.isSimulated && " (Simulated)"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div 
+              ref={viewerContainerRef}
+              className="w-full h-[500px] bg-black rounded-lg relative"
+              data-testid="3d-viewer-container"
+            />
+            {predictionResult && (
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-4 text-sm">
+                  <Badge variant="secondary">pLDDT: {predictionResult.metrics.pLDDT.toFixed(1)}</Badge>
+                  <Badge variant="secondary">pTM: {predictionResult.metrics.pTM.toFixed(3)}</Badge>
+                  <Badge variant="outline">{predictionResult.metrics.numAtoms} atoms</Badge>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (viewerInstanceRef.current) {
+                      viewerInstanceRef.current.spin(true);
+                    }
+                  }}
+                >
+                  <RotateCw className="h-4 w-4 mr-1" />
+                  Spin
+                </Button>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShow3DViewer(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

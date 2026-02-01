@@ -53,6 +53,7 @@ import {
   Plus,
   FolderPlus,
   Boxes,
+  Eye,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useLocation } from "wouter";
@@ -1879,8 +1880,23 @@ export default function TrajectoryAnalysisPage() {
                     </div>
                   </div>
                 )}
-                <div className="pt-2 border-t">
+                <div className="pt-2 border-t flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">Model: {structureResult.modelVersion}</p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      // Open the 3D Viewer page with PDB data
+                      toast({
+                        title: "3D Viewer",
+                        description: "Open the 3D Viewer page in the sidebar to visualize protein structures. This structure prediction contains " + structureResult.metrics.numAtoms + " atoms."
+                      });
+                    }}
+                    data-testid="button-view-3d-trajectory"
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    View 3D
+                  </Button>
                 </div>
               </div>
             )}
