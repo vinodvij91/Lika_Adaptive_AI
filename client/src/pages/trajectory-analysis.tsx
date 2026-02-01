@@ -257,7 +257,7 @@ export default function TrajectoryAnalysisPage() {
 
   const predictInhibitorsMutation = useMutation({
     mutationFn: async (params: { gene: string; disease: string; smilesList: string[] }) => {
-      const response = await apiRequest("POST", "/api/trajectory/predict-inhibitors", params);
+      const response = await apiRequest("POST", "/api/trajectory/predict-inhibitors", { ...params, pipelineType });
       return await response.json() as InhibitorResult;
     },
     onSuccess: (data) => {
