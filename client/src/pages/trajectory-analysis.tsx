@@ -50,7 +50,11 @@ import {
   Check,
   ArrowRight,
   Settings2,
+  Plus,
+  FolderPlus,
 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useLocation } from "wouter";
 
 interface ScRNADataset {
   id: string;
@@ -127,8 +131,23 @@ interface InhibitorResult {
   predictions: InhibitorPrediction[];
 }
 
+interface Campaign {
+  id: string;
+  name: string;
+  projectId: string;
+  domainType?: string;
+  status?: string;
+  createdAt?: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+}
+
 export default function TrajectoryAnalysisPage() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const { logAnalysisRun, logDataImport } = useActivityLog();
   const [selectedDisease, setSelectedDisease] = useState<string>("");
   const [selectedDataset, setSelectedDataset] = useState<string>("");
@@ -143,6 +162,11 @@ export default function TrajectoryAnalysisPage() {
   const [selectedTargetForPrediction, setSelectedTargetForPrediction] = useState<string | null>(null);
   const [inhibitorResult, setInhibitorResult] = useState<InhibitorResult | null>(null);
   const [smilesInput, setSmilesInput] = useState("CCO\nCC(=O)O\nC1=CC=CC=C1\nCCCCCC\nC1=CC=C(C=C1)O\nCC(C)CC(C(=O)O)N\nC1CCCCC1\nC(C(=O)O)N\nCCCCCCCC\nC1=CC=C(C=C1)N");
+  
+  const [showCampaignDialog, setShowCampaignDialog] = useState(false);
+  const [campaignMode, setCampaignMode] = useState<"new" | "existing">("new");
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [newCampaignName, setNewCampaignName] = useState("");
 
   const { data: diseases, isLoading: diseasesLoading } = useQuery<DiseaseInfo[]>({
     queryKey: ["/api/trajectory/diseases"],
@@ -242,6 +266,137 @@ export default function TrajectoryAnalysisPage() {
       });
     },
   });
+
+  const { data: campaignsData } = useQuery<Campaign[]>({
+    queryKey: ["/api/campaigns"],
+    enabled: showCampaignDialog,
+  });
+
+  const { data: projectsData } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+    enabled: showCampaignDialog,
+  });
+
+  const campaigns = campaignsData || [];
+  const projects = projectsData || [];
+
+  const createCampaignMutation = useMutation({
+    mutationFn: async (params: { 
+      name: string; 
+      projectId: string; 
+      pipelineConfig: Record<string, unknown>;
+      domainType: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/campaigns", params);
+      return await response.json() as Campaign;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      setShowCampaignDialog(false);
+      setShowAssayDialog(false);
+      toast({
+        title: "Campaign Created",
+        description: `${data.name} has been created with ${assayTemplate?.suggestedAssays?.length || 0} assays`,
+      });
+      navigate(`/campaigns?id=${data.id}`);
+    },
+    onError: () => {
+      toast({
+        title: "Campaign Creation Failed",
+        description: "Could not create campaign",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateCampaignMutation = useMutation({
+    mutationFn: async (params: { campaignId: string; pipelineConfig: Record<string, unknown> }) => {
+      const response = await apiRequest("PATCH", `/api/campaigns/${params.campaignId}`, { 
+        pipelineConfig: params.pipelineConfig 
+      });
+      return await response.json() as Campaign;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      setShowCampaignDialog(false);
+      setShowAssayDialog(false);
+      toast({
+        title: "Campaign Updated",
+        description: `Assays added to ${data.name}`,
+      });
+      navigate(`/campaigns?id=${data.id}`);
+    },
+    onError: () => {
+      toast({
+        title: "Update Failed",
+        description: "Could not add assays to campaign",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddToCampaign = () => {
+    if (!assayTemplate) return;
+
+    const assayConfig = {
+      trajectorySource: {
+        datasetId: selectedDataset,
+        disease: selectedDisease,
+        analysisTimestamp: new Date().toISOString(),
+      },
+      targetGene: assayTemplate.targetGene,
+      role: assayTemplate.role,
+      druggable: assayTemplate.targetable,
+      assays: assayTemplate.suggestedAssays,
+    };
+
+    if (campaignMode === "new") {
+      if (!newCampaignName.trim()) {
+        toast({
+          title: "Name Required",
+          description: "Please enter a campaign name",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const projectId = projects[0]?.id;
+      if (!projectId) {
+        toast({
+          title: "No Project Found",
+          description: "Please create a project first",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      createCampaignMutation.mutate({
+        name: newCampaignName,
+        projectId,
+        pipelineConfig: assayConfig,
+        domainType: "Neurology",
+      });
+    } else {
+      if (!selectedCampaignId) {
+        toast({
+          title: "No Campaign Selected",
+          description: "Please select an existing campaign",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      updateCampaignMutation.mutate({
+        campaignId: selectedCampaignId,
+        pipelineConfig: assayConfig,
+      });
+    }
+  };
+
+  const openCampaignDialog = () => {
+    setNewCampaignName(`${assayTemplate?.targetGene || "Target"} ${assayTemplate?.disease || "Discovery"} Campaign`);
+    setShowCampaignDialog(true);
+  };
 
   const handleRunAnalysis = () => {
     if (!selectedDataset) {
@@ -972,7 +1127,8 @@ export default function TrajectoryAnalysisPage() {
                 <Button variant="outline" onClick={() => setShowAssayDialog(false)} data-testid="button-close-assay">
                   Close
                 </Button>
-                <Button data-testid="button-add-to-campaign">
+                <Button onClick={openCampaignDialog} data-testid="button-add-to-campaign">
+                  <FolderPlus className="w-4 h-4 mr-2" />
                   Add to Campaign
                 </Button>
               </div>
@@ -1090,6 +1246,112 @@ export default function TrajectoryAnalysisPage() {
                   Export Hits
                 </Button>
               )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCampaignDialog} onOpenChange={setShowCampaignDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderPlus className="w-5 h-5" />
+              Add to Campaign
+            </DialogTitle>
+            <DialogDescription>
+              Create a new campaign or add assays to an existing one
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <RadioGroup value={campaignMode} onValueChange={(v) => setCampaignMode(v as "new" | "existing")}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="new" id="new-campaign" data-testid="radio-new-campaign" />
+                <Label htmlFor="new-campaign">Create New Campaign</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="existing" id="existing-campaign" data-testid="radio-existing-campaign" />
+                <Label htmlFor="existing-campaign">Add to Existing Campaign</Label>
+              </div>
+            </RadioGroup>
+
+            {campaignMode === "new" ? (
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="campaign-name">Campaign Name</Label>
+                  <Input
+                    id="campaign-name"
+                    value={newCampaignName}
+                    onChange={(e) => setNewCampaignName(e.target.value)}
+                    placeholder="Enter campaign name"
+                    data-testid="input-campaign-name"
+                  />
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                  <p className="font-medium mb-1">Will include:</p>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <Target className="w-3 h-3" />
+                      Target: {assayTemplate?.targetGene}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <FlaskConical className="w-3 h-3" />
+                      {assayTemplate?.suggestedAssays?.length || 0} assays
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Microscope className="w-3 h-3" />
+                      Disease: {assayTemplate?.disease}
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {campaigns.length > 0 ? (
+                  <div>
+                    <Label htmlFor="select-campaign">Select Campaign</Label>
+                    <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                      <SelectTrigger data-testid="select-campaign-trigger">
+                        <SelectValue placeholder="Select a campaign" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {campaigns.map((campaign) => (
+                          <SelectItem key={campaign.id} value={campaign.id} data-testid={`select-campaign-${campaign.id}`}>
+                            {campaign.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-muted/50 rounded-lg text-center">
+                    <p className="text-sm text-muted-foreground">No existing campaigns found</p>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setCampaignMode("new")}
+                      data-testid="button-switch-to-new"
+                    >
+                      Create a new campaign instead
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCampaignDialog(false)} data-testid="button-cancel-campaign">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleAddToCampaign}
+                disabled={createCampaignMutation.isPending || updateCampaignMutation.isPending}
+                data-testid="button-confirm-campaign"
+              >
+                {(createCampaignMutation.isPending || updateCampaignMutation.isPending) && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                {campaignMode === "new" ? "Create Campaign" : "Add to Campaign"}
+              </Button>
             </div>
           </div>
         </DialogContent>
