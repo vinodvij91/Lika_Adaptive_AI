@@ -39,6 +39,7 @@ import {
   Database,
   Syringe,
   GitBranch,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -96,6 +97,7 @@ const infrastructureItems = [
   { title: "Pipeline Launcher", url: "/pipeline", icon: Rocket },
   { title: "BioNeMo AI", url: "/bionemo", icon: Dna },
   { title: "External Data", url: "/external-data", icon: Database },
+  { title: "Activity Log", url: "/activity-log", icon: ClipboardList },
   { title: "Usage", url: "/usage", icon: Activity },
   { title: "Integrations", url: "/integrations", icon: Plug },
   { title: "Quantum", url: "/quantum", icon: Atom },
