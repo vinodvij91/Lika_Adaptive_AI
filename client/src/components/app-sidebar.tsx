@@ -38,6 +38,7 @@ import {
   Dna,
   Database,
   Syringe,
+  GitBranch,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -66,6 +67,7 @@ const drugWorkflowItems = [
   { title: "ADMET", url: "/admet", icon: Beaker },
   { title: "Assays", url: "/assays", icon: TestTube2 },
   { title: "Assay Harvesting", url: "/assay-harvesting", icon: Database },
+  { title: "Trajectory Analysis", url: "/trajectory-analysis", icon: GitBranch },
   { title: "SAR Analysis", url: "/learning-graph", icon: BarChart3 },
   { title: "Reports", url: "/reports", icon: BarChart3 },
 ];

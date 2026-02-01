@@ -10254,5 +10254,39 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
+  // ============================================================================
+  // SCRNA + PGD TRAJECTORY ANALYSIS ENDPOINTS
+  // ============================================================================
+  
+  app.get("/api/trajectory/datasets", requireAuth, async (req, res) => {
+    const { getDatasets } = await import("./api/trajectory-analysis");
+    return getDatasets(req, res);
+  });
+
+  app.get("/api/trajectory/datasets/:id", requireAuth, async (req, res) => {
+    const { getDatasetById } = await import("./api/trajectory-analysis");
+    return getDatasetById(req, res);
+  });
+
+  app.get("/api/trajectory/diseases", requireAuth, async (req, res) => {
+    const { getAvailableDiseases } = await import("./api/trajectory-analysis");
+    return getAvailableDiseases(req, res);
+  });
+
+  app.post("/api/trajectory/analyze/:datasetId", requireAuth, async (req, res) => {
+    const { runTrajectoryAnalysis } = await import("./api/trajectory-analysis");
+    return runTrajectoryAnalysis(req, res);
+  });
+
+  app.post("/api/trajectory/assay-template", requireAuth, async (req, res) => {
+    const { generateAssayTemplateFromTarget } = await import("./api/trajectory-analysis");
+    return generateAssayTemplateFromTarget(req, res);
+  });
+
+  app.post("/api/trajectory/predict-inhibitors", requireAuth, async (req, res) => {
+    const { predictInhibitors } = await import("./api/trajectory-analysis");
+    return predictInhibitors(req, res);
+  });
+
   return httpServer;
 }

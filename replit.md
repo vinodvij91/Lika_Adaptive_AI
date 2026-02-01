@@ -86,6 +86,23 @@ The platform integrates production-grade Python pipelines for both drug discover
 - **Materials Science Pipeline**: Includes Magpie and SOAP descriptors, Graph Neural Networks (CGCNN, Multi-Property GNN), Multi-task Neural Networks, GPU acceleration, materials generation, element substitution, synthesis planning, and atomistic simulations (VASP, Quantum ESPRESSO). It also incorporates specialized designers for various material types (e.g., Battery, Photovoltaic, Structural) and discovery workflows (e.g., Superconductor, Catalyst).
 - **Universal Hardware-Agnostic Materials Pipeline**: Automatically adapts to any hardware configuration (CPU, GPU, Apple Silicon) for optimal performance, supporting molecular, compositional, and polymer material types. It includes specialized feature extractors and predictors for various polymer properties (e.g., Tg, tensile strength).
 
+### scRNA + PGD Trajectory Analysis Module
+Automated biomarker discovery and target identification from public single-cell RNA-seq datasets using Pseudotime Graph Diffusion (PGD).
+- **Public Dataset Registry**: 10+ curated scRNA-seq datasets from GEO covering Alzheimer's, COVID-19, Cancer, Diabetes, IBD, and Parkinson's disease
+- **PGD Trajectory Inference**: Simulates UMAP embedding and pseudotime trajectory analysis with configurable smoothing parameters
+- **Biomarker Detection**: Identifies genes with significant expression changes at trajectory branch points
+- **Druggable Target Extraction**: Automatically identifies targetable genes from biomarker analysis
+- **Assay Template Generation**: Auto-generates assay templates from detected targets with binding, functional, and cellular assay suggestions
+- **BioNeMo Integration**: Predicts inhibitor binding affinity for identified targets using compound SMILES input
+- **API Endpoints**:
+  - `GET /api/trajectory/datasets` - List public scRNA-seq datasets (filterable by disease)
+  - `GET /api/trajectory/datasets/:id` - Get dataset details
+  - `GET /api/trajectory/diseases` - Get available disease areas with dataset counts
+  - `POST /api/trajectory/analyze/:datasetId` - Run PGD trajectory analysis on a dataset
+  - `POST /api/trajectory/assay-template` - Generate assay template from target gene
+  - `POST /api/trajectory/predict-inhibitors` - Predict binding affinity for SMILES against target
+- **Frontend**: Accessible at `/trajectory-analysis` with interactive UMAP visualization, biomarker table, and BioNeMo prediction dialog
+
 ## External Dependencies
 - **PostgreSQL**: Primary relational database.
 - **Radix UI primitives**: For building UI components.
