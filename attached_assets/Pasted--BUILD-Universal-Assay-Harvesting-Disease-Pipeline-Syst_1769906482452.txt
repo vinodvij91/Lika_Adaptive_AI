@@ -1,0 +1,128 @@
+**BUILD: Universal Assay Harvesting + Disease Pipeline System**
+
+## 🎯 CORE REQUIREMENTS
+
+### 1. **5 Assay Categories** (Universal for ALL diseases)
+binding # KD, IC50, Ki, SPR
+functional # Aggregation, pathway, cell-based
+adme # Permeability, metabolism, solubility
+safety # Cytotox, hERG, genotox
+physicochemical # LogD, PSA, solubility
+
+text
+
+### 2. **Disease Template System**
+JSON structure:
+{
+"disease": "Alzheimer's",
+"targets": ["Aβ42", "α-synuclein", "NLRP3", "TFEB", "ULK1"],
+"recommended_assays": {
+"binding": ["AID 720543", "CHEMBL123456"],
+"functional": ["NLRP3 inflammasome", "Aβ aggregation"],
+"adme": ["hiPSC-BBB permeability", "P-gp efflux"]
+}
+}
+
+text
+
+### 3. **Automated Harvesting Pipeline**
+pubchem.py + chembl.py → harvest_assays(disease) → categorize() → save_template()
+
+text
+
+## 🛠 IMPLEMENTATION PLAN (3 DAYS)
+
+### **DAY 1: API Integration**
+```bash
+pip install chembl_webresource_client pubchempy fastapi uvicorn
+pubchem_harvester.py:
+
+python
+def harvest_pubchem(target):
+    # Return top 20 AIDs for target
+    pass
+chembl_harvester.py:
+
+python
+def harvest_chembl(target_chembl_id):
+    # Return assays by category
+    pass
+DAY 2: Assay Classifier + Templates
+assay_classifier.py:
+
+python
+def classify_assay(description):
+    # NLP → returns "binding", "functional", etc.
+    # Keywords: "IC50"→binding, "aggregation"→functional, "permeability"→adme
+    pass
+disease_templates.py:
+
+python
+def build_template(disease):
+    targets = DISEASE_TARGETS[disease]
+    assays = harvest_all(targets)
+    return curate_template(assays)
+DAY 3: FastAPI UI + Frontend
+main.py:
+
+python
+@app.get("/assays/{disease}")
+def get_assays(disease: str):
+    return load_template(disease)
+
+@app.post("/campaign")
+def create_campaign(campaign: CampaignRequest):
+    # Select assays → Generate protocol JSON
+    pass
+Frontend (HTML/JS):
+
+text
+Disease: [Alzheimer's ▼]
+┌─ Recommended Assays (25 found)
+├─ Binding (8): ☑ Aβ aggregation AID 720543
+├─ Functional (7): ☑ NLRP3 inflammasome
+├─ ADME-CNS (6): ☑ hiPSC-BBB permeability
+└─ [GENERATE PROTOCOL] [EXPORT TO BENCHLING]
+📁 FOLDER STRUCTURE
+text
+app/
+├── api/
+│   ├── pubchem.py
+│   ├── chembl.py
+│   └── classifier.py
+├── templates/
+│   └── alzheimers.json
+├── static/
+│   └── index.html
+└── main.py
+🎛 EXAMPLE USAGE
+text
+1. GET /assays/Alzheimer's → Returns 25 curated assays
+2. POST /campaign → {disease: "Alzheimer's", selected: ["AID 720543"]}
+3. Returns: Experiment protocol JSON
+✅ DISEASE TEMPLATES TO BUILD FIRST
+text
+Alzheimer's     # Aβ, NLRP3, BBB assays
+Oncology        # Kinase panels, proliferation
+Metabolic       # GLUT, PPAR assays
+Vaccines        # Binding + neutralization
+Materials       # Physchem + stability
+🔗 INTEGRATE WITH EXISTING
+text
+AQAffinity output → assays/campaign step → Protocol generation
+BioNeMo context → "aggregation inhibition assay"
+START WITH ALZHEIMER'S TEMPLATE using screenshot AID 720543.
+DEPLOY TO PRODUCTION IN 72 HOURS.
+
+text
+
+***
+
+## 💡 **Why This Prompt Works**
+
+✅ **Complete scope** — No back-and-forth  
+✅ **3-day timeline** — Realistic for Replit  
+✅ **Exact file structure** — Copy-paste ready  
+✅ **Your Aβ assay** — Screenshot AID included  
+✅ **Scalable** — Works for ANY disease  
+✅ **Production-ready** — FastAPI + frontend  

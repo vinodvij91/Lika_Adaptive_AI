@@ -1,0 +1,104 @@
+BIO Nemo INTEGRATION (Add to Day 3)
+New Endpoint: /predict/{assay_id}
+python
+@app.post("/predict/{assay_id}")
+def predict_assay(assay_id: str, smiles: List[str]):
+    """
+    BioNeMo prediction for specific assay
+    """
+    assay = load_assay(assay_id)  # Aβ aggregation AID 720543
+    
+    # BioNeMo context-aware prediction
+    results = bionemo_client.predict(
+        model="megamolbart",  # Or ESM2
+        compounds=smiles,
+        context=f"{assay['description']} IC50 prediction"
+    )
+    
+    return {
+        "assay": assay_id,
+        "predictions": results,
+        "top_hits": top_10_by_ic50(results)
+    }
+Workflow Integration
+text
+1. Harvest assays → assay_templates.json
+2. User selects assay → POST /predict/AID720543
+3. BioNeMo returns: IC50 predictions for library
+4. Top hits → "Run this assay" button
+BioNeMo Context Examples (Your Assays)
+json
+{
+  "AID_720543": {
+    "context": "Thioflavin T fluorescence Aβ42 aggregation inhibition assay IC50",
+    "model": "megamolbart",
+    "readout": "pIC50"
+  },
+  "NLRP3_assay": {
+    "context": "NLRP3 inflammasome inhibition ASC speck formation IC50",
+    "model": "esm2"
+  }
+}
+🔄 COMPLETE WORKFLOW (BioNeMo‑Powered)
+text
+1. Disease: Alzheimer's → Load 25 assays
+2. Select: Aβ aggregation (AID 720543)
+3. BioNeMo predicts IC50 for 10K library
+4. Top 100 hits → "Order these compounds"
+5. Customer runs wet lab → Validate
+6. Results feedback → Fine-tune BioNeMo
+📝 UPDATED REPLIT PROMPT (BioNeMo Version)
+Replace the Day 3 section with:
+
+text
+## DAY 3: FastAPI + BioNeMo + Frontend
+
+**main.py:**
+```python
+@app.post("/predict/{assay_id}")
+def predict_assay(assay_id: str, smiles: List[str]):
+    assay = load_assay(assay_id)
+    bionemo_results = bionemo_predict(assay['context'], smiles)
+    return format_results(bionemo_results)
+
+@app.post("/campaign")
+def create_campaign(campaign: dict):
+    predictions = {}
+    for assay_id in campaign['assays']:
+        predictions[assay_id] = predict_assay(assay_id, campaign['smiles'])
+    return predictions  # All assays predicted at once!
+bionemo_client.py:
+
+python
+def bionemo_predict(context: str, smiles: List[str]):
+    # NVIDIA NIM API or local BioNeMo
+    response = requests.post("https://api.nvidia.com/bionemo", 
+                           json={"model": "megamolbart", "context": context, "smiles": smiles})
+    return response.json()
+Frontend:
+
+text
+Disease: Alzheimer's
+┌─ Assays (25 loaded)
+├─ ☑ Aβ agg (AID 720543) → [PREDICT w/ BioNeMo] → 10.2µM top hit
+├─ ☑ NLRP3 → [PREDICT] → 1.8µM top hit
+└─ [GENERATE FULL CAMPAIGN] [EXPORT TOP HITS]
+text
+
+***
+
+## 🎯 **Why Separate Harvesting + BioNeMo?**
+
+| Harvesting | BioNeMo |
+|------------|---------|
+| **Finds assays** (100s/disease) | **Predicts outcomes** (IC50s) |
+| ChEMBL/PubChem APIs | NVIDIA NIM/local models |
+| Static data | Dynamic predictions |
+| **Input to BioNeMo** | **Output to customer** |
+
+**Harvesting = "What assays exist?"**  
+**BioNeMo = "What will work in those assays?"**
+
+***
+
+## ✅ **Final Answer: BioNeMo IS Essential**
