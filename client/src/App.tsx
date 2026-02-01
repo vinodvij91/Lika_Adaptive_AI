@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { GlobalFooter } from "@/components/global-footer";
 import { AIAssistant } from "@/components/ai-assistant";
+import { QuickStartGuide } from "@/components/quick-start-guide";
 
 // Loading component for lazy-loaded pages
 function PageLoader() {
@@ -93,6 +94,9 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="absolute top-3 right-3 z-50">
+            <QuickStartGuide />
+          </div>
           <div className="flex-1 overflow-auto">
             <Suspense fallback={<PageLoader />}>
               {children}
