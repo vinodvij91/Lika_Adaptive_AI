@@ -279,7 +279,7 @@ export default function TrajectoryAnalysisPage() {
   };
 
   const umapData = useMemo(() => {
-    if (!trajectoryResult) return [];
+    if (!trajectoryResult || !trajectoryResult.umapCoordinates) return [];
     return trajectoryResult.umapCoordinates.slice(0, 500);
   }, [trajectoryResult]);
 
