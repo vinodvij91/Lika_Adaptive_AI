@@ -67,6 +67,12 @@ function generateCacheKey(proteinSequence: string, ligandSmiles?: string): strin
   return `of3_${Math.abs(hash).toString(36)}`;
 }
 
+// Format coordinate for PDB file (8 characters, right-justified, with proper spacing)
+function formatCoord(value: number): string {
+  const formatted = value.toFixed(3);
+  return formatted.padStart(8);
+}
+
 function generateMinimalPdb(sequence: string, ligandSmiles?: string): string {
   const aminoAcids: Record<string, string> = {
     A: "ALA", R: "ARG", N: "ASN", D: "ASP", C: "CYS",
@@ -92,69 +98,72 @@ function generateMinimalPdb(sequence: string, ligandSmiles?: string): string {
     const resName = aminoAcids[residues[resIdx]] || "ALA";
     const resNum = resIdx + 1;
     
-    const phi = -60 + Math.sin(resIdx * 0.5) * 30;
-    const psi = -45 + Math.cos(resIdx * 0.5) * 30;
+    // Generate alpha helix-like coordinates (compact structure)
+    const turn = resIdx * (2 * Math.PI / 3.6); // ~3.6 residues per turn
+    const radius = 2.3; // helix radius in Angstroms
+    const rise = 1.5; // rise per residue
     
-    const x = resIdx * 3.8 * Math.cos(phi * Math.PI / 180);
-    const y = resIdx * 3.8 * Math.sin(psi * Math.PI / 180);
-    const z = resIdx * 1.5;
+    const x = radius * Math.cos(turn);
+    const y = radius * Math.sin(turn);
+    const z = resIdx * rise;
 
     const pLDDT = 70 + Math.random() * 25;
     
     lines.push(
       `ATOM  ${atomNum.toString().padStart(5)} ${"N".padEnd(4)} ${resName} A${resNum.toString().padStart(4)}    ` +
-      `${x.toFixed(3).padStart(8)}${y.toFixed(3).padStart(8)}${z.toFixed(3).padStart(8)}` +
+      `${formatCoord(x)}${formatCoord(y)}${formatCoord(z)}` +
       `  1.00${pLDDT.toFixed(2).padStart(6)}           N`
     );
     atomNum++;
     
     lines.push(
       `ATOM  ${atomNum.toString().padStart(5)} ${"CA".padEnd(4)} ${resName} A${resNum.toString().padStart(4)}    ` +
-      `${(x + 1.45).toFixed(3).padStart(8)}${(y + 0.5).toFixed(3).padStart(8)}${z.toFixed(3).padStart(8)}` +
+      `${formatCoord(x + 1.45)}${formatCoord(y + 0.5)}${formatCoord(z)}` +
       `  1.00${pLDDT.toFixed(2).padStart(6)}           C`
     );
     atomNum++;
     
     lines.push(
       `ATOM  ${atomNum.toString().padStart(5)} ${"C".padEnd(4)} ${resName} A${resNum.toString().padStart(4)}    ` +
-      `${(x + 2.45).toFixed(3).padStart(8)}${(y + 1.0).toFixed(3).padStart(8)}${(z + 0.5).toFixed(3).padStart(8)}` +
+      `${formatCoord(x + 2.45)}${formatCoord(y + 1.0)}${formatCoord(z + 0.5)}` +
       `  1.00${pLDDT.toFixed(2).padStart(6)}           C`
     );
     atomNum++;
     
     lines.push(
       `ATOM  ${atomNum.toString().padStart(5)} ${"O".padEnd(4)} ${resName} A${resNum.toString().padStart(4)}    ` +
-      `${(x + 2.45).toFixed(3).padStart(8)}${(y + 2.2).toFixed(3).padStart(8)}${(z + 0.5).toFixed(3).padStart(8)}` +
+      `${formatCoord(x + 2.45)}${formatCoord(y + 2.2)}${formatCoord(z + 0.5)}` +
       `  1.00${pLDDT.toFixed(2).padStart(6)}           O`
     );
     atomNum++;
   }
 
   if (ligandSmiles) {
-    const ligandX = (sequence.length / 2) * 3.8;
-    const ligandY = 10;
-    const ligandZ = sequence.length * 0.75;
+    // Place ligand near the center of the helix
+    const ligandX = 5.0;
+    const ligandY = 5.0;
+    const ligandZ = (sequence.length * 1.5) / 2;
     
     lines.push(`HETATM${atomNum.toString().padStart(5)} ${"C1".padEnd(4)} LIG B   1    ` +
-      `${ligandX.toFixed(3).padStart(8)}${ligandY.toFixed(3).padStart(8)}${ligandZ.toFixed(3).padStart(8)}` +
+      `${formatCoord(ligandX)}${formatCoord(ligandY)}${formatCoord(ligandZ)}` +
       `  1.00 50.00           C`
     );
     atomNum++;
     
     lines.push(`HETATM${atomNum.toString().padStart(5)} ${"C2".padEnd(4)} LIG B   1    ` +
-      `${(ligandX + 1.5).toFixed(3).padStart(8)}${(ligandY + 1.0).toFixed(3).padStart(8)}${ligandZ.toFixed(3).padStart(8)}` +
+      `${formatCoord(ligandX + 1.5)}${formatCoord(ligandY + 1.0)}${formatCoord(ligandZ)}` +
       `  1.00 50.00           C`
     );
     atomNum++;
     
     lines.push(`HETATM${atomNum.toString().padStart(5)} ${"N1".padEnd(4)} LIG B   1    ` +
-      `${(ligandX + 2.5).toFixed(3).padStart(8)}${(ligandY + 0.5).toFixed(3).padStart(8)}${(ligandZ + 1.0).toFixed(3).padStart(8)}` +
+      `${formatCoord(ligandX + 2.5)}${formatCoord(ligandY + 0.5)}${formatCoord(ligandZ + 1.0)}` +
       `  1.00 50.00           N`
     );
     atomNum++;
     
     lines.push(`HETATM${atomNum.toString().padStart(5)} ${"O1".padEnd(4)} LIG B   1    ` +
-      `${(ligandX - 1.0).toFixed(3).padStart(8)}${(ligandY + 0.8).toFixed(3).padStart(8)}${(ligandZ - 0.5).toFixed(3).padStart(8)}` +
+      `${formatCoord(ligandX - 1.0)}${formatCoord(ligandY + 0.8)}${formatCoord(ligandZ - 0.5)}` +
       `  1.00 50.00           O`
     );
   }
