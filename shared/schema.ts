@@ -1749,3 +1749,32 @@ export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+
+// Structure Predictions Cache (OpenFold3 NIM)
+export const structurePredictions = pgTable("structure_predictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  cacheKey: varchar("cache_key").notNull().unique(),
+  targetId: varchar("target_id").references(() => targets.id, { onDelete: "cascade" }),
+  proteinSequence: text("protein_sequence").notNull(),
+  ligandSmiles: text("ligand_smiles"),
+  pdbData: text("pdb_data").notNull(),
+  confidenceScore: real("confidence_score").notNull(),
+  metrics: jsonb("metrics").notNull(),
+  ligandBindingSite: jsonb("ligand_binding_site"),
+  modelVersion: text("model_version").notNull(),
+  isSimulated: boolean("is_simulated").default(false),
+  inferenceTimeMs: integer("inference_time_ms"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
+}, (table) => [
+  index("structure_predictions_cache_key_idx").on(table.cacheKey),
+  index("structure_predictions_target_idx").on(table.targetId),
+]);
+
+export const insertStructurePredictionSchema = createInsertSchema(structurePredictions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type StructurePrediction = typeof structurePredictions.$inferSelect;
+export type InsertStructurePrediction = z.infer<typeof insertStructurePredictionSchema>;

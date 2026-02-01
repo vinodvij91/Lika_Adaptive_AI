@@ -8004,6 +8004,134 @@ print(json.dumps(result, default=str))
     }
   });
 
+  // OpenFold3 NIM Structure Prediction Endpoints
+  app.post("/api/structures/openfold3/predict", requireAuth, async (req, res) => {
+    try {
+      const { proteinSequence, ligandSmiles, name, targetId } = req.body;
+      if (!proteinSequence || typeof proteinSequence !== "string") {
+        return res.status(400).json({ error: "Protein sequence is required" });
+      }
+
+      const { predictStructure, isOpenFold3Configured } = await import("./services/openfold3");
+      const { structurePredictions } = await import("@shared/schema");
+      
+      // Generate cache key
+      const cacheKey = `of3_${Math.abs([...`${proteinSequence}:${ligandSmiles || ""}`].reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)).toString(36)}`;
+      
+      // Check cache first
+      const cached = await db.select().from(structurePredictions).where(eq(structurePredictions.cacheKey, cacheKey)).limit(1);
+      if (cached.length > 0) {
+        return res.json({
+          ...cached[0],
+          fromCache: true,
+        });
+      }
+
+      const result = await predictStructure({
+        proteinSequence,
+        ligandSmiles,
+        name: name || "Structure Prediction",
+      });
+
+      // Cache the result
+      await db.insert(structurePredictions).values({
+        cacheKey,
+        targetId: targetId || null,
+        proteinSequence,
+        ligandSmiles: ligandSmiles || null,
+        pdbData: result.pdbData,
+        confidenceScore: result.confidenceScore,
+        metrics: result.metrics,
+        ligandBindingSite: result.ligandBindingSite || null,
+        modelVersion: result.modelVersion,
+        isSimulated: result.isSimulated,
+        inferenceTimeMs: result.inferenceTimeMs,
+      }).onConflictDoNothing();
+
+      res.json({
+        ...result,
+        fromCache: false,
+      });
+    } catch (error: any) {
+      console.error("OpenFold3 prediction error:", error);
+      res.status(500).json({ error: error.message || "Failed to predict protein structure" });
+    }
+  });
+
+  app.post("/api/structures/openfold3/batch", requireAuth, async (req, res) => {
+    try {
+      const { predictions } = req.body;
+      if (!predictions || !Array.isArray(predictions) || predictions.length === 0) {
+        return res.status(400).json({ error: "Predictions array is required" });
+      }
+      if (predictions.length > 10) {
+        return res.status(400).json({ error: "Maximum 10 predictions per batch" });
+      }
+
+      const { predictBatch } = await import("./services/openfold3");
+      const result = await predictBatch({ predictions });
+      res.json(result);
+    } catch (error: any) {
+      console.error("OpenFold3 batch prediction error:", error);
+      res.status(500).json({ error: error.message || "Failed to run batch structure prediction" });
+    }
+  });
+
+  app.get("/api/structures/openfold3/cached", requireAuth, async (req, res) => {
+    try {
+      const { targetId, limit = 20 } = req.query;
+      const { structurePredictions } = await import("@shared/schema");
+      
+      let query = db.select({
+        id: structurePredictions.id,
+        cacheKey: structurePredictions.cacheKey,
+        targetId: structurePredictions.targetId,
+        ligandSmiles: structurePredictions.ligandSmiles,
+        confidenceScore: structurePredictions.confidenceScore,
+        metrics: structurePredictions.metrics,
+        modelVersion: structurePredictions.modelVersion,
+        isSimulated: structurePredictions.isSimulated,
+        createdAt: structurePredictions.createdAt,
+      }).from(structurePredictions);
+
+      if (targetId && typeof targetId === "string") {
+        query = query.where(eq(structurePredictions.targetId, targetId)) as typeof query;
+      }
+
+      const results = await query.orderBy(sql`${structurePredictions.createdAt} DESC`).limit(Number(limit));
+      res.json(results);
+    } catch (error: any) {
+      console.error("Error fetching cached structures:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch cached structures" });
+    }
+  });
+
+  app.get("/api/structures/openfold3/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { structurePredictions } = await import("@shared/schema");
+      
+      const result = await db.select().from(structurePredictions).where(eq(structurePredictions.id, id)).limit(1);
+      if (result.length === 0) {
+        return res.status(404).json({ error: "Structure prediction not found" });
+      }
+      res.json(result[0]);
+    } catch (error: any) {
+      console.error("Error fetching structure:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch structure" });
+    }
+  });
+
+  app.get("/api/structures/openfold3/info", requireAuth, async (req, res) => {
+    try {
+      const { getOpenFold3Info } = await import("./services/openfold3");
+      res.json(getOpenFold3Info());
+    } catch (error: any) {
+      console.error("Error getting OpenFold3 info:", error);
+      res.status(500).json({ error: error.message || "Failed to get OpenFold3 info" });
+    }
+  });
+
   app.post("/api/bionemo/spectroscopy/analyze", requireAuth, async (req, res) => {
     try {
       const { type, peaks, metadata } = req.body;
