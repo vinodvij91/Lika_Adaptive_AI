@@ -1,7 +1,8 @@
 import OpenAI from "openai";
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
 export interface MoleculePrediction {
@@ -225,5 +226,130 @@ export async function predictMaterialProperties(
 }
 
 export function isOpenAIConfigured(): boolean {
-  return !!process.env.OPENAI_API_KEY;
+  return !!(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY);
+}
+
+export interface VaccinePrediction {
+  sequence: string;
+  predictions: {
+    epitopes: {
+      bCellEpitopes: Array<{ sequence: string; position: number; score: number }>;
+      tCellEpitopes: Array<{ sequence: string; position: number; mhcClass: string; allele: string; score: number }>;
+    };
+    antigenicity: {
+      score: number;
+      verdict: string;
+      immunogenicRegions: string[];
+    };
+    allergenicity: {
+      score: number;
+      verdict: string;
+      concerns: string[];
+    };
+    toxicity: {
+      score: number;
+      verdict: string;
+      alerts: string[];
+    };
+    structuralFeatures: {
+      secondaryStructure: string;
+      solventAccessibility: string;
+      disorderPrediction: string;
+    };
+    vaccineCandidate: {
+      overallScore: number;
+      verdict: string;
+      recommendedPlatform: string;
+      linkerSuggestion: string;
+    };
+    summary: string;
+  };
+  confidence: number;
+  generatedAt: string;
+}
+
+const VACCINE_PREDICTION_PROMPT = `You are an expert immunologist and vaccine designer. Analyze the following protein sequence and provide detailed vaccine-related predictions.
+
+Protein Sequence: {sequence}
+
+Provide your analysis as a JSON object with this exact structure:
+{
+  "epitopes": {
+    "bCellEpitopes": [
+      { "sequence": "<8-15 aa epitope>", "position": <start position>, "score": <0-100> }
+    ],
+    "tCellEpitopes": [
+      { "sequence": "<9-11 aa epitope>", "position": <start position>, "mhcClass": "I or II", "allele": "<HLA allele>", "score": <0-100> }
+    ]
+  },
+  "antigenicity": {
+    "score": <0-100>,
+    "verdict": "<High/Moderate/Low antigenicity>",
+    "immunogenicRegions": ["<region description 1>", "<region description 2>"]
+  },
+  "allergenicity": {
+    "score": <0-100 where lower is better>,
+    "verdict": "<Non-allergenic/Potentially allergenic/Allergenic>",
+    "concerns": ["<any allergenicity concerns>"]
+  },
+  "toxicity": {
+    "score": <0-100 where lower is better>,
+    "verdict": "<Non-toxic/Low toxicity/Potentially toxic>",
+    "alerts": ["<any toxicity alerts>"]
+  },
+  "structuralFeatures": {
+    "secondaryStructure": "<alpha helix/beta sheet rich/mixed>",
+    "solventAccessibility": "<high/moderate/low surface exposure>",
+    "disorderPrediction": "<ordered/partially disordered/highly disordered>"
+  },
+  "vaccineCandidate": {
+    "overallScore": <0-100>,
+    "verdict": "<Excellent/Good/Moderate/Poor candidate>",
+    "recommendedPlatform": "<mRNA/Protein subunit/Viral vector/VLP>",
+    "linkerSuggestion": "<suggested linker for multi-epitope design>"
+  },
+  "summary": "<2-3 sentence overall assessment of vaccine potential>"
+}
+
+Base predictions on sequence features, hydrophobicity, charge distribution, and known immunogenic motifs.`;
+
+export async function predictVaccineProperties(sequence: string): Promise<VaccinePrediction> {
+  if (!isOpenAIConfigured()) {
+    throw new Error("OpenAI API not configured");
+  }
+
+  const prompt = VACCINE_PREDICTION_PROMPT.replace("{sequence}", sequence.slice(0, 500) + (sequence.length > 500 ? "..." : ""));
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content: "You are an immunology and vaccine design expert. Always respond with valid JSON only, no markdown formatting.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    temperature: 0.3,
+    max_tokens: 2500,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error("No response from OpenAI");
+  }
+
+  try {
+    const predictions = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
+    return {
+      sequence: sequence.slice(0, 50) + "...",
+      predictions,
+      confidence: 72,
+      generatedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    throw new Error(`Failed to parse vaccine prediction response: ${error}`);
+  }
 }

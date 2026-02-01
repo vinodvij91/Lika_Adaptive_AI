@@ -7791,6 +7791,247 @@ print(json.dumps(result, default=str))
     }
   });
 
+  app.post("/api/predictions/vaccine", requireAuth, async (req, res) => {
+    try {
+      const { sequence } = req.body;
+      if (!sequence || typeof sequence !== "string") {
+        return res.status(400).json({ error: "Protein sequence is required" });
+      }
+
+      const { predictVaccineProperties, isOpenAIConfigured } = await import("./services/openai-predictions");
+      
+      if (!isOpenAIConfigured()) {
+        return res.status(503).json({ 
+          error: "OpenAI not configured",
+          message: "AI predictions require OpenAI API configuration"
+        });
+      }
+
+      const prediction = await predictVaccineProperties(sequence);
+      res.json(prediction);
+    } catch (error: any) {
+      console.error("Error generating vaccine prediction:", error);
+      res.status(500).json({ error: error.message || "Failed to generate prediction" });
+    }
+  });
+
+  // ==================== Discovery Report Generation ====================
+
+  app.post("/api/reports/generate", requireAuth, async (req, res) => {
+    try {
+      const { domain, items } = req.body;
+      if (!domain || !items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: "Domain and items array are required" });
+      }
+
+      const { predictMoleculeProperties, predictMaterialProperties, predictVaccineProperties, isOpenAIConfigured } = 
+        await import("./services/openai-predictions");
+      
+      if (!isOpenAIConfigured()) {
+        return res.status(503).json({ 
+          error: "OpenAI not configured",
+          message: "AI predictions require OpenAI API configuration"
+        });
+      }
+
+      const results: any[] = [];
+      const errors: any[] = [];
+
+      for (const item of items.slice(0, 5)) {
+        try {
+          let prediction;
+          if (domain === "drug") {
+            prediction = await predictMoleculeProperties(item.smiles);
+          } else if (domain === "vaccine") {
+            prediction = await predictVaccineProperties(item.sequence);
+          } else if (domain === "materials") {
+            prediction = await predictMaterialProperties(item.representation || item.smiles, item.materialType || "polymer");
+          }
+          results.push({ item, prediction, success: true });
+        } catch (err: any) {
+          errors.push({ item, error: err.message });
+        }
+      }
+
+      const report = {
+        id: crypto.randomUUID(),
+        domain,
+        generatedAt: new Date().toISOString(),
+        totalItems: items.length,
+        processedItems: results.length,
+        successfulPredictions: results.filter(r => r.success).length,
+        errors: errors.length,
+        results,
+        errorDetails: errors,
+        summary: {
+          avgConfidence: results.length > 0 
+            ? Math.round(results.reduce((sum, r) => sum + (r.prediction?.confidence || 0), 0) / results.length) 
+            : 0,
+          topCandidates: results
+            .filter(r => r.success)
+            .sort((a, b) => (b.prediction?.confidence || 0) - (a.prediction?.confidence || 0))
+            .slice(0, 3)
+            .map(r => ({ 
+              name: r.item.name || r.item.smiles?.slice(0, 20) || r.item.sequence?.slice(0, 20),
+              score: r.prediction?.confidence
+            }))
+        }
+      };
+
+      res.json(report);
+    } catch (error: any) {
+      console.error("Error generating report:", error);
+      res.status(500).json({ error: error.message || "Failed to generate report" });
+    }
+  });
+
+  app.post("/api/reports/run-workflow", requireAuth, async (req, res) => {
+    try {
+      const { domain } = req.body;
+      if (!domain || !["drug", "vaccine", "materials"].includes(domain)) {
+        return res.status(400).json({ error: "Valid domain (drug/vaccine/materials) is required" });
+      }
+
+      const { predictMoleculeProperties, predictMaterialProperties, predictVaccineProperties, isOpenAIConfigured } = 
+        await import("./services/openai-predictions");
+      
+      if (!isOpenAIConfigured()) {
+        return res.status(503).json({ 
+          error: "OpenAI not configured",
+          message: "AI predictions require OpenAI API configuration"
+        });
+      }
+
+      let items: any[] = [];
+      
+      if (domain === "drug") {
+        const molecules = await storage.getMolecules();
+        items = molecules.filter((m: any) => m.smiles).slice(0, 3).map((m: any) => ({
+          id: m.id,
+          name: m.name,
+          smiles: m.smiles
+        }));
+      } else if (domain === "vaccine") {
+        const targets = await storage.getTargets();
+        items = targets.filter((t: any) => t.sequence && t.sequence.length > 50).slice(0, 3).map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          sequence: t.sequence
+        }));
+      } else if (domain === "materials") {
+        const { materials } = await storage.getMaterialEntities(undefined, 10);
+        items = materials.slice(0, 3).map((m: any) => {
+          const rep = m.representation as any;
+          const reprStr = m.smiles || rep?.formula || rep?.composition || m.name || "polymer material";
+          return {
+            id: m.id,
+            name: m.name,
+            representation: reprStr,
+            materialType: m.type
+          };
+        });
+      }
+
+      if (items.length === 0) {
+        return res.status(404).json({ error: `No ${domain} data found in database to analyze` });
+      }
+
+      const results: any[] = [];
+      const startTime = Date.now();
+
+      for (const item of items) {
+        try {
+          let prediction;
+          if (domain === "drug") {
+            prediction = await predictMoleculeProperties(item.smiles);
+          } else if (domain === "vaccine") {
+            prediction = await predictVaccineProperties(item.sequence);
+          } else if (domain === "materials") {
+            prediction = await predictMaterialProperties(item.representation, item.materialType);
+          }
+          results.push({ 
+            item: { id: item.id, name: item.name }, 
+            prediction, 
+            success: true 
+          });
+        } catch (err: any) {
+          results.push({ 
+            item: { id: item.id, name: item.name }, 
+            error: err.message, 
+            success: false 
+          });
+        }
+      }
+
+      const processingTime = Date.now() - startTime;
+
+      const report = {
+        id: crypto.randomUUID(),
+        domain,
+        workflowType: `${domain}_discovery_pipeline`,
+        generatedAt: new Date().toISOString(),
+        processingTimeMs: processingTime,
+        itemsAnalyzed: results.length,
+        successfulPredictions: results.filter(r => r.success).length,
+        failedPredictions: results.filter(r => !r.success).length,
+        results,
+        summary: generateWorkflowSummary(domain, results)
+      };
+
+      res.json(report);
+    } catch (error: any) {
+      console.error("Error running workflow:", error);
+      res.status(500).json({ error: error.message || "Failed to run workflow" });
+    }
+  });
+
+  function generateWorkflowSummary(domain: string, results: any[]) {
+    const successful = results.filter(r => r.success);
+    if (successful.length === 0) return { message: "No successful predictions" };
+
+    if (domain === "drug") {
+      const avgDrugLikeness = successful.reduce((sum, r) => 
+        sum + (r.prediction?.predictions?.drugLikeness?.score || 0), 0) / successful.length;
+      const avgSynthesizability = successful.reduce((sum, r) => 
+        sum + (r.prediction?.predictions?.synthesizability?.score || 0), 0) / successful.length;
+      const topCandidate = successful.sort((a, b) => 
+        (b.prediction?.predictions?.drugLikeness?.score || 0) - (a.prediction?.predictions?.drugLikeness?.score || 0))[0];
+      
+      return {
+        avgDrugLikeness: Math.round(avgDrugLikeness),
+        avgSynthesizability: Math.round(avgSynthesizability),
+        topCandidate: topCandidate?.item?.name,
+        topScore: topCandidate?.prediction?.predictions?.drugLikeness?.score,
+        recommendation: avgDrugLikeness > 70 ? "Promising candidates identified" : "Further optimization recommended"
+      };
+    } else if (domain === "vaccine") {
+      const avgAntigenicity = successful.reduce((sum, r) => 
+        sum + (r.prediction?.predictions?.antigenicity?.score || 0), 0) / successful.length;
+      const avgVaccineScore = successful.reduce((sum, r) => 
+        sum + (r.prediction?.predictions?.vaccineCandidate?.overallScore || 0), 0) / successful.length;
+      const topCandidate = successful.sort((a, b) => 
+        (b.prediction?.predictions?.vaccineCandidate?.overallScore || 0) - (a.prediction?.predictions?.vaccineCandidate?.overallScore || 0))[0];
+      
+      return {
+        avgAntigenicity: Math.round(avgAntigenicity),
+        avgVaccineScore: Math.round(avgVaccineScore),
+        topCandidate: topCandidate?.item?.name,
+        topScore: topCandidate?.prediction?.predictions?.vaccineCandidate?.overallScore,
+        recommendedPlatform: topCandidate?.prediction?.predictions?.vaccineCandidate?.recommendedPlatform,
+        recommendation: avgVaccineScore > 65 ? "Strong vaccine candidates" : "Additional epitope analysis recommended"
+      };
+    } else if (domain === "materials") {
+      const topCandidate = successful[0];
+      return {
+        materialsAnalyzed: successful.length,
+        topCandidate: topCandidate?.item?.name,
+        applications: topCandidate?.prediction?.predictions?.applications?.slice(0, 3) || [],
+        recommendation: "Materials property analysis complete"
+      };
+    }
+    return { message: "Analysis complete" };
+  }
+
   // ==================== BioNemo AI Predictions ====================
 
   app.get("/api/bionemo/status", requireAuth, async (req, res) => {
