@@ -8245,7 +8245,7 @@ print(json.dumps(result, default=str))
     }
   });
 
-  // OpenFold3 NIM Structure Prediction Endpoints
+  // Structure Prediction Endpoints - Uses ESMFold (free, real predictions) 
   app.post("/api/structures/openfold3/predict", requireAuth, async (req, res) => {
     try {
       const { proteinSequence, ligandSmiles, name, targetId } = req.body;
@@ -8253,55 +8253,81 @@ print(json.dumps(result, default=str))
         return res.status(400).json({ error: "Protein sequence is required" });
       }
 
-      const { predictStructure, isOpenFold3Configured } = await import("./services/openfold3");
-      const { structurePredictions } = await import("@shared/schema");
+      // Use ESMFold for real structure predictions (free, no API key required)
+      const { predictStructureWithESMFold } = await import("./services/esmfold");
       
-      // Generate cache key
-      const inputStr = `${proteinSequence}:${ligandSmiles || ""}`;
-      let hash = 0;
-      for (let i = 0; i < inputStr.length; i++) {
-        const char = inputStr.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-      }
-      const cacheKey = `of3_${Math.abs(hash).toString(36)}`;
-      
-      // Check cache first
-      const cached = await db.select().from(structurePredictions).where(eq(structurePredictions.cacheKey, cacheKey)).limit(1);
-      if (cached.length > 0) {
+      try {
+        const result = await predictStructureWithESMFold(
+          targetId || "unknown",
+          name || "Structure Prediction",
+          proteinSequence
+        );
+        
         return res.json({
-          ...cached[0],
-          fromCache: true,
+          pdbData: result.pdbData,
+          targetId: result.targetId,
+          targetName: result.targetName,
+          proteinSequence: result.sequence,
+          confidenceScore: result.confidenceScore,
+          metrics: result.metrics,
+          modelVersion: result.modelVersion,
+          isSimulated: result.isSimulated,
+          fromCache: result.fromCache || false,
+        });
+      } catch (esmError: any) {
+        // Fall back to simulated mode if ESMFold fails (e.g., sequence too long)
+        console.warn("ESMFold failed, falling back to simulation:", esmError.message);
+        
+        // Generate simulated PDB structure for fallback
+        const cleanSeq = proteinSequence.replace(/[^ACDEFGHIKLMNPQRSTVWY]/gi, '').toUpperCase();
+        const atoms: string[] = [];
+        let atomNum = 1;
+        
+        for (let i = 0; i < cleanSeq.length; i++) {
+          const aa = cleanSeq[i];
+          const threeLetterCode: Record<string, string> = {
+            A: 'ALA', R: 'ARG', N: 'ASN', D: 'ASP', C: 'CYS',
+            E: 'GLU', Q: 'GLN', G: 'GLY', H: 'HIS', I: 'ILE',
+            L: 'LEU', K: 'LYS', M: 'MET', F: 'PHE', P: 'PRO',
+            S: 'SER', T: 'THR', W: 'TRP', Y: 'TYR', V: 'VAL'
+          };
+          const res3 = threeLetterCode[aa] || 'ALA';
+          const x = (i * 3.8 * Math.cos(i * 0.5)).toFixed(3);
+          const y = (i * 3.8 * Math.sin(i * 0.5)).toFixed(3);
+          const z = (i * 1.5).toFixed(3);
+          const bFactor = (70 + Math.random() * 25).toFixed(2);
+          
+          for (const atomName of ['N', 'CA', 'C', 'O']) {
+            const xOff = parseFloat(x) + (atomName === 'CA' ? 1.45 : atomName === 'C' ? 2.4 : atomName === 'O' ? 2.4 : 0);
+            const yOff = parseFloat(y) + (atomName === 'O' ? 1.2 : 0);
+            atoms.push(`ATOM  ${atomNum.toString().padStart(5)} ${atomName.padEnd(4)} ${res3} A${(i + 1).toString().padStart(4)}    ${xOff.toFixed(3).padStart(8)}${yOff.toFixed(3).padStart(8)}${z.padStart(8)}  1.00${bFactor.padStart(6)}           ${atomName[0]}`);
+            atomNum++;
+          }
+        }
+        atoms.push('END');
+        
+        const simulatedPdb = atoms.join('\n');
+        const avgPLDDT = 75 + Math.random() * 15;
+        
+        res.json({
+          pdbData: simulatedPdb,
+          targetId: targetId || null,
+          proteinSequence,
+          confidenceScore: avgPLDDT / 100,
+          metrics: {
+            pTM: avgPLDDT / 100 * 0.95,
+            pLDDT: avgPLDDT,
+            numAtoms: atoms.length - 1,
+            numResidues: cleanSeq.length,
+          },
+          modelVersion: 'simulated-fallback',
+          isSimulated: true,
+          fromCache: false,
+          fallbackReason: esmError.message,
         });
       }
-
-      const result = await predictStructure({
-        proteinSequence,
-        ligandSmiles,
-        name: name || "Structure Prediction",
-      });
-
-      // Cache the result
-      await db.insert(structurePredictions).values({
-        cacheKey,
-        targetId: targetId || null,
-        proteinSequence,
-        ligandSmiles: ligandSmiles || null,
-        pdbData: result.pdbData,
-        confidenceScore: result.confidenceScore,
-        metrics: result.metrics,
-        ligandBindingSite: result.ligandBindingSite || null,
-        modelVersion: result.modelVersion,
-        isSimulated: result.isSimulated,
-        inferenceTimeMs: result.inferenceTimeMs,
-      }).onConflictDoNothing();
-
-      res.json({
-        ...result,
-        fromCache: false,
-      });
     } catch (error: any) {
-      console.error("OpenFold3 prediction error:", error);
+      console.error("Structure prediction error:", error);
       res.status(500).json({ error: error.message || "Failed to predict protein structure" });
     }
   });
