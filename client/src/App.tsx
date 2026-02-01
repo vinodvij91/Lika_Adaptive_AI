@@ -31,6 +31,7 @@ import NotFound from "@/pages/not-found";
 
 // Lazy load all other pages for faster initial bundle
 const DrugDashboardPage = lazy(() => import("@/pages/dashboard-drug"));
+const VaccineDashboardPage = lazy(() => import("@/pages/dashboard-vaccine"));
 const MaterialsDashboardPage = lazy(() => import("@/pages/dashboard-materials"));
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
 const ProjectsPage = lazy(() => import("@/pages/projects"));
@@ -117,6 +118,7 @@ function AuthenticatedRoutes() {
     <AuthenticatedLayout>
       <Switch>
         <Route path="/dashboard/drug" component={DrugDashboardPage} />
+        <Route path="/dashboard/vaccine" component={VaccineDashboardPage} />
         <Route path="/dashboard/materials" component={MaterialsDashboardPage} />
         <Route path="/dashboard" component={DashboardRedirect} />
         <Route path="/projects" component={ProjectsPage} />
