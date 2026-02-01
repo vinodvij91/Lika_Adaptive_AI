@@ -38,7 +38,13 @@ import {
   ClipboardCopy,
   Check,
   ExternalLink,
+  Brain,
+  Zap,
+  TrendingUp,
+  ArrowUpDown,
 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 
 interface DiseaseTarget {
   name: string;
@@ -66,6 +72,27 @@ interface DiseaseTemplate {
   lastUpdated: string;
 }
 
+interface PredictionResult {
+  smiles: string;
+  predictedValue: number;
+  confidence: number;
+  unit: string;
+  modelUsed: string;
+}
+
+interface AssayPrediction {
+  assayId: string;
+  assayName: string;
+  context: string;
+  predictions: PredictionResult[];
+  topHits: PredictionResult[];
+  modelInfo: {
+    model: string;
+    version: string;
+    inferenceTime: number;
+  };
+}
+
 const categoryConfig: Record<string, { label: string; icon: typeof FlaskConical; color: string }> = {
   binding: { label: "Binding", icon: Target, color: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300" },
   functional: { label: "Functional", icon: Activity, color: "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300" },
@@ -85,8 +112,17 @@ export default function AssayHarvestingPage() {
   const [selectedDisease, setSelectedDisease] = useState<string>("Alzheimer's Disease");
   const [selectedAssays, setSelectedAssays] = useState<Set<string>>(new Set());
   const [protocolDialogOpen, setProtocolDialogOpen] = useState(false);
+  const [predictionDialogOpen, setPredictionDialogOpen] = useState(false);
   const [campaignName, setCampaignName] = useState("");
   const [generatedProtocol, setGeneratedProtocol] = useState<any>(null);
+  const [predictions, setPredictions] = useState<Record<string, AssayPrediction>>({});
+  const [sampleSmiles, setSampleSmiles] = useState<string[]>([
+    "CC(=O)Oc1ccccc1C(=O)O",
+    "CN1C=NC2=C1C(=O)N(C(=O)N2C)C",
+    "CC(C)Cc1ccc(C(C)C(=O)O)cc1",
+    "c1ccc2c(c1)[nH]c1c(N)ncnc12",
+    "O=C(O)c1ccc(O)c(O)c1"
+  ]);
 
   const { data: diseasesData, isLoading: diseasesLoading } = useQuery<{ diseases: string[] }>({
     queryKey: ["/api/assays/diseases"],
@@ -141,6 +177,43 @@ export default function AssayHarvestingPage() {
       toast({
         title: "Protocol Generation Failed",
         description: error.message || "Failed to generate protocol",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const predictionMutation = useMutation({
+    mutationFn: async () => {
+      const assayIds = Array.from(selectedAssays);
+      const allAssays = template ? Object.values(template.recommendedAssays).flat() : [];
+      const assayMetadata: Record<string, { name: string; description: string }> = {};
+      
+      for (const assayId of assayIds) {
+        const assay = allAssays.find(a => a.id === assayId);
+        if (assay) {
+          assayMetadata[assayId] = { name: assay.name, description: assay.description };
+        }
+      }
+      
+      const res = await apiRequest("POST", "/api/predict/campaign", {
+        assayIds,
+        smiles: sampleSmiles,
+        assayMetadata,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setPredictions(data.predictions);
+      setPredictionDialogOpen(true);
+      toast({
+        title: "Predictions Complete",
+        description: `BioNeMo predicted outcomes for ${data.assayCount} assays`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Prediction Failed",
+        description: error.message || "Failed to run BioNeMo prediction",
         variant: "destructive",
       });
     },
@@ -448,6 +521,34 @@ export default function AssayHarvestingPage() {
 
             <Card>
               <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Brain className="w-4 h-4" />
+                  BioNeMo Predictions
+                </CardTitle>
+                <CardDescription>
+                  Predict IC50 values for compounds against selected assays
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-xs text-muted-foreground">
+                  <p>Sample library: {sampleSmiles.length} compounds</p>
+                  <p className="mt-1">Models: MegaMolBART, ESM2</p>
+                </div>
+                <Button
+                  className="w-full"
+                  variant="default"
+                  onClick={() => predictionMutation.mutate()}
+                  disabled={selectedAssays.size === 0 || predictionMutation.isPending}
+                  data-testid="button-predict-bionemo"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  {predictionMutation.isPending ? "Predicting..." : "Predict with BioNeMo"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
                 <CardTitle className="text-base">Generate Protocol</CardTitle>
                 <CardDescription>
                   Create an experiment protocol from selected assays
@@ -550,6 +651,122 @@ export default function AssayHarvestingPage() {
               Copy to Clipboard
             </Button>
             <Button onClick={downloadProtocol} data-testid="button-download-protocol">
+              <Download className="w-4 h-4 mr-2" />
+              Download JSON
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={predictionDialogOpen} onOpenChange={setPredictionDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-primary" />
+              BioNeMo Prediction Results
+            </DialogTitle>
+            <DialogDescription>
+              IC50 predictions for {Object.keys(predictions).length} assays using MegaMolBART/ESM2
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6">
+              {Object.entries(predictions).map(([assayId, pred]) => (
+                <Card key={assayId}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Target className="w-4 h-4" />
+                          {pred.assayName}
+                        </CardTitle>
+                        <CardDescription className="text-xs mt-1">
+                          {pred.context.substring(0, 100)}...
+                        </CardDescription>
+                      </div>
+                      <div className="text-right text-xs text-muted-foreground">
+                        <p>Model: {pred.modelInfo.model}</p>
+                        <p>Time: {pred.modelInfo.inferenceTime}ms</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="w-4 h-4 text-green-500" />
+                        <span className="text-sm font-medium">Top Hits</span>
+                        <Badge variant="secondary" className="text-xs">
+                          Best IC50: {pred.topHits[0]?.predictedValue.toFixed(3)} {pred.topHits[0]?.unit}
+                        </Badge>
+                      </div>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Compound</TableHead>
+                          <TableHead className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              IC50
+                              <ArrowUpDown className="w-3 h-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="text-right">Confidence</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pred.topHits.slice(0, 5).map((hit, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-mono text-xs max-w-[200px] truncate">
+                              {hit.smiles}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant={hit.predictedValue < 1 ? "default" : "secondary"}>
+                                {hit.predictedValue.toFixed(3)} {hit.unit}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Progress value={hit.confidence * 100} className="w-16 h-2" />
+                                <span className="text-xs text-muted-foreground w-10">
+                                  {(hit.confidence * 100).toFixed(0)}%
+                                </span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(JSON.stringify(predictions, null, 2));
+                toast({ title: "Copied", description: "Predictions copied to clipboard" });
+              }}
+              data-testid="button-copy-predictions"
+            >
+              <ClipboardCopy className="w-4 h-4 mr-2" />
+              Copy Results
+            </Button>
+            <Button
+              onClick={() => {
+                const blob = new Blob([JSON.stringify(predictions, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "bionemo_predictions.json";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
+              data-testid="button-download-predictions"
+            >
               <Download className="w-4 h-4 mr-2" />
               Download JSON
             </Button>
