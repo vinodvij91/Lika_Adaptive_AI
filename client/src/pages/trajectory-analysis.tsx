@@ -193,6 +193,7 @@ export default function TrajectoryAnalysisPage() {
   } | null>(null);
   const [show3DViewerDialog, setShow3DViewerDialog] = useState(false);
   const [viewer3DReady, setViewer3DReady] = useState(false);
+  const [viewerLoading, setViewerLoading] = useState(false);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const viewerInstanceRef = useRef<any>(null);
   
@@ -255,10 +256,17 @@ export default function TrajectoryAnalysisPage() {
       return;
     }
 
-    const initTimer = setTimeout(() => {
+    setViewerLoading(true);
+    
+    // Use a longer delay and retry mechanism
+    const initViewer = () => {
       try {
         const container = viewerContainerRef.current;
-        if (!container || !window.$3Dmol) return;
+        if (!container || !window.$3Dmol) {
+          console.warn("3Dmol not loaded or container not found");
+          setViewerLoading(false);
+          return;
+        }
 
         if (viewerInstanceRef.current) {
           try {
@@ -269,32 +277,46 @@ export default function TrajectoryAnalysisPage() {
         container.innerHTML = '';
         
         const rect = container.getBoundingClientRect();
+        console.log("Container dimensions:", rect.width, rect.height);
+        
         if (rect.width === 0 || rect.height === 0) {
+          console.warn("Container has no dimensions, will retry");
+          setViewerLoading(false);
           return;
         }
         
+        // Create viewer with jQuery-style selector for better compatibility
         const viewer = window.$3Dmol.createViewer(container, {
-          backgroundColor: '0x000000',
+          backgroundColor: 0x000000,
           antialias: true,
-          width: rect.width,
-          height: rect.height
         });
         
-        if (!viewer) return;
+        if (!viewer) {
+          console.error("Failed to create 3Dmol viewer");
+          setViewerLoading(false);
+          return;
+        }
         
-        viewer.addModel(structureResult.pdbData, "pdb");
+        // Add the PDB model
+        const pdbData = structureResult.pdbData;
+        console.log("Adding PDB model, length:", pdbData?.length);
+        
+        viewer.addModel(pdbData, "pdb");
         viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
         viewer.zoomTo();
         viewer.spin(true);
         viewer.render();
-        viewer.resize();
-        viewer.render();
         
         viewerInstanceRef.current = viewer;
+        setViewerLoading(false);
+        console.log("3D viewer initialized successfully");
       } catch (error) {
         console.error("Error initializing 3D viewer:", error);
+        setViewerLoading(false);
       }
-    }, 300);
+    };
+
+    const initTimer = setTimeout(initViewer, 500);
 
     return () => clearTimeout(initTimer);
   }, [show3DViewerDialog, structureResult?.pdbData, viewer3DReady]);
@@ -2026,7 +2048,21 @@ export default function TrajectoryAnalysisPage() {
               className="w-full h-[500px] bg-black rounded-lg relative"
               style={{ minHeight: '500px' }}
               data-testid="trajectory-3d-viewer-container"
-            />
+            >
+              {viewerLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-white" />
+                    <span className="text-white text-sm">Loading 3D Structure...</span>
+                  </div>
+                </div>
+              )}
+              {!viewerLoading && !viewerInstanceRef.current && structureResult?.pdbData && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-white/50 text-sm">Initializing viewer...</span>
+                </div>
+              )}
+            </div>
             {structureResult && (
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-4 text-sm">
