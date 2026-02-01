@@ -10011,5 +10011,176 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
+  // ============================================================================
+  // ASSAY HARVESTING ENDPOINTS
+  // ============================================================================
+  
+  app.get("/api/assays/diseases", requireAuth, async (req, res) => {
+    try {
+      const { getAvailableDiseases } = await import("./api/disease-templates");
+      const diseases = getAvailableDiseases();
+      res.json({ diseases });
+    } catch (error: any) {
+      console.error("Error fetching diseases:", error);
+      res.status(500).json({ error: "Failed to fetch diseases" });
+    }
+  });
+
+  app.get("/api/assays/:disease", requireAuth, async (req, res) => {
+    try {
+      const disease = decodeURIComponent(req.params.disease);
+      const useCache = req.query.refresh !== "true";
+      
+      const { buildDiseaseTemplate, getDiseaseTargets } = await import("./api/disease-templates");
+      
+      const targets = getDiseaseTargets(disease);
+      if (targets.length === 0) {
+        return res.status(404).json({ error: `Disease template not found: ${disease}` });
+      }
+      
+      const template = await buildDiseaseTemplate(disease, useCache);
+      res.json(template);
+    } catch (error: any) {
+      console.error("Error fetching assays:", error);
+      res.status(500).json({ error: "Failed to fetch assays" });
+    }
+  });
+
+  app.get("/api/assays/:disease/targets", requireAuth, async (req, res) => {
+    try {
+      const disease = decodeURIComponent(req.params.disease);
+      const { getDiseaseTargets } = await import("./api/disease-templates");
+      const targets = getDiseaseTargets(disease);
+      res.json({ targets });
+    } catch (error: any) {
+      console.error("Error fetching targets:", error);
+      res.status(500).json({ error: "Failed to fetch targets" });
+    }
+  });
+
+  app.post("/api/assays/harvest", requireAuth, async (req, res) => {
+    try {
+      const { disease, targets } = req.body;
+      
+      if (!disease || !targets || !Array.isArray(targets)) {
+        return res.status(400).json({ error: "Disease and targets array required" });
+      }
+      
+      const { harvestAssaysForDisease } = await import("./api/disease-templates");
+      const assays = await harvestAssaysForDisease(disease);
+      
+      res.json({ 
+        disease,
+        assaysFound: assays.length,
+        assays 
+      });
+    } catch (error: any) {
+      console.error("Error harvesting assays:", error);
+      res.status(500).json({ error: "Failed to harvest assays" });
+    }
+  });
+
+  app.post("/api/assays/classify", requireAuth, async (req, res) => {
+    try {
+      const { description, name } = req.body;
+      
+      if (!description) {
+        return res.status(400).json({ error: "Assay description required" });
+      }
+      
+      const { classifyAssay } = await import("./api/assay-classifier");
+      const classification = classifyAssay(description, name);
+      
+      res.json(classification);
+    } catch (error: any) {
+      console.error("Error classifying assay:", error);
+      res.status(500).json({ error: "Failed to classify assay" });
+    }
+  });
+
+  app.post("/api/campaign/protocol", requireAuth, async (req, res) => {
+    try {
+      const { disease, selectedAssays, campaignName } = req.body;
+      
+      if (!disease || !selectedAssays || !Array.isArray(selectedAssays)) {
+        return res.status(400).json({ error: "Disease and selectedAssays array required" });
+      }
+      
+      const { buildDiseaseTemplate, getDiseaseTargets } = await import("./api/disease-templates");
+      const template = await buildDiseaseTemplate(disease, true);
+      
+      const selectedAssayDetails = [];
+      for (const assayId of selectedAssays) {
+        for (const category of Object.keys(template.recommendedAssays) as Array<keyof typeof template.recommendedAssays>) {
+          const found = template.recommendedAssays[category].find(a => a.id === assayId);
+          if (found) {
+            selectedAssayDetails.push(found);
+            break;
+          }
+        }
+      }
+      
+      const protocol = {
+        name: campaignName || `${disease} Discovery Campaign`,
+        disease,
+        therapeuticArea: template.therapeuticArea,
+        createdAt: new Date().toISOString(),
+        targets: template.targets.filter(t => t.role === "primary"),
+        assays: selectedAssayDetails,
+        assaysByCategory: {
+          binding: selectedAssayDetails.filter(a => a.category === "binding"),
+          functional: selectedAssayDetails.filter(a => a.category === "functional"),
+          adme: selectedAssayDetails.filter(a => a.category === "adme"),
+          safety: selectedAssayDetails.filter(a => a.category === "safety"),
+          physicochemical: selectedAssayDetails.filter(a => a.category === "physicochemical")
+        },
+        workflow: {
+          stage1: {
+            name: "Primary Screen",
+            assays: selectedAssayDetails.filter(a => a.category === "binding").map(a => a.id)
+          },
+          stage2: {
+            name: "Functional Validation",
+            assays: selectedAssayDetails.filter(a => a.category === "functional").map(a => a.id)
+          },
+          stage3: {
+            name: "ADME Profiling",
+            assays: selectedAssayDetails.filter(a => a.category === "adme").map(a => a.id)
+          },
+          stage4: {
+            name: "Safety Assessment",
+            assays: selectedAssayDetails.filter(a => a.category === "safety").map(a => a.id)
+          }
+        }
+      };
+      
+      res.json({ protocol });
+    } catch (error: any) {
+      console.error("Error generating protocol:", error);
+      res.status(500).json({ error: "Failed to generate protocol" });
+    }
+  });
+
+  app.get("/api/pubchem/assay/:aid", requireAuth, async (req, res) => {
+    try {
+      const aid = parseInt(req.params.aid);
+      if (isNaN(aid)) {
+        return res.status(400).json({ error: "Invalid AID" });
+      }
+      
+      const { getAssayById } = await import("./api/pubchem-harvester");
+      const assay = await getAssayById(aid);
+      
+      if (!assay) {
+        return res.status(404).json({ error: `Assay AID ${aid} not found` });
+      }
+      
+      res.json(assay);
+    } catch (error: any) {
+      console.error("Error fetching PubChem assay:", error);
+      res.status(500).json({ error: "Failed to fetch assay" });
+    }
+  });
+
   return httpServer;
 }
