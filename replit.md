@@ -1,131 +1,40 @@
 # Lika Sciences Platform
 
 ## Overview
-Lika Sciences is a scientific SaaS platform designed to accelerate drug discovery and molecular research. It provides tools for managing molecule registries, research campaigns, and SMILES data, aiming to streamline scientific workflows, enable data-driven decisions, and offer robust data visualization and professional scientific presentation. The platform supports both drug discovery and materials science domains, with future extensibility for advanced computational chemistry and quantum computing.
+Lika Sciences is a scientific SaaS platform accelerating drug discovery and molecular research. It manages molecule registries, research campaigns, and SMILES data to streamline scientific workflows, enable data-driven decisions, and provide robust data visualization and professional scientific presentations. The platform supports drug discovery and materials science, with future extensibility for advanced computational chemistry and quantum computing.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
-The platform utilizes a full-stack TypeScript architecture. The frontend is built with React, Vite, shadcn/ui, and Tailwind CSS, using TanStack React Query for state management. The backend is developed with Node.js, Express, TypeScript, and PostgreSQL, employing Drizzle ORM for database interactions. Shared schemas and types are managed in a `shared/` directory.
+The platform uses a full-stack TypeScript architecture. The frontend is built with React, Vite, shadcn/ui, and Tailwind CSS, using TanStack React Query. The backend uses Node.js, Express, TypeScript, PostgreSQL, and Drizzle ORM. Shared schemas and types are in a `shared/` directory.
 
 ### Key Domain Features
-- **Molecule & Project Management**: Handles chemical compounds (SMILES notation) and organizes them into projects and research campaigns across various modalities.
+- **Molecule & Project Management**: Manages chemical compounds (SMILES) and organizes them into projects and research campaigns.
 - **Data Import & Curation**: Supports batch import of SMILES with validation, duplicate detection, and provides curated domain-aware SMILES libraries.
 - **Scientific Terminology**: Integrates professional drug discovery and materials science terminology.
 - **Compute Nodes**: Manages multi-provider infrastructure (Hetzner, Vast.ai, AWS, Azure, GCP, On-Prem) for ML, docking, quantum, and agent workloads, including SSH key management.
-- **Advanced Scientific Modules**: Includes Multi-Target SAR, Translational Medicine, Wet-Lab Integration, and Literature & IP for drug discovery. For materials science, it supports polymers, crystals, composites, catalysts, membranes, and coatings with structure-first and property-first discovery modes.
+- **Advanced Scientific Modules**: Includes Multi-Target SAR, Translational Medicine, Wet-Lab Integration, and Literature & IP for drug discovery. For materials science, it supports various material types with structure-first and property-first discovery modes.
 - **Collaboration & Templates**: Supports multi-organization collaboration with role-based access and provides disease-specific pipeline templates.
 - **Enterprise-Scale Processing Infrastructure**: Features a robust processing jobs system for orchestration, status tracking, and fault tolerance, including artifact storage and ingestion. Precomputed aggregations provide dashboard data and per-variant metrics.
 
 ### API Design
-The platform uses RESTful API endpoints under `/api/`, with specific `/api/agent/` endpoints for AI interaction and service account roles.
+The platform uses RESTful API endpoints under `/api/`, with specific `/api/agent/` endpoints for AI interaction.
 
 ### Design System
 Adheres to Material Design principles with Carbon Design data patterns, using Inter and JetBrains Mono fonts, and a custom Tailwind theme for scientific visualization.
 
 ### Python Compute Pipelines
-The platform integrates production-grade Python pipelines for both drug discovery and materials science, designed for executing computational workloads.
-- **Drug Discovery Pipeline**: Features Dask for distributed computing, RAPIDS cuML for GPU-accelerated ML, PyTorch mixed precision training, AutoDock Vina integration, and XGBoost with GPU acceleration. Supports steps like SMILES validation, fingerprint generation, property calculation, ML prediction, Vina docking, scoring, and rule filtering.
-- **Vaccine Discovery Pipeline** (`compute/vaccine_discovery_pipeline.py`): GPU-agnostic pipeline with automatic hardware detection (NVIDIA CUDA, AMD ROCm, Apple Metal, CPU). Intelligently routes tasks between CPU and GPU based on workload characteristics.
-- **Complete Vaccine Pipeline** (`compute/complete_vaccine_pipeline.py`): Production-ready vaccine design with all bioinformatics tool integrations:
-  - DSSP surface analysis and secondary structure
-  - DiscoTope-3.0 B-cell epitope prediction
-  - NetMHCpan-4.1 T-cell epitope prediction (MHC-I/II)
-  - MAFFT conservation analysis
-  - Linker design for multi-epitope constructs
-  - JCat codon optimization
-  - ViennaRNA secondary structure prediction
-  - End-to-end pipeline for protein subunit, mRNA, and multi-epitope vaccines
-  - **Task Classification Matrix** (`compute/task_classification_matrix.py`): Comprehensive hardware routing map for all vaccine discovery tasks organized by pipeline stages:
-    - **Stage 1 - Target Identification**: Genome analysis, protein function prediction, structure prediction, conservation analysis
-    - **Stage 2 - Epitope Prediction**: B-cell epitopes (linear, conformational), T-cell epitopes (MHC-I/II binding, population coverage)
-    - **Stage 3 - Antigen Design**: Protein sequence design (ProteinMPNN, Rosetta), mRNA vaccine design (codon optimization, UTR optimization)
-    - **Stage 4 - Immunogenicity**: Immune simulation (C-ImmSim), antibody prediction, safety assessment
-    - **Stage 5 - Advanced Analysis**: Molecular dynamics, visualization
-  - **Task Compute Types**:
-    - **GPU_INTENSIVE** (15-200x speedup): Structure prediction (ESMFold PRIMARY, AlphaFold2 fallback for >400 residues), MD simulation, ProteinMPNN design
-    - **GPU_PREFERRED** (2-6x speedup): MHC binding prediction, toxicity prediction, RNA secondary structure
-    - **CPU_INTENSIVE**: Epitope prediction (NetMHCpan), sequence alignment, Rosetta design, immune simulation
-    - **CPU_ONLY**: Codon optimization, file I/O, structure quality assessment
-    - **HYBRID**: Antibody-antigen docking, free energy calculations
-  - **PDB File Support**: All vaccine pipeline endpoints now support PDB file input. Upload PDB files to extract protein sequences automatically for pipeline processing.
-  - **API Endpoints**:
-    - `POST /api/compute/vaccine/upload-pdb` - Upload PDB structure file (extracts sequence automatically)
-    - `GET /api/compute/vaccine/pdb-uploads` - List uploaded PDB files for vaccine discovery
-    - `POST /api/compute/vaccine/pipeline` - Run full vaccine discovery pipeline (accepts `pdbFileId` parameter)
-    - `POST /api/compute/vaccine/complete-pipeline` - Run complete pipeline with all bioinformatics tools (DSSP, DiscoTope, NetMHCpan, MAFFT, etc.)
-    - `GET /api/compute/vaccine/complete-task-registry` - Get complete pipeline task registry with all tools and status
-    - `POST /api/compute/vaccine/structure` - Predict protein structure (GPU-intensive, accepts `pdbFileId` parameter)
-    - `POST /api/compute/vaccine/epitopes` - Predict MHC binding/epitopes (CPU-intensive)
-    - `POST /api/compute/vaccine/codon-optimize` - Codon optimization (CPU-only)
-    - `POST /api/compute/vaccine/mrna-design` - mRNA construct design (CPU-intensive)
-    - `POST /api/compute/vaccine/md-simulation` - Molecular dynamics (GPU-intensive, accepts `pdbFileId` parameter)
-    - `GET /api/compute/vaccine/hardware` - Get hardware performance report
-    - `GET /api/compute/vaccine/task-matrix` - Get full task classification matrix with hardware requirements and cost analysis
-- **ESMFold Integration** (`server/services/esmfold.ts`): PRIMARY structure prediction service using Meta's free API. Supports Drug Discovery, Vaccine Discovery, and Materials Science pipelines. No API key required, fast inference, max 400 residues.
-  - **API Endpoints**:
-    - `GET /api/structures/esmfold/info` - Get ESMFold service info and capabilities
-    - `GET /api/structures/esmfold/info/:domain` - Get domain-specific info (drug_discovery, materials_science, vaccine_discovery)
-    - `POST /api/structures/esmfold/drug-discovery/predict` - Single structure prediction for drug discovery with binding site analysis
-    - `POST /api/structures/esmfold/drug-discovery/batch` - Batch predictions for drug discovery (max 10)
-    - `POST /api/structures/esmfold/materials/predict` - Single structure prediction for materials science with property analysis
-    - `POST /api/structures/esmfold/materials/batch` - Batch predictions for materials science (max 10)
-  - **Drug Discovery Metrics**: druggabilityScore, potentialBindingResidues, surfaceAccessibility, hydrophobicPockets
-  - **Materials Science Metrics**: structuralStability, thermalStabilityEstimate, mechanicalRigidity, catalyticPotential, selfAssemblyPropensity
-  - **Pipeline Steps**:
-    - Drug Discovery: target_validation, binding_site_analysis, virtual_screening, lead_optimization
-    - Materials Science: protein_materials, enzyme_design, biocatalyst_optimization, biomaterial_engineering
-- **OpenFold3 NIM Integration** (`server/services/openfold3.ts`): AlphaFold3-compatible structure prediction for protein-ligand complexes via NVIDIA NIM API. Features GPU-accelerated inference with automatic result caching. **FALLBACK** for sequences >400 residues or complex multi-chain predictions.
-  - **API Endpoints**:
-    - `POST /api/structures/openfold3/predict` - Predict protein-ligand complex structure (with caching)
-    - `POST /api/structures/openfold3/batch` - Batch predictions (max 10)
-    - `GET /api/structures/openfold3/cached` - List cached predictions
-    - `GET /api/structures/openfold3/:id` - Get specific cached prediction
-    - `GET /api/structures/openfold3/info` - Get OpenFold3 capabilities info
-  - **UI Integration**:
-    - Targets page: "Predict 3D Complex" action in dropdown menu for each target
-    - Vaccine/Drug Discovery: "Predict 3D Complex" button in assay template dialog
-  - **Result Caching**: Structure predictions cached in `structure_predictions` table with unique cache key per target-ligand pair
-- **SandboxAQ AQAffinity Integration** (`compute/aqaffinity_integration.py`): Open-source AI model for fast, structure-free prediction of protein-ligand binding affinities, built on OpenFold3. **Note:** Currently in simulation mode - returns deterministic predictions based on input hashing. Real AQAffinity integration requires installing the package (`pip install git+https://huggingface.co/SandboxAQ/aqaffinity`) and GPU compute resources.
-  - **Key Features**:
-    - Structure-free prediction (sequence + SMILES only, no protein structure required)
-    - Fast "fail fast" drug candidate screening
-    - Apache 2.0 licensed (free for academic & commercial use)
-    - Trained on GOSTAR assay database
-  - **Supported Pipelines**:
-    - **Drug Discovery**: Screen drug candidates against therapeutic targets
-    - **Vaccine Discovery**: Complementary epitope-MHC binding analysis
-    - **Materials Discovery**: Catalyst-substrate and polymer binding prediction
-  - **API Endpoints**:
-    - `POST /api/compute/aqaffinity/predict` - Single protein-ligand binding affinity prediction
-    - `POST /api/compute/aqaffinity/batch-predict` - Batch predictions for multiple ligands against one target
-    - `POST /api/compute/aqaffinity/screen-library` - Screen compound library against target with hit classification
-    - `GET /api/compute/aqaffinity/info` - Get AQAffinity integration info and capabilities
-  - **Input/Output**:
-    - Input: `proteinSequence` (amino acid sequence), `ligandSmiles` (SMILES string), `pipeline` (discovery type)
-    - Output: `predictedAffinity` (IC50 in nM), `confidenceScore` (0-1), `isStrongBinder` (boolean)
-  - **Installation**: `pip install git+https://huggingface.co/SandboxAQ/aqaffinity`
-  - **References**: https://huggingface.co/SandboxAQ/AQAffinity, https://www.sandboxaq.com/aqaffinity
-- **Materials Science Pipeline**: Includes Magpie and SOAP descriptors, Graph Neural Networks (CGCNN, Multi-Property GNN), Multi-task Neural Networks, GPU acceleration, materials generation, element substitution, synthesis planning, and atomistic simulations (VASP, Quantum ESPRESSO). It also incorporates specialized designers for various material types (e.g., Battery, Photovoltaic, Structural) and discovery workflows (e.g., Superconductor, Catalyst).
-- **Universal Hardware-Agnostic Materials Pipeline**: Automatically adapts to any hardware configuration (CPU, GPU, Apple Silicon) for optimal performance, supporting molecular, compositional, and polymer material types. It includes specialized feature extractors and predictors for various polymer properties (e.g., Tg, tensile strength).
+The platform integrates production-grade Python pipelines for drug discovery and materials science, designed for executing computational workloads.
+- **Drug Discovery Pipeline**: Features Dask for distributed computing, RAPIDS cuML for GPU-accelerated ML, PyTorch mixed precision training, AutoDock Vina integration, and XGBoost with GPU acceleration.
+- **Vaccine Discovery Pipeline**: A GPU-agnostic pipeline with automatic hardware detection and intelligent task routing. It includes a complete vaccine pipeline with bioinformatics tool integrations (DSSP, DiscoTope, NetMHCpan, MAFFT, Linker design, JCat, ViennaRNA) and supports PDB file input. A task classification matrix details hardware routing by pipeline stage.
+- **ESMFold Integration**: Primary structure prediction service using Meta's free API for drug discovery, vaccine discovery, and materials science.
+- **OpenFold3 NIM Integration**: AlphaFold3-compatible structure prediction for protein-ligand complexes via NVIDIA NIM API. Serves as a fallback for sequences >400 residues or complex multi-chain predictions. Includes result caching.
+- **SandboxAQ AQAffinity Integration**: Open-source AI model for fast, structure-free prediction of protein-ligand binding affinities, currently in simulation mode. Supports drug discovery, vaccine discovery, and materials discovery pipelines.
+- **Materials Science Pipeline**: Includes Magpie and SOAP descriptors, Graph Neural Networks, Multi-task Neural Networks, GPU acceleration, materials generation, element substitution, synthesis planning, and atomistic simulations (VASP, Quantum ESPRESSO). It also incorporates specialized designers for various material types and discovery workflows. A universal hardware-agnostic materials pipeline adapts to any hardware configuration.
 
 ### scRNA + PGD Trajectory Analysis Module
-Automated biomarker discovery and target identification from public single-cell RNA-seq datasets using Pseudotime Graph Diffusion (PGD).
-- **Public Dataset Registry**: 120+ curated scRNA-seq datasets from GEO covering 100+ disease areas including: Neurology (Alzheimer's, Parkinson's, ALS, MS, Huntington's, Epilepsy, Stroke, TBI, Dementia subtypes), Oncology (20+ cancer types including lung, breast, colorectal, pancreatic, liver, kidney, bladder, thyroid, head/neck, sarcomas, leukemias, lymphomas, myeloma), Autoimmune (RA, Lupus, Sjogren's, Scleroderma, IBD, Celiac, Psoriasis, Vitiligo), Cardiovascular (Heart Failure, MI, Atrial Fibrillation, Cardiomyopathy, Atherosclerosis, PAD, Pulmonary Hypertension), Respiratory (Asthma, COPD, Cystic Fibrosis, Pulmonary Fibrosis, Sarcoidosis), Metabolic (Diabetes, NASH, Obesity, PCOS), Infectious (COVID-19, Long COVID, HIV, TB, Hepatitis, Sepsis), Renal (CKD, Diabetic Nephropathy, IgA Nephropathy, FSGS, PKD), Psychiatric (Depression, Schizophrenia, Bipolar, PTSD, OCD, ADHD, Addiction), Ophthalmology (Macular Degeneration, Glaucoma, Diabetic Retinopathy, Uveitis), Neuromuscular (Muscular Dystrophy, SMA, CMT, Myasthenia Gravis, GBS), Women's Health (Endometriosis, Preeclampsia, PCOS, Fibroids, POI), and many more
-- **PGD Trajectory Inference**: Simulates UMAP embedding and pseudotime trajectory analysis with configurable smoothing parameters
-- **Biomarker Detection**: Identifies genes with significant expression changes at trajectory branch points
-- **Druggable Target Extraction**: Automatically identifies targetable genes from biomarker analysis
-- **Assay Template Generation**: Auto-generates assay templates from detected targets with binding, functional, and cellular assay suggestions
-- **BioNeMo Integration**: Predicts inhibitor binding affinity for identified targets using compound SMILES input
-- **API Endpoints**:
-  - `GET /api/trajectory/datasets` - List public scRNA-seq datasets (filterable by disease)
-  - `GET /api/trajectory/datasets/:id` - Get dataset details
-  - `GET /api/trajectory/diseases` - Get available disease areas with dataset counts
-  - `POST /api/trajectory/analyze/:datasetId` - Run PGD trajectory analysis on a dataset
-  - `POST /api/trajectory/assay-template` - Generate assay template from target gene
-  - `POST /api/trajectory/predict-inhibitors` - Predict binding affinity for SMILES against target
-- **Frontend**: Accessible at `/trajectory-analysis` with interactive UMAP visualization, biomarker table, and BioNeMo prediction dialog
+Automated biomarker discovery and target identification from public single-cell RNA-seq datasets using Pseudotime Graph Diffusion (PGD). Includes a public dataset registry, PGD trajectory inference, biomarker detection, druggable target extraction, assay template generation, and BioNeMo integration for inhibitor binding affinity prediction.
 
 ## External Dependencies
 - **PostgreSQL**: Primary relational database.
@@ -134,4 +43,4 @@ Automated biomarker discovery and target identification from public single-cell 
 - **embla-carousel-react**: For carousel components.
 - **date-fns**: For date utility functions.
 - **DigitalOcean Spaces**: S3-compatible storage for assets.
-- **Materials Project API**: (via `mp-api` Python package) For materials data and integrations.
+- **Materials Project API**: For materials data and integrations.
