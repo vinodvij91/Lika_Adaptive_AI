@@ -1711,3 +1711,41 @@ export type Conversation = typeof conversations.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+// Activity Log
+export const activityTypeEnum = pgEnum("activity_type", [
+  "user_action",
+  "system_response", 
+  "navigation",
+  "data_import",
+  "analysis_run",
+  "campaign_action",
+  "molecule_action",
+  "target_action",
+  "pipeline_action",
+  "error",
+  "auth"
+]);
+
+export const activityLogs = pgTable("activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  activityType: activityTypeEnum("activity_type").notNull(),
+  action: text("action").notNull(),
+  description: text("description"),
+  metadata: jsonb("metadata"),
+  entityType: text("entity_type"),
+  entityId: varchar("entity_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("activity_logs_user_id_idx").on(table.userId),
+  index("activity_logs_created_at_idx").on(table.createdAt),
+]);
+
+export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
