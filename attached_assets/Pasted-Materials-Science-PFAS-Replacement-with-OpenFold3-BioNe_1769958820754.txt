@@ -1,0 +1,331 @@
+Materials Science + PFAS Replacement with OpenFold3 & BioNeMo
+TASK: Extend the existing Lika Sciences platform to a full Materials Science mode, integrating OpenFold3 (AlphaFold3‑class) structure prediction and BioNeMo models.
+Focus on PFAS replacement plus other application templates (battery, photovoltaic, superconductors, catalysts, thermoelectrics, etc.) as seen in the Pipeline Launcher screenshots.
+
+1. Modes and Navigation
+Add a top‑level domain switch:
+
+Drug Discovery (existing)
+
+Materials Science (new)
+
+Under Materials Science, left sidebar sections (matching screenshot):
+
+Dashboard
+
+Import
+
+Materials Library
+
+Variants
+
+Multi‑Scale Representation
+
+Workflows:
+
+Lika Agent
+
+Property Prediction
+
+Structure–Property
+
+Manufacturability
+
+3D Viewer
+
+FEA Simulations
+
+Simulation Runs
+
+Reports
+
+Infrastructure:
+
+Compute Nodes
+
+Pipeline Launcher (existing UI, but extended for materials)
+
+BioNeMo AI
+
+External Data
+
+Activity Log
+
+Usage
+
+Integrations
+
+Quantum
+
+2. Materials Library & Representation
+Implement a Materials Library analogous to Molecules Library:
+
+Data model (Material):
+
+ts
+Material {
+  id: string
+  name: string              // e.g. "PTFE", "PEEK", "Spider Silk MaSp1"
+  category: "polymer" | "ceramic" | "metal" | "biomaterial"
+  smiles?: string           // for polymer repeat unit or additive
+  monomer_smiles?: string
+  composition?: string      // e.g. "C2F4", "CaTiO3"
+  structure_file?: string   // CIF/PDB path or ID
+  properties: {
+    density_g_cm3?: number
+    tensile_strength_MPa?: number
+    elastic_modulus_GPa?: number
+    thermal_conductivity_W_mK?: number
+    decomposition_temp_C?: number
+    dielectric_constant?: number
+    surface_energy_mJ_m2?: number
+    water_contact_angle_deg?: number
+    permeability_O2_Barrer?: number
+    pfos_free?: boolean
+    pfoa_free?: boolean
+  }
+  tags: string[]            // "PFAS", "PFAS replacement", "battery", etc.
+  source_refs?: string[]
+}
+Create initial seed materials from earlier PFAS work:
+
+PTFE, PVDF, ETFE, ECTFE, POM, PDMS, PE, UHMWPE, PPS, PEEK, PAEK, PES, PSU, Polyimide, etc.
+
+Store these in materials_seed.json and load at startup.
+
+3. Applications in Pipeline Launcher (Materials Science)
+In the Pipeline Launcher (Materials Science mode), extend the Job Type dropdown Molecular Docking with an Applications tree, as seen in your screenshots.
+
+Under Materials Science show:
+
+Battery Materials
+
+Photovoltaic Materials
+
+Superconductor Discovery
+
+Catalyst Discovery
+
+Thermoelectric Materials
+
+PFAS Replacement (highlight this)
+
+Aerospace Materials
+
+Biomedical Materials
+
+Wide‑Gap Semiconductors
+
+Sustainable Construction
+
+Transparent Conductors
+
+Rare‑Earth‑Free Magnets
+
+Solid Electrolytes
+
+Water Purification
+
+Carbon Capture
+
+Selecting an application should:
+
+Pre‑configure compute parameters (grid size, chunk size, workers).
+
+Load a template pipeline spec (materials, properties, models).
+
+Example config (materials_applications.json):
+
+json
+{
+  "pfas_replacement": {
+    "name": "PFAS Replacement",
+    "description": "Screen PFAS-free polymers and additives for PTFE/PVDF replacements.",
+    "default_chunk_size": 10000,
+    "default_workers": 4,
+    "default_properties": ["dielectric_constant", "thermal_stability_C", "chemical_resistance_index", "friction_coefficient"],
+    "default_model": "bionemo-materials-property-v1"
+  },
+  "battery_materials": {
+    "name": "Battery Materials",
+    "description": "Screen cathode/electrolyte materials for high ionic conductivity and stability.",
+    "default_properties": ["ionic_conductivity_S_cm", "band_gap_eV"]
+  }
+}
+In the Launch Pipeline tab:
+
+When user selects “PFAS Replacement”, show description and pre‑fill properties and models.
+
+4. OpenFold3 (AlphaFold‑class) Integration for Biomaterials
+For biomaterials (spider silk, enzymes, protein‑polymer interfaces):
+
+Deploy OpenFold3 NIM (already handled by infra team).
+
+Add a backend API:
+
+python
+# /api/materials/openfold3_complex
+POST body:
+{
+  "material_id": "PTFE_replacement_01",
+  "protein_sequence": "MTEYKLVVVGAGGVGKSALTIQLI...",
+  "ligand_smiles": "C([C@@H]1[C@H](...)",  # cellulose or polymer repeat
+  "context": "protein-material interface for textile fiber"
+}
+The handler will:
+
+Call OpenFold3 NIM /v1/predict with molecules = [{type: "protein", sequence}, {type: "ligand", smiles}].
+
+Store resulting cif/pdb in structures/.
+
+Attach structure_id to the Material or Variant.
+
+In 3D Viewer:
+
+Allow loading protein–polymer complexes from these predictions.
+
+Use same 3D component as drug docking.
+
+5. BioNeMo Property Prediction for Materials
+Add a BioNeMo AI section under Materials Science that exposes:
+
+bionemo-materials-property-v1 (conceptual name)
+
+Input: Material SMILES/composition + optional structure descriptors.
+
+Output: Predicted properties: dielectric constant, band gap, elastic modulus, etc.
+
+Backend endpoint:
+
+python
+# /api/materials/predict_properties
+POST {
+  "material_ids": ["PTFE", "PEEK", "UHMWPE"],
+  "properties": ["dielectric_constant", "friction_coefficient", "thermal_stability_C"]
+}
+This calls BioNeMo and stores predictions linked to each Material.
+
+Use these predictions in:
+
+Property Prediction workflow
+
+Pipeline Launcher results
+
+6. PFAS Replacement Pipeline (Detailed)
+Create a PFAS Replacement pipeline template that reuses your existing high‑throughput screening infrastructure:
+
+Input:
+
+Library of candidate PFAS‑free polymers/additives (SMILES, property priors).
+
+Target use cases: gaskets, seals, coatings (temp, pressure, chemical environment).
+
+Pipeline stages:
+
+Filter stage (fast rules):
+
+Remove PFAS/PFOS/PFOA‑like patterns (perfluorinated chains).
+
+Enforce sustainability tags (e.g., GRS/BCI/GOTS compatibility if biomass‑derived).
+
+Property prediction (BioNeMo):
+
+Predict:
+
+Thermal stability Td_C
+
+Chemical resistance index
+
+Friction coefficient / wear rate
+
+Dielectric constant
+
+Process temperature window (melt/softening).
+
+Structure prediction (OpenFold3, optional):
+
+For biopolymer candidates (protein‑based coatings, silk‑like fibers):
+
+Predict structure + interaction with substrate (e.g., steel, cellulose) using OpenFold3.
+
+Ranking + selection:
+
+Multi‑objective ranking: maximize stability + chemical resistance, minimize cost/environmental impact.
+
+Campaign export:
+
+Export top candidates with predicted properties, structures, and recommended experimental tests.
+
+UI in Pipeline Launcher:
+
+When “PFAS Replacement” selected:
+
+Show short explanation:
+“Screen PFAS‑free polymers and biomaterials as replacements for PTFE/PVDF in seals, coatings and textiles.”
+
+Fields:
+
+Application context: dropdown (seals, gaskets, coatings, textiles).
+
+Max temperature, pressure, media (acid, solvent, water) → used to set thresholds.
+
+7. Results & Reports
+Extend Results tab in Pipeline Launcher to handle materials:
+
+For each run:
+
+Show application (PFAS Replacement, Battery Materials, etc.).
+
+Show library size, models used (BioNeMo, OpenFold3).
+
+Allow drill‑down:
+
+Table: Material ID, predicted properties, scores, and structure icon if OpenFold3 was used.
+
+Ability to export:
+
+CSV/JSON property tables.
+
+SDF for polymer/additive molecules.
+
+PDB/CIF for biomaterial structures.
+
+8. Reuse from Drug Discovery
+Reuse as much existing infra as possible:
+
+Compute Nodes & Dask: same chunking & worker controls.
+
+Job Queue: materials jobs are just another job type.
+
+3D Viewer & Docking engine: same code, but for protein–polymer instead of protein–drug.
+
+Reporting: mirror SAR reports but for structure–property analyses.
+
+9. Acceptance Criteria
+Materials mode visible with all sidebar items.
+
+Pipeline Launcher shows Materials Science applications, including PFAS Replacement.
+
+User can:
+
+Import a materials library (CSV/SMILES).
+
+Launch a PFAS Replacement pipeline:
+
+Runs BioNeMo property prediction.
+
+Optionally calls OpenFold3 for biomaterials.
+
+View results and 3D structures.
+
+OpenFold3 and BioNeMo are both usable from Materials workflows (via backend APIs).
+
+No changes break existing Drug Discovery workflows.
+
+Please implement this step‑by‑step, prioritizing:
+
+PFAS Replacement application in Pipeline Launcher.
+
+Materials Library + property prediction via BioNeMo.
+
+OpenFold3 integration for biomaterials (protein–polymer complexes).

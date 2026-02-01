@@ -102,39 +102,65 @@ export default function TargetsPage() {
   const viewerInstanceRef = useRef<any>(null);
   const { toast } = useToast();
 
+  const [viewer3DReady, setViewer3DReady] = useState(false);
+
   // Load 3Dmol.js script
   useEffect(() => {
-    if (!window.$3Dmol) {
-      const script = document.createElement("script");
-      script.src = "https://3dmol.org/build/3Dmol-min.js";
-      script.async = true;
-      document.body.appendChild(script);
+    if (window.$3Dmol) {
+      setViewer3DReady(true);
+      return;
     }
+    
+    const script = document.createElement("script");
+    script.src = "https://3dmol.org/build/3Dmol-min.js";
+    script.async = true;
+    script.onload = () => {
+      setViewer3DReady(true);
+    };
+    document.body.appendChild(script);
   }, []);
 
   // Initialize 3D viewer when dialog opens
   useEffect(() => {
-    if (show3DViewer && predictionResult?.pdbData && viewerContainerRef.current && window.$3Dmol) {
-      // Clear any existing viewer
-      if (viewerInstanceRef.current) {
-        viewerInstanceRef.current.clear();
-      }
-      
-      // Create new viewer
-      const viewer = window.$3Dmol.createViewer(viewerContainerRef.current, {
-        backgroundColor: 'black'
-      });
-      
-      // Add the PDB structure
-      viewer.addModel(predictionResult.pdbData, "pdb");
-      viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
-      viewer.zoomTo();
-      viewer.spin(true);
-      viewer.render();
-      
-      viewerInstanceRef.current = viewer;
+    if (!show3DViewer || !predictionResult?.pdbData || !viewerContainerRef.current || !viewer3DReady) {
+      return;
     }
-  }, [show3DViewer, predictionResult?.pdbData]);
+
+    // Small delay to ensure the dialog is fully rendered
+    const initTimer = setTimeout(() => {
+      try {
+        const container = viewerContainerRef.current;
+        if (!container || !window.$3Dmol) return;
+
+        // Clear container first
+        container.innerHTML = '';
+        
+        // Create new viewer
+        const viewer = window.$3Dmol.createViewer(container, {
+          backgroundColor: 'black',
+          antialias: true
+        });
+        
+        if (!viewer) {
+          console.error("Failed to create 3Dmol viewer");
+          return;
+        }
+        
+        // Add the PDB structure
+        viewer.addModel(predictionResult.pdbData, "pdb");
+        viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
+        viewer.zoomTo();
+        viewer.spin(true);
+        viewer.render();
+        
+        viewerInstanceRef.current = viewer;
+      } catch (error) {
+        console.error("Error initializing 3D viewer:", error);
+      }
+    }, 100);
+
+    return () => clearTimeout(initTimer);
+  }, [show3DViewer, predictionResult?.pdbData, viewer3DReady]);
 
   const { data: diseases } = useQuery<{ disease: string; count: number }[]>({
     queryKey: ["/api/diseases"],
