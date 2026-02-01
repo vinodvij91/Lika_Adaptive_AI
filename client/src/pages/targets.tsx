@@ -126,19 +126,34 @@ export default function TargetsPage() {
       return;
     }
 
-    // Small delay to ensure the dialog is fully rendered
+    // Longer delay to ensure the dialog is fully rendered and has dimensions
     const initTimer = setTimeout(() => {
       try {
         const container = viewerContainerRef.current;
         if (!container || !window.$3Dmol) return;
 
-        // Clear container first
+        // Clear previous viewer
+        if (viewerInstanceRef.current) {
+          try {
+            viewerInstanceRef.current.clear();
+          } catch (e) {}
+          viewerInstanceRef.current = null;
+        }
         container.innerHTML = '';
         
-        // Create new viewer
+        // Ensure container has explicit dimensions for 3Dmol
+        const rect = container.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+          console.warn("Container has no dimensions, retrying...");
+          return;
+        }
+        
+        // Create new viewer with explicit dimensions
         const viewer = window.$3Dmol.createViewer(container, {
-          backgroundColor: 'black',
-          antialias: true
+          backgroundColor: '0x000000',
+          antialias: true,
+          width: rect.width,
+          height: rect.height
         });
         
         if (!viewer) {
@@ -153,11 +168,15 @@ export default function TargetsPage() {
         viewer.spin(true);
         viewer.render();
         
+        // Resize to fit container
+        viewer.resize();
+        viewer.render();
+        
         viewerInstanceRef.current = viewer;
       } catch (error) {
         console.error("Error initializing 3D viewer:", error);
       }
-    }, 100);
+    }, 300);
 
     return () => clearTimeout(initTimer);
   }, [show3DViewer, predictionResult?.pdbData, viewer3DReady]);
