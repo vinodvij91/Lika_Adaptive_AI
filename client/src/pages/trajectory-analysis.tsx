@@ -346,9 +346,13 @@ export default function TrajectoryAnalysisPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       setShowCampaignDialog(false);
       setShowAssayDialog(false);
+      const readoutsCount = selectedReadouts.size;
+      setSelectedReadouts(new Set());
       toast({
         title: "Campaign Created",
-        description: `${data.name} has been created with ${assayTemplate?.suggestedAssays?.length || 0} assays`,
+        description: readoutsCount > 0 
+          ? `${data.name} has been created with ${readoutsCount} immune readouts`
+          : `${data.name} has been created with ${assayTemplate?.suggestedAssays?.length || 0} assays`,
       });
       navigate(`/campaigns/${data.id}`);
     },
@@ -395,19 +399,55 @@ export default function TrajectoryAnalysisPage() {
   });
 
   const handleAddToCampaign = () => {
-    if (!assayTemplate) return;
+    const isVaccineReadoutsMode = isVaccineMode && selectedReadouts.size > 0 && !assayTemplate;
+    
+    if (!isVaccineReadoutsMode && !assayTemplate) return;
 
-    const assayConfig = {
-      trajectorySource: {
-        datasetId: selectedDataset,
-        disease: selectedDisease,
-        analysisTimestamp: new Date().toISOString(),
-      },
-      targetGene: assayTemplate.targetGene,
-      role: assayTemplate.role,
-      druggable: assayTemplate.targetable,
-      assays: assayTemplate.suggestedAssays,
-    };
+    let pipelineConfig: Record<string, unknown>;
+    let campaignDescription: string;
+
+    if (isVaccineReadoutsMode) {
+      const selectedReadoutData = allReadouts.filter(r => selectedReadouts.has(r.id));
+      const allBiomarkers = Array.from(new Set(selectedReadoutData.flatMap(r => r.biomarkers)));
+      const allTimepoints = Array.from(new Set(selectedReadoutData.flatMap(r => r.timepoints))).sort((a, b) => {
+        const numA = parseInt(a.replace("D", ""));
+        const numB = parseInt(b.replace("D", ""));
+        return numA - numB;
+      });
+      
+      pipelineConfig = {
+        pipelineType: "vaccine",
+        vaccineReadouts: selectedReadoutData.map(r => ({
+          id: r.id,
+          name: r.name,
+          description: r.description,
+          biomarkers: r.biomarkers,
+          timepoints: r.timepoints,
+        })),
+        associatedBiomarkers: allBiomarkers,
+        samplingTimepoints: allTimepoints,
+        trajectorySource: {
+          datasetId: selectedDataset,
+          disease: selectedDisease,
+          analysisTimestamp: new Date().toISOString(),
+        },
+      };
+      campaignDescription = `${selectedReadouts.size} immune readouts selected`;
+    } else {
+      const assayConfig = {
+        trajectorySource: {
+          datasetId: selectedDataset,
+          disease: selectedDisease,
+          analysisTimestamp: new Date().toISOString(),
+        },
+        targetGene: assayTemplate!.targetGene,
+        role: assayTemplate!.role,
+        druggable: assayTemplate!.targetable,
+        assays: assayTemplate!.suggestedAssays,
+      };
+      pipelineConfig = { trajectoryAssays: [assayConfig] };
+      campaignDescription = `${assayTemplate?.suggestedAssays?.length || 0} assays`;
+    }
 
     if (campaignMode === "new") {
       if (!newCampaignName.trim()) {
@@ -431,8 +471,8 @@ export default function TrajectoryAnalysisPage() {
       createCampaignMutation.mutate({
         name: newCampaignName,
         projectId: selectedProjectId,
-        pipelineConfig: { trajectoryAssays: [assayConfig] },
-        domainType: "Neurology",
+        pipelineConfig,
+        domainType: isVaccineMode ? "Vaccine" : "Neurology",
       });
     } else {
       if (!selectedCampaignId) {
@@ -445,11 +485,44 @@ export default function TrajectoryAnalysisPage() {
       }
 
       const existingCampaign = campaigns.find(c => c.id === selectedCampaignId);
-      updateCampaignMutation.mutate({
-        campaignId: selectedCampaignId,
-        assayConfig,
-        existingConfig: existingCampaign?.pipelineConfig || null,
-      });
+      
+      if (isVaccineReadoutsMode) {
+        const existingConfig = existingCampaign?.pipelineConfig || {};
+        const mergedConfig = {
+          ...existingConfig,
+          ...pipelineConfig,
+          vaccineReadouts: [
+            ...((existingConfig as Record<string, unknown>)?.vaccineReadouts as Array<unknown> || []),
+            ...((pipelineConfig as Record<string, unknown>).vaccineReadouts as Array<unknown>),
+          ],
+        };
+        
+        apiRequest("PATCH", `/api/campaigns/${selectedCampaignId}`, { pipelineConfig: mergedConfig })
+          .then(res => res.json())
+          .then((data: Campaign) => {
+            queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+            setShowCampaignDialog(false);
+            setSelectedReadouts(new Set());
+            toast({
+              title: "Readouts Added",
+              description: `${campaignDescription} added to ${data.name}`,
+            });
+            navigate(`/campaigns/${data.id}`);
+          })
+          .catch(() => {
+            toast({
+              title: "Update Failed",
+              description: "Could not add readouts to campaign",
+              variant: "destructive",
+            });
+          });
+      } else {
+        updateCampaignMutation.mutate({
+          campaignId: selectedCampaignId,
+          assayConfig: (pipelineConfig.trajectoryAssays as Array<unknown>)[0] as Record<string, unknown>,
+          existingConfig: existingCampaign?.pipelineConfig || null,
+        });
+      }
     }
   };
 
@@ -1258,8 +1331,11 @@ export default function TrajectoryAnalysisPage() {
                       <Button
                         disabled={selectedReadouts.size === 0}
                         onClick={() => {
-                          setShowCampaignDialog(true);
+                          setNewCampaignName(`${selectedDisease || "Vaccine"} Immune Readouts Campaign`);
                           setCampaignMode("new");
+                          setSelectedCampaignId("");
+                          setSelectedProjectId(projects[0]?.id || "");
+                          setShowCampaignDialog(true);
                         }}
                         data-testid="button-add-readouts-campaign"
                       >
