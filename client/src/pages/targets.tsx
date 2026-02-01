@@ -25,6 +25,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -43,15 +49,44 @@ import {
   CheckCircle,
   XCircle,
   Filter,
+  MoreVertical,
+  Boxes,
+  Loader2,
 } from "lucide-react";
 import type { Target as TargetType } from "@shared/schema";
 
 type TargetWithDiseases = TargetType & { diseases: string[] };
 
+interface StructurePrediction {
+  id: string;
+  name: string;
+  pdbData: string;
+  confidenceScore: number;
+  metrics: {
+    pLDDT: number;
+    pTM: number;
+    iPTM?: number;
+    numResidues: number;
+    numAtoms: number;
+  };
+  ligandBindingSite?: {
+    residues: string[];
+    bindingPocketVolume: number;
+    interactionType: string[];
+  };
+  modelVersion: string;
+  isSimulated: boolean;
+  fromCache?: boolean;
+}
+
 export default function TargetsPage() {
   const [search, setSearch] = useState("");
   const [diseaseFilter, setDiseaseFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [predictionDialogOpen, setPredictionDialogOpen] = useState(false);
+  const [selectedTarget, setSelectedTarget] = useState<TargetWithDiseases | null>(null);
+  const [ligandSmiles, setLigandSmiles] = useState("");
+  const [predictionResult, setPredictionResult] = useState<StructurePrediction | null>(null);
   const { toast } = useToast();
 
   const { data: diseases } = useQuery<{ disease: string; count: number }[]>({
@@ -89,6 +124,48 @@ export default function TargetsPage() {
       toast({ title: "Error", description: "Failed to create target", variant: "destructive" });
     },
   });
+
+  const structurePredictionMutation = useMutation({
+    mutationFn: async (data: {
+      proteinSequence: string;
+      ligandSmiles?: string;
+      name?: string;
+      targetId?: string;
+    }) => {
+      const res = await apiRequest("POST", "/api/structures/openfold3/predict", data);
+      return res.json();
+    },
+    onSuccess: (result: StructurePrediction) => {
+      setPredictionResult(result);
+      toast({ 
+        title: result.fromCache ? "Structure Retrieved from Cache" : "3D Structure Predicted", 
+        description: `pLDDT: ${result.metrics.pLDDT.toFixed(1)}, pTM: ${result.metrics.pTM.toFixed(2)}${result.isSimulated ? " (simulated)" : ""}` 
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to predict structure", variant: "destructive" });
+    },
+  });
+
+  const handlePredictStructure = () => {
+    if (!selectedTarget?.sequence) {
+      toast({ title: "Error", description: "Target has no sequence for structure prediction", variant: "destructive" });
+      return;
+    }
+    structurePredictionMutation.mutate({
+      proteinSequence: selectedTarget.sequence,
+      ligandSmiles: ligandSmiles || undefined,
+      name: `${selectedTarget.name} Complex`,
+      targetId: selectedTarget.id,
+    });
+  };
+
+  const openPredictionDialog = (target: TargetWithDiseases) => {
+    setSelectedTarget(target);
+    setLigandSmiles("");
+    setPredictionResult(null);
+    setPredictionDialogOpen(true);
+  };
 
   const filteredTargets = targets?.filter(
     (t) =>
@@ -344,11 +421,30 @@ export default function TargetsPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Link href={`/targets/${target.id}`}>
-                            <Button variant="ghost" size="icon" data-testid={`button-view-target-${target.id}`}>
-                              <ArrowRight className="h-4 w-4" />
-                            </Button>
-                          </Link>
+                          <div className="flex items-center gap-1">
+                            <Link href={`/targets/${target.id}`}>
+                              <Button variant="ghost" size="icon" data-testid={`button-view-target-${target.id}`}>
+                                <ArrowRight className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" data-testid={`button-target-actions-${target.id}`}>
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => openPredictionDialog(target)}
+                                  disabled={!target.sequence}
+                                  data-testid={`button-predict-structure-${target.id}`}
+                                >
+                                  <Boxes className="h-4 w-4 mr-2" />
+                                  Predict 3D Complex
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -381,6 +477,126 @@ export default function TargetsPage() {
           )}
         </div>
       </main>
+
+      <Dialog open={predictionDialogOpen} onOpenChange={setPredictionDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Predict 3D Complex - OpenFold3 NIM</DialogTitle>
+            <DialogDescription>
+              {selectedTarget ? (
+                <>Predict the 3D structure of <strong>{selectedTarget.name}</strong> with optional ligand using NVIDIA OpenFold3 NIM (AlphaFold3-compatible).</>
+              ) : (
+                "Select a target to predict its 3D structure."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedTarget && (
+              <div className="space-y-2">
+                <Label>Target Sequence</Label>
+                <div className="p-3 bg-muted rounded-md">
+                  <code className="text-xs font-mono break-all">
+                    {selectedTarget.sequence ? (
+                      selectedTarget.sequence.length > 200 
+                        ? selectedTarget.sequence.slice(0, 200) + "..." 
+                        : selectedTarget.sequence
+                    ) : (
+                      <span className="text-muted-foreground">No sequence available</span>
+                    )}
+                  </code>
+                  {selectedTarget.sequence && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {selectedTarget.sequence.length} amino acids
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="ligandSmiles">Ligand SMILES (optional)</Label>
+              <Input
+                id="ligandSmiles"
+                placeholder="e.g., CC(=O)Nc1ccc(O)cc1"
+                value={ligandSmiles}
+                onChange={(e) => setLigandSmiles(e.target.value)}
+                className="font-mono"
+                data-testid="input-ligand-smiles"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter a SMILES string to predict protein-ligand complex structure
+              </p>
+            </div>
+            {predictionResult && (
+              <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium">Prediction Results</h4>
+                  {predictionResult.fromCache && (
+                    <Badge variant="secondary" className="text-xs">From Cache</Badge>
+                  )}
+                  {predictionResult.isSimulated && (
+                    <Badge variant="outline" className="text-xs">Simulated</Badge>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">pLDDT Score:</span>
+                    <span className="ml-2 font-medium">{predictionResult.metrics.pLDDT.toFixed(1)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">pTM Score:</span>
+                    <span className="ml-2 font-medium">{predictionResult.metrics.pTM.toFixed(3)}</span>
+                  </div>
+                  {predictionResult.metrics.iPTM !== undefined && (
+                    <div>
+                      <span className="text-muted-foreground">iPTM Score:</span>
+                      <span className="ml-2 font-medium">{predictionResult.metrics.iPTM.toFixed(3)}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">Atoms:</span>
+                    <span className="ml-2 font-medium">{predictionResult.metrics.numAtoms}</span>
+                  </div>
+                </div>
+                {predictionResult.ligandBindingSite && (
+                  <div className="pt-2 border-t">
+                    <p className="text-sm font-medium mb-1">Binding Site</p>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>Residues: {predictionResult.ligandBindingSite.residues.slice(0, 5).join(", ")}{predictionResult.ligandBindingSite.residues.length > 5 ? "..." : ""}</p>
+                      <p>Pocket Volume: {predictionResult.ligandBindingSite.bindingPocketVolume.toFixed(0)} \u00c5\u00b3</p>
+                      <p>Interactions: {predictionResult.ligandBindingSite.interactionType.join(", ")}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">Model: {predictionResult.modelVersion}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPredictionDialogOpen(false)}>
+              Close
+            </Button>
+            <Button 
+              onClick={handlePredictStructure}
+              disabled={!selectedTarget?.sequence || structurePredictionMutation.isPending}
+              data-testid="button-run-prediction"
+            >
+              {structurePredictionMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Predicting...
+                </>
+              ) : (
+                <>
+                  <Boxes className="h-4 w-4 mr-2" />
+                  Predict Structure
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
