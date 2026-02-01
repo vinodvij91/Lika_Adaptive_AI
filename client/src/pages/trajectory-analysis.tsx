@@ -1200,20 +1200,31 @@ export default function TrajectoryAnalysisPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleGenerateTemplate(marker.gene, marker.pseudotimeExpression, marker.cluster)}
-                              disabled={generateTemplateMutation.isPending}
-                              data-testid={`button-template-${marker.gene}`}
-                            >
-                              {generateTemplateMutation.isPending && selectedBiomarker === marker.gene ? (
-                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                              ) : (
-                                <FlaskConical className="w-3 h-3 mr-1" />
-                              )}
-                              {isVaccineMode ? "Readout" : "Assay"}
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenStructureDialog(marker.gene)}
+                                title="Predict 3D Complex"
+                                data-testid={`button-structure-${marker.gene}`}
+                              >
+                                <Boxes className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGenerateTemplate(marker.gene, marker.pseudotimeExpression, marker.cluster)}
+                                disabled={generateTemplateMutation.isPending}
+                                data-testid={`button-template-${marker.gene}`}
+                              >
+                                {generateTemplateMutation.isPending && selectedBiomarker === marker.gene ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <FlaskConical className="w-3 h-3 mr-1" />
+                                )}
+                                {isVaccineMode ? "Readout" : "Assay"}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

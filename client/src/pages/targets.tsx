@@ -86,6 +86,7 @@ export default function TargetsPage() {
   const [predictionDialogOpen, setPredictionDialogOpen] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<TargetWithDiseases | null>(null);
   const [ligandSmiles, setLigandSmiles] = useState("");
+  const [manualSequence, setManualSequence] = useState("");
   const [predictionResult, setPredictionResult] = useState<StructurePrediction | null>(null);
   const { toast } = useToast();
 
@@ -148,21 +149,23 @@ export default function TargetsPage() {
   });
 
   const handlePredictStructure = () => {
-    if (!selectedTarget?.sequence) {
-      toast({ title: "Error", description: "Target has no sequence for structure prediction", variant: "destructive" });
+    const sequence = selectedTarget?.sequence || manualSequence.trim();
+    if (!sequence) {
+      toast({ title: "Error", description: "Please provide a protein sequence for structure prediction", variant: "destructive" });
       return;
     }
     structurePredictionMutation.mutate({
-      proteinSequence: selectedTarget.sequence,
+      proteinSequence: sequence,
       ligandSmiles: ligandSmiles || undefined,
-      name: `${selectedTarget.name} Complex`,
-      targetId: selectedTarget.id,
+      name: `${selectedTarget?.name || "Unknown"} Complex`,
+      targetId: selectedTarget?.id,
     });
   };
 
   const openPredictionDialog = (target: TargetWithDiseases) => {
     setSelectedTarget(target);
     setLigandSmiles("");
+    setManualSequence("");
     setPredictionResult(null);
     setPredictionDialogOpen(true);
   };
@@ -422,6 +425,15 @@ export default function TargetsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => openPredictionDialog(target)}
+                              title="Predict 3D Complex"
+                              data-testid={`button-predict-structure-${target.id}`}
+                            >
+                              <Boxes className="h-4 w-4" />
+                            </Button>
                             <Link href={`/targets/${target.id}`}>
                               <Button variant="ghost" size="icon" data-testid={`button-view-target-${target.id}`}>
                                 <ArrowRight className="h-4 w-4" />
@@ -436,8 +448,7 @@ export default function TargetsPage() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem 
                                   onClick={() => openPredictionDialog(target)}
-                                  disabled={!target.sequence}
-                                  data-testid={`button-predict-structure-${target.id}`}
+                                  data-testid={`button-predict-structure-menu-${target.id}`}
                                 >
                                   <Boxes className="h-4 w-4 mr-2" />
                                   Predict 3D Complex
@@ -494,22 +505,34 @@ export default function TargetsPage() {
             {selectedTarget && (
               <div className="space-y-2">
                 <Label>Target Sequence</Label>
-                <div className="p-3 bg-muted rounded-md">
-                  <code className="text-xs font-mono break-all">
-                    {selectedTarget.sequence ? (
-                      selectedTarget.sequence.length > 200 
+                {selectedTarget.sequence ? (
+                  <div className="p-3 bg-muted rounded-md">
+                    <code className="text-xs font-mono break-all">
+                      {selectedTarget.sequence.length > 200 
                         ? selectedTarget.sequence.slice(0, 200) + "..." 
-                        : selectedTarget.sequence
-                    ) : (
-                      <span className="text-muted-foreground">No sequence available</span>
-                    )}
-                  </code>
-                  {selectedTarget.sequence && (
+                        : selectedTarget.sequence}
+                    </code>
                     <p className="text-xs text-muted-foreground mt-2">
                       {selectedTarget.sequence.length} amino acids
                     </p>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+                      This target has no sequence stored. Enter a protein sequence below to predict its structure.
+                    </p>
+                    <textarea
+                      value={manualSequence}
+                      onChange={(e) => setManualSequence(e.target.value)}
+                      placeholder="Enter amino acid sequence (e.g., MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSF...)"
+                      className="w-full h-24 p-3 font-mono text-xs border rounded-md bg-background resize-none"
+                      data-testid="textarea-manual-sequence"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {manualSequence.trim().length > 0 && `${manualSequence.trim().length} characters`}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             <div className="space-y-2">
@@ -579,7 +602,7 @@ export default function TargetsPage() {
             </Button>
             <Button 
               onClick={handlePredictStructure}
-              disabled={!selectedTarget?.sequence || structurePredictionMutation.isPending}
+              disabled={(!selectedTarget?.sequence && !manualSequence.trim()) || structurePredictionMutation.isPending}
               data-testid="button-run-prediction"
             >
               {structurePredictionMutation.isPending ? (
