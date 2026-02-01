@@ -301,7 +301,7 @@ export default function TrajectoryAnalysisPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {trajectoryResult && (
+            {trajectoryResult && trajectoryResult.targets && (
               <Badge variant="secondary" className="gap-1">
                 <Target className="w-3 h-3" />
                 {trajectoryResult.targets.length} Targets
@@ -627,7 +627,7 @@ export default function TrajectoryAnalysisPage() {
                               opacity={0.7}
                             />
                           ))}
-                          {trajectoryResult.branchPoints.map((bp, i) => {
+                          {(trajectoryResult.branchPoints || []).map((bp, i) => {
                             const matchingPoints = umapData.filter(
                               p => Math.abs(p.pseudotime - bp.pseudotime) < 0.1
                             );
@@ -657,12 +657,12 @@ export default function TrajectoryAnalysisPage() {
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base">Clusters</CardTitle>
-                      <CardDescription>{trajectoryResult.clusters.length} cell populations</CardDescription>
+                      <CardDescription>{(trajectoryResult.clusters || []).length} cell populations</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ScrollArea className="h-[360px]">
                         <div className="space-y-2">
-                          {trajectoryResult.clusters.map((cluster) => (
+                          {(trajectoryResult.clusters || []).map((cluster) => (
                             <div
                               key={cluster.id}
                               className="flex items-center justify-between p-2 rounded-lg border"
@@ -697,7 +697,7 @@ export default function TrajectoryAnalysisPage() {
                     <div className="relative">
                       <div className="absolute top-4 left-0 right-0 h-1 bg-muted rounded-full" />
                       <div className="flex justify-between relative">
-                        {trajectoryResult.branchPoints.map((bp, i) => (
+                        {(trajectoryResult.branchPoints || []).map((bp, i) => (
                           <div
                             key={i}
                             className="flex flex-col items-center"
@@ -732,7 +732,7 @@ export default function TrajectoryAnalysisPage() {
                       Genes with significant expression changes along the trajectory
                     </CardDescription>
                   </div>
-                  <Badge variant="secondary">{trajectoryResult.biomarkers.length} genes</Badge>
+                  <Badge variant="secondary">{(trajectoryResult.biomarkers || []).length} genes</Badge>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -748,7 +748,7 @@ export default function TrajectoryAnalysisPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {trajectoryResult.biomarkers.map((marker) => (
+                      {(trajectoryResult.biomarkers || []).map((marker) => (
                         <TableRow key={marker.gene}>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -830,8 +830,8 @@ export default function TrajectoryAnalysisPage() {
           <TabsContent value="targets" className="space-y-4">
             {trajectoryResult && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {trajectoryResult.targets.map((target) => {
-                  const biomarker = trajectoryResult.biomarkers.find(b => b.gene === target);
+                {(trajectoryResult.targets || []).map((target) => {
+                  const biomarker = (trajectoryResult.biomarkers || []).find(b => b.gene === target);
                   return (
                     <Card key={target} className="hover-elevate">
                       <CardHeader className="pb-2">
