@@ -400,6 +400,19 @@ export default function PropertyPredictionPage() {
   const [currentMaterialName, setCurrentMaterialName] = useState("");
   const [currentSmiles, setCurrentSmiles] = useState("");
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [screeningInput, setScreeningInput] = useState("");
+  const [screeningConstraints, setScreeningConstraints] = useState<{
+    thermal_conductivity?: { min?: number; max?: number };
+    tensile_strength?: { min?: number; max?: number };
+    youngs_modulus?: { min?: number; max?: number };
+    density?: { min?: number; max?: number };
+    glass_transition?: { min?: number; max?: number };
+  }>({});
+  const [screeningResults, setScreeningResults] = useState<{
+    passed: MaterialPredictionResult[];
+    failed: MaterialPredictionResult[];
+  } | null>(null);
+  const [isScreening, setIsScreening] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -491,6 +504,79 @@ export default function PropertyPredictionPage() {
   };
 
   const isLoading = predictMutation.isPending || manufacturabilityMutation.isPending;
+
+  const handleBatchScreen = async () => {
+    setIsScreening(true);
+    setScreeningResults(null);
+    
+    let materials: any[] = [];
+    
+    if (screeningInput.trim()) {
+      const lines = screeningInput.split("\n").filter(l => l.trim());
+      materials = lines.map(line => {
+        if (materialType === "polymer") {
+          return { type: "polymer", smiles: line.trim() };
+        } else {
+          return { type: "crystal", formula: line.trim() };
+        }
+      });
+    } else {
+      materials = materialType === "polymer" 
+        ? DEMO_POLYMERS.map(p => ({ type: p.type, smiles: p.smiles }))
+        : DEMO_CRYSTALS.map(c => ({ type: c.type, formula: c.formula }));
+    }
+    
+    try {
+      const res = await apiRequest("POST", "/api/compute/materials/predict", { materials });
+      const data = await res.json();
+      
+      if (data.results) {
+        const passed: MaterialPredictionResult[] = [];
+        const failed: MaterialPredictionResult[] = [];
+        
+        data.results.forEach((result: MaterialPredictionResult) => {
+          let meetsConstraints = true;
+          
+          for (const prop of result.properties) {
+            const constraint = screeningConstraints[prop.property_name as keyof typeof screeningConstraints];
+            if (constraint) {
+              if (constraint.min !== undefined && prop.value < constraint.min) {
+                meetsConstraints = false;
+                break;
+              }
+              if (constraint.max !== undefined && prop.value > constraint.max) {
+                meetsConstraints = false;
+                break;
+              }
+            }
+          }
+          
+          if (meetsConstraints) {
+            passed.push(result);
+          } else {
+            failed.push(result);
+          }
+        });
+        
+        setScreeningResults({ passed, failed });
+      }
+    } catch (error) {
+      console.error("Screening error:", error);
+    } finally {
+      setIsScreening(false);
+    }
+  };
+
+  const updateConstraint = (property: string, type: "min" | "max", value: string) => {
+    const numValue = value === "" ? undefined : parseFloat(value);
+    setScreeningConstraints(prev => ({
+      ...prev,
+      [property]: {
+        ...prev[property as keyof typeof prev],
+        [type]: numValue
+      }
+    }));
+  };
 
   return (
     <div className="flex flex-col h-full bg-gradient-to-br from-background via-background to-emerald-500/5">
@@ -607,15 +693,107 @@ export default function PropertyPredictionPage() {
                       <p className="text-sm text-muted-foreground">
                         Batch screening mode for high-throughput discovery with target property constraints.
                       </p>
+                      
+                      <div className="space-y-3">
+                        <Label className="text-xs font-medium text-muted-foreground">Property Constraints</Label>
+                        <div className="space-y-2">
+                          {[
+                            { key: "thermal_conductivity", label: "Thermal Conductivity (W/mK)", icon: ThermometerSun },
+                            { key: "tensile_strength", label: "Tensile Strength (MPa)", icon: Gauge },
+                            { key: "density", label: "Density (g/cm³)", icon: Hexagon },
+                          ].map(({ key, label, icon: Icon }) => (
+                            <div key={key} className="flex items-center gap-2 p-2 rounded border bg-muted/30">
+                              <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="text-xs flex-1 truncate">{label}</span>
+                              <input
+                                type="number"
+                                placeholder="Min"
+                                className="w-16 h-7 px-2 text-xs rounded border bg-background"
+                                value={screeningConstraints[key as keyof typeof screeningConstraints]?.min ?? ""}
+                                onChange={(e) => updateConstraint(key, "min", e.target.value)}
+                                data-testid={`input-${key}-min`}
+                              />
+                              <span className="text-xs text-muted-foreground">-</span>
+                              <input
+                                type="number"
+                                placeholder="Max"
+                                className="w-16 h-7 px-2 text-xs rounded border bg-background"
+                                value={screeningConstraints[key as keyof typeof screeningConstraints]?.max ?? ""}
+                                onChange={(e) => updateConstraint(key, "max", e.target.value)}
+                                data-testid={`input-${key}-max`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">Materials to Screen (one per line)</Label>
+                        <Textarea
+                          className="h-20 font-mono text-sm"
+                          placeholder={materialType === "polymer" 
+                            ? "CC\nc1ccccc1CC\nCC(C)(C(=O)OC)C\nNCCCCCC(=O)O" 
+                            : "Fe2O3\nSiO2\nTiO2\nAl2O3"}
+                          value={screeningInput}
+                          onChange={(e) => setScreeningInput(e.target.value)}
+                          data-testid="input-screening-materials"
+                        />
+                      </div>
+
                       <Button
-                        className="w-full gap-2"
-                        variant="outline"
-                        disabled
+                        className="w-full gap-2 bg-gradient-to-r from-violet-500 to-purple-500"
+                        onClick={handleBatchScreen}
+                        disabled={isScreening || onlineNodes.length === 0}
                         data-testid="button-batch-screen"
                       >
-                        <TrendingUp className="h-4 w-4" />
-                        Coming Soon
+                        {isScreening ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <TrendingUp className="h-4 w-4" />
+                        )}
+                        Run Batch Screening
                       </Button>
+
+                      {screeningResults && (
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Results:</span>
+                            <div className="flex gap-2">
+                              <Badge variant="default" className="bg-emerald-500">
+                                {screeningResults.passed.length} Passed
+                              </Badge>
+                              <Badge variant="secondary">
+                                {screeningResults.failed.length} Failed
+                              </Badge>
+                            </div>
+                          </div>
+                          {screeningResults.passed.length > 0 && (
+                            <div className="space-y-1">
+                              {screeningResults.passed.map((mat, idx) => (
+                                <div key={idx} className="flex items-center gap-2 p-2 rounded bg-emerald-500/10 border border-emerald-500/30">
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                  <span className="text-xs font-mono truncate flex-1">
+                                    {mat.smiles || mat.material_id}
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 text-xs"
+                                    onClick={() => {
+                                      setResults([mat]);
+                                      setSelectedMaterial(mat);
+                                      setActiveTab("predict");
+                                    }}
+                                    data-testid={`button-view-${idx}`}
+                                  >
+                                    View
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </TabsContent>
                   </Tabs>
 
