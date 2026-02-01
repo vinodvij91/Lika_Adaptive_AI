@@ -166,6 +166,188 @@ const PUBLIC_DATASETS: ScRNADataset[] = [
     species: "human",
     publicationYear: 2021,
     hasTrajectory: true
+  },
+  {
+    id: "gse137810",
+    name: "ALS Spinal Cord Motor Neurons",
+    geoAccession: "GSE137810",
+    disease: "ALS",
+    tissue: "Spinal Cord",
+    cellCount: 89234,
+    description: "Single-nucleus transcriptomics of spinal cord in ALS patients",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2021,
+    hasTrajectory: true
+  },
+  {
+    id: "gse166482",
+    name: "ALS Motor Cortex",
+    geoAccession: "GSE166482",
+    disease: "ALS",
+    tissue: "Brain (Motor Cortex)",
+    cellCount: 112890,
+    description: "Single-cell analysis of motor cortex degeneration in ALS",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2022,
+    hasTrajectory: true
+  },
+  {
+    id: "gse128630",
+    name: "Multiple Sclerosis Brain Lesions",
+    geoAccession: "GSE128630",
+    disease: "Multiple Sclerosis",
+    tissue: "Brain (White Matter)",
+    cellCount: 75123,
+    description: "Single-cell transcriptomics of MS brain lesions",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2019,
+    hasTrajectory: true
+  },
+  {
+    id: "gse157278",
+    name: "MS CSF Immune Cells",
+    geoAccession: "GSE157278",
+    disease: "Multiple Sclerosis",
+    tissue: "Cerebrospinal Fluid",
+    cellCount: 42567,
+    description: "Single-cell immune profiling of CSF in multiple sclerosis",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2020,
+    hasTrajectory: true
+  },
+  {
+    id: "gse154927",
+    name: "Rheumatoid Arthritis Synovium",
+    geoAccession: "GSE154927",
+    disease: "Rheumatoid Arthritis",
+    tissue: "Synovial Tissue",
+    cellCount: 98456,
+    description: "Single-cell atlas of rheumatoid arthritis synovial tissue",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2020,
+    hasTrajectory: true
+  },
+  {
+    id: "gse163314",
+    name: "Lupus PBMC and Kidney",
+    geoAccession: "GSE163314",
+    disease: "Lupus",
+    tissue: "PBMC / Kidney",
+    cellCount: 156789,
+    description: "Multi-tissue single-cell analysis of systemic lupus erythematosus",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2021,
+    hasTrajectory: true
+  },
+  {
+    id: "gse145505",
+    name: "Asthma Airway Epithelium",
+    geoAccession: "GSE145505",
+    disease: "Asthma",
+    tissue: "Airway Epithelium",
+    cellCount: 67890,
+    description: "Single-cell transcriptome of airway epithelium in asthma",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2020,
+    hasTrajectory: true
+  },
+  {
+    id: "gse136831",
+    name: "COPD Lung Tissue",
+    geoAccession: "GSE136831",
+    disease: "COPD",
+    tissue: "Lung",
+    cellCount: 220125,
+    description: "Single-cell RNA-seq of human lung in COPD",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2020,
+    hasTrajectory: true
+  },
+  {
+    id: "gse135893",
+    name: "Pulmonary Fibrosis Lung",
+    geoAccession: "GSE135893",
+    disease: "Pulmonary Fibrosis",
+    tissue: "Lung",
+    cellCount: 114396,
+    description: "Single-cell transcriptomic analysis of idiopathic pulmonary fibrosis",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2019,
+    hasTrajectory: true
+  },
+  {
+    id: "gse183852",
+    name: "Heart Failure Cardiac Tissue",
+    geoAccession: "GSE183852",
+    disease: "Heart Failure",
+    tissue: "Heart (Left Ventricle)",
+    cellCount: 287456,
+    description: "Single-cell atlas of human heart failure",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2022,
+    hasTrajectory: true
+  },
+  {
+    id: "gse151530",
+    name: "Chronic Kidney Disease",
+    geoAccession: "GSE151530",
+    disease: "Kidney Disease",
+    tissue: "Kidney",
+    cellCount: 145678,
+    description: "Single-cell transcriptomics of chronic kidney disease",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2021,
+    hasTrajectory: true
+  },
+  {
+    id: "gse174422",
+    name: "NASH Liver",
+    geoAccession: "GSE174422",
+    disease: "NASH",
+    tissue: "Liver",
+    cellCount: 178234,
+    description: "Single-cell atlas of non-alcoholic steatohepatitis progression",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2022,
+    hasTrajectory: true
+  },
+  {
+    id: "gse162223",
+    name: "Psoriasis Skin",
+    geoAccession: "GSE162223",
+    disease: "Psoriasis",
+    tissue: "Skin",
+    cellCount: 89345,
+    description: "Single-cell analysis of psoriatic skin lesions",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2021,
+    hasTrajectory: true
+  },
+  {
+    id: "gse171524",
+    name: "Atopic Dermatitis Skin",
+    geoAccession: "GSE171524",
+    disease: "Atopic Dermatitis",
+    tissue: "Skin",
+    cellCount: 76543,
+    description: "Single-cell transcriptome of atopic dermatitis lesions",
+    source: "GEO",
+    species: "human",
+    publicationYear: 2021,
+    hasTrajectory: true
   }
 ];
 
@@ -225,6 +407,114 @@ const DISEASE_BIOMARKERS: Record<string, Array<{ gene: string; role: string; tar
     { gene: "PRKN", role: "Ubiquitin ligase", targetable: false },
     { gene: "DJ1", role: "Oxidative stress", targetable: true },
     { gene: "GBA", role: "Lysosomal function", targetable: true }
+  ],
+  ALS: [
+    { gene: "SOD1", role: "Superoxide dismutase", targetable: true },
+    { gene: "TDP43", role: "RNA binding protein", targetable: true },
+    { gene: "FUS", role: "RNA processing", targetable: true },
+    { gene: "C9orf72", role: "Repeat expansion", targetable: false },
+    { gene: "OPTN", role: "Autophagy receptor", targetable: true },
+    { gene: "VCP", role: "Protein degradation", targetable: true },
+    { gene: "UBQLN2", role: "Proteasome targeting", targetable: true }
+  ],
+  "Multiple Sclerosis": [
+    { gene: "IL17A", role: "Th17 inflammation", targetable: true },
+    { gene: "CD20", role: "B cell marker", targetable: true },
+    { gene: "BTK", role: "B cell signaling", targetable: true },
+    { gene: "S1P1", role: "Lymphocyte trafficking", targetable: true },
+    { gene: "CXCR4", role: "Immune cell migration", targetable: true },
+    { gene: "HLA-DRB1", role: "Antigen presentation", targetable: false },
+    { gene: "IL2RA", role: "T cell activation", targetable: true }
+  ],
+  "Rheumatoid Arthritis": [
+    { gene: "TNF", role: "Pro-inflammatory cytokine", targetable: true },
+    { gene: "IL6", role: "Inflammation mediator", targetable: true },
+    { gene: "JAK1", role: "Cytokine signaling", targetable: true },
+    { gene: "JAK3", role: "Immune signaling", targetable: true },
+    { gene: "CD80", role: "T cell costimulation", targetable: true },
+    { gene: "CTLA4", role: "Immune checkpoint", targetable: true },
+    { gene: "MMP1", role: "Matrix degradation", targetable: true }
+  ],
+  Lupus: [
+    { gene: "IFNA", role: "Type I interferon", targetable: true },
+    { gene: "BLyS", role: "B cell survival", targetable: true },
+    { gene: "TLR7", role: "Innate immunity", targetable: true },
+    { gene: "TLR9", role: "DNA sensing", targetable: true },
+    { gene: "STAT4", role: "Th1 response", targetable: true },
+    { gene: "IRF5", role: "Interferon regulation", targetable: false },
+    { gene: "PTPN22", role: "T cell signaling", targetable: true }
+  ],
+  Asthma: [
+    { gene: "IL4", role: "Th2 cytokine", targetable: true },
+    { gene: "IL5", role: "Eosinophil activation", targetable: true },
+    { gene: "IL13", role: "Airway inflammation", targetable: true },
+    { gene: "TSLP", role: "Epithelial alarmin", targetable: true },
+    { gene: "IL33", role: "Innate cytokine", targetable: true },
+    { gene: "CRTH2", role: "Prostaglandin receptor", targetable: true },
+    { gene: "GATA3", role: "Th2 transcription", targetable: false }
+  ],
+  COPD: [
+    { gene: "MMP9", role: "Matrix metalloproteinase", targetable: true },
+    { gene: "MMP12", role: "Elastin degradation", targetable: true },
+    { gene: "CXCL8", role: "Neutrophil recruitment", targetable: true },
+    { gene: "CCL2", role: "Monocyte chemotaxis", targetable: true },
+    { gene: "SERPINA1", role: "Alpha-1 antitrypsin", targetable: false },
+    { gene: "AGER", role: "Inflammation receptor", targetable: true },
+    { gene: "HDAC2", role: "Epigenetic regulation", targetable: true }
+  ],
+  "Pulmonary Fibrosis": [
+    { gene: "TGFB1", role: "Fibrosis driver", targetable: true },
+    { gene: "CTGF", role: "Connective tissue growth", targetable: true },
+    { gene: "PDGFRA", role: "Fibroblast activation", targetable: true },
+    { gene: "COL1A1", role: "Collagen deposition", targetable: false },
+    { gene: "MUC5B", role: "Mucin production", targetable: false },
+    { gene: "LOXL2", role: "Collagen crosslinking", targetable: true },
+    { gene: "ITGAV", role: "TGF-beta activation", targetable: true }
+  ],
+  "Heart Failure": [
+    { gene: "NPPA", role: "Natriuretic peptide A", targetable: true },
+    { gene: "NPPB", role: "BNP marker", targetable: true },
+    { gene: "REN", role: "Renin-angiotensin", targetable: true },
+    { gene: "ACE", role: "Angiotensin converting", targetable: true },
+    { gene: "ADRB1", role: "Beta-adrenergic receptor", targetable: true },
+    { gene: "SERCA2", role: "Calcium handling", targetable: true },
+    { gene: "SGLT2", role: "Glucose transport", targetable: true }
+  ],
+  "Kidney Disease": [
+    { gene: "NPHS1", role: "Nephrin", targetable: false },
+    { gene: "NPHS2", role: "Podocin", targetable: false },
+    { gene: "WT1", role: "Podocyte marker", targetable: false },
+    { gene: "VEGFA", role: "Vascular growth", targetable: true },
+    { gene: "CTGF", role: "Fibrosis", targetable: true },
+    { gene: "TGFB1", role: "TGF-beta signaling", targetable: true },
+    { gene: "SGLT2", role: "Glucose reabsorption", targetable: true }
+  ],
+  NASH: [
+    { gene: "PNPLA3", role: "Lipid metabolism", targetable: true },
+    { gene: "TM6SF2", role: "Lipid secretion", targetable: false },
+    { gene: "SREBF1", role: "Lipogenesis", targetable: true },
+    { gene: "FXR", role: "Bile acid receptor", targetable: true },
+    { gene: "THR", role: "Thyroid hormone receptor", targetable: true },
+    { gene: "ACC1", role: "Fatty acid synthesis", targetable: true },
+    { gene: "ASK1", role: "Apoptosis signaling", targetable: true }
+  ],
+  Psoriasis: [
+    { gene: "IL17A", role: "Th17 cytokine", targetable: true },
+    { gene: "IL17F", role: "Keratinocyte activation", targetable: true },
+    { gene: "IL23", role: "Th17 differentiation", targetable: true },
+    { gene: "TNF", role: "Inflammation", targetable: true },
+    { gene: "IL22", role: "Epithelial proliferation", targetable: true },
+    { gene: "TYK2", role: "JAK family kinase", targetable: true },
+    { gene: "PDE4", role: "cAMP signaling", targetable: true }
+  ],
+  "Atopic Dermatitis": [
+    { gene: "IL4", role: "Th2 cytokine", targetable: true },
+    { gene: "IL13", role: "Th2 inflammation", targetable: true },
+    { gene: "IL31", role: "Itch mediator", targetable: true },
+    { gene: "TSLP", role: "Epithelial alarmin", targetable: true },
+    { gene: "JAK1", role: "Cytokine signaling", targetable: true },
+    { gene: "FLG", role: "Skin barrier", targetable: false },
+    { gene: "OX40L", role: "T cell activation", targetable: true }
   ]
 };
 

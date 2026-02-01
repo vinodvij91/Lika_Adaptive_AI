@@ -88,7 +88,7 @@ The platform integrates production-grade Python pipelines for both drug discover
 
 ### scRNA + PGD Trajectory Analysis Module
 Automated biomarker discovery and target identification from public single-cell RNA-seq datasets using Pseudotime Graph Diffusion (PGD).
-- **Public Dataset Registry**: 10+ curated scRNA-seq datasets from GEO covering Alzheimer's, COVID-19, Cancer, Diabetes, IBD, and Parkinson's disease
+- **Public Dataset Registry**: 25+ curated scRNA-seq datasets from GEO covering 18 disease areas: Alzheimer's, COVID-19, Cancer, Diabetes, IBD, Parkinson's, ALS, Multiple Sclerosis, Rheumatoid Arthritis, Lupus, Asthma, COPD, Pulmonary Fibrosis, Heart Failure, Kidney Disease, NASH, Psoriasis, and Atopic Dermatitis
 - **PGD Trajectory Inference**: Simulates UMAP embedding and pseudotime trajectory analysis with configurable smoothing parameters
 - **Biomarker Detection**: Identifies genes with significant expression changes at trajectory branch points
 - **Druggable Target Extraction**: Automatically identifies targetable genes from biomarker analysis
