@@ -65,6 +65,7 @@ const drugWorkflowItems = [
   { title: "Docking & 3D", url: "/docking", icon: Layers },
   { title: "ADMET", url: "/admet", icon: Beaker },
   { title: "Assays", url: "/assays", icon: TestTube2 },
+  { title: "Assay Harvesting", url: "/assay-harvesting", icon: Database },
   { title: "SAR Analysis", url: "/learning-graph", icon: BarChart3 },
   { title: "Reports", url: "/reports", icon: BarChart3 },
 ];

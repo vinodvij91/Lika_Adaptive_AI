@@ -80,6 +80,7 @@ const BioNemoPage = lazy(() => import("@/pages/bionemo"));
 const ExternalDataPage = lazy(() => import("@/pages/external-data"));
 const VaccineDiscoveryPage = lazy(() => import("@/pages/vaccine-discovery"));
 const DiseaseDiscoveryPage = lazy(() => import("@/pages/disease-discovery"));
+const AssayHarvestingPage = lazy(() => import("@/pages/assay-harvesting"));
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -128,6 +129,7 @@ function AuthenticatedRoutes() {
         <Route path="/learning-graph" component={LearningGraphPage} />
         <Route path="/assays" component={AssaysPage} />
         <Route path="/assays/:id" component={AssayDetailPage} />
+        <Route path="/assay-harvesting" component={AssayHarvestingPage} />
         <Route path="/docking" component={DockingPage} />
         <Route path="/admet" component={AdmetPage} />
         <Route path="/campaigns/:id/hit-triage" component={HitTriagePage} />
