@@ -206,6 +206,9 @@ import {
   type InsertMoaNode,
   type MoaEdge,
   type InsertMoaEdge,
+  activityLogs,
+  type ActivityLog,
+  type InsertActivityLog,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -2963,6 +2966,52 @@ export class DatabaseStorage implements IStorage {
         .set({ isBuiltIn: true })
         .where(eq(canonicalMolecules.id, id));
     }
+  }
+
+  async getActivityLogs(
+    userId: string, 
+    options: { limit: number; offset: number; activityType?: string }
+  ): Promise<ActivityLog[]> {
+    const { limit, offset, activityType } = options;
+    
+    const conditions = [eq(activityLogs.userId, userId)];
+    if (activityType) {
+      conditions.push(eq(activityLogs.activityType, activityType as any));
+    }
+    
+    return db.select()
+      .from(activityLogs)
+      .where(and(...conditions))
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getActivityLogCount(userId: string, activityType?: string): Promise<number> {
+    const conditions = [eq(activityLogs.userId, userId)];
+    if (activityType) {
+      conditions.push(eq(activityLogs.activityType, activityType as any));
+    }
+    
+    const result = await db.select({ count: count() })
+      .from(activityLogs)
+      .where(and(...conditions));
+    return result[0]?.count || 0;
+  }
+
+  async createActivityLog(log: InsertActivityLog): Promise<ActivityLog> {
+    const result = await db.insert(activityLogs).values(log).returning();
+    return result[0];
+  }
+
+  async getActivityLogStats(userId: string): Promise<{ type: string; count: number }[]> {
+    return db.select({
+      type: activityLogs.activityType,
+      count: count(),
+    })
+      .from(activityLogs)
+      .where(eq(activityLogs.userId, userId))
+      .groupBy(activityLogs.activityType);
   }
 }
 

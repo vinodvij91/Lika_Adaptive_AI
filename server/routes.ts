@@ -10288,5 +10288,63 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     return predictInhibitors(req, res);
   });
 
+  // ============================================================================
+  // ACTIVITY LOG ENDPOINTS
+  // ============================================================================
+
+  app.get("/api/activity-logs", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const activityType = req.query.type as string | undefined;
+      
+      const logs = await storage.getActivityLogs(userId, { limit, offset, activityType });
+      const total = await storage.getActivityLogCount(userId, activityType);
+      
+      res.json({ logs, total, limit, offset });
+    } catch (error) {
+      console.error("Error fetching activity logs:", error);
+      res.status(500).json({ error: "Failed to fetch activity logs" });
+    }
+  });
+
+  app.post("/api/activity-logs", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { activityType, action, description, metadata, entityType, entityId } = req.body;
+      
+      if (!activityType || !action) {
+        return res.status(400).json({ error: "activityType and action are required" });
+      }
+      
+      const log = await storage.createActivityLog({
+        userId,
+        activityType,
+        action,
+        description,
+        metadata,
+        entityType,
+        entityId,
+      });
+      
+      res.status(201).json(log);
+    } catch (error) {
+      console.error("Error creating activity log:", error);
+      res.status(500).json({ error: "Failed to create activity log" });
+    }
+  });
+
+  app.get("/api/activity-logs/stats", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const stats = await storage.getActivityLogStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching activity stats:", error);
+      res.status(500).json({ error: "Failed to fetch activity stats" });
+    }
+  });
+
   return httpServer;
 }
