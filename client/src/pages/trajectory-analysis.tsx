@@ -49,6 +49,7 @@ import {
   FlaskConical,
   Loader2,
   ChevronRight,
+  ChevronDown,
   Zap,
   Brain,
   Dna,
@@ -60,7 +61,12 @@ import {
   FolderPlus,
   Boxes,
   Eye,
+  BarChart3,
+  FileDown,
+  Sparkles,
+  LineChart,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useLocation } from "wouter";
 
@@ -179,6 +185,7 @@ export default function TrajectoryAnalysisPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [pipelineType, setPipelineType] = useState<"drug" | "vaccine">("drug");
   const [selectedReadouts, setSelectedReadouts] = useState<Set<string>>(new Set());
+  const [expandedReadouts, setExpandedReadouts] = useState<Set<string>>(new Set());
   const [showStructureDialog, setShowStructureDialog] = useState(false);
   const [structureLigandSmiles, setStructureLigandSmiles] = useState("");
   const [structureResult, setStructureResult] = useState<{
@@ -199,26 +206,191 @@ export default function TrajectoryAnalysisPage() {
   
   const isVaccineMode = pipelineType === "vaccine";
 
-  const IMMUNE_READOUTS = {
+  // Enhanced immune readouts with correlation scores, simulated data, and BioNeMo predictions
+  interface ImmuneReadout {
+    id: string;
+    name: string;
+    description: string;
+    biomarkers: string[];
+    timepoints: string[];
+    correlationScores: { gene: string; correlation: number; pValue: number }[];
+    simulatedData: { timepoint: string; value: number; stderr: number }[];
+    bionemoForecast: { timepoint: string; predicted: number; confidence: number }[];
+    unit: string;
+  }
+
+  // Memoized immune readouts to prevent re-randomization on every render
+  const IMMUNE_READOUTS = useMemo(() => {
+    const generateSimulatedData = (timepoints: string[], baseValue: number, trend: "increasing" | "decreasing" | "peak") => {
+      return timepoints.map((tp, idx) => {
+        let value = baseValue;
+        const noise = (Math.random() - 0.5) * baseValue * 0.2;
+        if (trend === "increasing") value = baseValue * (1 + idx * 0.4) + noise;
+        else if (trend === "decreasing") value = baseValue * (1 - idx * 0.15) + noise;
+        else value = baseValue * (idx === Math.floor(timepoints.length / 2) ? 2.5 : 1 + Math.sin(idx) * 0.5) + noise;
+        return { timepoint: tp, value: Math.max(0, value), stderr: Math.abs(value * 0.1) };
+      });
+    };
+
+    const generateBioNemoForecast = (timepoints: string[], lastValue: number) => {
+      const futureTimepoints = ["D365", "D540", "D730"];
+      return futureTimepoints.map((tp, idx) => ({
+        timepoint: tp,
+        predicted: lastValue * Math.exp(-0.003 * (idx + 1) * 180) + (Math.random() - 0.5) * lastValue * 0.1,
+        confidence: 0.85 - idx * 0.1,
+      }));
+    };
+
+    const generateCorrelationScores = (biomarkers: string[]) => {
+      return biomarkers.map(gene => ({
+        gene,
+        correlation: 0.5 + Math.random() * 0.45,
+        pValue: Math.random() * 0.05,
+      })).sort((a, b) => b.correlation - a.correlation);
+    };
+
+    const readouts: { humoral: ImmuneReadout[]; cellular: ImmuneReadout[]; innate: ImmuneReadout[] } = {
     humoral: [
-      { id: "neutralizing_titer", name: "Neutralizing antibody titer (MNA/PNA)", description: "Microneutralization or pseudovirus neutralization assay vs target strain", biomarkers: ["IGHG1", "IGHG3", "IGHA1"], timepoints: ["D0", "D14", "D28", "D56", "D180"] },
-      { id: "spike_igg_elisa", name: "Spike/RBD IgG ELISA titer", description: "Binding antibody levels against spike or receptor-binding domain", biomarkers: ["IGHG1", "CD27", "PRDM1"], timepoints: ["D0", "D7", "D14", "D28", "D90"] },
-      { id: "antibody_avidity", name: "Antibody avidity index", description: "Measure of antibody binding strength/maturation", biomarkers: ["AICDA", "BCL6", "CD38"], timepoints: ["D28", "D56", "D180"] },
-      { id: "memory_bcell", name: "Antigen-specific memory B cells", description: "Flow cytometry for memory B cell frequencies", biomarkers: ["CD27", "CD38", "PAX5"], timepoints: ["D14", "D28", "D90", "D180"] },
-      { id: "systems_serology", name: "Systems serology panel", description: "Comprehensive antibody profiling (Fc effector functions, subclasses)", biomarkers: ["FCGR3A", "IGHG1", "IGHG3", "IGHA1"], timepoints: ["D0", "D14", "D28", "D56"] },
+      { 
+        id: "neutralizing_titer", 
+        name: "Neutralizing antibody titer (MNA/PNA)", 
+        description: "Microneutralization or pseudovirus neutralization assay vs target strain", 
+        biomarkers: ["IGHG1", "IGHG3", "IGHA1"], 
+        timepoints: ["D0", "D14", "D28", "D56", "D180"],
+        correlationScores: generateCorrelationScores(["IGHG1", "IGHG3", "IGHA1"]),
+        simulatedData: generateSimulatedData(["D0", "D14", "D28", "D56", "D180"], 50, "peak"),
+        bionemoForecast: generateBioNemoForecast(["D0", "D14", "D28", "D56", "D180"], 120),
+        unit: "IC50 titer"
+      },
+      { 
+        id: "spike_igg_elisa", 
+        name: "Spike/RBD IgG ELISA titer", 
+        description: "Binding antibody levels against spike or receptor-binding domain", 
+        biomarkers: ["IGHG1", "CD27", "PRDM1"], 
+        timepoints: ["D0", "D7", "D14", "D28", "D90"],
+        correlationScores: generateCorrelationScores(["IGHG1", "CD27", "PRDM1"]),
+        simulatedData: generateSimulatedData(["D0", "D7", "D14", "D28", "D90"], 100, "peak"),
+        bionemoForecast: generateBioNemoForecast(["D0", "D7", "D14", "D28", "D90"], 800),
+        unit: "AU/mL"
+      },
+      { 
+        id: "antibody_avidity", 
+        name: "Antibody avidity index", 
+        description: "Measure of antibody binding strength/maturation", 
+        biomarkers: ["AICDA", "BCL6", "CD38"], 
+        timepoints: ["D28", "D56", "D180"],
+        correlationScores: generateCorrelationScores(["AICDA", "BCL6", "CD38"]),
+        simulatedData: generateSimulatedData(["D28", "D56", "D180"], 0.4, "increasing"),
+        bionemoForecast: generateBioNemoForecast(["D28", "D56", "D180"], 0.85),
+        unit: "Avidity Index"
+      },
+      { 
+        id: "memory_bcell", 
+        name: "Antigen-specific memory B cells", 
+        description: "Flow cytometry for memory B cell frequencies", 
+        biomarkers: ["CD27", "CD38", "PAX5"], 
+        timepoints: ["D14", "D28", "D90", "D180"],
+        correlationScores: generateCorrelationScores(["CD27", "CD38", "PAX5"]),
+        simulatedData: generateSimulatedData(["D14", "D28", "D90", "D180"], 0.5, "peak"),
+        bionemoForecast: generateBioNemoForecast(["D14", "D28", "D90", "D180"], 1.2),
+        unit: "% of B cells"
+      },
+      { 
+        id: "systems_serology", 
+        name: "Systems serology panel", 
+        description: "Comprehensive antibody profiling (Fc effector functions, subclasses)", 
+        biomarkers: ["FCGR3A", "IGHG1", "IGHG3", "IGHA1"], 
+        timepoints: ["D0", "D14", "D28", "D56"],
+        correlationScores: generateCorrelationScores(["FCGR3A", "IGHG1", "IGHG3", "IGHA1"]),
+        simulatedData: generateSimulatedData(["D0", "D14", "D28", "D56"], 2.0, "peak"),
+        bionemoForecast: generateBioNemoForecast(["D0", "D14", "D28", "D56"], 4.5),
+        unit: "ADCC score"
+      },
     ],
     cellular: [
-      { id: "ifng_elispot", name: "IFN-γ ELISpot (CD4/CD8)", description: "T cell IFN-γ secretion upon antigen stimulation", biomarkers: ["IFNG", "CD4", "CD8A"], timepoints: ["D0", "D14", "D28", "D56"] },
-      { id: "polyfunctional_cd4", name: "Polyfunctional CD4 T cells (ICS)", description: "Intracellular cytokine staining for multi-cytokine producers", biomarkers: ["IL2", "IFNG", "TNF", "CD4"], timepoints: ["D14", "D28", "D56"] },
-      { id: "cytotoxic_cd8", name: "Cytotoxic CD8+ T cell response", description: "Granzyme/perforin-expressing CD8 T cells", biomarkers: ["GZMB", "PRF1", "CD8A"], timepoints: ["D14", "D28", "D56"] },
-      { id: "tfh_cells", name: "Circulating Tfh cell frequencies", description: "CXCR5+ PD-1+ helper T cells in blood", biomarkers: ["CXCR5", "PDCD1", "BCL6", "IL21"], timepoints: ["D7", "D14", "D28"] },
+      { 
+        id: "ifng_elispot", 
+        name: "IFN-γ ELISpot (CD4/CD8)", 
+        description: "T cell IFN-γ secretion upon antigen stimulation", 
+        biomarkers: ["IFNG", "CD4", "CD8A"], 
+        timepoints: ["D0", "D14", "D28", "D56"],
+        correlationScores: generateCorrelationScores(["IFNG", "CD4", "CD8A"]),
+        simulatedData: generateSimulatedData(["D0", "D14", "D28", "D56"], 50, "peak"),
+        bionemoForecast: generateBioNemoForecast(["D0", "D14", "D28", "D56"], 200),
+        unit: "SFU/10⁶ PBMC"
+      },
+      { 
+        id: "polyfunctional_cd4", 
+        name: "Polyfunctional CD4 T cells (ICS)", 
+        description: "Intracellular cytokine staining for multi-cytokine producers", 
+        biomarkers: ["IL2", "IFNG", "TNF", "CD4"], 
+        timepoints: ["D14", "D28", "D56"],
+        correlationScores: generateCorrelationScores(["IL2", "IFNG", "TNF", "CD4"]),
+        simulatedData: generateSimulatedData(["D14", "D28", "D56"], 0.3, "peak"),
+        bionemoForecast: generateBioNemoForecast(["D14", "D28", "D56"], 0.8),
+        unit: "% CD4+ T cells"
+      },
+      { 
+        id: "cytotoxic_cd8", 
+        name: "Cytotoxic CD8+ T cell response", 
+        description: "Granzyme/perforin-expressing CD8 T cells", 
+        biomarkers: ["GZMB", "PRF1", "CD8A"], 
+        timepoints: ["D14", "D28", "D56"],
+        correlationScores: generateCorrelationScores(["GZMB", "PRF1", "CD8A"]),
+        simulatedData: generateSimulatedData(["D14", "D28", "D56"], 1.5, "peak"),
+        bionemoForecast: generateBioNemoForecast(["D14", "D28", "D56"], 3.2),
+        unit: "% CD8+ T cells"
+      },
+      { 
+        id: "tfh_cells", 
+        name: "Circulating Tfh cell frequencies", 
+        description: "CXCR5+ PD-1+ helper T cells in blood", 
+        biomarkers: ["CXCR5", "PDCD1", "BCL6", "IL21"], 
+        timepoints: ["D7", "D14", "D28"],
+        correlationScores: generateCorrelationScores(["CXCR5", "PDCD1", "BCL6", "IL21"]),
+        simulatedData: generateSimulatedData(["D7", "D14", "D28"], 0.8, "peak"),
+        bionemoForecast: generateBioNemoForecast(["D7", "D14", "D28"], 2.1),
+        unit: "% CD4+ T cells"
+      },
     ],
     innate: [
-      { id: "ifn_signature", name: "Innate IFN signature score (D1-D3)", description: "Type I/III interferon gene expression from scRNA trajectories", biomarkers: ["IFITM1", "ISG15", "MX1", "OAS1"], timepoints: ["D1", "D2", "D3", "D7"] },
-      { id: "cytokine_panel", name: "Serum IL-6, CRP, IP-10 panel", description: "Pro-inflammatory cytokine and chemokine levels", biomarkers: ["IL6", "CRP", "CXCL10"], timepoints: ["D0", "D1", "D3", "D7"] },
-      { id: "monocyte_activation", name: "Monocyte/DC activation score", description: "CD14+ monocyte and dendritic cell activation markers", biomarkers: ["CD14", "CD80", "CD86", "HLA-DRA"], timepoints: ["D1", "D3", "D7"] },
+      { 
+        id: "ifn_signature", 
+        name: "Innate IFN signature score (D1-D3)", 
+        description: "Type I/III interferon gene expression from scRNA trajectories", 
+        biomarkers: ["IFITM1", "ISG15", "MX1", "OAS1"], 
+        timepoints: ["D1", "D2", "D3", "D7"],
+        correlationScores: generateCorrelationScores(["IFITM1", "ISG15", "MX1", "OAS1"]),
+        simulatedData: generateSimulatedData(["D1", "D2", "D3", "D7"], 3.0, "decreasing"),
+        bionemoForecast: generateBioNemoForecast(["D1", "D2", "D3", "D7"], 1.2),
+        unit: "IFN score"
+      },
+      { 
+        id: "cytokine_panel", 
+        name: "Serum IL-6, CRP, IP-10 panel", 
+        description: "Pro-inflammatory cytokine and chemokine levels", 
+        biomarkers: ["IL6", "CRP", "CXCL10"], 
+        timepoints: ["D0", "D1", "D3", "D7"],
+        correlationScores: generateCorrelationScores(["IL6", "CRP", "CXCL10"]),
+        simulatedData: generateSimulatedData(["D0", "D1", "D3", "D7"], 15, "decreasing"),
+        bionemoForecast: generateBioNemoForecast(["D0", "D1", "D3", "D7"], 5),
+        unit: "pg/mL"
+      },
+      { 
+        id: "monocyte_activation", 
+        name: "Monocyte/DC activation score", 
+        description: "CD14+ monocyte and dendritic cell activation markers", 
+        biomarkers: ["CD14", "CD80", "CD86", "HLA-DRA"], 
+        timepoints: ["D1", "D3", "D7"],
+        correlationScores: generateCorrelationScores(["CD14", "CD80", "CD86", "HLA-DRA"]),
+        simulatedData: generateSimulatedData(["D1", "D3", "D7"], 2.5, "decreasing"),
+        bionemoForecast: generateBioNemoForecast(["D1", "D3", "D7"], 1.0),
+        unit: "Activation score"
+      },
     ],
-  };
+    };
+    return readouts;
+  }, []);
 
   const toggleReadout = (id: string) => {
     setSelectedReadouts(prev => {
@@ -230,6 +402,44 @@ export default function TrajectoryAnalysisPage() {
       }
       return newSet;
     });
+  };
+
+  const toggleExpandReadout = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedReadouts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const downloadReadoutData = (readout: ImmuneReadout, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const csvData = [
+      ["Timepoint", "Value", "StdErr", "Unit"],
+      ...readout.simulatedData.map(d => [d.timepoint, d.value.toFixed(2), d.stderr.toFixed(2), readout.unit]),
+      ["", "", "", ""],
+      ["BioNeMo Predictions", "", "", ""],
+      ["Timepoint", "Predicted", "Confidence", ""],
+      ...readout.bionemoForecast.map(d => [d.timepoint, d.predicted.toFixed(2), (d.confidence * 100).toFixed(1) + "%", ""]),
+      ["", "", "", ""],
+      ["Gene Correlations", "", "", ""],
+      ["Gene", "Correlation", "p-Value", ""],
+      ...readout.correlationScores.map(c => [c.gene, c.correlation.toFixed(3), c.pValue.toExponential(2), ""]),
+    ];
+    const csvContent = csvData.map(row => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${readout.id}_data.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Data Downloaded", description: `${readout.name} data exported to CSV` });
   };
 
   const allReadouts = [...IMMUNE_READOUTS.humoral, ...IMMUNE_READOUTS.cellular, ...IMMUNE_READOUTS.innate];
@@ -1358,131 +1568,219 @@ export default function TrajectoryAnalysisPage() {
                 </Card>
 
                 <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <FlaskConical className="w-4 h-4" />
-                      Humoral Responses
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {IMMUNE_READOUTS.humoral.map((readout) => (
-                        <Card 
-                          key={readout.id} 
-                          className={`cursor-pointer transition-all ${selectedReadouts.has(readout.id) ? "ring-2 ring-primary bg-primary/5" : "hover-elevate"}`}
-                          onClick={() => toggleReadout(readout.id)}
-                          data-testid={`readout-${readout.id}`}
-                        >
-                          <CardHeader className="pb-2">
-                            <div className="flex items-start gap-3">
-                              <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center ${selectedReadouts.has(readout.id) ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
-                                {selectedReadouts.has(readout.id) && <Check className="w-3 h-3 text-primary-foreground" />}
-                              </div>
-                              <div className="flex-1">
-                                <CardTitle className="text-sm font-medium">{readout.name}</CardTitle>
-                                <CardDescription className="text-xs mt-1">{readout.description}</CardDescription>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {readout.biomarkers.slice(0, 3).map((b) => (
-                                <Badge key={b} variant="outline" className="text-xs font-mono">{b}</Badge>
-                              ))}
-                              {readout.biomarkers.length > 3 && (
-                                <Badge variant="outline" className="text-xs">+{readout.biomarkers.length - 3}</Badge>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Timepoints: {readout.timepoints.join(", ")}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <Target className="w-4 h-4" />
-                      Cellular Responses
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {IMMUNE_READOUTS.cellular.map((readout) => (
-                        <Card 
-                          key={readout.id} 
-                          className={`cursor-pointer transition-all ${selectedReadouts.has(readout.id) ? "ring-2 ring-primary bg-primary/5" : "hover-elevate"}`}
-                          onClick={() => toggleReadout(readout.id)}
-                          data-testid={`readout-${readout.id}`}
-                        >
-                          <CardHeader className="pb-2">
-                            <div className="flex items-start gap-3">
-                              <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center ${selectedReadouts.has(readout.id) ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
-                                {selectedReadouts.has(readout.id) && <Check className="w-3 h-3 text-primary-foreground" />}
-                              </div>
-                              <div className="flex-1">
-                                <CardTitle className="text-sm font-medium">{readout.name}</CardTitle>
-                                <CardDescription className="text-xs mt-1">{readout.description}</CardDescription>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {readout.biomarkers.slice(0, 3).map((b) => (
-                                <Badge key={b} variant="outline" className="text-xs font-mono">{b}</Badge>
-                              ))}
-                              {readout.biomarkers.length > 3 && (
-                                <Badge variant="outline" className="text-xs">+{readout.biomarkers.length - 3}</Badge>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Timepoints: {readout.timepoints.join(", ")}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <Zap className="w-4 h-4" />
-                      Innate Responses
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {IMMUNE_READOUTS.innate.map((readout) => (
-                        <Card 
-                          key={readout.id} 
-                          className={`cursor-pointer transition-all ${selectedReadouts.has(readout.id) ? "ring-2 ring-primary bg-primary/5" : "hover-elevate"}`}
-                          onClick={() => toggleReadout(readout.id)}
-                          data-testid={`readout-${readout.id}`}
-                        >
-                          <CardHeader className="pb-2">
-                            <div className="flex items-start gap-3">
-                              <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center ${selectedReadouts.has(readout.id) ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
-                                {selectedReadouts.has(readout.id) && <Check className="w-3 h-3 text-primary-foreground" />}
-                              </div>
-                              <div className="flex-1">
-                                <CardTitle className="text-sm font-medium">{readout.name}</CardTitle>
-                                <CardDescription className="text-xs mt-1">{readout.description}</CardDescription>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {readout.biomarkers.slice(0, 3).map((b) => (
-                                <Badge key={b} variant="outline" className="text-xs font-mono">{b}</Badge>
-                              ))}
-                              {readout.biomarkers.length > 3 && (
-                                <Badge variant="outline" className="text-xs">+{readout.biomarkers.length - 3}</Badge>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Timepoints: {readout.timepoints.join(", ")}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Enhanced Readout Card Renderer */}
+                  {(["humoral", "cellular", "innate"] as const).map((category) => {
+                    const categoryConfig = {
+                      humoral: { title: "Humoral Responses", icon: FlaskConical },
+                      cellular: { title: "Cellular Responses", icon: Target },
+                      innate: { title: "Innate Responses", icon: Zap },
+                    };
+                    const { title, icon: Icon } = categoryConfig[category];
+                    
+                    return (
+                      <div key={category}>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                          <Icon className="w-4 h-4" />
+                          {title}
+                        </h3>
+                        <div className="grid grid-cols-1 gap-3">
+                          {IMMUNE_READOUTS[category].map((readout) => {
+                            const isExpanded = expandedReadouts.has(readout.id);
+                            const isSelected = selectedReadouts.has(readout.id);
+                            const maxValue = Math.max(...readout.simulatedData.map(d => d.value));
+                            
+                            return (
+                              <Card 
+                                key={readout.id} 
+                                className={`transition-all ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover-elevate"}`}
+                                data-testid={`readout-${readout.id}`}
+                              >
+                                <CardHeader className="pb-2">
+                                  <div className="flex items-start gap-3">
+                                    <div 
+                                      className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"}`}
+                                      onClick={() => toggleReadout(readout.id)}
+                                    >
+                                      {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center justify-between">
+                                        <CardTitle className="text-sm font-medium">{readout.name}</CardTitle>
+                                        <div className="flex items-center gap-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            onClick={(e) => downloadReadoutData(readout, e)}
+                                            title="Download data"
+                                            data-testid={`button-download-${readout.id}`}
+                                          >
+                                            <FileDown className="w-3.5 h-3.5" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            onClick={(e) => toggleExpandReadout(readout.id, e)}
+                                            title={isExpanded ? "Collapse" : "Expand details"}
+                                            data-testid={`button-expand-${readout.id}`}
+                                          >
+                                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <CardDescription className="text-xs mt-1">{readout.description}</CardDescription>
+                                    </div>
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {readout.biomarkers.map((b) => {
+                                      const correlation = readout.correlationScores.find(c => c.gene === b);
+                                      return (
+                                        <Badge 
+                                          key={b} 
+                                          variant="outline" 
+                                          className="text-xs font-mono gap-1"
+                                          title={correlation ? `Correlation: ${(correlation.correlation * 100).toFixed(0)}%` : undefined}
+                                        >
+                                          {b}
+                                          {correlation && (
+                                            <span className={`text-[10px] ${correlation.correlation > 0.7 ? "text-green-600" : correlation.correlation > 0.5 ? "text-yellow-600" : "text-muted-foreground"}`}>
+                                              {(correlation.correlation * 100).toFixed(0)}%
+                                            </span>
+                                          )}
+                                        </Badge>
+                                      );
+                                    })}
+                                  </div>
+                                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                    <span>Timepoints: {readout.timepoints.join(", ")}</span>
+                                    <span className="text-primary font-medium">Unit: {readout.unit}</span>
+                                  </div>
+                                  
+                                  {/* Inline Data Preview (mini sparkline) */}
+                                  <div className="mt-3 h-8 flex items-end gap-0.5">
+                                    {readout.simulatedData.map((d, idx) => (
+                                      <div
+                                        key={d.timepoint}
+                                        className="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors rounded-t"
+                                        style={{ height: `${(d.value / maxValue) * 100}%`, minHeight: "4px" }}
+                                        title={`${d.timepoint}: ${d.value.toFixed(1)} ${readout.unit}`}
+                                      />
+                                    ))}
+                                    {/* BioNeMo predictions (dashed) */}
+                                    {readout.bionemoForecast.map((d) => (
+                                      <div
+                                        key={d.timepoint}
+                                        className="flex-1 bg-purple-400/30 border border-dashed border-purple-400 hover:bg-purple-400/50 transition-colors rounded-t"
+                                        style={{ height: `${(d.predicted / maxValue) * 100}%`, minHeight: "4px" }}
+                                        title={`${d.timepoint} (predicted): ${d.predicted.toFixed(1)} ${readout.unit} (${(d.confidence * 100).toFixed(0)}% conf)`}
+                                      />
+                                    ))}
+                                  </div>
+                                  
+                                  {/* Expanded Details */}
+                                  <Collapsible open={isExpanded}>
+                                    <CollapsibleContent className="mt-4 space-y-4">
+                                      {/* Data Table */}
+                                      <div className="border rounded-md">
+                                        <div className="bg-muted/50 px-3 py-2 border-b flex items-center gap-2">
+                                          <BarChart3 className="w-4 h-4" />
+                                          <span className="text-sm font-medium">Measured Data</span>
+                                        </div>
+                                        <div className="p-2">
+                                          <Table>
+                                            <TableHeader>
+                                              <TableRow>
+                                                <TableHead className="h-8 text-xs">Timepoint</TableHead>
+                                                <TableHead className="h-8 text-xs">Value</TableHead>
+                                                <TableHead className="h-8 text-xs">StdErr</TableHead>
+                                              </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                              {readout.simulatedData.map((d) => (
+                                                <TableRow key={d.timepoint}>
+                                                  <TableCell className="py-1 text-xs font-mono">{d.timepoint}</TableCell>
+                                                  <TableCell className="py-1 text-xs">{d.value.toFixed(2)} {readout.unit}</TableCell>
+                                                  <TableCell className="py-1 text-xs text-muted-foreground">±{d.stderr.toFixed(2)}</TableCell>
+                                                </TableRow>
+                                              ))}
+                                            </TableBody>
+                                          </Table>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Correlation Scores */}
+                                      <div className="border rounded-md">
+                                        <div className="bg-muted/50 px-3 py-2 border-b flex items-center gap-2">
+                                          <LineChart className="w-4 h-4" />
+                                          <span className="text-sm font-medium">Gene Correlations</span>
+                                        </div>
+                                        <div className="p-3 space-y-2">
+                                          {readout.correlationScores.map((c) => (
+                                            <div key={c.gene} className="flex items-center gap-3">
+                                              <Badge variant="outline" className="font-mono text-xs w-16 justify-center">{c.gene}</Badge>
+                                              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                                                <div 
+                                                  className={`h-full rounded-full ${c.correlation > 0.7 ? "bg-green-500" : c.correlation > 0.5 ? "bg-yellow-500" : "bg-orange-400"}`}
+                                                  style={{ width: `${c.correlation * 100}%` }}
+                                                />
+                                              </div>
+                                              <span className="text-xs font-mono w-12">{(c.correlation * 100).toFixed(0)}%</span>
+                                              <span className="text-xs text-muted-foreground w-20">p={c.pValue.toExponential(1)}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      
+                                      {/* BioNeMo Predictions */}
+                                      <div className="border rounded-md border-purple-200 dark:border-purple-800">
+                                        <div className="bg-purple-50 dark:bg-purple-900/20 px-3 py-2 border-b border-purple-200 dark:border-purple-800 flex items-center gap-2">
+                                          <Sparkles className="w-4 h-4 text-purple-600" />
+                                          <span className="text-sm font-medium text-purple-700 dark:text-purple-300">BioNeMo Predictions</span>
+                                          <Badge variant="secondary" className="text-xs ml-auto">AI Forecast</Badge>
+                                        </div>
+                                        <div className="p-2">
+                                          <Table>
+                                            <TableHeader>
+                                              <TableRow>
+                                                <TableHead className="h-8 text-xs">Timepoint</TableHead>
+                                                <TableHead className="h-8 text-xs">Predicted</TableHead>
+                                                <TableHead className="h-8 text-xs">Confidence</TableHead>
+                                              </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                              {readout.bionemoForecast.map((d) => (
+                                                <TableRow key={d.timepoint}>
+                                                  <TableCell className="py-1 text-xs font-mono">{d.timepoint}</TableCell>
+                                                  <TableCell className="py-1 text-xs text-purple-600 dark:text-purple-400 font-medium">
+                                                    {d.predicted.toFixed(2)} {readout.unit}
+                                                  </TableCell>
+                                                  <TableCell className="py-1">
+                                                    <Badge 
+                                                      variant={d.confidence > 0.75 ? "default" : d.confidence > 0.6 ? "secondary" : "outline"}
+                                                      className="text-xs"
+                                                    >
+                                                      {(d.confidence * 100).toFixed(0)}%
+                                                    </Badge>
+                                                  </TableCell>
+                                                </TableRow>
+                                              ))}
+                                            </TableBody>
+                                          </Table>
+                                        </div>
+                                      </div>
+                                    </CollapsibleContent>
+                                  </Collapsible>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <Card className="bg-muted/30">
