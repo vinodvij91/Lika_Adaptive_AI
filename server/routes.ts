@@ -10161,6 +10161,78 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
+  // ============================================================================
+  // BIONEMO PREDICTION ENDPOINTS
+  // ============================================================================
+  
+  app.post("/api/predict/:assayId", requireAuth, async (req, res) => {
+    try {
+      const assayId = decodeURIComponent(req.params.assayId);
+      const { smiles, assayName, assayDescription } = req.body;
+      
+      if (!smiles || !Array.isArray(smiles) || smiles.length === 0) {
+        return res.status(400).json({ error: "SMILES array is required" });
+      }
+      
+      if (smiles.length > 1000) {
+        return res.status(400).json({ error: "Maximum 1000 SMILES per request" });
+      }
+      
+      const { predictForAssay } = await import("./api/bionemo-client");
+      const result = await predictForAssay(assayId, smiles, assayName, assayDescription);
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error predicting for assay:", error);
+      res.status(500).json({ error: "Failed to run prediction" });
+    }
+  });
+
+  app.post("/api/predict/campaign", requireAuth, async (req, res) => {
+    try {
+      const { assayIds, smiles, assayMetadata } = req.body;
+      
+      if (!assayIds || !Array.isArray(assayIds) || assayIds.length === 0) {
+        return res.status(400).json({ error: "assayIds array is required" });
+      }
+      
+      if (!smiles || !Array.isArray(smiles) || smiles.length === 0) {
+        return res.status(400).json({ error: "smiles array is required" });
+      }
+      
+      if (smiles.length > 500) {
+        return res.status(400).json({ error: "Maximum 500 SMILES per campaign prediction" });
+      }
+      
+      const { predictCampaign } = await import("./api/bionemo-client");
+      const results = await predictCampaign(assayIds, smiles, assayMetadata);
+      
+      res.json({
+        success: true,
+        assayCount: assayIds.length,
+        compoundCount: smiles.length,
+        predictions: results
+      });
+    } catch (error: any) {
+      console.error("Error predicting campaign:", error);
+      res.status(500).json({ error: "Failed to run campaign prediction" });
+    }
+  });
+
+  app.get("/api/bionemo/contexts", requireAuth, async (req, res) => {
+    try {
+      const { ASSAY_CONTEXTS } = await import("./api/bionemo-client");
+      res.json({
+        contexts: ASSAY_CONTEXTS,
+        availableModels: ["megamolbart", "esm2", "molmim"],
+        readoutTypes: ["pIC50", "IC50", "Ki", "Kd", "percent_inhibition"]
+      });
+    } catch (error: any) {
+      console.error("Error fetching contexts:", error);
+      res.status(500).json({ error: "Failed to fetch BioNeMo contexts" });
+    }
+  });
+
   app.get("/api/pubchem/assay/:aid", requireAuth, async (req, res) => {
     try {
       const aid = parseInt(req.params.aid);
