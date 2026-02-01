@@ -138,6 +138,7 @@ interface Campaign {
   domainType?: string;
   status?: string;
   createdAt?: string;
+  pipelineConfig?: Record<string, unknown> | null;
 }
 
 interface Project {
@@ -167,6 +168,7 @@ export default function TrajectoryAnalysisPage() {
   const [campaignMode, setCampaignMode] = useState<"new" | "existing">("new");
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [newCampaignName, setNewCampaignName] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
   const { data: diseases, isLoading: diseasesLoading } = useQuery<DiseaseInfo[]>({
     queryKey: ["/api/trajectory/diseases"],
@@ -298,7 +300,7 @@ export default function TrajectoryAnalysisPage() {
         title: "Campaign Created",
         description: `${data.name} has been created with ${assayTemplate?.suggestedAssays?.length || 0} assays`,
       });
-      navigate(`/campaigns?id=${data.id}`);
+      navigate(`/campaigns/${data.id}`);
     },
     onError: () => {
       toast({
@@ -310,9 +312,16 @@ export default function TrajectoryAnalysisPage() {
   });
 
   const updateCampaignMutation = useMutation({
-    mutationFn: async (params: { campaignId: string; pipelineConfig: Record<string, unknown> }) => {
+    mutationFn: async (params: { campaignId: string; assayConfig: Record<string, unknown>; existingConfig: Record<string, unknown> | null }) => {
+      const mergedConfig = {
+        ...params.existingConfig,
+        trajectoryAssays: [
+          ...((params.existingConfig as Record<string, unknown>)?.trajectoryAssays as Array<unknown> || []),
+          params.assayConfig,
+        ],
+      };
       const response = await apiRequest("PATCH", `/api/campaigns/${params.campaignId}`, { 
-        pipelineConfig: params.pipelineConfig 
+        pipelineConfig: mergedConfig 
       });
       return await response.json() as Campaign;
     },
@@ -324,7 +333,7 @@ export default function TrajectoryAnalysisPage() {
         title: "Campaign Updated",
         description: `Assays added to ${data.name}`,
       });
-      navigate(`/campaigns?id=${data.id}`);
+      navigate(`/campaigns/${data.id}`);
     },
     onError: () => {
       toast({
@@ -360,11 +369,10 @@ export default function TrajectoryAnalysisPage() {
         return;
       }
       
-      const projectId = projects[0]?.id;
-      if (!projectId) {
+      if (!selectedProjectId) {
         toast({
-          title: "No Project Found",
-          description: "Please create a project first",
+          title: "No Project Selected",
+          description: "Please select a project for this campaign",
           variant: "destructive",
         });
         return;
@@ -372,8 +380,8 @@ export default function TrajectoryAnalysisPage() {
 
       createCampaignMutation.mutate({
         name: newCampaignName,
-        projectId,
-        pipelineConfig: assayConfig,
+        projectId: selectedProjectId,
+        pipelineConfig: { trajectoryAssays: [assayConfig] },
         domainType: "Neurology",
       });
     } else {
@@ -386,15 +394,20 @@ export default function TrajectoryAnalysisPage() {
         return;
       }
 
+      const existingCampaign = campaigns.find(c => c.id === selectedCampaignId);
       updateCampaignMutation.mutate({
         campaignId: selectedCampaignId,
-        pipelineConfig: assayConfig,
+        assayConfig,
+        existingConfig: existingCampaign?.pipelineConfig || null,
       });
     }
   };
 
   const openCampaignDialog = () => {
     setNewCampaignName(`${assayTemplate?.targetGene || "Target"} ${assayTemplate?.disease || "Discovery"} Campaign`);
+    setCampaignMode("new");
+    setSelectedCampaignId("");
+    setSelectedProjectId(projects[0]?.id || "");
     setShowCampaignDialog(true);
   };
 
@@ -1285,6 +1298,21 @@ export default function TrajectoryAnalysisPage() {
                     placeholder="Enter campaign name"
                     data-testid="input-campaign-name"
                   />
+                </div>
+                <div>
+                  <Label htmlFor="select-project">Project</Label>
+                  <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                    <SelectTrigger data-testid="select-project-trigger">
+                      <SelectValue placeholder="Select a project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id} data-testid={`select-project-${project.id}`}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg text-sm">
                   <p className="font-medium mb-1">Will include:</p>
