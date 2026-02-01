@@ -169,9 +169,19 @@ export default function TrajectoryAnalysisPage() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [newCampaignName, setNewCampaignName] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [pipelineType, setPipelineType] = useState<"drug" | "vaccine">("drug");
+  
+  const isVaccineMode = pipelineType === "vaccine";
 
-  const { data: diseases, isLoading: diseasesLoading } = useQuery<DiseaseInfo[]>({
-    queryKey: ["/api/trajectory/diseases"],
+  const { data: diseases, isLoading: diseasesLoading, refetch: refetchDiseases } = useQuery<DiseaseInfo[]>({
+    queryKey: ["/api/trajectory/diseases", { pipelineType }],
+    queryFn: async () => {
+      const res = await fetch(`/api/trajectory/diseases?pipelineType=${pipelineType}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch diseases");
+      return res.json();
+    },
   });
 
   const { data: datasetsData, isLoading: datasetsLoading } = useQuery<{
@@ -179,9 +189,9 @@ export default function TrajectoryAnalysisPage() {
     totalCount: number;
     diseases: string[];
   }>({
-    queryKey: ["/api/trajectory/datasets", { disease: selectedDisease }],
+    queryKey: ["/api/trajectory/datasets", { disease: selectedDisease, pipelineType }],
     queryFn: async () => {
-      const res = await fetch(`/api/trajectory/datasets?disease=${encodeURIComponent(selectedDisease)}`, {
+      const res = await fetch(`/api/trajectory/datasets?disease=${encodeURIComponent(selectedDisease)}&pipelineType=${pipelineType}`, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch datasets");
@@ -194,7 +204,11 @@ export default function TrajectoryAnalysisPage() {
 
   const analyzeMutation = useMutation({
     mutationFn: async (datasetId: string) => {
-      const response = await apiRequest("POST", `/api/trajectory/analyze/${datasetId}`, { smoothingAlpha: smoothingAlpha[0], detectBiomarkers: true });
+      const response = await apiRequest("POST", `/api/trajectory/analyze/${datasetId}`, { 
+        smoothingAlpha: smoothingAlpha[0], 
+        detectBiomarkers: true,
+        pipelineType 
+      });
       return await response.json() as TrajectoryResult;
     },
     onSuccess: (data) => {
@@ -225,7 +239,7 @@ export default function TrajectoryAnalysisPage() {
 
   const generateTemplateMutation = useMutation({
     mutationFn: async (params: { gene: string; disease: string; pseudotime?: number; cellState?: string }) => {
-      const response = await apiRequest("POST", "/api/trajectory/assay-template", params);
+      const response = await apiRequest("POST", "/api/trajectory/assay-template", { ...params, pipelineType });
       return await response.json() as AssayTemplate;
     },
     onSuccess: (data) => {
@@ -471,6 +485,13 @@ export default function TrajectoryAnalysisPage() {
 
   const selectedDatasetInfo = datasets.find(d => d.id === selectedDataset);
 
+  useEffect(() => {
+    setSelectedDisease("");
+    setSelectedDataset("");
+    setTrajectoryResult(null);
+    setActiveTab("datasets");
+  }, [pipelineType]);
+
   return (
     <div className="flex flex-col h-full" data-testid="page-trajectory-analysis">
       <div className="border-b bg-card p-4">
@@ -482,15 +503,37 @@ export default function TrajectoryAnalysisPage() {
             <div>
               <h1 className="text-xl font-semibold">Trajectory Analysis</h1>
               <p className="text-sm text-muted-foreground">
-                scRNA + PGD for automated biomarker discovery
+                {isVaccineMode 
+                  ? "Systems vaccinology for immune response discovery" 
+                  : "scRNA + PGD for automated biomarker discovery"}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
+              <Button
+                variant={pipelineType === "drug" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setPipelineType("drug")}
+                data-testid="button-mode-drug"
+              >
+                <FlaskConical className="w-4 h-4 mr-1" />
+                Drug Discovery
+              </Button>
+              <Button
+                variant={pipelineType === "vaccine" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setPipelineType("vaccine")}
+                data-testid="button-mode-vaccine"
+              >
+                <Dna className="w-4 h-4 mr-1" />
+                Vaccine Discovery
+              </Button>
+            </div>
             {trajectoryResult && trajectoryResult.targets && (
               <Badge variant="secondary" className="gap-1">
                 <Target className="w-3 h-3" />
-                {trajectoryResult.targets.length} Targets
+                {trajectoryResult.targets.length} {isVaccineMode ? "Readouts" : "Targets"}
               </Badge>
             )}
           </div>
@@ -536,7 +579,7 @@ export default function TrajectoryAnalysisPage() {
               data-testid="tab-targets"
             >
               <Target className="w-4 h-4 mr-2" />
-              Targets
+              {isVaccineMode ? "Immune Readouts" : "Targets"}
             </TabsTrigger>
           </TabsList>
 
@@ -1025,7 +1068,7 @@ export default function TrajectoryAnalysisPage() {
                           <CardTitle className="text-lg font-mono">{target}</CardTitle>
                           <Badge variant="default" className="gap-1">
                             <Target className="w-3 h-3" />
-                            Druggable
+                            {isVaccineMode ? "Predictive" : "Druggable"}
                           </Badge>
                         </div>
                       </CardHeader>
@@ -1110,9 +1153,11 @@ export default function TrajectoryAnalysisPage() {
                   <p className="text-sm">{assayTemplate.role}</p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
-                  <Label className="text-xs text-muted-foreground">Druggability</Label>
+                  <Label className="text-xs text-muted-foreground">{isVaccineMode ? "Predictive Value" : "Druggability"}</Label>
                   <Badge variant={assayTemplate.targetable ? "default" : "secondary"}>
-                    {assayTemplate.targetable ? "Druggable" : "Challenging"}
+                    {assayTemplate.targetable 
+                      ? (isVaccineMode ? "Predictive" : "Druggable") 
+                      : "Challenging"}
                   </Badge>
                 </div>
               </div>

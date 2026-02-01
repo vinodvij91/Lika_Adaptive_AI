@@ -1,0 +1,90 @@
+should include this for Vaccine Discovery, but with a slightly different template.
+
+Why it fits vaccines
+scRNA‑seq is already used to track immune trajectories after vaccination (B‑cell, T‑cell, germinal center responses).
+
+Systems vaccinology focuses exactly on identifying molecular signatures and biomarkers that predict protection, often from longitudinal blood samples.
+
+Your PGD + Trajectory → Biomarkers → Targets → Assay → Campaign flow maps perfectly onto that.
+
+How to adapt the pipeline for vaccines
+Use the same 4 tabs, but with vaccine‑specific semantics:
+
+Datasets
+
+Public vaccine-response datasets (COVID mRNA, flu, malaria, etc.).
+
+Metadata: pathogen, platform (mRNA, viral vector, protein), dose, timepoints.
+
+Trajectory
+
+Pseudotime along response time (day 0 → day 7 → day 28) instead of disease progression.
+
+Clusters = B‑cell, T‑cell, plasmablast, germinal center B, etc.
+​
+
+Biomarkers
+
+Genes, pathways, or cell‑state signatures associated with:
+
+Strong neutralizing antibody titers.
+
+Durable memory (Tfh, memory B signatures).
+
+Targets (renamed “Readouts/Assay Targets”)
+
+Not “druggable targets” but immunological readouts you want to measure or optimize:
+
+Neutralization titer assays.
+
+ELISpot / cytokine panels.
+
+Antigen‑specific BCR/TCR clonotypes.
+
+What “Create Assay / Campaign” means for vaccines
+Assay template cards would propose:
+
+“S‑protein neutralization assay (VSV‑pseudo or PRNT).”
+​
+
+“IFN‑γ ELISpot for spike‑specific CD8 T cells.”
+​
+
+“Flow cytometry panel for Tfh / germinal center B cells.”
+​
+
+Campaign becomes:
+
+A vaccine‑response study design:
+
+Target population (e.g., SARS‑CoV‑2 mRNA booster).
+
+Readouts (neutralization, T‑cell, memory signatures).
+
+Timepoints.
+
+Later, you can still plug BioNeMo/AQAffinity in for:
+
+Epitope prediction, antigen design, variant coverage, etc.
+
+Minimal changes to implement
+Add a “Mode” or “Pipeline Type” flag on the Trajectory Analysis page:
+
+Disease Drug Discovery vs Vaccine Discovery.
+
+When Vaccine Discovery:
+
+Change labels: Targets → Immune Readouts, Druggable → Predictive.
+
+Load vaccine scRNA datasets and immune biomarkers instead of neuronal/glial targets.
+
+Assay templates use vaccine‑specific assays (neutralization, ELISA, ELISpot).
+
+Recommendation
+Reuse the same PGD + Trajectory UI and “Add to Campaign” flow.
+
+Define a separate Vaccine template JSON (datasets, biomarker rules, assay templates).
+
+Expose it under your existing “Vaccine Discovery” workflow to keep things coherent.
+
+That way you get two products (drug and vaccine discovery) from one generalized trajectory‑analysis engine.

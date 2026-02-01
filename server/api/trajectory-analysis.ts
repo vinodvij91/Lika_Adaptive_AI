@@ -750,6 +750,84 @@ const PUBLIC_DATASETS: ScRNADataset[] = [
   { id: "gse155678", name: "CIDP", geoAccession: "GSE155678", disease: "CIDP", tissue: "Peripheral Nerve", cellCount: 34567, description: "Single-cell atlas of chronic inflammatory demyelinating polyneuropathy", source: "GEO", species: "human", publicationYear: 2021, hasTrajectory: true }
 ];
 
+const VACCINE_DATASETS: ScRNADataset[] = [
+  { id: "gse171964", name: "COVID-19 mRNA Vaccine Response", geoAccession: "GSE171964", disease: "COVID-19 mRNA Vaccine", tissue: "PBMC", cellCount: 245678, description: "Longitudinal scRNA-seq of immune responses to BNT162b2 mRNA vaccination", source: "GEO", species: "human", publicationYear: 2021, hasTrajectory: true },
+  { id: "gse178388", name: "COVID-19 Vaccine Germinal Center", geoAccession: "GSE178388", disease: "COVID-19 mRNA Vaccine", tissue: "Lymph Node", cellCount: 89012, description: "Single-cell profiling of germinal center B cells after COVID-19 vaccination", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
+  { id: "gse180829", name: "COVID-19 Booster Response", geoAccession: "GSE180829", disease: "COVID-19 Booster", tissue: "PBMC", cellCount: 167890, description: "Single-cell immune dynamics after COVID-19 booster vaccination", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
+  { id: "gse156063", name: "Influenza Vaccine Response", geoAccession: "GSE156063", disease: "Influenza Vaccine", tissue: "PBMC", cellCount: 134567, description: "Systems vaccinology of seasonal influenza vaccination", source: "GEO", species: "human", publicationYear: 2021, hasTrajectory: true },
+  { id: "gse168752", name: "Flu Vaccine Memory B Cells", geoAccession: "GSE168752", disease: "Influenza Vaccine", tissue: "PBMC", cellCount: 78901, description: "Single-cell analysis of memory B cell responses to influenza", source: "GEO", species: "human", publicationYear: 2021, hasTrajectory: true },
+  { id: "gse149689", name: "Malaria Vaccine RTS,S", geoAccession: "GSE149689", disease: "Malaria Vaccine", tissue: "PBMC", cellCount: 98765, description: "Immune correlates of RTS,S malaria vaccine protection", source: "GEO", species: "human", publicationYear: 2020, hasTrajectory: true },
+  { id: "gse172834", name: "Malaria Vaccine PfSPZ", geoAccession: "GSE172834", disease: "Malaria Vaccine", tissue: "PBMC", cellCount: 67890, description: "Single-cell profiling of PfSPZ whole sporozoite vaccine", source: "GEO", species: "human", publicationYear: 2021, hasTrajectory: true },
+  { id: "gse161918", name: "Yellow Fever Vaccine", geoAccession: "GSE161918", disease: "Yellow Fever Vaccine", tissue: "PBMC", cellCount: 145678, description: "Longitudinal immune response to YF-17D vaccination", source: "GEO", species: "human", publicationYear: 2021, hasTrajectory: true },
+  { id: "gse148346", name: "HPV Vaccine Response", geoAccession: "GSE148346", disease: "HPV Vaccine", tissue: "PBMC/Cervix", cellCount: 89012, description: "Immune signatures of HPV vaccine protection", source: "GEO", species: "human", publicationYear: 2020, hasTrajectory: true },
+  { id: "gse159823", name: "Hepatitis B Vaccine", geoAccession: "GSE159823", disease: "Hepatitis B Vaccine", tissue: "PBMC", cellCount: 56789, description: "Single-cell analysis of HBV vaccine responders vs non-responders", source: "GEO", species: "human", publicationYear: 2021, hasTrajectory: true },
+  { id: "gse175892", name: "RSV Vaccine Trial", geoAccession: "GSE175892", disease: "RSV Vaccine", tissue: "PBMC/Airway", cellCount: 78901, description: "Immune correlates of RSV vaccine efficacy in elderly", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
+  { id: "gse183456", name: "Dengue Vaccine Response", geoAccession: "GSE183456", disease: "Dengue Vaccine", tissue: "PBMC", cellCount: 112345, description: "Single-cell profiling of Dengvaxia vaccination", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
+  { id: "gse167234", name: "Shingles Vaccine (Shingrix)", geoAccession: "GSE167234", disease: "Shingles Vaccine", tissue: "PBMC", cellCount: 67890, description: "T cell responses to adjuvanted shingles vaccine", source: "GEO", species: "human", publicationYear: 2021, hasTrajectory: true },
+  { id: "gse152418", name: "Measles-Mumps-Rubella Vaccine", geoAccession: "GSE152418", disease: "MMR Vaccine", tissue: "PBMC", cellCount: 45678, description: "Systems vaccinology of MMR booster in adults", source: "GEO", species: "human", publicationYear: 2020, hasTrajectory: true },
+  { id: "gse178945", name: "Tuberculosis BCG Vaccine", geoAccession: "GSE178945", disease: "TB BCG Vaccine", tissue: "PBMC", cellCount: 123456, description: "Single-cell atlas of BCG vaccination in infants", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
+  { id: "gse185672", name: "COVID-19 Viral Vector Vaccine", geoAccession: "GSE185672", disease: "COVID-19 Viral Vector", tissue: "PBMC", cellCount: 156789, description: "Immune responses to ChAdOx1 nCoV-19 (AstraZeneca)", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
+  { id: "gse188234", name: "Neoantigen Cancer Vaccine", geoAccession: "GSE188234", disease: "Cancer Neoantigen Vaccine", tissue: "PBMC/Tumor", cellCount: 89012, description: "Personalized neoantigen vaccine in melanoma", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
+  { id: "gse176543", name: "mRNA Cancer Vaccine", geoAccession: "GSE176543", disease: "Cancer mRNA Vaccine", tissue: "PBMC/Tumor", cellCount: 98765, description: "mRNA-encoded neoantigen vaccine immune dynamics", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true }
+];
+
+const VACCINE_BIOMARKERS: Record<string, Array<{ gene: string; role: string; predictive: boolean }>> = {
+  "COVID-19 mRNA Vaccine": [
+    { gene: "IGHG1", role: "IgG1 production", predictive: true },
+    { gene: "BCL6", role: "Germinal center formation", predictive: true },
+    { gene: "CXCR5", role: "Tfh cell marker", predictive: true },
+    { gene: "MKI67", role: "B cell proliferation", predictive: true },
+    { gene: "IFNG", role: "Th1 response", predictive: true },
+    { gene: "IL21", role: "Tfh cytokine", predictive: true },
+    { gene: "PRDM1", role: "Plasma cell differentiation", predictive: true }
+  ],
+  "COVID-19 Booster": [
+    { gene: "IGHG3", role: "IgG3 class switching", predictive: true },
+    { gene: "AICDA", role: "Somatic hypermutation", predictive: true },
+    { gene: "CD27", role: "Memory B cells", predictive: true },
+    { gene: "CCR7", role: "Lymph node homing", predictive: true },
+    { gene: "GZMB", role: "Cytotoxic T cells", predictive: true }
+  ],
+  "Influenza Vaccine": [
+    { gene: "IGHV3-23", role: "Flu-specific antibody", predictive: true },
+    { gene: "CXCL13", role: "Germinal center chemokine", predictive: true },
+    { gene: "PAX5", role: "B cell identity", predictive: true },
+    { gene: "IRF4", role: "Plasma cell transcription", predictive: true },
+    { gene: "XBP1", role: "Antibody secretion", predictive: true }
+  ],
+  "Malaria Vaccine": [
+    { gene: "FCRL5", role: "Atypical memory B cells", predictive: true },
+    { gene: "ITGAX", role: "CD11c+ B cells", predictive: true },
+    { gene: "TBX21", role: "Th1 transcription factor", predictive: true },
+    { gene: "IL10", role: "Regulatory response", predictive: false },
+    { gene: "CTLA4", role: "T cell exhaustion", predictive: false }
+  ],
+  "Yellow Fever Vaccine": [
+    { gene: "EIF2AK2", role: "Antiviral response", predictive: true },
+    { gene: "OAS1", role: "Interferon-stimulated gene", predictive: true },
+    { gene: "CD38", role: "Plasmablast marker", predictive: true },
+    { gene: "TNFRSF17", role: "BCMA plasma cells", predictive: true }
+  ],
+  "HPV Vaccine": [
+    { gene: "IGHG1", role: "Neutralizing antibodies", predictive: true },
+    { gene: "IL4", role: "Th2 helper response", predictive: true },
+    { gene: "CD40LG", role: "T-B cell help", predictive: true }
+  ],
+  "TB BCG Vaccine": [
+    { gene: "IFNG", role: "Mycobacterial immunity", predictive: true },
+    { gene: "TNF", role: "Granuloma formation", predictive: true },
+    { gene: "IL17A", role: "Th17 response", predictive: true },
+    { gene: "CXCR3", role: "Tissue-homing T cells", predictive: true }
+  ],
+  "Cancer Neoantigen Vaccine": [
+    { gene: "CD8A", role: "Cytotoxic T cells", predictive: true },
+    { gene: "PRF1", role: "Perforin cytotoxicity", predictive: true },
+    { gene: "GZMA", role: "Granzyme A", predictive: true },
+    { gene: "PDCD1", role: "PD-1 checkpoint", predictive: false },
+    { gene: "HAVCR2", role: "TIM-3 exhaustion", predictive: false }
+  ]
+};
+
 const DISEASE_BIOMARKERS: Record<string, Array<{ gene: string; role: string; targetable: boolean }>> = {
   Alzheimers: [
     { gene: "NLRP3", role: "Inflammasome activation", targetable: true },
@@ -1976,23 +2054,30 @@ function seededRandom(seed: number): number {
 }
 
 export function getDatasets(req: Request, res: Response) {
-  const { disease } = req.query;
+  const { disease, pipelineType } = req.query;
   
-  let datasets = PUBLIC_DATASETS;
+  const isVaccine = pipelineType === "vaccine";
+  let datasets = isVaccine ? VACCINE_DATASETS : PUBLIC_DATASETS;
+  
   if (disease && typeof disease === "string") {
     datasets = datasets.filter(d => d.disease.toLowerCase() === disease.toLowerCase());
   }
   
+  const sourceDatasets = isVaccine ? VACCINE_DATASETS : PUBLIC_DATASETS;
   res.json({
     datasets,
     totalCount: datasets.length,
-    diseases: Array.from(new Set(PUBLIC_DATASETS.map(d => d.disease)))
+    diseases: Array.from(new Set(sourceDatasets.map(d => d.disease))),
+    pipelineType: isVaccine ? "vaccine" : "drug"
   });
 }
 
 export function getDatasetById(req: Request, res: Response) {
   const { id } = req.params;
-  const dataset = PUBLIC_DATASETS.find(d => d.id === id);
+  let dataset = PUBLIC_DATASETS.find(d => d.id === id);
+  if (!dataset) {
+    dataset = VACCINE_DATASETS.find(d => d.id === id);
+  }
   
   if (!dataset) {
     return res.status(404).json({ error: "Dataset not found" });
@@ -2003,9 +2088,13 @@ export function getDatasetById(req: Request, res: Response) {
 
 export function runTrajectoryAnalysis(req: Request, res: Response) {
   const { datasetId } = req.params;
-  const { smoothingAlpha = 0.1, detectBiomarkers = true } = req.body;
+  const { smoothingAlpha = 0.1, detectBiomarkers = true, pipelineType } = req.body;
   
-  const dataset = PUBLIC_DATASETS.find(d => d.id === datasetId);
+  let dataset = PUBLIC_DATASETS.find(d => d.id === datasetId);
+  const isVaccine = pipelineType === "vaccine" || !dataset;
+  if (!dataset) {
+    dataset = VACCINE_DATASETS.find(d => d.id === datasetId);
+  }
   if (!dataset) {
     return res.status(404).json({ error: "Dataset not found" });
   }
@@ -2046,10 +2135,67 @@ export function runTrajectoryAnalysis(req: Request, res: Response) {
 }
 
 export function generateAssayTemplateFromTarget(req: Request, res: Response) {
-  const { gene, disease, pseudotime, cellState } = req.body;
+  const { gene, disease, pseudotime, cellState, pipelineType } = req.body;
   
   if (!gene || !disease) {
     return res.status(400).json({ error: "Gene and disease are required" });
+  }
+  
+  const isVaccine = pipelineType === "vaccine";
+  
+  if (isVaccine) {
+    const vaccineBiomarker = VACCINE_BIOMARKERS[disease]?.find(b => b.gene === gene);
+    
+    const vaccineTemplate = {
+      targetGene: gene,
+      disease,
+      role: vaccineBiomarker?.role || "Immune signature",
+      targetable: vaccineBiomarker?.predictive ?? true,
+      pseudotimeContext: pseudotime || null,
+      cellStateContext: cellState || null,
+      suggestedAssays: [
+        {
+          type: "Neutralization",
+          name: `${disease} Neutralization Assay`,
+          description: `Measure neutralizing antibody titers against target antigen`,
+          readoutType: "NT50",
+          technique: "VSV-pseudovirus / PRNT"
+        },
+        {
+          type: "T Cell",
+          name: `${gene}-specific ELISpot`,
+          description: `Measure antigen-specific T cell responses via IFN-γ/IL-2 production`,
+          readoutType: "SFU per 10^6 cells",
+          technique: "ELISpot / FluoroSpot"
+        },
+        {
+          type: "Flow Cytometry",
+          name: `Tfh / GC B Cell Panel`,
+          description: `Quantify germinal center and follicular helper T cell populations`,
+          readoutType: "% positive cells",
+          technique: "Multi-color flow cytometry"
+        },
+        {
+          type: "Serology",
+          name: `Anti-antigen IgG ELISA`,
+          description: `Measure antigen-specific antibody titers over time`,
+          readoutType: "Endpoint titer / AU/mL",
+          technique: "ELISA / Luminex"
+        }
+      ],
+      bioNemoContext: {
+        model: "ESM2",
+        targetSequence: null,
+        predictionType: "epitope_binding"
+      },
+      createdFrom: "trajectory_analysis_vaccine",
+      metadata: {
+        source: "scRNA-seq vaccine response trajectory",
+        discoveryMethod: "Systems vaccinology PGD analysis"
+      }
+    };
+    
+    return res.json(vaccineTemplate);
   }
   
   const biomarkerInfo = DISEASE_BIOMARKERS[disease]?.find(b => b.gene === gene);
@@ -2135,14 +2281,20 @@ export function predictInhibitors(req: Request, res: Response) {
 }
 
 export function getAvailableDiseases(req: Request, res: Response) {
-  const diseases = Array.from(new Set(PUBLIC_DATASETS.map(d => d.disease)));
+  const { pipelineType } = req.query;
+  const isVaccine = pipelineType === "vaccine";
+  
+  const sourceDatasets = isVaccine ? VACCINE_DATASETS : PUBLIC_DATASETS;
+  const sourceBiomarkers = isVaccine ? VACCINE_BIOMARKERS : DISEASE_BIOMARKERS;
+  
+  const diseases = Array.from(new Set(sourceDatasets.map(d => d.disease)));
   const diseaseCounts = diseases.map(disease => ({
     disease,
-    datasetCount: PUBLIC_DATASETS.filter(d => d.disease === disease).length,
-    totalCells: PUBLIC_DATASETS
+    datasetCount: sourceDatasets.filter(d => d.disease === disease).length,
+    totalCells: sourceDatasets
       .filter(d => d.disease === disease)
       .reduce((sum, d) => sum + d.cellCount, 0),
-    biomarkers: DISEASE_BIOMARKERS[disease]?.length || 0
+    biomarkers: sourceBiomarkers[disease]?.length || 0
   }));
   
   res.json(diseaseCounts);
