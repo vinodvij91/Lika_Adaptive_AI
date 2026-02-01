@@ -1,4 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+
+declare global {
+  interface Window {
+    $3Dmol: any;
+  }
+}
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -178,12 +184,17 @@ export default function TrajectoryAnalysisPage() {
   const [structureResult, setStructureResult] = useState<{
     id: string;
     confidenceScore: number;
+    pdbData?: string;
     metrics: { pLDDT: number; pTM: number; iPTM?: number; numResidues: number; numAtoms: number };
     ligandBindingSite?: { residues: string[]; bindingPocketVolume: number; interactionType: string[] };
     modelVersion: string;
     isSimulated: boolean;
     fromCache?: boolean;
   } | null>(null);
+  const [show3DViewerDialog, setShow3DViewerDialog] = useState(false);
+  const [viewer3DReady, setViewer3DReady] = useState(false);
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const viewerInstanceRef = useRef<any>(null);
   
   const isVaccineMode = pipelineType === "vaccine";
 
@@ -221,6 +232,72 @@ export default function TrajectoryAnalysisPage() {
   };
 
   const allReadouts = [...IMMUNE_READOUTS.humoral, ...IMMUNE_READOUTS.cellular, ...IMMUNE_READOUTS.innate];
+
+  // Load 3Dmol.js script for protein structure visualization
+  useEffect(() => {
+    if (window.$3Dmol) {
+      setViewer3DReady(true);
+      return;
+    }
+    
+    const script = document.createElement("script");
+    script.src = "https://3dmol.org/build/3Dmol-min.js";
+    script.async = true;
+    script.onload = () => {
+      setViewer3DReady(true);
+    };
+    document.body.appendChild(script);
+  }, []);
+
+  // Initialize 3D viewer when dialog opens
+  useEffect(() => {
+    if (!show3DViewerDialog || !structureResult?.pdbData || !viewerContainerRef.current || !viewer3DReady) {
+      return;
+    }
+
+    const initTimer = setTimeout(() => {
+      try {
+        const container = viewerContainerRef.current;
+        if (!container || !window.$3Dmol) return;
+
+        if (viewerInstanceRef.current) {
+          try {
+            viewerInstanceRef.current.clear();
+          } catch (e) {}
+          viewerInstanceRef.current = null;
+        }
+        container.innerHTML = '';
+        
+        const rect = container.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+          return;
+        }
+        
+        const viewer = window.$3Dmol.createViewer(container, {
+          backgroundColor: '0x000000',
+          antialias: true,
+          width: rect.width,
+          height: rect.height
+        });
+        
+        if (!viewer) return;
+        
+        viewer.addModel(structureResult.pdbData, "pdb");
+        viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
+        viewer.zoomTo();
+        viewer.spin(true);
+        viewer.render();
+        viewer.resize();
+        viewer.render();
+        
+        viewerInstanceRef.current = viewer;
+      } catch (error) {
+        console.error("Error initializing 3D viewer:", error);
+      }
+    }, 300);
+
+    return () => clearTimeout(initTimer);
+  }, [show3DViewerDialog, structureResult?.pdbData, viewer3DReady]);
 
   const { data: diseases, isLoading: diseasesLoading, refetch: refetchDiseases } = useQuery<DiseaseInfo[]>({
     queryKey: ["/api/trajectory/diseases", { pipelineType }],
@@ -1886,11 +1963,15 @@ export default function TrajectoryAnalysisPage() {
                     variant="secondary"
                     size="sm"
                     onClick={() => {
-                      // Open the 3D Viewer page with PDB data
-                      toast({
-                        title: "3D Viewer",
-                        description: "Open the 3D Viewer page in the sidebar to visualize protein structures. This structure prediction contains " + structureResult.metrics.numAtoms + " atoms."
-                      });
+                      if (structureResult.pdbData) {
+                        setShow3DViewerDialog(true);
+                      } else {
+                        toast({
+                          title: "No Structure Data",
+                          description: "Structure prediction data is not available for 3D visualization.",
+                          variant: "destructive"
+                        });
+                      }
                     }}
                     data-testid="button-view-3d-trajectory"
                   >
@@ -1922,6 +2003,68 @@ export default function TrajectoryAnalysisPage() {
                 </>
               )}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 3D Protein Structure Viewer Dialog */}
+      <Dialog open={show3DViewerDialog} onOpenChange={setShow3DViewerDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Boxes className="h-5 w-5" />
+              3D Protein Structure Viewer
+            </DialogTitle>
+            <DialogDescription>
+              Predicted 3D structure for {selectedTargetForPrediction || "Target"}
+              {structureResult?.isSimulated && " (Simulated)"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div 
+              ref={viewerContainerRef}
+              className="w-full h-[500px] bg-black rounded-lg relative"
+              style={{ minHeight: '500px' }}
+              data-testid="trajectory-3d-viewer-container"
+            />
+            {structureResult && (
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-4 text-sm">
+                  <Badge variant="secondary">pLDDT: {structureResult.metrics.pLDDT.toFixed(1)}</Badge>
+                  <Badge variant="secondary">pTM: {structureResult.metrics.pTM.toFixed(3)}</Badge>
+                  <Badge variant="outline">{structureResult.metrics.numAtoms} atoms</Badge>
+                  {structureResult.fromCache && <Badge variant="outline">From Cache</Badge>}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (viewerInstanceRef.current) {
+                        viewerInstanceRef.current.spin(!viewerInstanceRef.current.spinning);
+                        viewerInstanceRef.current.render();
+                      }
+                    }}
+                    data-testid="button-toggle-spin"
+                  >
+                    Toggle Spin
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (viewerInstanceRef.current) {
+                        viewerInstanceRef.current.zoomTo();
+                        viewerInstanceRef.current.render();
+                      }
+                    }}
+                    data-testid="button-reset-view"
+                  >
+                    Reset View
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
