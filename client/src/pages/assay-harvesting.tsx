@@ -270,7 +270,7 @@ export default function AssayHarvestingPage() {
                 <Tabs defaultValue="binding" className="w-full">
                   <TabsList className="grid w-full grid-cols-5">
                     {Object.entries(categoryConfig).map(([key, config]) => (
-                      <TabsTrigger key={key} value={key} className="gap-1">
+                      <TabsTrigger key={key} value={key} className="gap-1" data-testid={`tab-${key}`}>
                         <config.icon className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">{config.label}</span>
                         <Badge variant="secondary" className="ml-1 text-xs">

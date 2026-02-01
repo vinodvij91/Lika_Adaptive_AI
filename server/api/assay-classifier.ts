@@ -66,11 +66,21 @@ export function classifyAssay(description: string, assayName?: string): Classifi
   }
 
   const totalMatches = Object.values(scores).reduce((sum, d) => sum + d.score, 0);
-  const confidence = totalMatches > 0 ? bestScore / totalMatches : 0.5;
+  
+  // If no keywords matched, return low confidence and default to "functional" as generic category
+  if (totalMatches === 0) {
+    return {
+      category: "functional" as AssayCategory,
+      confidence: 0.1,
+      keywords: []
+    };
+  }
+  
+  const confidence = bestScore / totalMatches;
 
   return {
     category: bestCategory,
-    confidence,
+    confidence: Math.max(confidence, 0.3), // Minimum 30% confidence if any keywords matched
     keywords: scores[bestCategory].matches
   };
 }

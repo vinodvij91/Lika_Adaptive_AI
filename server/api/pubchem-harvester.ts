@@ -39,7 +39,8 @@ export async function searchPubChemAssays(targetName: string, limit: number = 20
 
     const assays: PubChemAssay[] = [];
     
-    for (const aid of aids.slice(0, Math.min(limit, 10))) {
+    // Fetch up to the requested limit (capped at 20 for API rate limiting)
+    for (const aid of aids.slice(0, Math.min(limit, 20))) {
       try {
         const detailUrl = `${PUBCHEM_BASE_URL}/assay/aid/${aid}/description/JSON`;
         const detailRes = await fetch(detailUrl);
