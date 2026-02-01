@@ -2043,26 +2043,44 @@ export default function TrajectoryAnalysisPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div 
-              ref={viewerContainerRef}
-              className="w-full h-[500px] bg-black rounded-lg relative"
-              style={{ minHeight: '500px' }}
-              data-testid="trajectory-3d-viewer-container"
-            >
-              {viewerLoading && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="h-8 w-8 animate-spin text-white" />
-                    <span className="text-white text-sm">Loading 3D Structure...</span>
-                  </div>
-                </div>
-              )}
-              {!viewerLoading && !viewerInstanceRef.current && structureResult?.pdbData && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-white/50 text-sm">Initializing viewer...</span>
-                </div>
-              )}
-            </div>
+            {structureResult?.pdbData && (
+              <iframe
+                key={selectedTargetForPrediction}
+                srcDoc={`<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://3dmol.org/build/3Dmol-min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+    #viewer { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="viewer"></div>
+  <script>
+    const pdbData = ${JSON.stringify(structureResult.pdbData)};
+    window.addEventListener('load', function() {
+      try {
+        var viewer = $3Dmol.createViewer('viewer', { backgroundColor: 0x000000 });
+        viewer.addModel(pdbData, "pdb");
+        viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
+        viewer.zoomTo();
+        viewer.spin(true);
+        viewer.render();
+      } catch(e) {
+        document.body.innerHTML = '<div style="color:red;padding:20px;">Error: ' + e.message + '</div>';
+      }
+    });
+  </script>
+</body>
+</html>`}
+                className="w-full h-[500px] rounded-lg border-0"
+                style={{ minHeight: '500px', background: '#000' }}
+                title="3D Protein Structure Viewer"
+                data-testid="trajectory-3d-viewer-iframe"
+              />
+            )}
             {structureResult && (
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-4 text-sm">
@@ -2070,34 +2088,6 @@ export default function TrajectoryAnalysisPage() {
                   <Badge variant="secondary">pTM: {structureResult.metrics.pTM.toFixed(3)}</Badge>
                   <Badge variant="outline">{structureResult.metrics.numAtoms} atoms</Badge>
                   {structureResult.fromCache && <Badge variant="outline">From Cache</Badge>}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (viewerInstanceRef.current) {
-                        viewerInstanceRef.current.spin(!viewerInstanceRef.current.spinning);
-                        viewerInstanceRef.current.render();
-                      }
-                    }}
-                    data-testid="button-toggle-spin"
-                  >
-                    Toggle Spin
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (viewerInstanceRef.current) {
-                        viewerInstanceRef.current.zoomTo();
-                        viewerInstanceRef.current.render();
-                      }
-                    }}
-                    data-testid="button-reset-view"
-                  >
-                    Reset View
-                  </Button>
                 </div>
               </div>
             )}
