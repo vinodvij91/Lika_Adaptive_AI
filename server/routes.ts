@@ -10312,22 +10312,14 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
   app.post("/api/activity-logs", requireAuth, async (req, res) => {
     try {
       const userId = (req.user as any)?.id || "";
-      const { activityType, action, description, metadata, entityType, entityId } = req.body;
+      const { insertActivityLogSchema } = await import("@shared/schema");
       
-      if (!activityType || !action) {
-        return res.status(400).json({ error: "activityType and action are required" });
+      const parseResult = insertActivityLogSchema.safeParse({ ...req.body, userId });
+      if (!parseResult.success) {
+        return res.status(400).json({ error: "Invalid activity log data", details: parseResult.error.flatten() });
       }
       
-      const log = await storage.createActivityLog({
-        userId,
-        activityType,
-        action,
-        description,
-        metadata,
-        entityType,
-        entityId,
-      });
-      
+      const log = await storage.createActivityLog(parseResult.data);
       res.status(201).json(log);
     } catch (error) {
       console.error("Error creating activity log:", error);
