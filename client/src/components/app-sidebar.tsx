@@ -31,7 +31,6 @@ import {
   Rocket,
   Crosshair,
   Beaker,
-  ArrowLeftRight,
   Plug,
   Brain,
   Atom,
@@ -183,13 +182,6 @@ export function AppSidebar() {
     return user.email || "User";
   };
 
-  const cycleDomain = () => {
-    const domains: DiscoveryDomain[] = ["drug", "vaccine", "materials"];
-    const currentIndex = domains.indexOf(domain!);
-    const nextIndex = (currentIndex + 1) % domains.length;
-    setDomain(domains[nextIndex]);
-  };
-
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
@@ -283,14 +275,33 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
+          <SidebarGroupLabel>Switch Domain</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={cycleDomain} data-testid="button-switch-domain">
-                  <ArrowLeftRight className="h-4 w-4" />
-                  <span>Switch Domain</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {!isDrugDomain && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setDomain("drug")} data-testid="button-switch-drug">
+                    <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                    <span>Drug Discovery</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {!isVaccineDomain && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setDomain("vaccine")} data-testid="button-switch-vaccine">
+                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    <span>Vaccine Discovery</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {!isMaterialsDomain && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setDomain("materials")} data-testid="button-switch-materials">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>Materials Science</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
