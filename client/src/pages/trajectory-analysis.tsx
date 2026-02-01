@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
+import { useActivityLog } from "@/hooks/use-activity-log";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -128,6 +129,7 @@ interface InhibitorResult {
 
 export default function TrajectoryAnalysisPage() {
   const { toast } = useToast();
+  const { logAnalysisRun, logDataImport } = useActivityLog();
   const [selectedDisease, setSelectedDisease] = useState<string>("");
   const [selectedDataset, setSelectedDataset] = useState<string>("");
   const [trajectoryResult, setTrajectoryResult] = useState<TrajectoryResult | null>(null);
@@ -172,9 +174,18 @@ export default function TrajectoryAnalysisPage() {
     onSuccess: (data) => {
       setTrajectoryResult(data);
       setActiveTab("trajectory");
+      const biomarkerCount = (data.biomarkers || []).length;
+      const targetCount = (data.targets || []).length;
+      logAnalysisRun(
+        "Trajectory Analysis Complete",
+        `Found ${biomarkerCount} biomarkers and ${targetCount} druggable targets`,
+        "scRNA_dataset",
+        selectedDataset,
+        { disease: selectedDisease, biomarkerCount, targetCount, smoothingAlpha: smoothingAlpha[0] }
+      );
       toast({
         title: "Analysis Complete",
-        description: `Found ${(data.biomarkers || []).length} biomarkers and ${(data.targets || []).length} druggable targets`,
+        description: `Found ${biomarkerCount} biomarkers and ${targetCount} druggable targets`,
       });
     },
     onError: () => {
@@ -211,6 +222,13 @@ export default function TrajectoryAnalysisPage() {
     },
     onSuccess: (data) => {
       setInhibitorResult(data);
+      logAnalysisRun(
+        "Inhibitor Prediction Complete",
+        `Found ${data.hits} potential hits out of ${data.totalCompounds} compounds`,
+        "target",
+        selectedTargetForPrediction || undefined,
+        { hits: data.hits, totalCompounds: data.totalCompounds, disease: selectedDisease }
+      );
       toast({
         title: "Prediction Complete",
         description: `Found ${data.hits} potential hits out of ${data.totalCompounds} compounds`,

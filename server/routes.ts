@@ -10294,7 +10294,7 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
 
   app.get("/api/activity-logs", requireAuth, async (req, res) => {
     try {
-      const userId = req.user!.id;
+      const userId = (req.user as any)?.id || "";
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
       const offset = parseInt(req.query.offset as string) || 0;
       const activityType = req.query.type as string | undefined;
@@ -10311,7 +10311,7 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
 
   app.post("/api/activity-logs", requireAuth, async (req, res) => {
     try {
-      const userId = req.user!.id;
+      const userId = (req.user as any)?.id || "";
       const { activityType, action, description, metadata, entityType, entityId } = req.body;
       
       if (!activityType || !action) {
@@ -10337,7 +10337,7 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
 
   app.get("/api/activity-logs/stats", requireAuth, async (req, res) => {
     try {
-      const userId = req.user!.id;
+      const userId = (req.user as any)?.id || "";
       const stats = await storage.getActivityLogStats(userId);
       res.json(stats);
     } catch (error) {
