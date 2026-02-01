@@ -151,7 +151,14 @@ export default function TrajectoryAnalysisPage() {
     totalCount: number;
     diseases: string[];
   }>({
-    queryKey: ["/api/trajectory/datasets", selectedDisease],
+    queryKey: ["/api/trajectory/datasets", { disease: selectedDisease }],
+    queryFn: async () => {
+      const res = await fetch(`/api/trajectory/datasets?disease=${encodeURIComponent(selectedDisease)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch datasets");
+      return res.json();
+    },
     enabled: !!selectedDisease,
   });
 
