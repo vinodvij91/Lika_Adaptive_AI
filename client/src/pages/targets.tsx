@@ -87,6 +87,7 @@ export default function TargetsPage() {
   const [selectedTarget, setSelectedTarget] = useState<TargetWithDiseases | null>(null);
   const [ligandSmiles, setLigandSmiles] = useState("");
   const [manualSequence, setManualSequence] = useState("");
+  const [fetchingSequence, setFetchingSequence] = useState(false);
   const [predictionResult, setPredictionResult] = useState<StructurePrediction | null>(null);
   const { toast } = useToast();
 
@@ -162,12 +163,34 @@ export default function TargetsPage() {
     });
   };
 
-  const openPredictionDialog = (target: TargetWithDiseases) => {
+  const openPredictionDialog = async (target: TargetWithDiseases) => {
     setSelectedTarget(target);
     setLigandSmiles("");
     setManualSequence("");
     setPredictionResult(null);
     setPredictionDialogOpen(true);
+    
+    // Auto-fetch sequence from UniProt if target has UniProt ID but no sequence
+    if (!target.sequence && target.uniprotId) {
+      setFetchingSequence(true);
+      try {
+        const response = await fetch(`https://rest.uniprot.org/uniprotkb/${target.uniprotId}.fasta`);
+        if (response.ok) {
+          const fastaText = await response.text();
+          // Parse FASTA - skip the header line and join remaining lines
+          const lines = fastaText.split('\n');
+          const sequence = lines.slice(1).join('').trim();
+          if (sequence) {
+            setManualSequence(sequence);
+            toast({ title: "Sequence loaded", description: `Fetched ${sequence.length} amino acids from UniProt` });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch sequence from UniProt:", error);
+      } finally {
+        setFetchingSequence(false);
+      }
+    }
   };
 
   const filteredTargets = targets?.filter(
@@ -518,19 +541,39 @@ export default function TargetsPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
-                      This target has no sequence stored. Enter a protein sequence below to predict its structure.
-                    </p>
-                    <textarea
-                      value={manualSequence}
-                      onChange={(e) => setManualSequence(e.target.value)}
-                      placeholder="Enter amino acid sequence (e.g., MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSF...)"
-                      className="w-full h-24 p-3 font-mono text-xs border rounded-md bg-background resize-none"
-                      data-testid="textarea-manual-sequence"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {manualSequence.trim().length > 0 && `${manualSequence.trim().length} characters`}
-                    </p>
+                    {fetchingSequence ? (
+                      <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">Fetching sequence from UniProt...</span>
+                      </div>
+                    ) : manualSequence ? (
+                      <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-md">
+                        <code className="text-xs font-mono break-all">
+                          {manualSequence.length > 200 
+                            ? manualSequence.slice(0, 200) + "..." 
+                            : manualSequence}
+                        </code>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {manualSequence.length} amino acids (from UniProt)
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+                          This target has no sequence stored. Enter a protein sequence below to predict its structure.
+                        </p>
+                        <textarea
+                          value={manualSequence}
+                          onChange={(e) => setManualSequence(e.target.value)}
+                          placeholder="Enter amino acid sequence (e.g., MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSF...)"
+                          className="w-full h-24 p-3 font-mono text-xs border rounded-md bg-background resize-none"
+                          data-testid="textarea-manual-sequence"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {manualSequence.trim().length > 0 && `${manualSequence.trim().length} characters`}
+                        </p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -602,7 +645,7 @@ export default function TargetsPage() {
             </Button>
             <Button 
               onClick={handlePredictStructure}
-              disabled={(!selectedTarget?.sequence && !manualSequence.trim()) || structurePredictionMutation.isPending}
+              disabled={(!selectedTarget?.sequence && !manualSequence.trim()) || fetchingSequence || structurePredictionMutation.isPending}
               data-testid="button-run-prediction"
             >
               {structurePredictionMutation.isPending ? (
