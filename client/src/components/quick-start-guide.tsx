@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +65,7 @@ const GUIDE_STEPS: GuideStep[] = [
       "Manage compound libraries",
       "Generate comprehensive reports"
     ],
-    route: "/drug-discovery",
+    route: "/campaigns",
     color: "text-blue-500"
   },
   {
@@ -142,6 +143,7 @@ const STORAGE_KEY = "lika-quickstart-completed";
 const STORAGE_SEEN_KEY = "lika-quickstart-seen";
 
 export function QuickStartGuide() {
+  const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -243,7 +245,7 @@ export function QuickStartGuide() {
                     />
                   ))}
                 </div>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs" data-testid="badge-step-counter">
                   {currentStep + 1} / {GUIDE_STEPS.length}
                 </Badge>
               </div>
@@ -282,14 +284,19 @@ export function QuickStartGuide() {
               </Card>
 
               {step.route && (
-                <a
-                  href={step.route}
-                  className="text-sm text-primary hover:underline flex items-center gap-1"
-                  onClick={() => setIsOpen(false)}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-0 h-auto text-sm"
+                  onClick={() => {
+                    setIsOpen(false);
+                    setLocation(step.route!);
+                  }}
+                  data-testid={`link-goto-${step.id}`}
                 >
                   Go to {step.title}
-                  <ChevronRight className="w-3 h-3" />
-                </a>
+                  <ChevronRight className="w-3 h-3 ml-1" />
+                </Button>
               )}
             </div>
 
