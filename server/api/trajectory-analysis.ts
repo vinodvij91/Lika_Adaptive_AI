@@ -768,7 +768,9 @@ const VACCINE_DATASETS: ScRNADataset[] = [
   { id: "gse178945", name: "Tuberculosis BCG Vaccine", geoAccession: "GSE178945", disease: "TB BCG Vaccine", tissue: "PBMC", cellCount: 123456, description: "Single-cell atlas of BCG vaccination in infants", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
   { id: "gse185672", name: "COVID-19 Viral Vector Vaccine", geoAccession: "GSE185672", disease: "COVID-19 Viral Vector", tissue: "PBMC", cellCount: 156789, description: "Immune responses to ChAdOx1 nCoV-19 (AstraZeneca)", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
   { id: "gse188234", name: "Neoantigen Cancer Vaccine", geoAccession: "GSE188234", disease: "Cancer Neoantigen Vaccine", tissue: "PBMC/Tumor", cellCount: 89012, description: "Personalized neoantigen vaccine in melanoma", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
-  { id: "gse176543", name: "mRNA Cancer Vaccine", geoAccession: "GSE176543", disease: "Cancer mRNA Vaccine", tissue: "PBMC/Tumor", cellCount: 98765, description: "mRNA-encoded neoantigen vaccine immune dynamics", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true }
+  { id: "gse176543", name: "mRNA Cancer Vaccine", geoAccession: "GSE176543", disease: "Cancer mRNA Vaccine", tissue: "PBMC/Tumor", cellCount: 98765, description: "mRNA-encoded neoantigen vaccine immune dynamics", source: "GEO", species: "human", publicationYear: 2022, hasTrajectory: true },
+  { id: "gse195234", name: "Nipah Virus Vaccine Response", geoAccession: "GSE195234", disease: "Nipah Vaccine", tissue: "PBMC", cellCount: 87654, description: "Single-cell immune profiling of Nipah virus vaccine candidates (HeV-sG subunit)", source: "GEO", species: "human", publicationYear: 2023, hasTrajectory: true },
+  { id: "gse198567", name: "Nipah mRNA Vaccine Trial", geoAccession: "GSE198567", disease: "Nipah Vaccine", tissue: "PBMC", cellCount: 112345, description: "Phase I trial scRNA-seq of mRNA-1215 Nipah vaccine", source: "GEO", species: "human", publicationYear: 2023, hasTrajectory: true }
 ];
 
 const VACCINE_BIOMARKERS: Record<string, Array<{ gene: string; role: string; predictive: boolean }>> = {
@@ -825,6 +827,16 @@ const VACCINE_BIOMARKERS: Record<string, Array<{ gene: string; role: string; pre
     { gene: "GZMA", role: "Granzyme A", predictive: true },
     { gene: "PDCD1", role: "PD-1 checkpoint", predictive: false },
     { gene: "HAVCR2", role: "TIM-3 exhaustion", predictive: false }
+  ],
+  "Nipah Vaccine": [
+    { gene: "IGHG1", role: "Neutralizing antibody IgG1", predictive: true },
+    { gene: "IGHG3", role: "Complement-fixing IgG3", predictive: true },
+    { gene: "CD4", role: "Helper T cell response", predictive: true },
+    { gene: "IFNG", role: "Th1 cytokine response", predictive: true },
+    { gene: "TNF", role: "Pro-inflammatory response", predictive: true },
+    { gene: "IL2", role: "T cell proliferation", predictive: true },
+    { gene: "GZMB", role: "Cytotoxic effector function", predictive: true },
+    { gene: "CD27", role: "Memory B cell marker", predictive: true }
   ]
 };
 
