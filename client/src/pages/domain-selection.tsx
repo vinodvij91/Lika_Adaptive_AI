@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useDomain, type DiscoveryDomain } from "@/contexts/domain-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FlaskConical, Hexagon, ArrowRight, Check } from "lucide-react";
+import { FlaskConical, Hexagon, ArrowRight, Check, Syringe } from "lucide-react";
 import { LikaLogoLeafGradient } from "@/components/lika-logo";
 
 const domains: {
@@ -32,17 +32,33 @@ const domains: {
     accentColor: "text-blue-500",
   },
   {
+    id: "vaccine",
+    title: "Vaccine Discovery",
+    subtitle: "Design next-gen immunogens",
+    description: "Predict epitopes, optimize MHC binding, and design multi-epitope constructs with integrated bioinformatics tools.",
+    icon: Syringe,
+    features: [
+      "Epitope prediction & MHC binding",
+      "B-cell & T-cell analysis",
+      "mRNA vaccine design",
+      "Codon optimization",
+      "Immunogenicity simulation",
+    ],
+    gradient: "from-purple-600 via-violet-500 to-indigo-500",
+    accentColor: "text-purple-500",
+  },
+  {
     id: "materials",
     title: "Materials Science",
     subtitle: "Discover next-gen materials",
-    description: "Explore polymers, crystals, and composites with property-first pipelines and manufacturability scoring.",
+    description: "Explore polymers, crystals, and composites with property-first pipelines, PFAS replacement, and manufacturability scoring.",
     icon: Hexagon,
     features: [
-      "Polymer & crystal design",
+      "PFAS replacement screening",
+      "Spider silk & biomaterials",
+      "Battery & photovoltaic design",
       "Property-first discovery",
-      "Multi-scale representations",
-      "Manufacturability scoring",
-      "Structure-property analysis",
+      "OpenFold3 structure prediction",
     ],
     gradient: "from-emerald-600 via-teal-500 to-cyan-500",
     accentColor: "text-emerald-500",
@@ -79,7 +95,7 @@ export default function DomainSelectionPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {domains.map((domain) => (
               <Card
                 key={domain.id}

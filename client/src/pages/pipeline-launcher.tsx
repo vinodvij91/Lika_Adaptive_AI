@@ -85,12 +85,15 @@ const drugDiscoveryJobs = [
 ];
 
 const materialsJobTypes = [
+  { value: "mat_spider_silk", label: "Spider Silk Fibers", icon: Layers, description: "MaSp1/2-based protein fibers for sustainable textiles (GRS/BCI/GOTS)" },
+  { value: "mat_bioprocessing_enzymes", label: "Bio-Processing Enzymes", icon: Activity, description: "Cellulases and peroxidases for textile processing" },
+  { value: "mat_dye_degrading", label: "Dye-Degrading Proteins", icon: Target, description: "Enzymes for wastewater dye degradation" },
+  { value: "mat_pfas_replacement", label: "PFAS Replacement", icon: Layers, description: "Fluorine-free alternatives for seals, gaskets, coatings (EPA compliant)" },
   { value: "mat_battery", label: "Battery Materials", icon: Zap, description: "Cathode/anode discovery for Li-ion and solid-state batteries" },
   { value: "mat_solar", label: "Photovoltaic Materials", icon: Activity, description: "Solar absorber discovery with band gap optimization" },
   { value: "mat_superconductor", label: "Superconductor Discovery", icon: Zap, description: "High-Tc superconductor discovery with DFT validation" },
   { value: "mat_catalyst", label: "Catalyst Discovery", icon: Target, description: "HER/ORR catalyst discovery for fuel cells" },
   { value: "mat_thermoelectric", label: "Thermoelectric Materials", icon: Activity, description: "High-ZT thermoelectric materials discovery" },
-  { value: "mat_pfas_replacement", label: "PFAS Replacement", icon: Layers, description: "Fluorine-free alternatives for coatings (EPA compliant)" },
   { value: "mat_aerospace", label: "Aerospace Materials", icon: Rocket, description: "Lightweight alloys and composites (Ti-Al, SiC)" },
   { value: "mat_biomedical", label: "Biomedical Materials", icon: Target, description: "Biocompatible implant materials with bone matching" },
   { value: "mat_semiconductor", label: "Wide-Gap Semiconductors", icon: Zap, description: "SiC/GaN alternatives for power electronics" },

@@ -73,6 +73,23 @@ const drugWorkflowItems = [
   { title: "Reports", url: "/reports", icon: BarChart3 },
 ];
 
+const vaccineNavigationItems = [
+  { title: "Dashboard", url: "/dashboard/vaccine", icon: LayoutDashboard },
+  { title: "Import", url: "/import", icon: Upload },
+  { title: "Targets", url: "/targets", icon: Target },
+  { title: "Vaccine Pipeline", url: "/vaccine-discovery", icon: Syringe },
+  { title: "Trajectory Analysis", url: "/trajectory-analysis", icon: GitBranch },
+];
+
+const vaccineWorkflowItems = [
+  { title: "Lika Agent", url: "/lika-agent", icon: Brain },
+  { title: "Epitope Prediction", url: "/vaccine-discovery", icon: Crosshair },
+  { title: "mRNA Design", url: "/vaccine-discovery", icon: Dna },
+  { title: "3D Viewer", url: "/molecular-viewer", icon: Atom },
+  { title: "BioNeMo AI", url: "/bionemo", icon: Brain },
+  { title: "Reports", url: "/reports", icon: BarChart3 },
+];
+
 const materialsNavigationItems = [
   { title: "Dashboard", url: "/dashboard/materials", icon: LayoutDashboard },
   { title: "Import", url: "/import", icon: Upload },
@@ -106,14 +123,50 @@ const infrastructureItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
-  const { domain, setDomain, isDrugDomain, isMaterialsDomain, hasDomainSelected } = useDomain();
+  const { domain, setDomain, isDrugDomain, isVaccineDomain, isMaterialsDomain, hasDomainSelected } = useDomain();
 
-  const navigationItems = isDrugDomain ? drugNavigationItems : materialsNavigationItems;
-  const workflowItems = isDrugDomain ? drugWorkflowItems : materialsWorkflowItems;
+  const getNavigationItems = () => {
+    if (isDrugDomain) return drugNavigationItems;
+    if (isVaccineDomain) return vaccineNavigationItems;
+    return materialsNavigationItems;
+  };
+  
+  const getWorkflowItems = () => {
+    if (isDrugDomain) return drugWorkflowItems;
+    if (isVaccineDomain) return vaccineWorkflowItems;
+    return materialsWorkflowItems;
+  };
+
+  const navigationItems = getNavigationItems();
+  const workflowItems = getWorkflowItems();
   
   if (!hasDomainSelected) {
     return null;
   }
+
+  const getDomainLabel = () => {
+    if (isDrugDomain) return "Drug Discovery";
+    if (isVaccineDomain) return "Vaccine Discovery";
+    return "Materials Science";
+  };
+
+  const getDomainColor = () => {
+    if (isDrugDomain) return "bg-cyan-500";
+    if (isVaccineDomain) return "bg-purple-500";
+    return "bg-emerald-500";
+  };
+
+  const getDomainGradient = () => {
+    if (isDrugDomain) return "bg-gradient-to-br from-cyan-400 to-teal-500";
+    if (isVaccineDomain) return "bg-gradient-to-br from-purple-400 to-indigo-500";
+    return "bg-gradient-to-br from-emerald-400 to-amber-400";
+  };
+
+  const getDashboardUrl = () => {
+    if (isDrugDomain) return "/dashboard/drug";
+    if (isVaccineDomain) return "/dashboard/vaccine";
+    return "/dashboard/materials";
+  };
 
   const getInitials = () => {
     if (!user) return "U";
@@ -130,22 +183,20 @@ export function AppSidebar() {
     return user.email || "User";
   };
 
-  const toggleDomain = () => {
-    const newDomain: DiscoveryDomain = isDrugDomain ? "materials" : "drug";
-    setDomain(newDomain);
+  const cycleDomain = () => {
+    const domains: DiscoveryDomain[] = ["drug", "vaccine", "materials"];
+    const currentIndex = domains.indexOf(domain!);
+    const nextIndex = (currentIndex + 1) % domains.length;
+    setDomain(domains[nextIndex]);
   };
 
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <Link href={isDrugDomain ? "/dashboard/drug" : "/dashboard/materials"}>
+        <Link href={getDashboardUrl()}>
           <div className="flex items-center gap-3 cursor-pointer group">
             <div className="relative">
-              <div className={`absolute inset-0 rounded-xl blur-md opacity-40 ${
-                isDrugDomain 
-                  ? "bg-gradient-to-br from-cyan-400 to-teal-500" 
-                  : "bg-gradient-to-br from-emerald-400 to-amber-400"
-              }`} />
+              <div className={`absolute inset-0 rounded-xl blur-md opacity-40 ${getDomainGradient()}`} />
               <div className="relative w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-slate-900 dark:bg-slate-800 border border-slate-700">
                 <LikaLogoLeafGradient size={26} className="drop-shadow-md" />
               </div>
@@ -155,11 +206,9 @@ export function AppSidebar() {
                 Lika Sciences
               </span>
               <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${
-                  isDrugDomain ? "bg-cyan-500" : "bg-emerald-500"
-                }`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${getDomainColor()}`} />
                 <span className="text-[11px] font-medium text-muted-foreground">
-                  {isDrugDomain ? "Drug Discovery" : "Materials Science"}
+                  {getDomainLabel()}
                 </span>
               </div>
             </div>
@@ -170,7 +219,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>
-            {isDrugDomain ? "Drug Discovery" : "Materials Science"}
+            {getDomainLabel()}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -237,9 +286,9 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={toggleDomain} data-testid="button-switch-domain">
+                <SidebarMenuButton onClick={cycleDomain} data-testid="button-switch-domain">
                   <ArrowLeftRight className="h-4 w-4" />
-                  <span>Switch to {isDrugDomain ? "Materials" : "Drug Discovery"}</span>
+                  <span>Switch Domain</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

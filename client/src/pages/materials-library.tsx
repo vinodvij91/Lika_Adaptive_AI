@@ -10,7 +10,7 @@ import { Link } from "wouter";
 import { 
   Hexagon, Plus, Upload, Search, Zap, Atom, Box, Layers, 
   Calculator, Factory, Sparkles, ArrowRight, CheckCircle2,
-  Loader2, Play, Database
+  Loader2, Play, Database, Leaf, Shield, Dna
 } from "lucide-react";
 import type { MaterialEntity } from "@shared/schema";
 
@@ -91,25 +91,43 @@ export default function MaterialsLibraryPage() {
   const compositeTypes = ["composite", "high_entropy_alloy", "binary_alloy", "ternary_alloy"];
   const thinFilmTypes = ["thin_film", "doped_semiconductor"];
   const electrochemicalTypes = ["battery_cathode", "battery_anode", "solid_electrolyte", "catalyst", "coating", "membrane"];
+  const biomaterialTypes = ["biomaterial"];
 
   const isPolymer = (type: string) => polymerTypes.includes(type);
   const isCrystal = (type: string) => crystalTypes.includes(type);
   const isComposite = (type: string) => compositeTypes.includes(type);
   const isThinFilm = (type: string) => thinFilmTypes.includes(type);
   const isElectrochemical = (type: string) => electrochemicalTypes.includes(type);
+  const isBiomaterial = (type: string) => biomaterialTypes.includes(type);
+  
+  // PFAS filter state
+  const [pfasFilter, setPfasFilter] = useState<"all" | "pfas_free" | "pfas">("all");
 
   const categories = [
     { label: "Total Materials", value: typeCounts?.total || totalMaterials, icon: Hexagon, color: "from-emerald-500 to-teal-500", bgColor: "bg-emerald-500", filter: "all" },
-    { label: "Composites/Alloys", value: typeCounts?.composites || 0, icon: Box, color: "from-amber-500 to-orange-500", bgColor: "bg-amber-500", filter: "composite" },
-    { label: "Thin Films", value: typeCounts?.thinFilms || 0, icon: Layers, color: "from-pink-500 to-rose-500", bgColor: "bg-pink-500", filter: "thinfilm" },
-    { label: "Crystals", value: typeCounts?.crystals || 0, icon: Atom, color: "from-violet-500 to-purple-500", bgColor: "bg-violet-500", filter: "crystal" },
     { label: "Polymers", value: typeCounts?.polymers || 0, icon: Hexagon, color: "from-blue-500 to-cyan-500", bgColor: "bg-blue-500", filter: "polymer" },
+    { label: "Biomaterials", value: (typeCounts as any)?.biomaterials || 0, icon: Dna, color: "from-green-500 to-emerald-500", bgColor: "bg-green-500", filter: "biomaterial" },
+    { label: "Crystals", value: typeCounts?.crystals || 0, icon: Atom, color: "from-violet-500 to-purple-500", bgColor: "bg-violet-500", filter: "crystal" },
+    { label: "Composites/Alloys", value: typeCounts?.composites || 0, icon: Box, color: "from-amber-500 to-orange-500", bgColor: "bg-amber-500", filter: "composite" },
     { label: "Electrochemical", value: typeCounts?.electrochemical || 0, icon: Zap, color: "from-yellow-500 to-amber-500", bgColor: "bg-yellow-500", filter: "electrochemical" },
   ];
 
-  // Backend now handles category filtering; only apply search filter client-side
+  // Apply search and PFAS filtering client-side
   const filteredMaterials = materials.filter(m => {
     if (searchQuery && !m.name?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    
+    // Apply PFAS filter based on properties
+    if (pfasFilter === "pfas_free") {
+      const props = m.properties as any;
+      if (!props?.pfas_free) return false;
+    } else if (pfasFilter === "pfas") {
+      const props = m.properties as any;
+      if (props?.pfas_free !== false) return false;
+    }
+    
+    // Apply biomaterial type filter
+    if (activeTab === "biomaterial" && m.type !== "biomaterial") return false;
+    
     return true;
   });
 
@@ -156,15 +174,52 @@ export default function MaterialsLibraryPage() {
             </div>
           </header>
 
-          <div className="relative max-w-xl">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input 
-              placeholder="Search materials by name, formula, or properties..." 
-              className="pl-12 h-12 text-base"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              data-testid="input-search-materials"
-            />
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="relative flex-1 max-w-xl">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input 
+                placeholder="Search materials by name, formula, or properties..." 
+                className="pl-12 h-12 text-base"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                data-testid="input-search-materials"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                <Shield className="h-4 w-4" />
+                PFAS:
+              </span>
+              <div className="flex gap-1">
+                <Button 
+                  size="sm" 
+                  variant={pfasFilter === "all" ? "default" : "outline"}
+                  onClick={() => setPfasFilter("all")}
+                  data-testid="button-pfas-all"
+                >
+                  All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={pfasFilter === "pfas_free" ? "default" : "outline"}
+                  onClick={() => setPfasFilter("pfas_free")}
+                  className={pfasFilter === "pfas_free" ? "bg-green-600 hover:bg-green-700" : ""}
+                  data-testid="button-pfas-free"
+                >
+                  <Leaf className="h-3 w-3 mr-1" />
+                  PFAS-Free
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={pfasFilter === "pfas" ? "default" : "outline"}
+                  onClick={() => setPfasFilter("pfas")}
+                  className={pfasFilter === "pfas" ? "bg-orange-600 hover:bg-orange-700" : ""}
+                  data-testid="button-pfas-contains"
+                >
+                  Contains PFAS
+                </Button>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">

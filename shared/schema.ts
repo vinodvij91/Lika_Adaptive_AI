@@ -32,13 +32,17 @@ export const assayOutcomeEnum = pgEnum("assay_outcome", ["active", "inactive", "
 export const orgRoleEnum = pgEnum("org_role", ["admin", "member", "viewer"]);
 export const assetTypeEnum = pgEnum("asset_type", ["smiles_library", "pipeline_template", "program"]);
 export const sharePermissionEnum = pgEnum("share_permission", ["read", "fork"]);
-export const discoveryDomainEnum = pgEnum("discovery_domain", ["drug", "materials"]);
+export const discoveryDomainEnum = pgEnum("discovery_domain", ["drug", "vaccine", "materials"]);
 export const materialTypeEnum = pgEnum("material_type", [
   "polymer", "crystal", "composite", "surface", "membrane", "catalyst", "coating",
   "thin_film", "doped_semiconductor", "binary_oxide", "binary_chalcogenide", "binary_pnictide",
   "binary_alloy", "ternary_alloy", "high_entropy_alloy", "perovskite", "double_perovskite",
   "battery_cathode", "battery_anode", "solid_electrolyte", "spinel", "mxene_2d", "tmd_2d",
-  "homopolymer", "copolymer", "2d_material"
+  "homopolymer", "copolymer", "2d_material", "biomaterial", "metal", "ceramic"
+]);
+
+export const materialCategoryEnum = pgEnum("material_category", [
+  "polymer", "ceramic", "metal", "biomaterial", "composite"
 ]);
 export const materialPropertySourceEnum = pgEnum("material_property_source", ["ml", "simulation", "experiment"]);
 export const variantGeneratedByEnum = pgEnum("variant_generated_by", ["human", "ml", "genetic", "quantum"]);
@@ -812,6 +816,7 @@ export const materialEntities = pgTable("material_entities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name"),
   type: materialTypeEnum("type").notNull(),
+  category: materialCategoryEnum("category"),
   representation: jsonb("representation"),
   baseFamily: text("base_family"),
   metadata: jsonb("metadata"),
@@ -819,6 +824,57 @@ export const materialEntities = pgTable("material_entities", {
   companyId: varchar("company_id"),
   isDemo: boolean("is_demo").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  
+  // Chemical identifiers
+  smiles: text("smiles"),
+  monomerSmiles: text("monomer_smiles"),
+  composition: text("composition"),
+  sequence: text("sequence"),
+  
+  // Structure references
+  structureFile: text("structure_file"),
+  structureId: varchar("structure_id"),
+  
+  // Properties JSONB for all material properties
+  properties: jsonb("properties").$type<{
+    density_g_cm3?: number;
+    tensile_strength_MPa?: number;
+    tensile_strength_GPa?: number;
+    youngs_modulus_GPa?: number;
+    elastic_modulus_GPa?: number;
+    elongation_at_break_percent?: number;
+    hardness_shoreD?: number;
+    Tg_C?: number;
+    Tm_C?: number;
+    Td_C?: number;
+    thermal_conductivity_W_mK?: number;
+    coefficient_thermal_expansion_um_mC?: number;
+    chemical_resistance_index?: number;
+    solvent_resistance_index?: number;
+    water_absorption_percent?: number;
+    dielectric_constant?: number;
+    electrical_resistivity_ohm_m?: number;
+    surface_energy_mJ_m2?: number;
+    water_contact_angle_deg?: number;
+    friction_coefficient?: number;
+    pfos_free?: boolean;
+    pfoa_free?: boolean;
+    pfas_free?: boolean;
+    biodegradable?: boolean;
+    recycled_content_percent?: number;
+    cellulose_binding_Kd_nM?: number;
+    dye_degradation_kcat_Km?: number;
+    fabric_strength_retention_percent?: number;
+    ionic_conductivity_S_cm?: number;
+    band_gap_eV?: number;
+    voltage_window_V?: number;
+    thermal_stability_C?: number;
+    ph_stability_range?: string;
+  }>(),
+  
+  // Tags and references
+  tags: text("tags").array(),
+  sourceRefs: text("source_refs").array(),
 });
 
 export const insertMaterialEntitySchema = createInsertSchema(materialEntities).omit({ id: true, createdAt: true });
@@ -1253,7 +1309,8 @@ export type JobStatus = "pending" | "running" | "completed" | "failed";
 export type JobType = "generation" | "filtering" | "docking" | "scoring" | "quantum_optimization" | "quantum_scoring" | "other";
 export type OutcomeLabel = "promising" | "dropped" | "hit" | "unknown";
 export type ProviderType = "bionemo" | "ml" | "docking" | "quantum" | "ip" | "literature" | "smiles_library" | "agent" | "materials_library" | "simulation" | "oracle" | "selection";
-export type DiscoveryDomain = "drug" | "materials";
+export type DiscoveryDomain = "drug" | "vaccine" | "materials";
+export type MaterialCategory = "polymer" | "ceramic" | "metal" | "biomaterial" | "composite";
 export type MaterialType = "polymer" | "crystal" | "composite" | "surface" | "membrane" | "catalyst";
 export type MaterialPropertySource = "ml" | "simulation" | "experiment";
 export type Modality = "small_molecule" | "fragment" | "protac" | "peptide" | "other";

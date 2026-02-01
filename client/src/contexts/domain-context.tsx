@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 
-export type DiscoveryDomain = "drug" | "materials";
+export type DiscoveryDomain = "drug" | "vaccine" | "materials";
 
 interface DomainContextValue {
   domain: DiscoveryDomain | null;
   setDomain: (domain: DiscoveryDomain) => void;
   clearDomain: () => void;
   isDrugDomain: boolean;
+  isVaccineDomain: boolean;
   isMaterialsDomain: boolean;
   hasDomainSelected: boolean;
 }
@@ -19,7 +20,7 @@ export function DomainProvider({ children }: { children: ReactNode }) {
   const [domain, setDomainState] = useState<DiscoveryDomain | null>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem(DOMAIN_STORAGE_KEY);
-      if (stored === "drug" || stored === "materials") {
+      if (stored === "drug" || stored === "vaccine" || stored === "materials") {
         return stored;
       }
     }
@@ -49,6 +50,7 @@ export function DomainProvider({ children }: { children: ReactNode }) {
     setDomain,
     clearDomain,
     isDrugDomain: domain === "drug",
+    isVaccineDomain: domain === "vaccine",
     isMaterialsDomain: domain === "materials",
     hasDomainSelected: domain !== null,
   };

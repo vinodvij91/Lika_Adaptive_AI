@@ -1,0 +1,803 @@
+🚀 COMPLETE LIKA SCIENCES MATERIALS SCIENCE IMPLEMENTATION
+One-Time Master Prompt for Replit
+PROJECT: Lika Sciences Materials Science Platform
+Extend drug discovery pipeline to Materials Science with OpenFold3 + BioNeMo
+
+🎯 EXECUTIVE SUMMARY
+Transform Lika Sciences from drug/vaccine discovery platform into a unified computational platform supporting:
+
+Drug Discovery (existing)
+
+Vaccine Discovery (existing)
+
+Materials Science (NEW) - sustainable textiles, PFAS replacement, biomaterials
+
+Tech stack: OpenFold3 (structure prediction) + BioNeMo (property prediction) + existing Dask/GPU infrastructure.
+
+📋 PART 1: PLATFORM ARCHITECTURE
+1.1 Top-Level Domain Switch
+Add mode selector (top nav):
+
+text
+[Drug Discovery] [Vaccine Discovery] [Materials Science] ← NEW
+Each mode loads different:
+
+Sidebar navigation
+
+Datasets
+
+Workflow templates
+
+Property types
+
+1.2 Materials Science Sidebar Navigation
+Materials Science section:
+
+text
+Materials Science
+├── Dashboard
+├── Import
+├── Materials Library
+├── Variants
+└── Multi-Scale Representation
+
+Workflows
+├── Lika Agent
+├── Property Prediction
+├── Structure-Property
+├── Manufacturability
+├── 3D Viewer
+├── FEA Simulations
+├── Simulation Runs
+├── Reports
+
+Infrastructure
+├── Compute Nodes
+├── Pipeline Launcher
+├── BioNeMo AI
+├── External Data
+├── Activity Log
+├── Usage
+├── Integrations
+└── Quantum
+📋 PART 2: MATERIALS DATA MODEL
+2.1 Materials Library
+typescript
+interface Material {
+  id: string
+  name: string
+  category: 'polymer' | 'ceramic' | 'metal' | 'biomaterial' | 'composite'
+  
+  // Chemical identifiers
+  smiles?: string              // For polymers/additives
+  monomer_smiles?: string
+  composition?: string         // e.g. "C2F4", "CaTiO3"
+  sequence?: string            // For biomaterials (protein)
+  
+  // Structure
+  structure_file?: string      // CIF/PDB path
+  structure_id?: string        // OpenFold3 prediction ID
+  
+  // Properties
+  properties: {
+    // Mechanical
+    density_g_cm3?: number
+    tensile_strength_MPa?: number
+    youngs_modulus_GPa?: number
+    elastic_modulus_GPa?: number
+    elongation_at_break_percent?: number
+    hardness_shoreD?: number
+    
+    // Thermal
+    Tg_C?: number
+    Tm_C?: number
+    Td_C?: number
+    thermal_conductivity_W_mK?: number
+    coefficient_thermal_expansion_um_mC?: number
+    
+    // Chemical
+    chemical_resistance_index?: number
+    solvent_resistance_index?: number
+    water_absorption_percent?: number
+    
+    // Electrical
+    dielectric_constant?: number
+    electrical_resistivity_ohm_m?: number
+    
+    // Surface
+    surface_energy_mJ_m2?: number
+    water_contact_angle_deg?: number
+    friction_coefficient?: number
+    
+    // Environmental
+    pfos_free?: boolean
+    pfoa_free?: boolean
+    pfas_free?: boolean
+    biodegradable?: boolean
+    recycled_content_percent?: number
+    
+    // Textile-specific (for biomaterials)
+    cellulose_binding_Kd_nM?: number
+    dye_degradation_kcat_Km?: number
+    fabric_strength_retention_percent?: number
+  }
+  
+  tags: string[]
+  source_refs?: string[]
+  created_date: string
+}
+2.2 Seed Materials Database
+Create materials_seed.json with PFAS polymers and replacements:
+
+json
+[
+  {
+    "id": "PTFE",
+    "name": "Polytetrafluoroethylene (PTFE)",
+    "category": "polymer",
+    "smiles": "C(C(F)(F)F)(F)F",
+    "properties": {
+      "density_g_cm3": 2.2,
+      "tensile_strength_MPa": 30,
+      "Td_C": 327,
+      "dielectric_constant": 2.1,
+      "pfas_free": false
+    },
+    "tags": ["PFAS", "fluoropolymer", "high_performance"]
+  },
+  {
+    "id": "PEEK",
+    "name": "Polyetheretherketone (PEEK)",
+    "category": "polymer",
+    "properties": {
+      "tensile_strength_MPa": 100,
+      "Tg_C": 143,
+      "pfas_free": true
+    },
+    "tags": ["PFAS_replacement", "high_performance"]
+  },
+  {
+    "id": "MaSp1_WT",
+    "name": "Spider Silk MaSp1 (Wild Type)",
+    "category": "biomaterial",
+    "sequence": "MSRLRQLAHTTTGLRKLLRQYLANLSPQLESIRQLVGRQNDLIAAFQSM...",
+    "properties": {
+      "tensile_strength_GPa": 1.0,
+      "youngs_modulus_GPa": 10,
+      "elongation_at_break_percent": 25,
+      "cellulose_binding_Kd_nM": 50,
+      "pfas_free": true
+    },
+    "tags": ["biomaterial", "spider_silk", "sustainable_textile", "biobased"]
+  }
+]
+Load at startup into Materials Library.
+
+📋 PART 3: PIPELINE LAUNCHER - MATERIALS APPLICATIONS
+3.1 Applications Tree
+Extend Job Type dropdown in Pipeline Launcher with Materials applications:
+
+text
+Materials Science Applications
+├── Sustainable Textiles
+│   ├── Spider Silk Fibers ⭐
+│   ├── Bio-Processing Enzymes
+│   └── Dye-Degrading Proteins
+├── PFAS Replacement ⭐
+├── Battery Materials
+├── Photovoltaic Materials
+├── Superconductor Discovery
+├── Catalyst Discovery
+├── Thermoelectric Materials
+├── Aerospace Materials
+├── Biomedical Materials
+├── Wide-Gap Semiconductors
+├── Sustainable Construction
+├── Transparent Conductors
+├── Rare-Earth-Free Magnets
+├── Solid Electrolytes
+├── Water Purification
+└── Carbon Capture
+3.2 Application Configuration
+Create materials_applications.json:
+
+json
+{
+  "spider_silk_fibers": {
+    "name": "Spider Silk Fibers",
+    "description": "Design MaSp1/2-based protein fibers for high-strength sustainable textiles (GRS/BCI/GOTS)",
+    "default_chunk_size": 10000,
+    "default_workers": 4,
+    "default_properties": [
+      "tensile_strength_GPa",
+      "youngs_modulus_GPa",
+      "elongation_at_break_percent",
+      "cellulose_binding_Kd_nM"
+    ],
+    "default_model": "bionemo-materials-property-v1",
+    "openfold3_enabled": true,
+    "substrate_options": ["cellulose", "cotton", "polyester"]
+  },
+  
+  "pfas_replacement": {
+    "name": "PFAS Replacement",
+    "description": "Screen PFAS-free polymers for PTFE/PVDF replacements in seals, gaskets, coatings",
+    "default_chunk_size": 10000,
+    "default_workers": 4,
+    "default_properties": [
+      "thermal_stability_C",
+      "chemical_resistance_index",
+      "friction_coefficient",
+      "dielectric_constant",
+      "pfas_free"
+    ],
+    "default_model": "bionemo-materials-property-v1",
+    "openfold3_enabled": false,
+    "filter_rules": {
+      "exclude_patterns": ["perfluoro", "PFOS", "PFOA"],
+      "require_properties": ["pfas_free"]
+    }
+  },
+  
+  "bioprocessing_enzymes": {
+    "name": "Bio-Processing Enzymes",
+    "description": "Optimize cellulases and peroxidases for textile processing and wastewater",
+    "default_properties": [
+      "cellulose_binding_Kd_nM",
+      "dye_degradation_kcat_Km",
+      "thermal_stability_C",
+      "ph_stability_range"
+    ],
+    "openfold3_enabled": true
+  },
+  
+  "battery_materials": {
+    "name": "Battery Materials",
+    "description": "Screen cathode/electrolyte materials for high ionic conductivity",
+    "default_properties": [
+      "ionic_conductivity_S_cm",
+      "band_gap_eV",
+      "voltage_window_V"
+    ]
+  }
+}
+📋 PART 4: OPENFOLD3 INTEGRATION
+4.1 Deploy OpenFold3 NIM
+bash
+# On GPU node (A100/H100)
+docker run --gpus all -p 8000:8000 nvcr.io/nim/bionemo/openfold3:1.0
+Or use NVIDIA Build API: https://build.nvidia.com/openfold/openfold3
+
+4.2 Backend API Endpoints
+python
+# /api/structures/openfold3
+@app.post("/api/structures/openfold3")
+async def predict_structure(request: dict):
+    """
+    General OpenFold3 structure prediction
+    Supports: protein, DNA, RNA, ligand (SMILES)
+    """
+    payload = {
+        "input_id": request["input_id"],
+        "molecules": request["molecules"]
+        # molecules: [
+        #   {"type": "protein", "sequence": "MTEYK..."},
+        #   {"type": "ligand", "smiles": "CC1=CC=C..."}
+        # ]
+    }
+    
+    resp = requests.post(OPENFOLD3_URL, json=payload)
+    structure = resp.json()
+    
+    # Save to storage
+    structure_id = save_structure(structure["cif"])
+    
+    return {
+        "structure_id": structure_id,
+        "confidence": structure["confidence"],
+        "pdb_url": f"/structures/{structure_id}.pdb",
+        "cif_url": f"/structures/{structure_id}.cif"
+    }
+
+# /api/materials/spider_silk/openfold3
+@app.post("/api/materials/spider_silk/openfold3")
+async def predict_silk_complex(request: dict):
+    """
+    Spider silk + substrate complex prediction
+    """
+    variant = get_material(request["variant_id"])
+    
+    # Substrate SMILES
+    substrate_smiles = {
+        "cellulose": "C([C@@H]1[C@H]([C@@H]([C@H](O[C@H]1O)CO)O)O)O",
+        "cotton": "C([C@@H]1[C@H]([C@@H]([C@H](O[C@H]1O)CO)O)O)O",
+        "polyester": "CC(=O)OC1=CC=C(C=C1)C(=O)O"
+    }
+    
+    payload = {
+        "input_id": f"silk_{request['variant_id']}_{request['substrate']}",
+        "molecules": [
+            {"type": "protein", "sequence": variant.sequence},
+            {"type": "ligand", "smiles": substrate_smiles[request["substrate"]]}
+        ]
+    }
+    
+    return await predict_structure(payload)
+
+# /api/campaigns/targets/predict_structure
+@app.post("/api/campaigns/targets/predict_structure")
+async def predict_target_structure(campaign_id: str, target_gene: str):
+    """
+    Predict structure for drug campaign target
+    """
+    target = get_target_from_campaign(campaign_id, target_gene)
+    
+    payload = {
+        "input_id": f"target_{target_gene}",
+        "molecules": [
+            {"type": "protein", "sequence": target.uniprot_sequence}
+        ]
+    }
+    
+    structure = await predict_structure(payload)
+    
+    # Attach to campaign
+    update_campaign_target(campaign_id, target_gene, structure_id=structure["structure_id"])
+    
+    return structure
+📋 PART 5: BIONEMO PROPERTY PREDICTION
+5.1 Materials Property Prediction API
+python
+# /api/materials/predict_properties
+@app.post("/api/materials/predict_properties")
+async def predict_properties(request: dict):
+    """
+    BioNeMo material property prediction
+    Supports: polymers, biomaterials, composites
+    """
+    materials = [get_material(id) for id in request["material_ids"]]
+    properties_to_predict = request["properties"]
+    
+    predictions = []
+    
+    for material in materials:
+        # Prepare input for BioNeMo
+        bionemo_input = {
+            "material_id": material.id,
+            "smiles": material.smiles,
+            "sequence": material.sequence,  # For biomaterials
+            "composition": material.composition,
+            "properties": properties_to_predict,
+            "context": request.get("context", "general")
+        }
+        
+        # Call BioNeMo
+        result = requests.post(
+            BIONEMO_MATERIALS_URL,
+            json=bionemo_input
+        ).json()
+        
+        predictions.append({
+            "material_id": material.id,
+            "predictions": result["predictions"],
+            "confidence": result["confidence"]
+        })
+    
+    return {"predictions": predictions}
+
+# /api/campaigns/predict_materials
+@app.post("/api/campaigns/predict_materials")
+async def predict_campaign_materials(campaign_id: str):
+    """
+    Run BioNeMo predictions for all materials in campaign
+    """
+    campaign = get_campaign(campaign_id)
+    material_ids = campaign.selected_materials
+    properties = campaign.target_properties
+    
+    return await predict_properties({
+        "material_ids": material_ids,
+        "properties": properties,
+        "context": campaign.application
+    })
+📋 PART 6: TRAJECTORY ANALYSIS FOR MATERIALS
+6.1 Adapt Trajectory Analysis
+Materials mode uses same Trajectory Analysis UI but different semantics:
+
+Datasets tab:
+
+Load protein transcriptomes (spider silk glands, enzyme metagenomes)
+
+Load polymer synthesis datasets
+
+Trajectory tab:
+
+PGD smoothing along synthesis/expression pathways
+
+Branch points = different material variants
+
+Biomarkers tab:
+
+text
+Gene | Pseudotime | Direction | Fold Change | Property | Cell Type | Action
+MaSp1 | 0.72 | ↑ | 3.2x | Tensile | Gland cells | [Assay]
+Cell7A | 0.45 | ↑ | 4.1x | Binding | Enzyme | [Assay]
+DyP1 | 0.33 | ↑ | 2.8x | Degradation | Bacteria | [Assay]
+Targets/Readouts tab:
+
+Instead of "Druggable Targets" → "Material Targets"
+
+Shows protein variants with predicted material properties
+
+6.2 Materials Assay Templates
+json
+{
+  "fiber_strength_assays": {
+    "name": "Fiber Strength Testing",
+    "readouts": [
+      {"name": "Tensile strength", "method": "ASTM D2256", "unit": "GPa"},
+      {"name": "Young's modulus", "method": "ASTM D2256", "unit": "GPa"},
+      {"name": "Elongation at break", "method": "ASTM D2256", "unit": "%"},
+      {"name": "Fiber diameter", "method": "SEM", "unit": "μm"}
+    ]
+  },
+  
+  "enzyme_binding_assays": {
+    "name": "Enzyme-Substrate Binding",
+    "readouts": [
+      {"name": "Cellulose binding Kd", "method": "SPR", "unit": "nM"},
+      {"name": "Dye degradation kcat/Km", "method": "Spectrophotometry", "unit": "min⁻¹mM⁻¹"},
+      {"name": "Thermal stability Tm", "method": "DSC", "unit": "°C"},
+      {"name": "pH stability range", "method": "Activity assay", "unit": "pH units"}
+    ]
+  },
+  
+  "fabric_safety_assays": {
+    "name": "Fabric Processing Safety",
+    "readouts": [
+      {"name": "Cotton strength retention", "method": "ASTM D5035", "unit": "%"},
+      {"name": "Color fastness", "method": "AATCC 61", "unit": "grade"},
+      {"name": "Wastewater toxicity EC50", "method": "ISO 11348", "unit": "mg/L"}
+    ]
+  }
+}
+📋 PART 7: CAMPAIGN WORKFLOW
+7.1 Materials Campaign Creation
+When user clicks "Create Campaign" from Trajectory Targets:
+
+typescript
+interface MaterialsCampaign {
+  id: string
+  name: string
+  application: 'spider_silk' | 'pfas_replacement' | 'bioprocessing' | ...
+  
+  target: {
+    protein_id?: string       // For biomaterials
+    material_id?: string      // For polymers
+    sequence?: string
+    expression_peak?: number
+    fold_change?: number
+  }
+  
+  properties_to_optimize: {
+    property: string
+    target_value: number
+    weight: number
+  }[]
+  
+  assays: {
+    assay_template: string
+    readouts: string[]
+  }[]
+  
+  structures: {
+    structure_id: string
+    type: 'apo_protein' | 'protein_ligand_complex' | 'fiber_assembly'
+    confidence: number
+    pdb_url: string
+  }[]
+  
+  predictions: {
+    material_id: string
+    predicted_properties: Record<string, number>
+    confidence: number
+  }[]
+  
+  status: 'design' | 'prediction' | 'testing' | 'completed'
+}
+7.2 Campaign Detail Page
+text
+┌─────────────────────────────────────────────────────────────┐
+│ Spider Silk Sustainable Fibers Campaign                     │
+│ Application: Sustainable Textiles (GRS/BCI/GOTS)            │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ 🎯 Target: MaSp1 variant 003                                │
+│    • Expression peak: t=0.72 (Gland cells)                  │
+│    • Fold change: 3.2x ↑                                    │
+│                                                             │
+│ 🧬 Structure: [OpenFold3 Predicted] [View 3D] [Download]   │
+│    • MaSp1-Cellulose complex                                │
+│    • Confidence: 0.92                                       │
+│                                                             │
+│ 📊 Predicted Properties (BioNeMo):                          │
+│    • Tensile strength: 1.8 GPa (target: >1.5 GPa) ✓        │
+│    • Young's modulus: 12.5 GPa                              │
+│    • Elongation: 20% (target: >15%) ✓                      │
+│    • Cellulose binding: 5.4 nM (target: <10 nM) ✓          │
+│                                                             │
+│ 🧪 Selected Assays (3):                                     │
+│    ☑ ASTM D2256 tensile testing                            │
+│    ☑ SPR cellulose binding                                 │
+│    ☑ SEM fiber imaging                                     │
+│                                                             │
+│ 📤 Actions:                                                 │
+│    [Run FEA Simulation] [Export Sequence] [Order Synthesis] │
+└─────────────────────────────────────────────────────────────┘
+📋 PART 8: SPIDER SILK MODULE (PRIORITY)
+8.1 Spider Silk Variants Generation
+python
+# /api/materials/spider_silk/generate_variants
+@app.post("/api/materials/spider_silk/generate_variants")
+async def generate_silk_variants(base_id: str, num_variants: int):
+    """
+    Generate MaSp1/2 sequence variants
+    """
+    base_material = get_material(base_id)
+    base_seq = base_material.sequence
+    
+    variants = []
+    
+    for i in range(num_variants):
+        # Variant strategies:
+        # 1. Repeat block expansion (GPGXX motifs)
+        # 2. Poly-A stretch modification
+        # 3. Conservative mutations in spacer regions
+        
+        variant_seq = apply_variant_strategy(base_seq, i)
+        
+        variant = {
+            "id": f"{base_id}_var_{i:03d}",
+            "name": f"{base_material.name} Variant {i+1}",
+            "category": "biomaterial",
+            "sequence": variant_seq,
+            "parent_id": base_id,
+            "mutation_strategy": "repeat_expansion",
+            "tags": ["spider_silk", "variant", "computational"]
+        }
+        
+        variants.append(create_material(variant))
+    
+    return {"variants": variants}
+8.2 Spider Silk Pipeline
+text
+1. Select base: MaSp1 or MaSp2
+2. Generate 10-100 variants
+3. BioNeMo predict properties for all variants
+4. Rank by multi-objective score:
+   - Tensile strength (40%)
+   - Cellulose binding (30%)
+   - Manufacturability (20%)
+   - Cost (10%)
+5. Top 10 → OpenFold3 structure prediction
+6. Export top 3 for synthesis
+📋 PART 9: PFAS REPLACEMENT PIPELINE
+9.1 PFAS Screening
+python
+@app.post("/api/materials/pfas/screen")
+async def screen_pfas_replacements(request: dict):
+    """
+    Screen PFAS-free polymer library
+    """
+    # Load candidate library
+    candidates = load_material_library(request["library_id"])
+    
+    # Filter stage 1: PFAS exclusion
+    pfas_free = [m for m in candidates if is_pfas_free(m)]
+    
+    # Filter stage 2: Property constraints
+    use_case = request["use_case"]  # "seals", "gaskets", "coatings"
+    constraints = get_constraints(use_case)
+    
+    viable = [m for m in pfas_free if meets_constraints(m, constraints)]
+    
+    # Predict properties via BioNeMo
+    predictions = await predict_properties({
+        "material_ids": [m.id for m in viable],
+        "properties": [
+            "thermal_stability_C",
+            "chemical_resistance_index",
+            "friction_coefficient",
+            "dielectric_constant"
+        ]
+    })
+    
+    # Rank by multi-objective
+    ranked = rank_materials(predictions, constraints)
+    
+    return {
+        "initial_library_size": len(candidates),
+        "pfas_free_count": len(pfas_free),
+        "viable_count": len(viable),
+        "top_candidates": ranked[:20]
+    }
+9.2 PFAS UI Configuration
+When user selects "PFAS Replacement" application:
+
+text
+┌─────────────────────────────────────────────────┐
+│ PFAS Replacement Screening                      │
+│                                                 │
+│ Application Context:                            │
+│   Use case: [Seals ▼] [Gaskets] [Coatings]    │
+│                                                 │
+│ Operating Conditions:                           │
+│   Max temperature: [200°C]                      │
+│   Chemical media: [Acid ▼] [Solvent] [Water]  │
+│   Pressure: [10 MPa]                           │
+│                                                 │
+│ Target Properties:                              │
+│   ☑ Thermal stability >200°C                   │
+│   ☑ Chemical resistance index >0.8             │
+│   ☑ Friction coefficient <0.15                 │
+│   ☑ Cost <$50/kg                               │
+│                                                 │
+│ [Launch Screening]                              │
+└─────────────────────────────────────────────────┘
+📋 PART 10: ASSAY HARVESTING FOR MATERIALS
+10.1 Materials Assay Database
+Extend existing Assay Harvesting to include materials assays:
+
+json
+{
+  "materials_assays": {
+    "categories": {
+      "mechanical": [
+        "tensile_strength_astm_d2256",
+        "youngs_modulus",
+        "hardness_shore_d",
+        "impact_strength_izod"
+      ],
+      "thermal": [
+        "dsc_tg_tm",
+        "tga_decomposition",
+        "thermal_conductivity",
+        "coefficient_thermal_expansion"
+      ],
+      "chemical": [
+        "chemical_resistance_astm_d543",
+        "solvent_resistance",
+        "water_absorption_astm_d570"
+      ],
+      "electrical": [
+        "dielectric_constant_astm_d150",
+        "volume_resistivity",
+        "dielectric_strength"
+      ],
+      "surface": [
+        "contact_angle_goniometry",
+        "surface_energy",
+        "friction_coefficient_astm_d1894"
+      ],
+      "textile_specific": [
+        "fiber_tensile_astm_d2256",
+        "cellulose_binding_spr",
+        "dye_degradation_spectrophotometry",
+        "fabric_strength_retention_astm_d5035"
+      ]
+    }
+  }
+}
+📋 PART 11: INTEGRATION POINTS
+11.1 3D Viewer Enhancements
+Add "Materials Mode" to 3D Viewer:
+
+Protein–polymer complex visualization
+
+Fiber assembly coloring (helical/β-sheet/coil)
+
+Binding interface highlighting
+
+Substrate molecule rendering
+
+11.2 FEA Simulations
+Wire materials campaigns to FEA:
+
+Export OpenFold3 structures to FEA mesh
+
+Run tensile/compression simulations
+
+Predict fiber behavior under load
+
+11.3 Reports
+Extend Reports to include:
+
+Materials screening summaries
+
+Structure–property correlations
+
+Multi-objective optimization charts
+
+Export to Granta MI / Citrine
+
+📋 PART 12: DEPLOYMENT CHECKLIST
+Phase 1: Foundation (Week 1)
+ Materials Science mode toggle
+
+ Materials Library with seed data
+
+ Materials data model + API
+
+ Pipeline Launcher materials applications dropdown
+
+Phase 2: OpenFold3 (Week 2)
+ Deploy OpenFold3 NIM
+
+ /api/structures/openfold3 endpoint
+
+ Spider silk OpenFold3 endpoint
+
+ 3D Viewer integration
+
+Phase 3: BioNeMo (Week 2-3)
+ /api/materials/predict_properties endpoint
+
+ Property prediction for polymers
+
+ Property prediction for biomaterials
+
+ Integrate into Pipeline Launcher
+
+Phase 4: Spider Silk (Week 3)
+ Variant generation
+
+ Spider silk pipeline
+
+ MaSp1-cellulose complex prediction
+
+ Campaign creation for textiles
+
+Phase 5: PFAS Replacement (Week 3-4)
+ PFAS screening pipeline
+
+ Use case configuration UI
+
+ Multi-objective ranking
+
+ Results export
+
+Phase 6: Polish (Week 4)
+ Materials assay templates
+
+ Trajectory analysis materials mode
+
+ FEA integration
+
+ Reports and exports
+
+✅ SUCCESS CRITERIA
+User can:
+
+Switch to Materials Science mode
+
+Launch "Spider Silk Fibers" pipeline:
+
+Generate MaSp1 variants
+
+Predict properties via BioNeMo
+
+Predict structures via OpenFold3
+
+Create textile campaign
+
+Launch "PFAS Replacement" pipeline:
+
+Screen PFAS-free polymers
+
+Predict properties
+
+Rank by use case
+
+View structures in 3D Viewer
+
+Export results (sequences, properties, structures)
