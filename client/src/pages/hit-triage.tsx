@@ -232,8 +232,8 @@ function AgreementBadge({ level }: { level: "strong" | "good" | "mixed" | null }
   );
 }
 
-function AffinityScore({ score, unit = "nM" }: { score: number | null; unit?: string }) {
-  if (score === null) return <span className="text-muted-foreground text-xs">N/A</span>;
+function AffinityScore({ score, unit = "nM" }: { score: number | null | undefined; unit?: string }) {
+  if (score === null || score === undefined) return <span className="text-muted-foreground text-xs">N/A</span>;
   
   const stars = score < 10 ? 3 : score < 50 ? 2 : 1;
   const starDisplay = "★".repeat(stars) + "☆".repeat(3 - stars);
@@ -246,8 +246,8 @@ function AffinityScore({ score, unit = "nM" }: { score: number | null; unit?: st
   );
 }
 
-function DockingScore({ score }: { score: number | null }) {
-  if (score === null) return <span className="text-muted-foreground text-xs">N/A</span>;
+function DockingScore({ score }: { score: number | null | undefined }) {
+  if (score === null || score === undefined) return <span className="text-muted-foreground text-xs">N/A</span>;
   
   const absScore = Math.abs(score);
   const stars = absScore > 8 ? 3 : absScore > 6 ? 2 : 1;
