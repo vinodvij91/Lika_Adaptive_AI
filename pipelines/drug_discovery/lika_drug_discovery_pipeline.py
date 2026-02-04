@@ -223,6 +223,35 @@ logger.info(f"System: {NUM_WORKERS} CPU cores available")
 # ============================================================================
 
 @dataclass
+class RepurposingCandidate:
+    """Container for drug repurposing information with dose optimization"""
+    original_indication: str = ""
+    original_dose: str = ""
+    original_target: str = ""
+    repurposed_indication: str = ""
+    repurposed_dose: str = ""
+    dose_reduction_factor: float = 1.0
+    mechanism_change: str = ""
+    toxicity_reduction: str = ""
+    confidence_score: float = 0.0
+    success_factors: List[str] = field(default_factory=list)
+    clinical_evidence: str = "Preclinical"
+
+
+@dataclass
+class DoseOptimization:
+    """Dose optimization parameters"""
+    therapeutic_window: Tuple[float, float] = (0.0, 0.0)  # (min_effective, max_safe)
+    recommended_dose_mg: float = 0.0
+    dose_per_kg: float = 0.0
+    frequency: str = "Once daily"
+    route: str = "Oral"
+    bioavailability_adjustment: float = 1.0
+    food_effect: str = "None"
+    special_populations: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class MoleculeData:
     """Container for molecule information throughout the pipeline"""
     smiles: str
@@ -237,6 +266,8 @@ class MoleculeData:
     admet_profile: Dict[str, Any] = field(default_factory=dict)
     sar_analysis: Dict[str, Any] = field(default_factory=dict)
     optimization_suggestions: List[str] = field(default_factory=list)
+    dose_optimization: Optional[DoseOptimization] = None
+    repurposing_candidates: List[RepurposingCandidate] = field(default_factory=list)
     filter_results: Dict[str, bool] = field(default_factory=dict)
     final_score: float = 0.0
     rank: int = 0
@@ -838,11 +869,80 @@ class SARAnalysisStage(PipelineStage):
 
 
 # ============================================================================
-# Stage 6: Optimization
+# Stage 6: Optimization with Dose Optimization & Drug Repurposing
 # ============================================================================
 
 class OptimizationStage(PipelineStage):
-    """Stage 6: Generate molecular optimization suggestions"""
+    """Stage 6: Generate molecular optimization, dose optimization & repurposing suggestions"""
+    
+    # Known drug repurposing templates (Fenfluramine-style examples)
+    REPURPOSING_TEMPLATES = {
+        'fenfluramine': {
+            'original_indication': 'Obesity',
+            'original_dose': '60-120 mg/day',
+            'original_target': '5-HT2C receptor agonist',
+            'repurposed_indication': 'Dravet Syndrome / Lennox-Gastaut Syndrome',
+            'repurposed_dose': '0.2-0.7 mg/kg/day',
+            'dose_reduction_factor': 20.0,  # ~20x dose reduction
+            'mechanism_change': 'Sigma-1 receptor modulation + serotonergic',
+            'toxicity_reduction': 'Eliminates cardiovascular toxicity at lower dose',
+            'success_factors': ['Dose reduction', 'Different receptor affinity profile', 'Neuroprotective effects'],
+            'structural_features': ['amine', 'halogen'],
+            'clinical_evidence': 'FDA Approved'
+        },
+        'thalidomide': {
+            'original_indication': 'Morning sickness (withdrawn)',
+            'original_dose': '100-200 mg/day',
+            'original_target': 'Cereblon E3 ligase',
+            'repurposed_indication': 'Multiple Myeloma / Leprosy',
+            'repurposed_dose': '50-200 mg/day',
+            'dose_reduction_factor': 1.0,
+            'mechanism_change': 'IMiD immunomodulation',
+            'toxicity_reduction': 'Strict REMS program, contraindicated in pregnancy',
+            'success_factors': ['Novel mechanism discovery', 'Anti-angiogenic effects'],
+            'structural_features': ['amide', 'carbonyl'],
+            'clinical_evidence': 'FDA Approved'
+        },
+        'sildenafil': {
+            'original_indication': 'Angina (failed)',
+            'original_dose': '100 mg TID',
+            'original_target': 'PDE5 inhibitor',
+            'repurposed_indication': 'Erectile Dysfunction / Pulmonary Hypertension',
+            'repurposed_dose': '25-100 mg PRN / 20 mg TID',
+            'dose_reduction_factor': 3.0,
+            'mechanism_change': 'Same target, different tissue focus',
+            'toxicity_reduction': 'Lower dose reduces cardiovascular effects',
+            'success_factors': ['Serendipitous discovery', 'Different dosing regimen'],
+            'structural_features': ['sulfonamide', 'amine'],
+            'clinical_evidence': 'FDA Approved'
+        },
+        'minoxidil': {
+            'original_indication': 'Hypertension',
+            'original_dose': '10-40 mg/day oral',
+            'original_target': 'K+ channel opener',
+            'repurposed_indication': 'Androgenetic Alopecia (hair loss)',
+            'repurposed_dose': '2-5% topical solution',
+            'dose_reduction_factor': 100.0,  # Topical vs systemic
+            'mechanism_change': 'Topical application for local effect',
+            'toxicity_reduction': 'Topical avoids systemic hypotension',
+            'success_factors': ['Route change', 'Local vs systemic', 'Hair follicle stimulation'],
+            'structural_features': ['amine', 'hydroxyl'],
+            'clinical_evidence': 'FDA Approved'
+        },
+        'aspirin_low_dose': {
+            'original_indication': 'Pain/Inflammation',
+            'original_dose': '650-1000 mg QID',
+            'original_target': 'COX-1/COX-2 inhibitor',
+            'repurposed_indication': 'Cardiovascular Prevention',
+            'repurposed_dose': '81-100 mg/day',
+            'dose_reduction_factor': 10.0,
+            'mechanism_change': 'Antiplatelet effect at low dose',
+            'toxicity_reduction': 'Reduced GI bleeding at lower dose',
+            'success_factors': ['Dose reduction', 'Selective antiplatelet effect'],
+            'structural_features': ['carboxyl', 'ester'],
+            'clinical_evidence': 'Established Practice'
+        }
+    }
     
     OPTIMIZATION_STRATEGIES = {
         'reduce_cardiotoxicity': {
@@ -851,7 +951,8 @@ class OptimizationStage(PipelineStage):
                 'Add polar groups to reduce hERG binding',
                 'Reduce lipophilicity (target LogP < 3)',
                 'Consider adding carboxylic acid moiety',
-                'Introduce hydroxyl groups'
+                'Introduce hydroxyl groups',
+                'Consider Fenfluramine-style dose reduction for repurposing'
             ]
         },
         'improve_bbb_penetration': {
@@ -889,11 +990,52 @@ class OptimizationStage(PipelineStage):
                 'Fragment-based optimization',
                 'Consider macrocyclic constraints'
             ]
+        },
+        'dose_optimization': {
+            'condition': lambda d: d.get('logp', 0) > 3 or d.get('mw', 0) > 400,
+            'suggestions': [
+                'Consider lower dose with altered indication (Fenfluramine model)',
+                'Evaluate alternative routes (topical, inhaled) for dose reduction',
+                'Assess if different receptor targets at lower concentrations',
+                'Consider sustained-release formulation'
+            ]
         }
     }
     
+    # Therapeutic area dose ranges (mg/day, typical adult)
+    DOSE_RANGES_BY_INDICATION = {
+        'CNS': {'low': 1, 'medium': 50, 'high': 200, 'max': 600},
+        'Cardiovascular': {'low': 5, 'medium': 50, 'high': 200, 'max': 400},
+        'Oncology': {'low': 10, 'medium': 100, 'high': 500, 'max': 2000},
+        'Metabolic': {'low': 5, 'medium': 100, 'high': 500, 'max': 2000},
+        'Immunology': {'low': 1, 'medium': 25, 'high': 100, 'max': 400},
+        'Infectious': {'low': 50, 'medium': 250, 'high': 1000, 'max': 4000},
+        'Pain': {'low': 10, 'medium': 100, 'high': 400, 'max': 1000},
+        'General': {'low': 10, 'medium': 100, 'high': 400, 'max': 1000},
+    }
+    
     def __init__(self, config: PipelineConfig):
-        super().__init__(config, "Optimization", 6)
+        super().__init__(config, "Optimization & Dose Optimization", 6)
+        self.repurposing_templates = {}
+        self._load_repurposing_templates()
+        
+    def _load_repurposing_templates(self):
+        """Load repurposing templates from config if available"""
+        self.repurposing_templates = self.REPURPOSING_TEMPLATES.copy()
+        
+        # Try to load additional templates from disease config
+        try:
+            config_path = Path(self.config.disease_config_file)
+            if config_path.exists() and yaml:
+                with open(config_path, 'r') as f:
+                    config_data = yaml.safe_load(f)
+                    templates = config_data.get('repurposing_templates', {})
+                    for name, template in templates.items():
+                        if name not in self.repurposing_templates:
+                            self.repurposing_templates[name] = template
+                            logger.info(f"  Loaded repurposing template: {name}")
+        except Exception as e:
+            logger.debug(f"  Could not load additional repurposing templates: {e}")
         
     def run(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
         self.log_start()
@@ -903,11 +1045,25 @@ class OptimizationStage(PipelineStage):
             return molecules
             
         total_suggestions = 0
+        repurposing_candidates = 0
+        dose_optimizations = 0
+        
         for mol_data in deps.progress_bar(molecules, desc="  Optimization"):
+            # Generate optimization suggestions
             mol_data.optimization_suggestions = self._generate_suggestions(mol_data)
             total_suggestions += len(mol_data.optimization_suggestions)
             
+            # Perform dose optimization
+            mol_data.dose_optimization = self._calculate_dose_optimization(mol_data)
+            if mol_data.dose_optimization:
+                dose_optimizations += 1
+            
+            # Identify repurposing opportunities
+            mol_data.repurposing_candidates = self._identify_repurposing_candidates(mol_data)
+            repurposing_candidates += len(mol_data.repurposing_candidates)
+            
         logger.info(f"  Generated {total_suggestions} suggestions for {len(molecules)} molecules")
+        logger.info(f"  Dose optimizations: {dose_optimizations}, Repurposing candidates: {repurposing_candidates}")
         return molecules
         
     def _generate_suggestions(self, mol_data: MoleculeData) -> List[str]:
@@ -920,6 +1076,175 @@ class OptimizationStage(PipelineStage):
                 suggestions.extend(strategy['suggestions'][:2])  # Top 2 suggestions per issue
                 
         return list(set(suggestions))  # Remove duplicates
+        
+    def _calculate_dose_optimization(self, mol_data: MoleculeData) -> Optional[DoseOptimization]:
+        """Calculate optimized dose parameters based on molecular properties and ADMET"""
+        desc = mol_data.descriptors
+        if not desc:
+            return None
+            
+        mw = desc.get('mw', 300)
+        logp = desc.get('logp', 2)
+        tpsa = desc.get('tpsa', 70)
+        qed = desc.get('qed', 0.5)
+        
+        # Determine therapeutic area from disease target
+        disease = mol_data.disease_target.lower() if mol_data.disease_target else ''
+        if any(x in disease for x in ['alzheimer', 'parkinson', 'epilepsy', 'depression', 'schizophrenia', 'anxiety', 'migraine']):
+            therapeutic_area = 'CNS'
+        elif any(x in disease for x in ['heart', 'hypertension', 'arrhythmia', 'coronary', 'cardiovascular']):
+            therapeutic_area = 'Cardiovascular'
+        elif any(x in disease for x in ['cancer', 'tumor', 'leukemia', 'lymphoma', 'carcinoma']):
+            therapeutic_area = 'Oncology'
+        elif any(x in disease for x in ['diabetes', 'obesity', 'metabolic']):
+            therapeutic_area = 'Metabolic'
+        elif any(x in disease for x in ['arthritis', 'lupus', 'autoimmune', 'crohn']):
+            therapeutic_area = 'Immunology'
+        elif any(x in disease for x in ['infection', 'bacterial', 'viral', 'fungal']):
+            therapeutic_area = 'Infectious'
+        elif any(x in disease for x in ['pain', 'inflammation']):
+            therapeutic_area = 'Pain'
+        else:
+            therapeutic_area = 'General'
+            
+        dose_range = self.DOSE_RANGES_BY_INDICATION.get(therapeutic_area, self.DOSE_RANGES_BY_INDICATION['General'])
+        
+        # Estimate dose based on molecular properties
+        # Lower MW and moderate LogP generally allow for lower doses
+        base_dose = dose_range['medium']
+        
+        # Adjust for molecular weight (lower MW = potentially lower dose needed)
+        if mw < 300:
+            dose_factor = 0.7
+        elif mw < 400:
+            dose_factor = 0.85
+        elif mw < 500:
+            dose_factor = 1.0
+        else:
+            dose_factor = 1.3  # Higher MW may need higher dose for activity
+            
+        # Adjust for lipophilicity (affects absorption)
+        if logp < 1:
+            dose_factor *= 1.2  # Hydrophilic, may need higher dose
+        elif logp > 4:
+            dose_factor *= 0.8  # Very lipophilic, lower dose due to tissue accumulation
+            
+        # Adjust for bioavailability estimate
+        if tpsa > 140:
+            bioavailability = 0.3  # Poor oral absorption
+            dose_factor *= 1.5
+        elif tpsa > 100:
+            bioavailability = 0.5
+            dose_factor *= 1.2
+        else:
+            bioavailability = 0.7
+            
+        recommended_dose = base_dose * dose_factor
+        
+        # Calculate therapeutic window
+        min_effective = recommended_dose * 0.5
+        max_safe = recommended_dose * 4.0 if therapeutic_area != 'Oncology' else recommended_dose * 2.0
+        
+        # Determine frequency based on estimated half-life
+        if logp > 3:
+            frequency = "Once daily (long half-life expected)"
+        elif logp > 1:
+            frequency = "Twice daily"
+        else:
+            frequency = "Three times daily (short half-life expected)"
+            
+        # Determine route
+        if tpsa > 140 or mw > 600:
+            route = "Parenteral (poor oral absorption expected)"
+        else:
+            route = "Oral"
+            
+        # Food effect
+        if logp > 3:
+            food_effect = "Take with food (improves absorption of lipophilic drug)"
+        elif logp < 0:
+            food_effect = "Take on empty stomach"
+        else:
+            food_effect = "Can be taken with or without food"
+            
+        # Special populations
+        special_populations = {}
+        if logp > 3:
+            special_populations['hepatic_impairment'] = "Reduce dose by 50%"
+            special_populations['elderly'] = "Start at lower dose"
+        if mw < 300 and logp < 2:
+            special_populations['renal_impairment'] = "Reduce dose based on CrCl"
+            
+        return DoseOptimization(
+            therapeutic_window=(round(min_effective, 1), round(max_safe, 1)),
+            recommended_dose_mg=round(recommended_dose, 1),
+            dose_per_kg=round(recommended_dose / 70, 3),  # Assuming 70kg adult
+            frequency=frequency,
+            route=route,
+            bioavailability_adjustment=round(bioavailability, 2),
+            food_effect=food_effect,
+            special_populations=special_populations
+        )
+        
+    def _identify_repurposing_candidates(self, mol_data: MoleculeData) -> List[RepurposingCandidate]:
+        """Identify potential drug repurposing opportunities based on structural similarity"""
+        candidates = []
+        
+        # Get functional groups from SAR analysis
+        functional_groups = set(mol_data.sar_analysis.get('functional_groups', {}).keys())
+        desc = mol_data.descriptors
+        disease_target = mol_data.disease_target.lower() if mol_data.disease_target else ''
+        
+        for template_name, template in self.repurposing_templates.items():
+            template_features = set(template.get('structural_features', []))
+            
+            # Check structural similarity (shared functional groups)
+            shared_features = functional_groups & template_features
+            similarity_score = len(shared_features) / max(len(template_features), 1) if template_features else 0
+            
+            # Only consider if there's meaningful structural overlap
+            if similarity_score >= 0.3 or (len(shared_features) >= 1 and len(template_features) <= 2):
+                # Calculate repurposing confidence
+                confidence = similarity_score * 0.5
+                
+                # Boost if similar molecular properties
+                template_logp_range = (2.0, 4.0)  # Typical drug-like range
+                if template_logp_range[0] <= desc.get('logp', 0) <= template_logp_range[1]:
+                    confidence += 0.2
+                    
+                # Boost if QED is good
+                if desc.get('qed', 0) > 0.5:
+                    confidence += 0.1
+                    
+                # Create repurposing candidate
+                dose_reduction = template.get('dose_reduction_factor', 1.0)
+                
+                candidate = RepurposingCandidate(
+                    original_indication=template.get('original_indication', ''),
+                    original_dose=template.get('original_dose', ''),
+                    original_target=template.get('original_target', ''),
+                    repurposed_indication=template.get('repurposed_indication', ''),
+                    repurposed_dose=template.get('repurposed_dose', ''),
+                    dose_reduction_factor=dose_reduction,
+                    mechanism_change=template.get('mechanism_change', ''),
+                    toxicity_reduction=template.get('toxicity_reduction', ''),
+                    confidence_score=round(min(confidence, 1.0), 3),
+                    success_factors=template.get('success_factors', []),
+                    clinical_evidence=template.get('clinical_evidence', 'Preclinical')
+                )
+                
+                # Add suggestion based on Fenfluramine model if high cardiotoxicity risk
+                if template_name == 'fenfluramine' and desc.get('logp', 0) > 3.5:
+                    candidate.success_factors.append(
+                        f"Fenfluramine model: Consider {int(dose_reduction)}x dose reduction to mitigate cardiotoxicity"
+                    )
+                    
+                candidates.append(candidate)
+                
+        # Sort by confidence score
+        candidates.sort(key=lambda x: x.confidence_score, reverse=True)
+        
+        return candidates[:3]  # Return top 3 repurposing candidates
 
 
 # ============================================================================
@@ -1143,6 +1468,43 @@ class RankingExportStage(PipelineStage):
                 'Optimization_Suggestions': '; '.join(mol_data.optimization_suggestions),
                 'Screening_Method': mol_data.predictions.get('screening_method', ''),
             }
+            
+            # Add dose optimization data
+            if mol_data.dose_optimization:
+                dose_opt = mol_data.dose_optimization
+                row['Recommended_Dose_mg'] = dose_opt.recommended_dose_mg
+                row['Dose_Per_Kg'] = dose_opt.dose_per_kg
+                row['Dosing_Frequency'] = dose_opt.frequency
+                row['Route'] = dose_opt.route
+                row['Therapeutic_Window'] = f"{dose_opt.therapeutic_window[0]}-{dose_opt.therapeutic_window[1]} mg"
+                row['Bioavailability'] = f"{dose_opt.bioavailability_adjustment * 100:.0f}%"
+                row['Food_Effect'] = dose_opt.food_effect
+            else:
+                row['Recommended_Dose_mg'] = ''
+                row['Dose_Per_Kg'] = ''
+                row['Dosing_Frequency'] = ''
+                row['Route'] = ''
+                row['Therapeutic_Window'] = ''
+                row['Bioavailability'] = ''
+                row['Food_Effect'] = ''
+                
+            # Add repurposing data
+            if mol_data.repurposing_candidates:
+                top_repurposing = mol_data.repurposing_candidates[0]
+                row['Repurposing_Opportunity'] = top_repurposing.repurposed_indication
+                row['Repurposing_Confidence'] = f"{top_repurposing.confidence_score:.2f}"
+                row['Dose_Reduction_Factor'] = f"{top_repurposing.dose_reduction_factor:.1f}x"
+                row['Original_Indication'] = top_repurposing.original_indication
+                row['Mechanism_Change'] = top_repurposing.mechanism_change
+                row['Toxicity_Reduction'] = top_repurposing.toxicity_reduction
+            else:
+                row['Repurposing_Opportunity'] = ''
+                row['Repurposing_Confidence'] = ''
+                row['Dose_Reduction_Factor'] = ''
+                row['Original_Indication'] = ''
+                row['Mechanism_Change'] = ''
+                row['Toxicity_Reduction'] = ''
+                
             rows.append(row)
             
         df = pd.DataFrame(rows)
@@ -1160,6 +1522,23 @@ class RankingExportStage(PipelineStage):
                     df.to_excel(writer, sheet_name='All Results', index=False)
                     df.head(50).to_excel(writer, sheet_name='Top 50', index=False)
                     
+                    # Dose Optimization sheet
+                    dose_cols = ['Rank', 'Name', 'Disease_Target', 'Final_Score', 
+                                'Recommended_Dose_mg', 'Dose_Per_Kg', 'Dosing_Frequency', 
+                                'Route', 'Therapeutic_Window', 'Bioavailability', 'Food_Effect']
+                    dose_df = df[[c for c in dose_cols if c in df.columns]].head(100)
+                    dose_df.to_excel(writer, sheet_name='Dose Optimization', index=False)
+                    
+                    # Repurposing Candidates sheet
+                    repurposing_cols = ['Rank', 'Name', 'SMILES', 'Disease_Target', 'Final_Score',
+                                       'Repurposing_Opportunity', 'Repurposing_Confidence', 
+                                       'Dose_Reduction_Factor', 'Original_Indication',
+                                       'Mechanism_Change', 'Toxicity_Reduction']
+                    repurposing_df = df[[c for c in repurposing_cols if c in df.columns]]
+                    repurposing_df = repurposing_df[repurposing_df['Repurposing_Opportunity'] != ''].head(50)
+                    if len(repurposing_df) > 0:
+                        repurposing_df.to_excel(writer, sheet_name='Repurposing Candidates', index=False)
+                    
                     # Group by disease
                     if 'Disease_Target' in df.columns:
                         for disease in df['Disease_Target'].unique()[:10]:
@@ -1175,8 +1554,12 @@ class RankingExportStage(PipelineStage):
             logger.warning("  openpyxl not available for Excel export")
             
         # Save summary JSON
+        repurposing_count = sum(1 for m in molecules if m.repurposing_candidates)
+        dose_opt_count = sum(1 for m in molecules if m.dose_optimization)
+        
         summary = {
             'timestamp': datetime.now().isoformat(),
+            'pipeline_version': '2.1',
             'total_compounds': len(molecules),
             'top_10': [
                 {
@@ -1184,7 +1567,9 @@ class RankingExportStage(PipelineStage):
                     'name': m.name,
                     'smiles': m.smiles,
                     'score': m.final_score,
-                    'disease': m.disease_target
+                    'disease': m.disease_target,
+                    'recommended_dose_mg': m.dose_optimization.recommended_dose_mg if m.dose_optimization else None,
+                    'repurposing_opportunity': m.repurposing_candidates[0].repurposed_indication if m.repurposing_candidates else None
                 }
                 for m in molecules[:10]
             ],
@@ -1192,6 +1577,24 @@ class RankingExportStage(PipelineStage):
                 'avg_score': float(df['Final_Score'].mean()) if len(df) > 0 else 0,
                 'avg_qed': float(df['QED'].mean()) if len(df) > 0 else 0,
                 'avg_mw': float(df['MW'].mean()) if len(df) > 0 else 0,
+            },
+            'dose_optimization': {
+                'compounds_with_dose_optimization': dose_opt_count,
+                'therapeutic_areas_covered': list(set(
+                    m.disease_target for m in molecules if m.dose_optimization and m.disease_target
+                ))[:10]
+            },
+            'drug_repurposing': {
+                'compounds_with_repurposing_opportunities': repurposing_count,
+                'repurposing_templates_used': list(set(
+                    m.repurposing_candidates[0].original_indication 
+                    for m in molecules if m.repurposing_candidates
+                ))[:5],
+                'fenfluramine_style_candidates': sum(
+                    1 for m in molecules 
+                    if m.repurposing_candidates and 
+                    any(c.dose_reduction_factor >= 10 for c in m.repurposing_candidates)
+                )
             }
         }
         
