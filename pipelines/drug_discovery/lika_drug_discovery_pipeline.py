@@ -15,101 +15,208 @@ Production-Ready 8-Stage Pipeline:
 8. Ranking & Export (CPU) - Multi-criteria scoring, export
 
 Features:
-✅ 750+ diseases with comprehensive targets
-✅ Drug repurposing (Fenfluramine-style dose optimization)
-✅ Advanced SAR analysis with functional group substitution
-✅ State-of-the-art ADMET predictions
-✅ GPU acceleration for ML models
-✅ Production-ready error handling and logging
+- 750+ diseases with comprehensive targets
+- Drug repurposing (Fenfluramine-style dose optimization)
+- Advanced SAR analysis with functional group substitution
+- State-of-the-art ADMET predictions
+- GPU acceleration for ML models
+- Production-ready error handling and logging
 
 Author: Lika Sciences Drug Discovery Platform
-Version: 2.0
+Version: 2.1
 ================================================================================
 """
 
+from __future__ import annotations
+
 import os
 import sys
-import yaml
+import json
 import logging
 import warnings
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Optional, Any, Union
 from dataclasses import dataclass, field
 from datetime import datetime
+from abc import ABC, abstractmethod
 import multiprocessing as mp
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-import numpy as np
-import pandas as pd
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+import traceback
 
-# Chemistry libraries
-try:
-    from rdkit import Chem
-    from rdkit.Chem import AllChem, Descriptors, Lipinski, Crippen
-    from rdkit.Chem import Fragments, rdMolDescriptors, QED
-    from rdkit.Chem.Scaffolds import MurckoScaffold
-    from rdkit.Chem import rdRGroupDecomposition
-    from rdkit.Chem.FilterCatalog import FilterCatalog, FilterCatalogParams
-    from rdkit.Chem import MACCSkeys
-    from rdkit import DataStructs
-    RDKIT_AVAILABLE = True
-except ImportError:
-    RDKIT_AVAILABLE = False
-    warnings.warn("RDKit not available. Install with: pip install rdkit --break-system-packages")
-
-# Machine learning libraries
-try:
-    import torch
-    import torch.nn as nn
-    from torch.utils.data import Dataset, DataLoader
-    PYTORCH_AVAILABLE = True
-except ImportError:
-    PYTORCH_AVAILABLE = False
-    warnings.warn("PyTorch not available. Install with: pip install torch --break-system-packages")
-
-# Scientific computing
-try:
-    from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.model_selection import train_test_split
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
-    warnings.warn("Scikit-learn not available. Install with: pip install scikit-learn --break-system-packages")
-
-# Additional utilities
-try:
-    from tqdm import tqdm
-    TQDM_AVAILABLE = True
-except ImportError:
-    TQDM_AVAILABLE = False
-    warnings.warn("tqdm not available. Install with: pip install tqdm --break-system-packages")
-
-# Suppress RDKit warnings
+# Suppress warnings during import
 warnings.filterwarnings('ignore')
 
 # ============================================================================
-# Configuration and Constants
+# Dependency Management
 # ============================================================================
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('lika_drug_discovery.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)
+class DependencyManager:
+    """Manage optional dependencies with graceful fallbacks"""
+    
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self):
+        if self._initialized:
+            return
+        self._initialized = True
+        
+        # Core scientific computing
+        self.numpy = self._try_import('numpy', 'pip install numpy')
+        self.pandas = self._try_import('pandas', 'pip install pandas')
+        self.yaml = self._try_import('yaml', 'pip install pyyaml')
+        
+        # Chemistry
+        self.rdkit_available = False
+        self.Chem = None
+        self.AllChem = None
+        self.Descriptors = None
+        self.Crippen = None
+        self.rdMolDescriptors = None
+        self.QED = None
+        self.MurckoScaffold = None
+        self.FilterCatalog = None
+        self.FilterCatalogParams = None
+        self.DataStructs = None
+        self._init_rdkit()
+        
+        # Machine Learning
+        self.torch = None
+        self.nn = None
+        self.pytorch_available = False
+        self.device = 'cpu'
+        self._init_pytorch()
+        
+        # Sklearn
+        self.sklearn_available = False
+        self._init_sklearn()
+        
+        # Progress bar
+        self.tqdm = None
+        self.tqdm_available = False
+        self._init_tqdm()
+        
+        # Excel support
+        self.openpyxl_available = self._check_import('openpyxl')
+        
+    def _try_import(self, module_name: str, install_cmd: str):
+        """Try to import a module"""
+        try:
+            return __import__(module_name)
+        except ImportError:
+            logging.warning(f"{module_name} not available. Install with: {install_cmd}")
+            return None
+            
+    def _check_import(self, module_name: str) -> bool:
+        """Check if a module can be imported"""
+        try:
+            __import__(module_name)
+            return True
+        except ImportError:
+            return False
+    
+    def _init_rdkit(self):
+        """Initialize RDKit components"""
+        try:
+            from rdkit import Chem
+            from rdkit.Chem import AllChem, Descriptors, Crippen
+            from rdkit.Chem import rdMolDescriptors, QED
+            from rdkit.Chem.Scaffolds import MurckoScaffold
+            from rdkit.Chem.FilterCatalog import FilterCatalog, FilterCatalogParams
+            from rdkit import DataStructs
+            
+            self.Chem = Chem
+            self.AllChem = AllChem
+            self.Descriptors = Descriptors
+            self.Crippen = Crippen
+            self.rdMolDescriptors = rdMolDescriptors
+            self.QED = QED
+            self.MurckoScaffold = MurckoScaffold
+            self.FilterCatalog = FilterCatalog
+            self.FilterCatalogParams = FilterCatalogParams
+            self.DataStructs = DataStructs
+            self.rdkit_available = True
+            logging.info("RDKit initialized successfully")
+        except ImportError:
+            logging.warning("RDKit not available. Install with: pip install rdkit")
+            
+    def _init_pytorch(self):
+        """Initialize PyTorch"""
+        try:
+            import torch
+            import torch.nn as nn
+            self.torch = torch
+            self.nn = nn
+            self.pytorch_available = True
+            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            logging.info(f"PyTorch initialized. Device: {self.device}")
+        except ImportError:
+            logging.warning("PyTorch not available. Install with: pip install torch")
+            
+    def _init_sklearn(self):
+        """Initialize scikit-learn"""
+        try:
+            from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor
+            from sklearn.preprocessing import StandardScaler
+            self.sklearn_available = True
+            logging.info("Scikit-learn initialized successfully")
+        except ImportError:
+            logging.warning("Scikit-learn not available. Install with: pip install scikit-learn")
+            
+    def _init_tqdm(self):
+        """Initialize tqdm progress bar"""
+        try:
+            from tqdm import tqdm
+            self.tqdm = tqdm
+            self.tqdm_available = True
+        except ImportError:
+            logging.warning("tqdm not available. Install with: pip install tqdm")
+            
+    def progress_bar(self, iterable, desc: str = "", total: Optional[int] = None):
+        """Return progress bar or plain iterable"""
+        if self.tqdm_available and self.tqdm:
+            return self.tqdm(iterable, desc=desc, total=total)
+        return iterable
 
-# GPU configuration
-DEVICE = torch.device('cuda' if PYTORCH_AVAILABLE and torch.cuda.is_available() else 'cpu')
-logger.info(f"Using device: {DEVICE}")
+# Global dependency manager
+deps = DependencyManager()
 
-# Parallel processing
+# Lazy imports
+np = deps.numpy
+pd = deps.pandas
+yaml = deps.yaml
+
+# ============================================================================
+# Configuration and Logging
+# ============================================================================
+
+def setup_logging(log_file: str = 'lika_drug_discovery.log', level: int = logging.INFO):
+    """Configure logging with file and console output"""
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    
+    # Clear existing handlers
+    root = logging.getLogger()
+    root.handlers = []
+    
+    logging.basicConfig(
+        level=level,
+        format=log_format,
+        handlers=[
+            logging.FileHandler(log_file, mode='w'),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    return logging.getLogger(__name__)
+
+logger = setup_logging()
+
 NUM_WORKERS = mp.cpu_count()
-logger.info(f"Available CPU cores: {NUM_WORKERS}")
-
+logger.info(f"System: {NUM_WORKERS} CPU cores available")
 
 # ============================================================================
 # Data Classes
@@ -117,25 +224,38 @@ logger.info(f"Available CPU cores: {NUM_WORKERS}")
 
 @dataclass
 class MoleculeData:
-    """Container for molecule information"""
+    """Container for molecule information throughout the pipeline"""
     smiles: str
-    mol: Optional[Any] = None  # RDKit mol object
     name: str = ""
     disease_target: str = ""
+    mol: Optional[Any] = None
     primary_targets: List[str] = field(default_factory=list)
     secondary_targets: List[str] = field(default_factory=list)
-    fingerprint: Optional[np.ndarray] = None
+    fingerprint: Optional[Any] = None
     descriptors: Dict[str, float] = field(default_factory=dict)
     predictions: Dict[str, Any] = field(default_factory=dict)
     admet_profile: Dict[str, Any] = field(default_factory=dict)
     sar_analysis: Dict[str, Any] = field(default_factory=dict)
     optimization_suggestions: List[str] = field(default_factory=list)
+    filter_results: Dict[str, bool] = field(default_factory=dict)
     final_score: float = 0.0
     rank: int = 0
+    errors: List[str] = field(default_factory=list)
     
     def __post_init__(self):
-        if RDKIT_AVAILABLE and self.mol is None and self.smiles:
-            self.mol = Chem.MolFromSmiles(self.smiles)
+        """Initialize RDKit mol object from SMILES"""
+        if deps.rdkit_available and self.mol is None and self.smiles:
+            try:
+                self.mol = deps.Chem.MolFromSmiles(self.smiles)
+                if self.mol is None:
+                    self.errors.append(f"Invalid SMILES: {self.smiles}")
+            except Exception as e:
+                self.errors.append(f"SMILES parsing error: {str(e)}")
+                
+    @property
+    def is_valid(self) -> bool:
+        """Check if molecule is valid"""
+        return self.mol is not None and len(self.errors) == 0
 
 
 @dataclass
@@ -145,8 +265,8 @@ class DiseaseTarget:
     category: str
     icd10: str
     primary_targets: List[str]
-    secondary_targets: List[str]
-    pathways: List[str]
+    secondary_targets: List[str] = field(default_factory=list)
+    pathways: List[str] = field(default_factory=list)
     molecular_weight_range: Tuple[float, float] = (150, 650)
     logp_range: Tuple[float, float] = (-0.5, 5.0)
     tpsa_range: Tuple[float, float] = (20, 140)
@@ -157,132 +277,224 @@ class DiseaseTarget:
 
 @dataclass
 class PipelineConfig:
-    """Pipeline configuration"""
-    input_smiles_file: str
-    disease_config_file: str
-    output_directory: str
+    """Pipeline configuration settings"""
+    input_smiles_file: str = "input_smiles.csv"
+    disease_config_file: str = "disease_discovery_config.yaml"
+    output_directory: str = "output"
     num_workers: int = NUM_WORKERS
     batch_size: int = 1024
-    gpu_enabled: bool = PYTORCH_AVAILABLE and torch.cuda.is_available()
+    gpu_enabled: bool = True
     enable_sar: bool = True
     enable_optimization: bool = True
     enable_admet: bool = True
+    min_qed_threshold: float = 0.3
+    enable_pains_filter: bool = True
     verbose: bool = True
+    
+    def __post_init__(self):
+        """Validate and adjust config"""
+        if self.gpu_enabled and not deps.pytorch_available:
+            logger.warning("GPU requested but PyTorch not available. Using CPU.")
+            self.gpu_enabled = False
+        if deps.pytorch_available and self.gpu_enabled:
+            self.device = deps.device
+        else:
+            self.device = 'cpu'
+
+
+@dataclass
+class PipelineStats:
+    """Track pipeline statistics"""
+    start_time: datetime = field(default_factory=datetime.now)
+    end_time: Optional[datetime] = None
+    stage_times: Dict[str, float] = field(default_factory=dict)
+    molecules_loaded: int = 0
+    molecules_preprocessed: int = 0
+    molecules_screened: int = 0
+    molecules_filtered: int = 0
+    molecules_final: int = 0
+    diseases_loaded: int = 0
+    errors: List[str] = field(default_factory=list)
+    
+    def record_stage(self, stage_name: str, start: datetime, count: int = 0):
+        """Record stage completion time"""
+        elapsed = (datetime.now() - start).total_seconds()
+        self.stage_times[stage_name] = elapsed
+        logger.info(f"  Completed in {elapsed:.2f}s")
 
 
 # ============================================================================
-# Stage 1: Data Loading (CPU)
+# Pipeline Stages (Abstract Base)
 # ============================================================================
 
-class DataLoaderStage:
-    """Load molecular data and disease configurations"""
+class PipelineStage(ABC):
+    """Abstract base class for pipeline stages"""
+    
+    def __init__(self, config: PipelineConfig, stage_name: str, stage_num: int):
+        self.config = config
+        self.stage_name = stage_name
+        self.stage_num = stage_num
+        
+    def log_start(self):
+        logger.info(f"\n[Stage {self.stage_num}/8] {self.stage_name}...")
+        
+    @abstractmethod
+    def run(self, data: Any) -> Any:
+        """Execute the stage"""
+        pass
+
+
+# ============================================================================
+# Stage 1: Data Loading
+# ============================================================================
+
+class DataLoadingStage(PipelineStage):
+    """Stage 1: Load molecular data and disease configurations"""
     
     def __init__(self, config: PipelineConfig):
-        self.config = config
+        super().__init__(config, "Data Loading", 1)
         self.diseases: Dict[str, DiseaseTarget] = {}
         self.molecules: List[MoleculeData] = []
         
+    def run(self, data: Any = None) -> Tuple[Dict[str, DiseaseTarget], List[MoleculeData]]:
+        self.log_start()
+        self.diseases = self.load_disease_config()
+        self.molecules = self.load_smiles()
+        return self.diseases, self.molecules
+        
     def load_disease_config(self) -> Dict[str, DiseaseTarget]:
         """Load disease configuration from YAML"""
-        logger.info("Loading disease configuration...")
+        logger.info("  Loading disease configuration...")
         
+        if not yaml:
+            logger.error("PyYAML not available")
+            return {}
+            
+        config_path = Path(self.config.disease_config_file)
+        if not config_path.exists():
+            logger.warning(f"  Disease config not found: {config_path}")
+            return self._generate_sample_diseases()
+            
         try:
-            with open(self.config.disease_config_file, 'r') as f:
+            with open(config_path, 'r') as f:
                 config_data = yaml.safe_load(f)
                 
+            diseases = {}
             for disease_data in config_data.get('diseases', []):
-                disease = DiseaseTarget(
-                    name=disease_data['name'],
-                    category=disease_data['category'],
-                    icd10=disease_data['icd10'],
-                    primary_targets=disease_data['targets']['primary'],
-                    secondary_targets=disease_data['targets'].get('secondary', []),
-                    pathways=disease_data['pathways'],
-                    molecular_weight_range=tuple(disease_data.get('molecular_weight_range', [150, 650])),
-                    logp_range=tuple(disease_data.get('logp_range', [-0.5, 5.0])),
-                    tpsa_range=tuple(disease_data.get('tpsa_range', [20, 140])),
-                    priority=disease_data.get('priority', 'medium'),
-                    time_critical=disease_data.get('time_critical', False),
-                    repurposing_candidates=disease_data.get('repurposing_candidates', [])
-                )
-                self.diseases[disease.name] = disease
-                
-            logger.info(f"Loaded {len(self.diseases)} diseases")
-            return self.diseases
+                try:
+                    disease = DiseaseTarget(
+                        name=disease_data.get('name', 'Unknown'),
+                        category=disease_data.get('category', 'General'),
+                        icd10=disease_data.get('icd10', 'X00'),
+                        primary_targets=disease_data.get('targets', {}).get('primary', []),
+                        secondary_targets=disease_data.get('targets', {}).get('secondary', []),
+                        pathways=disease_data.get('pathways', []),
+                        molecular_weight_range=tuple(disease_data.get('molecular_weight_range', [150, 650])),
+                        logp_range=tuple(disease_data.get('logp_range', [-0.5, 5.0])),
+                        tpsa_range=tuple(disease_data.get('tpsa_range', [20, 140])),
+                        priority=disease_data.get('priority', 'medium'),
+                        time_critical=disease_data.get('time_critical', False),
+                        repurposing_candidates=disease_data.get('repurposing_candidates', [])
+                    )
+                    diseases[disease.name] = disease
+                except Exception as e:
+                    logger.warning(f"  Error parsing disease: {e}")
+                    
+            logger.info(f"  Loaded {len(diseases)} diseases")
+            return diseases
             
         except Exception as e:
-            logger.error(f"Error loading disease config: {e}")
-            raise
+            logger.error(f"  Error loading disease config: {e}")
+            return self._generate_sample_diseases()
+            
+    def _generate_sample_diseases(self) -> Dict[str, DiseaseTarget]:
+        """Generate sample diseases for testing"""
+        sample_diseases = [
+            ("Alzheimer Disease", "Neurological", "G30"),
+            ("Parkinson Disease", "Neurological", "G20"),
+            ("Type 2 Diabetes", "Metabolic", "E11"),
+            ("Hypertension", "Cardiovascular", "I10"),
+            ("Breast Cancer", "Oncology", "C50"),
+            ("Lung Cancer", "Oncology", "C34"),
+            ("Depression", "Psychiatric", "F32"),
+            ("Rheumatoid Arthritis", "Autoimmune", "M05"),
+        ]
+        
+        diseases = {}
+        for name, category, icd10 in sample_diseases:
+            diseases[name] = DiseaseTarget(
+                name=name,
+                category=category,
+                icd10=icd10,
+                primary_targets=["Target1", "Target2"],
+                secondary_targets=["Target3"]
+            )
+        logger.info(f"  Generated {len(diseases)} sample diseases")
+        return diseases
             
     def load_smiles(self) -> List[MoleculeData]:
         """Load SMILES from file or generate sample data"""
-        logger.info("Loading SMILES data...")
+        logger.info("  Loading SMILES data...")
         
-        if os.path.exists(self.config.input_smiles_file):
-            try:
-                # Try loading from CSV/TSV
-                if self.config.input_smiles_file.endswith('.csv'):
-                    df = pd.read_csv(self.config.input_smiles_file)
-                else:
-                    df = pd.read_csv(self.config.input_smiles_file, sep='\t')
-                    
-                for _, row in df.iterrows():
-                    mol_data = MoleculeData(
-                        smiles=row.get('SMILES', row.get('smiles', '')),
-                        name=row.get('Name', row.get('name', row.get('ID', ''))),
-                        disease_target=row.get('Disease', row.get('disease', ''))
-                    )
-                    if mol_data.smiles:
-                        self.molecules.append(mol_data)
-                        
-                logger.info(f"Loaded {len(self.molecules)} molecules from file")
-                
-            except Exception as e:
-                logger.error(f"Error loading SMILES file: {e}")
-                logger.info("Generating sample molecules instead...")
-                self.molecules = self._generate_sample_molecules()
-        else:
-            logger.info("Input file not found. Generating sample molecules...")
-            self.molecules = self._generate_sample_molecules()
+        if not pd:
+            logger.error("Pandas not available")
+            return self._generate_sample_molecules()
             
-        return self.molecules
+        input_path = Path(self.config.input_smiles_file)
+        if not input_path.exists():
+            logger.warning(f"  Input file not found: {input_path}")
+            return self._generate_sample_molecules()
+            
+        try:
+            # Detect file format
+            if input_path.suffix.lower() == '.csv':
+                df = pd.read_csv(input_path)
+            elif input_path.suffix.lower() in ['.tsv', '.txt']:
+                df = pd.read_csv(input_path, sep='\t')
+            else:
+                df = pd.read_csv(input_path)  # Try CSV as default
+                
+            molecules = []
+            for _, row in df.iterrows():
+                smiles = row.get('SMILES', row.get('smiles', row.get('Smiles', '')))
+                if smiles and str(smiles).strip():
+                    mol_data = MoleculeData(
+                        smiles=str(smiles).strip(),
+                        name=str(row.get('Name', row.get('name', row.get('ID', f"Compound_{len(molecules)}"))) or ''),
+                        disease_target=str(row.get('Disease', row.get('disease', row.get('Target', ''))) or '')
+                    )
+                    molecules.append(mol_data)
+                    
+            logger.info(f"  Loaded {len(molecules)} molecules from file")
+            return molecules
+            
+        except Exception as e:
+            logger.error(f"  Error loading SMILES file: {e}")
+            return self._generate_sample_molecules()
         
-    def _generate_sample_molecules(self, n=100) -> List[MoleculeData]:
+    def _generate_sample_molecules(self, n: int = 50) -> List[MoleculeData]:
         """Generate sample drug-like molecules for testing"""
         sample_smiles = [
-            # CNS drugs
             ("CC(C)NCC(COc1ccccc1)O", "Propranolol", "Hypertension"),
             ("CN1C2CCC1CC(C2)OC(=O)C(CO)c3ccccc3", "Atropine", "Bradycardia"),
-            ("COC1=C(C=CC(=C1)CC2C(=O)NC(=O)S2)OC", "Pioglitazone", "Type 2 Diabetes"),
+            ("COC1=C(C=CC(=C1)CC2C(=O)NC(=O)S2)OC", "Pioglitazone-like", "Type 2 Diabetes"),
             ("CC(C)Cc1ccc(cc1)C(C)C(=O)O", "Ibuprofen", "Pain"),
             ("CC(=O)Oc1ccccc1C(=O)O", "Aspirin", "Pain"),
-            
-            # Kinase inhibitors (cancer)
-            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", "Imatinib", "Leukemia"),
-            ("COc1cc2ncnc(c2cc1OCCCN3CCOCC3)Nc4ccc(c(c4)Cl)F", "Gefitinib", "Lung Cancer"),
-            
-            # Cardiovascular
-            ("CCCCC(=O)N(CC1=CC=C(C=C1)C2=CC=CC=C2C3=NNN=N3)C4CCN(CC4)C", "Losartan", "Hypertension"),
-            ("CC(C)(C)NCC(COc1cccc2[nH]ccc12)O", "Propranolol", "Arrhythmia"),
-            
-            # Antibiotics
-            ("CC1(C(N2C(S1)C(C2=O)NC(=O)Cc3ccccc3)C(=O)O)C", "Penicillin G", "Infection"),
-            
-            # Neurological
+            ("Cc1ccc(cc1Nc2nccc(n2)c3cccnc3)NC(=O)c4ccc(cc4)CN5CCN(CC5)C", "Imatinib-like", "Leukemia"),
+            ("COc1cc2ncnc(c2cc1OCCCN3CCOCC3)Nc4ccc(c(c4)Cl)F", "Gefitinib-like", "Lung Cancer"),
+            ("CC1(C(N2C(S1)C(C2=O)NC(=O)Cc3ccccc3)C(=O)O)C", "Penicillin-like", "Infection"),
             ("CN1C=NC2=C1C(=O)N(C(=O)N2C)C", "Caffeine", "Fatigue"),
-            ("CC(C)NCC(COc1cccc2c1cccc2)O", "Propranolol", "Migraine"),
-            
-            # Metabolic
             ("CN(C)C(=N)NC(=N)N", "Metformin", "Type 2 Diabetes"),
-            
-            # Antihistamines
-            ("CN1CCCC1CCOc2ccc(cc2)C#N", "Cetirizine", "Allergies"),
+            ("c1ccc2c(c1)cc3ccccc3n2", "Phenanthridine", "Research"),
+            ("O=C(O)c1ccccc1O", "Salicylic Acid", "Pain"),
+            ("CCO", "Ethanol", "Solvent"),
+            ("CC(=O)Nc1ccc(cc1)O", "Paracetamol", "Pain"),
+            ("Clc1ccc(cc1)C(c2ccc(Cl)cc2)C(Cl)(Cl)Cl", "DDT", "Research"),
         ]
         
         molecules = []
         diseases = list(self.diseases.keys()) if self.diseases else ["General"]
         
-        # Add provided samples
         for smiles, name, disease in sample_smiles:
             molecules.append(MoleculeData(
                 smiles=smiles,
@@ -290,227 +502,268 @@ class DataLoaderStage:
                 disease_target=disease
             ))
             
-        # Generate additional random-ish molecules
+        # Extend with variations
         for i in range(max(0, n - len(sample_smiles))):
-            # Use a template and modify
-            base_idx = i % len(sample_smiles)
+            base = sample_smiles[i % len(sample_smiles)]
             molecules.append(MoleculeData(
-                smiles=sample_smiles[base_idx][0],
-                name=f"Compound_{i+len(sample_smiles)}",
+                smiles=base[0],
+                name=f"Compound_{i + len(sample_smiles)}",
                 disease_target=diseases[i % len(diseases)]
             ))
             
-        logger.info(f"Generated {len(molecules)} sample molecules")
+        logger.info(f"  Generated {len(molecules)} sample molecules")
         return molecules
 
 
 # ============================================================================
-# Stage 2: Preprocessing (CPU-parallel)
+# Stage 2: Preprocessing
 # ============================================================================
 
-class Preprocessor:
-    """Molecular preprocessing and fingerprint generation"""
+class PreprocessingStage(PipelineStage):
+    """Stage 2: Molecular preprocessing and fingerprint generation"""
     
     def __init__(self, config: PipelineConfig):
-        self.config = config
+        super().__init__(config, "Preprocessing", 2)
         
-    def process_molecules(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
-        """Process molecules in parallel"""
-        logger.info(f"Preprocessing {len(molecules)} molecules...")
+    def run(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
+        self.log_start()
         
-        if not RDKIT_AVAILABLE:
-            logger.error("RDKit not available for preprocessing")
+        if not deps.rdkit_available:
+            logger.error("  RDKit not available for preprocessing")
             return molecules
             
         processed = []
-        iterator = tqdm(molecules, desc="Preprocessing") if TQDM_AVAILABLE else molecules
+        failed = 0
         
-        for mol_data in iterator:
+        for mol_data in deps.progress_bar(molecules, desc="  Preprocessing"):
             try:
                 if mol_data.mol is None:
-                    mol_data.mol = Chem.MolFromSmiles(mol_data.smiles)
+                    mol_data.mol = deps.Chem.MolFromSmiles(mol_data.smiles)
                     
                 if mol_data.mol is not None:
-                    # Generate fingerprint
                     mol_data.fingerprint = self._generate_fingerprint(mol_data.mol)
-                    
-                    # Calculate descriptors
                     mol_data.descriptors = self._calculate_descriptors(mol_data.mol)
-                    
                     processed.append(mol_data)
+                else:
+                    failed += 1
             except Exception as e:
-                logger.warning(f"Error processing molecule {mol_data.name}: {e}")
+                mol_data.errors.append(f"Preprocessing error: {str(e)}")
+                failed += 1
                 
-        logger.info(f"Successfully preprocessed {len(processed)} molecules")
+        logger.info(f"  Preprocessed {len(processed)} molecules ({failed} failed)")
         return processed
         
-    def _generate_fingerprint(self, mol) -> np.ndarray:
-        """Generate Morgan fingerprint"""
-        fp = AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=2048)
+    def _generate_fingerprint(self, mol) -> Any:
+        """Generate Morgan fingerprint (ECFP4)"""
+        if not np:
+            return None
+        fp = deps.AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=2048)
         arr = np.zeros((2048,), dtype=np.int8)
-        DataStructs.ConvertToNumpyArray(fp, arr)
+        deps.DataStructs.ConvertToNumpyArray(fp, arr)
         return arr
         
     def _calculate_descriptors(self, mol) -> Dict[str, float]:
-        """Calculate molecular descriptors"""
-        return {
-            'mw': Descriptors.MolWt(mol),
-            'logp': Crippen.MolLogP(mol),
-            'tpsa': rdMolDescriptors.CalcTPSA(mol),
-            'hbd': rdMolDescriptors.CalcNumHBD(mol),
-            'hba': rdMolDescriptors.CalcNumHBA(mol),
-            'rotatable_bonds': rdMolDescriptors.CalcNumRotatableBonds(mol),
-            'aromatic_rings': rdMolDescriptors.CalcNumAromaticRings(mol),
-            'heavy_atoms': mol.GetNumHeavyAtoms(),
-            'qed': QED.qed(mol),
-            'fraction_csp3': rdMolDescriptors.CalcFractionCSP3(mol)
-        }
+        """Calculate comprehensive molecular descriptors"""
+        try:
+            return {
+                'mw': deps.Descriptors.MolWt(mol),
+                'logp': deps.Crippen.MolLogP(mol),
+                'tpsa': deps.rdMolDescriptors.CalcTPSA(mol),
+                'hbd': deps.rdMolDescriptors.CalcNumHBD(mol),
+                'hba': deps.rdMolDescriptors.CalcNumHBA(mol),
+                'rotatable_bonds': deps.rdMolDescriptors.CalcNumRotatableBonds(mol),
+                'aromatic_rings': deps.rdMolDescriptors.CalcNumAromaticRings(mol),
+                'heavy_atoms': mol.GetNumHeavyAtoms(),
+                'qed': deps.QED.qed(mol),
+                'fraction_csp3': deps.rdMolDescriptors.CalcFractionCSP3(mol),
+                'num_rings': deps.rdMolDescriptors.CalcNumRings(mol),
+                'num_heteroatoms': deps.rdMolDescriptors.CalcNumHeteroatoms(mol),
+            }
+        except Exception as e:
+            logger.warning(f"  Descriptor calculation error: {e}")
+            return {}
 
 
 # ============================================================================
-# Stage 3: Virtual Screening (GPU)
+# Stage 3: Virtual Screening
 # ============================================================================
 
-class VirtualScreener:
-    """ML-based virtual screening"""
+class VirtualScreeningStage(PipelineStage):
+    """Stage 3: ML-based virtual screening"""
     
     def __init__(self, config: PipelineConfig):
-        self.config = config
-        self.device = DEVICE if config.gpu_enabled else torch.device('cpu')
+        super().__init__(config, "Virtual Screening", 3)
         self.model = None
         
-    def screen_molecules(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
-        """Screen molecules using ML model"""
-        logger.info(f"Virtual screening {len(molecules)} molecules on {self.device}...")
+    def run(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
+        self.log_start()
         
-        if not PYTORCH_AVAILABLE:
-            logger.warning("PyTorch not available, using simple scoring")
-            return self._simple_scoring(molecules)
+        if deps.pytorch_available and self.config.gpu_enabled:
+            logger.info(f"  Using device: {self.config.device}")
+            return self._gpu_screening(molecules)
+        else:
+            logger.info("  Using CPU-based scoring")
+            return self._cpu_screening(molecules)
             
-        # Build simple neural network model
-        self.model = self._build_model()
+    def _gpu_screening(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
+        """GPU-accelerated screening using neural network"""
+        torch = deps.torch
+        nn = deps.nn
+        device = torch.device(self.config.device)
         
-        # Process in batches
-        batch_size = self.config.batch_size
-        iterator = range(0, len(molecules), batch_size)
-        if TQDM_AVAILABLE:
-            iterator = tqdm(iterator, desc="Virtual Screening")
-            
-        for i in iterator:
-            batch = molecules[i:i+batch_size]
-            self._score_batch(batch)
-            
-        return molecules
-        
-    def _build_model(self) -> nn.Module:
-        """Build neural network for activity prediction"""
+        # Build model
         model = nn.Sequential(
             nn.Linear(2048, 512),
             nn.ReLU(),
+            nn.BatchNorm1d(512),
             nn.Dropout(0.3),
-            nn.Linear(512, 128),
+            nn.Linear(512, 256),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, 1),
+            nn.Dropout(0.2),
+            nn.Linear(256, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1),
             nn.Sigmoid()
-        ).to(self.device)
-        return model
+        ).to(device)
         
-    def _score_batch(self, batch: List[MoleculeData]):
-        """Score a batch of molecules"""
-        fingerprints = []
-        for mol_data in batch:
-            if mol_data.fingerprint is not None:
-                fingerprints.append(mol_data.fingerprint)
-            else:
-                fingerprints.append(np.zeros(2048, dtype=np.float32))
-                
-        if fingerprints:
-            X = torch.tensor(np.array(fingerprints), dtype=torch.float32).to(self.device)
+        model.eval()
+        
+        # Process in batches
+        batch_size = self.config.batch_size
+        for i in range(0, len(molecules), batch_size):
+            batch = molecules[i:i+batch_size]
+            fingerprints = []
             
-            with torch.no_grad():
-                scores = self.model(X).cpu().numpy().flatten()
+            for mol_data in batch:
+                if mol_data.fingerprint is not None:
+                    fingerprints.append(mol_data.fingerprint.astype(np.float32))
+                else:
+                    fingerprints.append(np.zeros(2048, dtype=np.float32))
+                    
+            if fingerprints:
+                X = torch.tensor(np.array(fingerprints), dtype=torch.float32).to(device)
                 
-            for mol_data, score in zip(batch, scores):
-                mol_data.predictions['activity_score'] = float(score)
-                
-    def _simple_scoring(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
-        """Simple rule-based scoring as fallback"""
-        for mol_data in molecules:
+                with torch.no_grad():
+                    scores = model(X).cpu().numpy().flatten()
+                    
+                for mol_data, score in zip(batch, scores):
+                    mol_data.predictions['activity_score'] = float(score)
+                    mol_data.predictions['screening_method'] = 'GPU-Neural-Network'
+                    
+        logger.info(f"  Screened {len(molecules)} molecules on GPU")
+        return molecules
+        
+    def _cpu_screening(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
+        """CPU-based rule-based scoring"""
+        for mol_data in deps.progress_bar(molecules, desc="  Screening"):
             desc = mol_data.descriptors
             if desc:
-                score = desc.get('qed', 0.5)
+                # Composite scoring based on drug-likeness
+                qed = desc.get('qed', 0.5)
+                
+                # Penalize extreme values
+                mw_score = 1.0 if 200 < desc.get('mw', 0) < 500 else 0.7
+                logp_score = 1.0 if -0.5 < desc.get('logp', 0) < 5 else 0.7
+                
+                score = qed * 0.6 + mw_score * 0.2 + logp_score * 0.2
                 mol_data.predictions['activity_score'] = score
+                mol_data.predictions['screening_method'] = 'CPU-Rule-Based'
+            else:
+                mol_data.predictions['activity_score'] = 0.5
+                mol_data.predictions['screening_method'] = 'Default'
+                
+        logger.info(f"  Screened {len(molecules)} molecules on CPU")
         return molecules
 
 
 # ============================================================================
-# Stage 4: Filtering (CPU)
+# Stage 4: Filtering
 # ============================================================================
 
-class MolecularFilter:
-    """Apply drug-likeness and PAINS filters"""
+class FilteringStage(PipelineStage):
+    """Stage 4: Apply drug-likeness and PAINS filters"""
     
     def __init__(self, config: PipelineConfig):
-        self.config = config
+        super().__init__(config, "Filtering", 4)
         self.pains_catalog = None
-        if RDKIT_AVAILABLE:
-            params = FilterCatalogParams()
-            params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
-            self.pains_catalog = FilterCatalog(params)
-            
-    def filter_molecules(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
-        """Apply all filters"""
-        logger.info(f"Filtering {len(molecules)} molecules...")
+        
+        if deps.rdkit_available and config.enable_pains_filter:
+            try:
+                params = deps.FilterCatalogParams()
+                params.AddCatalog(deps.FilterCatalogParams.FilterCatalogs.PAINS)
+                self.pains_catalog = deps.FilterCatalog(params)
+            except Exception as e:
+                logger.warning(f"  Could not initialize PAINS filter: {e}")
+        
+    def run(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
+        self.log_start()
         
         passed = []
-        iterator = tqdm(molecules, desc="Filtering") if TQDM_AVAILABLE else molecules
+        failed_lipinski = 0
+        failed_pains = 0
+        failed_qed = 0
         
-        for mol_data in iterator:
-            if self._passes_all_filters(mol_data):
+        for mol_data in deps.progress_bar(molecules, desc="  Filtering"):
+            results = self._check_filters(mol_data)
+            mol_data.filter_results = results
+            
+            if all(results.values()):
                 passed.append(mol_data)
-                
-        logger.info(f"{len(passed)} molecules passed all filters")
+            else:
+                if not results.get('lipinski', True):
+                    failed_lipinski += 1
+                if not results.get('pains', True):
+                    failed_pains += 1
+                if not results.get('qed', True):
+                    failed_qed += 1
+                    
+        logger.info(f"  Passed: {len(passed)}, Failed Lipinski: {failed_lipinski}, "
+                   f"Failed PAINS: {failed_pains}, Failed QED: {failed_qed}")
         return passed
         
-    def _passes_all_filters(self, mol_data: MoleculeData) -> bool:
-        """Check if molecule passes all filters"""
+    def _check_filters(self, mol_data: MoleculeData) -> Dict[str, bool]:
+        """Apply all filters to molecule"""
+        results = {}
         desc = mol_data.descriptors
         
-        # Lipinski's Rule of Five
+        # Lipinski's Rule of Five (relaxed)
+        lipinski_violations = 0
         if desc.get('mw', 0) > 500:
-            return False
+            lipinski_violations += 1
         if desc.get('logp', 0) > 5:
-            return False
+            lipinski_violations += 1
         if desc.get('hbd', 0) > 5:
-            return False
+            lipinski_violations += 1
         if desc.get('hba', 0) > 10:
-            return False
-            
+            lipinski_violations += 1
+        results['lipinski'] = lipinski_violations <= 1  # Allow 1 violation
+        
         # PAINS filter
+        results['pains'] = True
         if self.pains_catalog and mol_data.mol:
-            if self.pains_catalog.HasMatch(mol_data.mol):
-                return False
+            try:
+                results['pains'] = not self.pains_catalog.HasMatch(mol_data.mol)
+            except:
+                pass
                 
         # QED threshold
-        if desc.get('qed', 0) < 0.3:
-            return False
-            
-        return True
+        results['qed'] = desc.get('qed', 0) >= self.config.min_qed_threshold
+        
+        return results
 
 
 # ============================================================================
-# Stage 5: SAR Analysis (CPU)
+# Stage 5: SAR Analysis
 # ============================================================================
 
-class SARAnalyzer:
-    """Structure-Activity Relationship analysis"""
+class SARAnalysisStage(PipelineStage):
+    """Stage 5: Structure-Activity Relationship analysis"""
     
     FUNCTIONAL_GROUPS = {
         'hydroxyl': '[OH]',
         'amine': '[NH2]',
-        'carboxyl': 'C(=O)O',
-        'carbonyl': 'C=O',
+        'carboxyl': 'C(=O)[OH]',
+        'carbonyl': '[C]=O',
         'ether': 'COC',
         'ester': 'C(=O)O[C,c]',
         'amide': 'C(=O)N',
@@ -521,199 +774,278 @@ class SARAnalyzer:
         'sulfonamide': 'S(=O)(=O)N',
         'phosphate': 'P(=O)(O)(O)',
         'thiol': '[SH]',
-        'azide': '[N3]'
+        'azide': '[N]=[N]=[N]',
     }
     
     def __init__(self, config: PipelineConfig):
-        self.config = config
+        super().__init__(config, "SAR Analysis", 5)
         
-    def analyze_molecules(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
-        """Perform SAR analysis on molecules"""
+    def run(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
+        self.log_start()
+        
         if not self.config.enable_sar:
+            logger.info("  SAR analysis disabled")
             return molecules
             
-        logger.info(f"SAR analysis on {len(molecules)} molecules...")
-        
-        if not RDKIT_AVAILABLE:
-            logger.warning("RDKit not available for SAR analysis")
+        if not deps.rdkit_available:
+            logger.warning("  RDKit not available for SAR analysis")
             return molecules
             
-        iterator = tqdm(molecules, desc="SAR Analysis") if TQDM_AVAILABLE else molecules
-        
-        for mol_data in iterator:
+        for mol_data in deps.progress_bar(molecules, desc="  SAR Analysis"):
             if mol_data.mol:
                 mol_data.sar_analysis = self._analyze_molecule(mol_data)
                 
+        logger.info(f"  Analyzed {len(molecules)} molecules")
         return molecules
         
     def _analyze_molecule(self, mol_data: MoleculeData) -> Dict[str, Any]:
-        """Analyze single molecule SAR"""
+        """Perform SAR analysis on single molecule"""
         mol = mol_data.mol
+        analysis = {}
         
-        # Extract scaffold
+        # Extract Murcko scaffold
         try:
-            scaffold = MurckoScaffold.GetScaffoldForMol(mol)
-            scaffold_smiles = Chem.MolToSmiles(scaffold)
-        except:
-            scaffold_smiles = ""
+            scaffold = deps.MurckoScaffold.GetScaffoldForMol(mol)
+            analysis['scaffold'] = deps.Chem.MolToSmiles(scaffold)
+            analysis['scaffold_atoms'] = scaffold.GetNumAtoms()
+        except Exception:
+            analysis['scaffold'] = ""
+            analysis['scaffold_atoms'] = 0
             
-        # Find functional groups
+        # Identify functional groups
         functional_groups = {}
         for name, smarts in self.FUNCTIONAL_GROUPS.items():
-            pattern = Chem.MolFromSmarts(smarts)
-            if pattern:
-                matches = mol.GetSubstructMatches(pattern)
-                if matches:
-                    functional_groups[name] = len(matches)
-                    
-        return {
-            'scaffold': scaffold_smiles,
-            'functional_groups': functional_groups,
-            'num_rings': rdMolDescriptors.CalcNumRings(mol),
-            'num_aromatic_rings': rdMolDescriptors.CalcNumAromaticRings(mol),
-            'num_heteroatoms': rdMolDescriptors.CalcNumHeteroatoms(mol)
-        }
+            try:
+                pattern = deps.Chem.MolFromSmarts(smarts)
+                if pattern:
+                    matches = mol.GetSubstructMatches(pattern)
+                    if matches:
+                        functional_groups[name] = len(matches)
+            except Exception:
+                pass
+        analysis['functional_groups'] = functional_groups
+        
+        # Ring analysis
+        try:
+            analysis['num_rings'] = deps.rdMolDescriptors.CalcNumRings(mol)
+            analysis['num_aromatic_rings'] = deps.rdMolDescriptors.CalcNumAromaticRings(mol)
+            analysis['num_aliphatic_rings'] = analysis['num_rings'] - analysis['num_aromatic_rings']
+            analysis['num_heteroatoms'] = deps.rdMolDescriptors.CalcNumHeteroatoms(mol)
+        except Exception:
+            pass
+            
+        return analysis
 
 
 # ============================================================================
-# Stage 6: Optimization (CPU/GPU)
+# Stage 6: Optimization
 # ============================================================================
 
-class MolecularOptimizer:
-    """Suggest molecular optimizations"""
+class OptimizationStage(PipelineStage):
+    """Stage 6: Generate molecular optimization suggestions"""
     
     OPTIMIZATION_STRATEGIES = {
         'reduce_cardiotoxicity': {
-            'description': 'Reduce hERG liability',
-            'suggestions': ['Add polar groups', 'Reduce lipophilicity', 'Add carboxylic acid']
+            'condition': lambda d: d.get('logp', 0) > 3.5,
+            'suggestions': [
+                'Add polar groups to reduce hERG binding',
+                'Reduce lipophilicity (target LogP < 3)',
+                'Consider adding carboxylic acid moiety',
+                'Introduce hydroxyl groups'
+            ]
         },
         'improve_bbb_penetration': {
-            'description': 'Improve blood-brain barrier penetration',
-            'suggestions': ['Reduce TPSA < 90', 'Reduce HBD', 'Add methyl groups']
+            'condition': lambda d: d.get('tpsa', 0) > 90,
+            'suggestions': [
+                'Reduce TPSA below 90 Å²',
+                'Decrease number of H-bond donors',
+                'Add methyl groups to mask polar atoms',
+                'Consider prodrug strategy'
+            ]
         },
         'improve_metabolic_stability': {
-            'description': 'Reduce CYP450 metabolism',
-            'suggestions': ['Block metabolic hotspots', 'Add fluorine', 'Reduce lipophilicity']
+            'condition': lambda d: d.get('logp', 0) > 4,
+            'suggestions': [
+                'Block metabolic hotspots with fluorine',
+                'Reduce lipophilicity',
+                'Replace labile groups with stable bioisosteres',
+                'Consider deuterium substitution'
+            ]
         },
         'improve_solubility': {
-            'description': 'Increase aqueous solubility',
-            'suggestions': ['Add polar groups', 'Reduce LogP', 'Add ionizable groups']
+            'condition': lambda d: d.get('logp', 0) > 4,
+            'suggestions': [
+                'Add ionizable groups (amine, carboxyl)',
+                'Reduce LogP below 3',
+                'Introduce polyethylene glycol chains',
+                'Add hydroxyl or sulfate groups'
+            ]
+        },
+        'reduce_molecular_weight': {
+            'condition': lambda d: d.get('mw', 0) > 500,
+            'suggestions': [
+                'Remove non-essential substituents',
+                'Use smaller bioisosteres',
+                'Fragment-based optimization',
+                'Consider macrocyclic constraints'
+            ]
         }
     }
     
     def __init__(self, config: PipelineConfig):
-        self.config = config
+        super().__init__(config, "Optimization", 6)
         
-    def optimize_molecules(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
-        """Generate optimization suggestions"""
+    def run(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
+        self.log_start()
+        
         if not self.config.enable_optimization:
+            logger.info("  Optimization disabled")
             return molecules
             
-        logger.info(f"Generating optimization suggestions for {len(molecules)} molecules...")
-        
-        for mol_data in molecules:
-            mol_data.optimization_suggestions = self._suggest_optimizations(mol_data)
+        total_suggestions = 0
+        for mol_data in deps.progress_bar(molecules, desc="  Optimization"):
+            mol_data.optimization_suggestions = self._generate_suggestions(mol_data)
+            total_suggestions += len(mol_data.optimization_suggestions)
             
+        logger.info(f"  Generated {total_suggestions} suggestions for {len(molecules)} molecules")
         return molecules
         
-    def _suggest_optimizations(self, mol_data: MoleculeData) -> List[str]:
-        """Suggest optimizations based on molecular properties"""
+    def _generate_suggestions(self, mol_data: MoleculeData) -> List[str]:
+        """Generate optimization suggestions based on properties"""
         suggestions = []
         desc = mol_data.descriptors
         
-        # Check for cardiotoxicity risk (high LogP + basic nitrogen)
-        if desc.get('logp', 0) > 3.5:
-            suggestions.extend(self.OPTIMIZATION_STRATEGIES['reduce_cardiotoxicity']['suggestions'])
-            
-        # Check BBB penetration
-        if desc.get('tpsa', 0) > 90:
-            suggestions.extend(self.OPTIMIZATION_STRATEGIES['improve_bbb_penetration']['suggestions'])
-            
-        # Check solubility
-        if desc.get('logp', 0) > 4:
-            suggestions.extend(self.OPTIMIZATION_STRATEGIES['improve_solubility']['suggestions'])
-            
+        for strategy_name, strategy in self.OPTIMIZATION_STRATEGIES.items():
+            if strategy['condition'](desc):
+                suggestions.extend(strategy['suggestions'][:2])  # Top 2 suggestions per issue
+                
         return list(set(suggestions))  # Remove duplicates
 
 
 # ============================================================================
-# Stage 7: ADMET Prediction (GPU)
+# Stage 7: ADMET Prediction
 # ============================================================================
 
-class ADMETPredictor:
-    """ADMET property prediction"""
+class ADMETStage(PipelineStage):
+    """Stage 7: ADMET property prediction"""
     
     def __init__(self, config: PipelineConfig):
-        self.config = config
-        self.device = DEVICE if config.gpu_enabled else torch.device('cpu')
+        super().__init__(config, "ADMET Prediction", 7)
         
-    def predict_admet(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
-        """Predict ADMET properties"""
+    def run(self, molecules: List[MoleculeData]) -> List[MoleculeData]:
+        self.log_start()
+        
         if not self.config.enable_admet:
+            logger.info("  ADMET prediction disabled")
             return molecules
             
-        logger.info(f"Predicting ADMET for {len(molecules)} molecules...")
-        
-        iterator = tqdm(molecules, desc="ADMET Prediction") if TQDM_AVAILABLE else molecules
-        
-        for mol_data in iterator:
-            mol_data.admet_profile = self._predict_molecule(mol_data)
+        for mol_data in deps.progress_bar(molecules, desc="  ADMET"):
+            mol_data.admet_profile = self._predict_admet(mol_data)
             
+        logger.info(f"  Predicted ADMET for {len(molecules)} molecules")
         return molecules
         
-    def _predict_molecule(self, mol_data: MoleculeData) -> Dict[str, Any]:
-        """Predict ADMET for single molecule"""
+    def _predict_admet(self, mol_data: MoleculeData) -> Dict[str, Any]:
+        """Predict ADMET properties using rule-based models"""
         desc = mol_data.descriptors
         
-        # Rule-based ADMET predictions
         logp = desc.get('logp', 0)
         tpsa = desc.get('tpsa', 0)
         mw = desc.get('mw', 0)
         hbd = desc.get('hbd', 0)
+        hba = desc.get('hba', 0)
         
         return {
             'absorption': {
-                'oral_bioavailability': 'High' if mw < 500 and logp < 5 else 'Low',
+                'oral_bioavailability': self._classify_bioavailability(mw, logp, tpsa),
+                'oral_bioavailability_score': self._score_bioavailability(mw, logp, tpsa),
                 'caco2_permeability': 'High' if tpsa < 140 else 'Low',
-                'pgp_substrate': 'Yes' if mw > 400 else 'No'
+                'pgp_substrate': 'Likely' if mw > 400 and logp > 3 else 'Unlikely',
+                'intestinal_absorption': 'Good' if tpsa < 140 and logp > -1 else 'Poor'
             },
             'distribution': {
-                'plasma_protein_binding': f"{min(99, max(10, 50 + logp * 10)):.0f}%",
-                'vd_class': 'High' if logp > 3 else 'Moderate',
-                'bbb_penetration': 'Yes' if tpsa < 90 and hbd < 3 else 'No'
+                'plasma_protein_binding': f"{min(99, max(10, int(50 + logp * 10)))}%",
+                'vd_class': 'High (>2 L/kg)' if logp > 3 else 'Moderate (0.5-2 L/kg)',
+                'bbb_penetration': 'Yes' if tpsa < 90 and hbd <= 2 and mw < 450 else 'No',
+                'bbb_score': max(0, min(1, (90 - tpsa) / 90 * (1 - hbd/5)))
             },
             'metabolism': {
                 'cyp3a4_substrate': 'Yes' if mw > 300 else 'No',
-                'cyp2d6_substrate': 'Yes' if logp > 2 else 'No',
-                'half_life_estimate': f"{max(1, 10 - logp * 2):.1f} hours"
+                'cyp2d6_substrate': 'Yes' if logp > 2 and any(
+                    fg in mol_data.sar_analysis.get('functional_groups', {})
+                    for fg in ['amine']
+                ) else 'No',
+                'cyp2c9_substrate': 'Yes' if logp > 2 else 'No',
+                'half_life_estimate': f"{max(1, min(24, 10 - logp * 2 + mw/100)):.1f} hours",
+                'metabolic_stability': 'Low' if logp > 4 else 'Moderate' if logp > 2 else 'High'
             },
             'excretion': {
-                'renal_clearance': 'High' if logp < 1 else 'Low',
-                'biliary_excretion': 'Yes' if mw > 400 else 'No'
+                'renal_clearance': 'High' if logp < 1 and mw < 300 else 'Low',
+                'biliary_excretion': 'Yes' if mw > 400 else 'No',
+                'total_clearance': 'High' if logp < 2 else 'Moderate' if logp < 4 else 'Low'
             },
             'toxicity': {
-                'herg_risk': 'High' if logp > 4 else 'Low',
-                'hepatotoxicity': 'Moderate' if logp > 3 else 'Low',
-                'mutagenicity': 'Low'
+                'herg_risk': self._assess_herg_risk(logp, desc),
+                'hepatotoxicity': 'High' if logp > 4 else 'Moderate' if logp > 3 else 'Low',
+                'mutagenicity': 'Low',  # Would need structural alerts
+                'cardiotoxicity': 'Elevated' if logp > 4 else 'Normal',
+                'ld50_estimate': 'Moderate' if mw < 500 else 'Low'
             }
         }
+        
+    def _classify_bioavailability(self, mw: float, logp: float, tpsa: float) -> str:
+        """Classify oral bioavailability"""
+        if mw < 500 and -0.5 < logp < 5 and tpsa < 140:
+            return 'High (>50%)'
+        elif mw < 600 and logp < 6 and tpsa < 160:
+            return 'Moderate (20-50%)'
+        else:
+            return 'Low (<20%)'
+            
+    def _score_bioavailability(self, mw: float, logp: float, tpsa: float) -> float:
+        """Calculate bioavailability score"""
+        score = 1.0
+        if mw > 500:
+            score -= 0.2
+        if logp > 5 or logp < -0.5:
+            score -= 0.2
+        if tpsa > 140:
+            score -= 0.2
+        return max(0, min(1, score))
+        
+    def _assess_herg_risk(self, logp: float, desc: Dict) -> str:
+        """Assess hERG cardiotoxicity risk"""
+        risk_score = 0
+        if logp > 3.5:
+            risk_score += 1
+        if logp > 4.5:
+            risk_score += 1
+        if desc.get('hbd', 0) < 2:
+            risk_score += 1
+            
+        if risk_score >= 2:
+            return 'High'
+        elif risk_score >= 1:
+            return 'Moderate'
+        else:
+            return 'Low'
 
 
 # ============================================================================
-# Stage 8: Ranking & Export (CPU)
+# Stage 8: Ranking & Export
 # ============================================================================
 
-class ResultExporter:
-    """Rank and export results"""
+class RankingExportStage(PipelineStage):
+    """Stage 8: Rank molecules and export results"""
     
     def __init__(self, config: PipelineConfig):
-        self.config = config
+        super().__init__(config, "Ranking & Export", 8)
         
-    def rank_and_export(self, molecules: List[MoleculeData]) -> pd.DataFrame:
-        """Rank molecules and export results"""
-        logger.info(f"Ranking {len(molecules)} molecules...")
+    def run(self, molecules: List[MoleculeData]) -> Tuple[List[MoleculeData], Any]:
+        self.log_start()
         
         # Calculate final scores
+        logger.info("  Calculating final scores...")
         for mol_data in molecules:
             mol_data.final_score = self._calculate_final_score(mol_data)
             
@@ -724,63 +1056,65 @@ class ResultExporter:
         for i, mol_data in enumerate(molecules):
             mol_data.rank = i + 1
             
-        # Export to DataFrame
-        df = self._to_dataframe(molecules)
+        # Export results
+        df = self._export_results(molecules)
         
-        # Save outputs
-        output_dir = Path(self.config.output_directory)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # CSV
-        csv_path = output_dir / 'drug_discovery_results.csv'
-        df.to_csv(csv_path, index=False)
-        logger.info(f"Saved CSV to {csv_path}")
-        
-        # Excel with multiple sheets
-        try:
-            excel_path = output_dir / 'drug_discovery_results.xlsx'
-            with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
-                df.to_excel(writer, sheet_name='All Results', index=False)
-                df.head(50).to_excel(writer, sheet_name='Top 50', index=False)
-            logger.info(f"Saved Excel to {excel_path}")
-        except Exception as e:
-            logger.warning(f"Could not save Excel: {e}")
-            
-        return df
+        return molecules, df
         
     def _calculate_final_score(self, mol_data: MoleculeData) -> float:
         """Calculate weighted final score"""
+        weights = {
+            'activity': 0.30,
+            'qed': 0.25,
+            'lipinski': 0.15,
+            'admet': 0.20,
+            'optimization': 0.10
+        }
+        
         score = 0.0
         
-        # Activity score (40%)
-        score += mol_data.predictions.get('activity_score', 0) * 0.4
+        # Activity score (from virtual screening)
+        activity = mol_data.predictions.get('activity_score', 0.5)
+        score += activity * weights['activity']
         
-        # QED score (30%)
-        score += mol_data.descriptors.get('qed', 0) * 0.3
+        # QED score
+        qed = mol_data.descriptors.get('qed', 0.5)
+        score += qed * weights['qed']
         
-        # Drug-likeness (20%)
-        desc = mol_data.descriptors
-        lipinski_score = 1.0
-        if desc.get('mw', 0) > 500: lipinski_score -= 0.25
-        if desc.get('logp', 0) > 5: lipinski_score -= 0.25
-        if desc.get('hbd', 0) > 5: lipinski_score -= 0.25
-        if desc.get('hba', 0) > 10: lipinski_score -= 0.25
-        score += lipinski_score * 0.2
+        # Drug-likeness (Lipinski)
+        lipinski_score = 1.0 if mol_data.filter_results.get('lipinski', True) else 0.5
+        score += lipinski_score * weights['lipinski']
         
-        # ADMET favorability (10%)
+        # ADMET favorability
         admet = mol_data.admet_profile
+        admet_score = 0.5
         if admet:
-            admet_score = 0.5
-            if admet.get('absorption', {}).get('oral_bioavailability') == 'High':
-                admet_score += 0.25
+            if admet.get('absorption', {}).get('oral_bioavailability', '').startswith('High'):
+                admet_score += 0.2
             if admet.get('toxicity', {}).get('herg_risk') == 'Low':
-                admet_score += 0.25
-            score += admet_score * 0.1
-            
-        return score
+                admet_score += 0.2
+            if admet.get('distribution', {}).get('bbb_penetration') == 'Yes':
+                admet_score += 0.1
+        score += min(1.0, admet_score) * weights['admet']
         
-    def _to_dataframe(self, molecules: List[MoleculeData]) -> pd.DataFrame:
-        """Convert molecules to DataFrame"""
+        # Optimization (fewer issues = better)
+        opt_count = len(mol_data.optimization_suggestions)
+        opt_score = max(0, 1.0 - opt_count * 0.1)
+        score += opt_score * weights['optimization']
+        
+        return round(score, 4)
+        
+    def _export_results(self, molecules: List[MoleculeData]) -> Any:
+        """Export results to files"""
+        if not pd:
+            logger.error("  Pandas not available for export")
+            return None
+            
+        # Create output directory
+        output_dir = Path(self.config.output_directory)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Build DataFrame
         rows = []
         for mol_data in molecules:
             row = {
@@ -788,95 +1122,208 @@ class ResultExporter:
                 'Name': mol_data.name,
                 'SMILES': mol_data.smiles,
                 'Disease_Target': mol_data.disease_target,
-                'Final_Score': f"{mol_data.final_score:.3f}",
-                'Activity_Score': f"{mol_data.predictions.get('activity_score', 0):.3f}",
-                'MW': f"{mol_data.descriptors.get('mw', 0):.1f}",
-                'LogP': f"{mol_data.descriptors.get('logp', 0):.2f}",
-                'TPSA': f"{mol_data.descriptors.get('tpsa', 0):.1f}",
-                'QED': f"{mol_data.descriptors.get('qed', 0):.3f}",
+                'Final_Score': mol_data.final_score,
+                'Activity_Score': mol_data.predictions.get('activity_score', 0),
+                'MW': mol_data.descriptors.get('mw', 0),
+                'LogP': mol_data.descriptors.get('logp', 0),
+                'TPSA': mol_data.descriptors.get('tpsa', 0),
+                'QED': mol_data.descriptors.get('qed', 0),
                 'HBD': mol_data.descriptors.get('hbd', 0),
                 'HBA': mol_data.descriptors.get('hba', 0),
+                'Rotatable_Bonds': mol_data.descriptors.get('rotatable_bonds', 0),
+                'Lipinski_Pass': mol_data.filter_results.get('lipinski', False),
+                'PAINS_Pass': mol_data.filter_results.get('pains', False),
                 'Scaffold': mol_data.sar_analysis.get('scaffold', ''),
-                'Optimization_Suggestions': '; '.join(mol_data.optimization_suggestions),
+                'Functional_Groups': json.dumps(mol_data.sar_analysis.get('functional_groups', {})),
                 'Oral_Bioavailability': mol_data.admet_profile.get('absorption', {}).get('oral_bioavailability', ''),
                 'BBB_Penetration': mol_data.admet_profile.get('distribution', {}).get('bbb_penetration', ''),
-                'hERG_Risk': mol_data.admet_profile.get('toxicity', {}).get('herg_risk', '')
+                'hERG_Risk': mol_data.admet_profile.get('toxicity', {}).get('herg_risk', ''),
+                'Hepatotoxicity': mol_data.admet_profile.get('toxicity', {}).get('hepatotoxicity', ''),
+                'Half_Life': mol_data.admet_profile.get('metabolism', {}).get('half_life_estimate', ''),
+                'Optimization_Suggestions': '; '.join(mol_data.optimization_suggestions),
+                'Screening_Method': mol_data.predictions.get('screening_method', ''),
             }
             rows.append(row)
             
-        return pd.DataFrame(rows)
+        df = pd.DataFrame(rows)
+        
+        # Save CSV
+        csv_path = output_dir / 'drug_discovery_results.csv'
+        df.to_csv(csv_path, index=False)
+        logger.info(f"  Saved CSV: {csv_path}")
+        
+        # Save Excel with multiple sheets
+        if deps.openpyxl_available:
+            try:
+                excel_path = output_dir / 'drug_discovery_results.xlsx'
+                with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+                    df.to_excel(writer, sheet_name='All Results', index=False)
+                    df.head(50).to_excel(writer, sheet_name='Top 50', index=False)
+                    
+                    # Group by disease
+                    if 'Disease_Target' in df.columns:
+                        for disease in df['Disease_Target'].unique()[:10]:
+                            if disease:
+                                disease_df = df[df['Disease_Target'] == disease].head(20)
+                                sheet_name = str(disease)[:31]  # Excel sheet name limit
+                                disease_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                                
+                logger.info(f"  Saved Excel: {excel_path}")
+            except Exception as e:
+                logger.warning(f"  Excel export failed: {e}")
+        else:
+            logger.warning("  openpyxl not available for Excel export")
+            
+        # Save summary JSON
+        summary = {
+            'timestamp': datetime.now().isoformat(),
+            'total_compounds': len(molecules),
+            'top_10': [
+                {
+                    'rank': m.rank,
+                    'name': m.name,
+                    'smiles': m.smiles,
+                    'score': m.final_score,
+                    'disease': m.disease_target
+                }
+                for m in molecules[:10]
+            ],
+            'statistics': {
+                'avg_score': float(df['Final_Score'].mean()) if len(df) > 0 else 0,
+                'avg_qed': float(df['QED'].mean()) if len(df) > 0 else 0,
+                'avg_mw': float(df['MW'].mean()) if len(df) > 0 else 0,
+            }
+        }
+        
+        json_path = output_dir / 'summary.json'
+        with open(json_path, 'w') as f:
+            json.dump(summary, f, indent=2)
+        logger.info(f"  Saved summary: {json_path}")
+            
+        return df
 
 
 # ============================================================================
-# Main Pipeline
+# Main Pipeline Controller
 # ============================================================================
 
 class DrugDiscoveryPipeline:
-    """Complete 8-stage drug discovery pipeline"""
+    """Complete 8-stage drug discovery pipeline controller"""
     
     def __init__(self, config: PipelineConfig):
         self.config = config
+        self.stats = PipelineStats()
         
-        # Initialize stages
-        self.data_loader = DataLoaderStage(config)
-        self.preprocessor = Preprocessor(config)
-        self.virtual_screener = VirtualScreener(config)
-        self.molecular_filter = MolecularFilter(config)
-        self.sar_analyzer = SARAnalyzer(config)
-        self.optimizer = MolecularOptimizer(config)
-        self.admet_predictor = ADMETPredictor(config)
-        self.exporter = ResultExporter(config)
+        # Initialize all stages
+        self.stages = [
+            DataLoadingStage(config),
+            PreprocessingStage(config),
+            VirtualScreeningStage(config),
+            FilteringStage(config),
+            SARAnalysisStage(config),
+            OptimizationStage(config),
+            ADMETStage(config),
+            RankingExportStage(config),
+        ]
         
-    def run(self) -> pd.DataFrame:
-        """Execute full pipeline"""
-        start_time = datetime.now()
-        logger.info("=" * 60)
-        logger.info("Starting Lika Sciences Drug Discovery Pipeline")
-        logger.info("=" * 60)
+    def run(self) -> Tuple[List[MoleculeData], Any]:
+        """Execute the complete pipeline"""
+        self.stats.start_time = datetime.now()
         
-        # Stage 1: Data Loading
-        logger.info("\n[Stage 1/8] Loading Data...")
-        diseases = self.data_loader.load_disease_config()
-        molecules = self.data_loader.load_smiles()
+        logger.info("=" * 70)
+        logger.info("  LIKA SCIENCES - DRUG DISCOVERY PIPELINE v2.1")
+        logger.info("=" * 70)
+        logger.info(f"  Started: {self.stats.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"  Device: {self.config.device}")
+        logger.info(f"  Workers: {self.config.num_workers}")
+        logger.info("=" * 70)
         
-        # Stage 2: Preprocessing
-        logger.info("\n[Stage 2/8] Preprocessing...")
-        molecules = self.preprocessor.process_molecules(molecules)
+        try:
+            # Stage 1: Data Loading
+            stage_start = datetime.now()
+            diseases, molecules = self.stages[0].run()
+            self.stats.diseases_loaded = len(diseases)
+            self.stats.molecules_loaded = len(molecules)
+            self.stats.record_stage("Data Loading", stage_start)
+            
+            # Stage 2: Preprocessing
+            stage_start = datetime.now()
+            molecules = self.stages[1].run(molecules)
+            self.stats.molecules_preprocessed = len(molecules)
+            self.stats.record_stage("Preprocessing", stage_start)
+            
+            # Stage 3: Virtual Screening
+            stage_start = datetime.now()
+            molecules = self.stages[2].run(molecules)
+            self.stats.molecules_screened = len(molecules)
+            self.stats.record_stage("Virtual Screening", stage_start)
+            
+            # Stage 4: Filtering
+            stage_start = datetime.now()
+            molecules = self.stages[3].run(molecules)
+            self.stats.molecules_filtered = len(molecules)
+            self.stats.record_stage("Filtering", stage_start)
+            
+            # Stage 5: SAR Analysis
+            stage_start = datetime.now()
+            molecules = self.stages[4].run(molecules)
+            self.stats.record_stage("SAR Analysis", stage_start)
+            
+            # Stage 6: Optimization
+            stage_start = datetime.now()
+            molecules = self.stages[5].run(molecules)
+            self.stats.record_stage("Optimization", stage_start)
+            
+            # Stage 7: ADMET
+            stage_start = datetime.now()
+            molecules = self.stages[6].run(molecules)
+            self.stats.record_stage("ADMET", stage_start)
+            
+            # Stage 8: Ranking & Export
+            stage_start = datetime.now()
+            molecules, results_df = self.stages[7].run(molecules)
+            self.stats.molecules_final = len(molecules)
+            self.stats.record_stage("Ranking & Export", stage_start)
+            
+            # Final summary
+            self.stats.end_time = datetime.now()
+            self._print_summary(molecules, results_df)
+            
+            return molecules, results_df
+            
+        except Exception as e:
+            logger.error(f"Pipeline failed: {e}")
+            logger.error(traceback.format_exc())
+            self.stats.errors.append(str(e))
+            raise
+            
+    def _print_summary(self, molecules: List[MoleculeData], results_df: Any):
+        """Print pipeline summary"""
+        elapsed = (self.stats.end_time - self.stats.start_time).total_seconds()
         
-        # Stage 3: Virtual Screening
-        logger.info("\n[Stage 3/8] Virtual Screening...")
-        molecules = self.virtual_screener.screen_molecules(molecules)
+        logger.info("\n" + "=" * 70)
+        logger.info("  PIPELINE COMPLETE")
+        logger.info("=" * 70)
+        logger.info(f"  Total time: {elapsed:.2f} seconds")
+        logger.info(f"  Diseases loaded: {self.stats.diseases_loaded}")
+        logger.info(f"  Molecules loaded: {self.stats.molecules_loaded}")
+        logger.info(f"  After preprocessing: {self.stats.molecules_preprocessed}")
+        logger.info(f"  After filtering: {self.stats.molecules_filtered}")
+        logger.info(f"  Final compounds: {self.stats.molecules_final}")
+        logger.info("-" * 70)
         
-        # Stage 4: Filtering
-        logger.info("\n[Stage 4/8] Filtering...")
-        molecules = self.molecular_filter.filter_molecules(molecules)
+        if molecules:
+            logger.info("\n  TOP 10 COMPOUNDS:")
+            logger.info("-" * 70)
+            for mol in molecules[:10]:
+                logger.info(f"  {mol.rank:3d}. {mol.name[:25]:<25} "
+                          f"Score: {mol.final_score:.3f}  "
+                          f"QED: {mol.descriptors.get('qed', 0):.2f}  "
+                          f"Disease: {mol.disease_target[:20]}")
         
-        # Stage 5: SAR Analysis
-        logger.info("\n[Stage 5/8] SAR Analysis...")
-        molecules = self.sar_analyzer.analyze_molecules(molecules)
-        
-        # Stage 6: Optimization
-        logger.info("\n[Stage 6/8] Optimization...")
-        molecules = self.optimizer.optimize_molecules(molecules)
-        
-        # Stage 7: ADMET Prediction
-        logger.info("\n[Stage 7/8] ADMET Prediction...")
-        molecules = self.admet_predictor.predict_admet(molecules)
-        
-        # Stage 8: Ranking & Export
-        logger.info("\n[Stage 8/8] Ranking & Export...")
-        results_df = self.exporter.rank_and_export(molecules)
-        
-        # Summary
-        elapsed = datetime.now() - start_time
-        logger.info("\n" + "=" * 60)
-        logger.info("Pipeline Complete!")
-        logger.info(f"Diseases loaded: {len(diseases)}")
-        logger.info(f"Final compounds: {len(molecules)}")
-        logger.info(f"Time elapsed: {elapsed}")
-        logger.info("=" * 60)
-        
-        return results_df
+        logger.info("\n" + "=" * 70)
+        logger.info(f"  Results saved to: {self.config.output_directory}/")
+        logger.info("=" * 70)
 
 
 # ============================================================================
@@ -888,59 +1335,71 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="Lika Sciences Drug Discovery Pipeline"
+        description="Lika Sciences Drug Discovery Pipeline v2.1",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python lika_drug_discovery_pipeline.py --smiles molecules.csv --diseases config.yaml
+  python lika_drug_discovery_pipeline.py --smiles data.csv --output results/ --no-gpu
+  python lika_drug_discovery_pipeline.py --demo  # Run with sample data
+        """
     )
-    parser.add_argument(
-        '--smiles', '-s',
-        default='input_smiles.csv',
-        help='Input SMILES file (CSV/TSV)'
-    )
-    parser.add_argument(
-        '--diseases', '-d',
-        default='disease_discovery_config.yaml',
-        help='Disease configuration YAML'
-    )
-    parser.add_argument(
-        '--output', '-o',
-        default='output',
-        help='Output directory'
-    )
-    parser.add_argument(
-        '--workers', '-w',
-        type=int,
-        default=NUM_WORKERS,
-        help='Number of parallel workers'
-    )
-    parser.add_argument(
-        '--batch-size', '-b',
-        type=int,
-        default=1024,
-        help='Batch size for GPU processing'
-    )
-    parser.add_argument(
-        '--no-gpu',
-        action='store_true',
-        help='Disable GPU acceleration'
-    )
+    
+    parser.add_argument('--smiles', '-s', default='input_smiles.csv',
+                       help='Input SMILES file (CSV/TSV)')
+    parser.add_argument('--diseases', '-d', default='disease_discovery_config.yaml',
+                       help='Disease configuration YAML')
+    parser.add_argument('--output', '-o', default='output',
+                       help='Output directory')
+    parser.add_argument('--workers', '-w', type=int, default=NUM_WORKERS,
+                       help='Number of parallel workers')
+    parser.add_argument('--batch-size', '-b', type=int, default=1024,
+                       help='Batch size for GPU processing')
+    parser.add_argument('--no-gpu', action='store_true',
+                       help='Disable GPU acceleration')
+    parser.add_argument('--no-sar', action='store_true',
+                       help='Disable SAR analysis')
+    parser.add_argument('--no-admet', action='store_true',
+                       help='Disable ADMET prediction')
+    parser.add_argument('--no-optimization', action='store_true',
+                       help='Disable optimization suggestions')
+    parser.add_argument('--qed-threshold', type=float, default=0.3,
+                       help='Minimum QED threshold (default: 0.3)')
+    parser.add_argument('--demo', action='store_true',
+                       help='Run with sample data for demonstration')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                       help='Verbose output')
     
     args = parser.parse_args()
     
+    # Create configuration
     config = PipelineConfig(
-        input_smiles_file=args.smiles,
+        input_smiles_file=args.smiles if not args.demo else 'demo_smiles.csv',
         disease_config_file=args.diseases,
         output_directory=args.output,
         num_workers=args.workers,
         batch_size=args.batch_size,
-        gpu_enabled=not args.no_gpu
+        gpu_enabled=not args.no_gpu,
+        enable_sar=not args.no_sar,
+        enable_optimization=not args.no_optimization,
+        enable_admet=not args.no_admet,
+        min_qed_threshold=args.qed_threshold,
+        verbose=args.verbose
     )
     
+    # Run pipeline
     pipeline = DrugDiscoveryPipeline(config)
-    results = pipeline.run()
+    molecules, results = pipeline.run()
     
-    print(f"\nTop 10 compounds:")
-    print(results.head(10).to_string())
+    # Print top results to console
+    if results is not None and len(results) > 0:
+        print("\n" + "=" * 60)
+        print("TOP 10 DRUG CANDIDATES")
+        print("=" * 60)
+        print(results[['Rank', 'Name', 'Final_Score', 'QED', 'Disease_Target']].head(10).to_string(index=False))
+        print("=" * 60)
     
-    return results
+    return molecules, results
 
 
 if __name__ == '__main__':
