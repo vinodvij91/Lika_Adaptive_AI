@@ -27,6 +27,7 @@ function PageLoader() {
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import DomainSelectionPage from "@/pages/domain-selection";
+import PlatformPage from "@/pages/platform";
 import NotFound from "@/pages/not-found";
 
 // Lazy load all other pages for faster initial bundle
@@ -241,6 +242,7 @@ function Router() {
         <div className="flex-1">
           <Switch>
             <Route path="/" component={LandingPage} />
+            <Route path="/platform" component={PlatformPage} />
             <Route path="/login" component={LoginPage} />
             <Route path="/use-cases">
               <Suspense fallback={<PageLoader />}>
