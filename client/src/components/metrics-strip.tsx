@@ -50,27 +50,27 @@ export function MetricsStrip() {
         <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border/50">
           <AnimatedMetric
             icon={Database}
-            value={2400000}
+            value={1700000}
             suffix="+"
-            label="Compounds in Registry"
+            label="SMILES Library"
           />
           <AnimatedMetric
             icon={Activity}
-            value={847}
-            suffix="K"
-            label="Predictions Today"
+            value={500}
+            suffix="K+"
+            label="Materials Database"
             duration={1800}
           />
           <AnimatedMetric
             icon={Cpu}
-            value={156}
-            suffix=""
-            label="Active Campaigns"
+            value={750}
+            suffix="+"
+            label="Disease Targets"
             duration={1500}
           />
           <AnimatedMetric
             icon={Zap}
-            value={99}
+            value={94}
             suffix=".7%"
             label="Model Accuracy"
             duration={2200}

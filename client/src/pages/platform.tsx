@@ -93,7 +93,7 @@ const domainCards = [
     borderColor: "border-cyan-500/30",
     stats: [
       { value: "750+", label: "Disease Targets" },
-      { value: "2.4M", label: "SMILES Library" },
+      { value: "1.7M+", label: "SMILES Library" },
       { value: "8-Stage", label: "Pipeline" },
     ],
     features: [
@@ -213,10 +213,10 @@ const testimonials = [
 ];
 
 const metrics = [
-  { value: "94.7%", label: "Prediction Accuracy", sublabel: "Cross-validated on 50K compounds" },
-  { value: "10x", label: "Faster Discovery", sublabel: "vs. traditional HTS workflows" },
-  { value: "1M+", label: "Compounds/Hour", sublabel: "GPU-accelerated screening" },
-  { value: "$2.3B", label: "R&D Savings", sublabel: "Across customer base" },
+  { value: "1.7M+", label: "SMILES Library", sublabel: "Curated drug-like molecules" },
+  { value: "500K+", label: "Materials Database", sublabel: "Properties & formulations" },
+  { value: "750+", label: "Disease Targets", sublabel: "Validated therapeutic areas" },
+  { value: "10x", label: "Faster Discovery", sublabel: "vs. traditional pipelines" },
 ];
 
 export default function PlatformPage() {

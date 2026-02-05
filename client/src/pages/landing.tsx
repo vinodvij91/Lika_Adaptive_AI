@@ -85,16 +85,16 @@ export default function LandingPage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-transparent to-amber-500/20 rounded-xl blur-xl" />
                 <div className="relative grid grid-cols-3 gap-4 p-6 rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-white">2.4M+</div>
-                    <div className="text-xs text-slate-400">Compounds Scored</div>
+                    <div className="text-2xl font-bold text-white">1.7M+</div>
+                    <div className="text-xs text-slate-400">SMILES Library</div>
                   </div>
                   <div className="text-center border-x border-white/10">
-                    <div className="text-2xl font-bold text-white">847K</div>
-                    <div className="text-xs text-slate-400">Daily Predictions</div>
+                    <div className="text-2xl font-bold text-white">500K+</div>
+                    <div className="text-xs text-slate-400">Materials Database</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-white">156</div>
-                    <div className="text-xs text-slate-400">Active Campaigns</div>
+                    <div className="text-2xl font-bold text-white">750+</div>
+                    <div className="text-xs text-slate-400">Disease Targets</div>
                   </div>
                 </div>
               </div>
