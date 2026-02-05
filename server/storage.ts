@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { supabaseSyncService } from "./services/supabase-sync";
 import { eq, and, or, desc, sql, count, avg, sum, inArray } from "drizzle-orm";
 import {
   projects,
@@ -867,10 +868,23 @@ export class DatabaseStorage implements IStorage {
     assaysUploaded: number;
     activeCampaigns: number;
   }> {
-    // Use external database counts (1.7M+ SMILES from DigitalOcean PostgreSQL)
-    // Internal database has ~5,809 molecules, but external has 1.7M+
-    const EXTERNAL_SMILES_COUNT = 1700000;
-    const EXTERNAL_HITS_RATIO = 0.12; // ~12% hit rate from screening
+    let externalSmilesCount = 0;
+    try {
+      const doStats = await supabaseSyncService.getDigitalOceanSmilesStats();
+      if (doStats.success && doStats.totalRecords > 0) {
+        externalSmilesCount = doStats.totalRecords;
+      }
+    } catch (err) {
+      console.error("Failed to fetch DigitalOcean SMILES count:", err);
+    }
+
+    const [internalMoleculeCount] = await db.select({ count: count() }).from(molecules);
+    const moleculesScreened = externalSmilesCount > 0 ? externalSmilesCount : Number(internalMoleculeCount.count);
+
+    const [hitsCount] = await db
+      .select({ count: count() })
+      .from(moleculeScores)
+      .where(sql`${moleculeScores.oracleScore} >= 0.7`);
     
     const [targetCount] = await db.select({ count: count() }).from(targets);
     
@@ -882,8 +896,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(campaigns.status, "running"));
 
     return {
-      moleculesScreened: EXTERNAL_SMILES_COUNT,
-      hitsIdentified: Math.round(EXTERNAL_SMILES_COUNT * EXTERNAL_HITS_RATIO),
+      moleculesScreened,
+      hitsIdentified: Number(hitsCount.count),
       activeTargets: Number(targetCount.count),
       assaysUploaded: Number(assayCount.count),
       activeCampaigns: Number(activeCampaignCount.count),
