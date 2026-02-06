@@ -1,0 +1,64 @@
+On this page, “Harvest Fresh” should trigger a full re‑query of external assay databases for the disease/target you’ve selected, then render a ranked table of recommended assays that you can add into campaigns.
+
+Given your UI, the intended flow is:
+
+1. Select context (top-right dropdown)
+That dropdown is where you pick what to harvest for:
+
+Disease area (e.g. “Alzheimer’s disease”, “Nipah virus”, “Rheumatoid arthritis”), or
+
+A specific target list associated with that disease (e.g. NLRP3, TFEB, APOE, APP for AD).
+
+Once something is chosen, the center text should change from:
+
+“Select a disease to view recommended assays”
+
+to something like:
+
+“Press Harvest Fresh to pull assays for Alzheimer’s disease (4 targets).”
+
+2. Click “Harvest Fresh”
+When you click Harvest Fresh, the backend should:
+
+Take the selected disease/target set.
+
+Call your assay sources (at least mocked for now):
+
+PubChem BioAssay (AID)
+
+ChEMBL activities
+
+BindingDB, etc.
+
+Filter and score assays for relevance:
+
+Match to your targets.
+
+Prefer binding / functional assays with IC50, EC50, Kd, etc.
+
+Rank by quality + recency + diversity.
+
+During this, the page should show a loader:
+
+“Harvesting assays from PubChem and ChEMBL…”
+
+3. Show a “recommended assays” list
+After the call returns, the big empty area should populate with a table or cards, e.g.:
+
+Assay	Source	Target	Type	Readout	#Cmpds	Score	Action
+AID 123456	PubChem	NLRP3	Biochem	IC50	1,247	0.93	[Details] [Add to Campaign]
+CHEMBL98765	ChEMBL	TFEB	Cell	EC50	382	0.88	[Details] [Add to Campaign]
+Score = your relevance score for that disease/target.
+
+Clicking Details opens assay metadata, distribution of potencies, link out.
+
+Clicking Add to Campaign pushes it into the selected Campaign’s “Assays” tab.
+
+If you’ve wired nothing yet, “Harvest Fresh” currently does nothing; this is the behavior you want to ask Replit to implement.
+
+4. “Harvest Fresh” vs cached
+Conceptually:
+
+Initial page load can show cached recommendations (“Last harvested on…”).
+
+Harvest Fresh forces a new pull from external sources (e.g. to capture new PubChem / ChEMBL assays) and updates the cache.
