@@ -111,6 +111,14 @@ export default function AssayHarvestingPage() {
   const { toast } = useToast();
   const [selectedDisease, setSelectedDisease] = useState<string>("Alzheimer's Disease");
   const [selectedAssays, setSelectedAssays] = useState<Set<string>>(new Set());
+
+  const handleDiseaseChange = (disease: string) => {
+    setSelectedDisease(disease);
+    setSelectedAssays(new Set());
+    setGeneratedProtocol(null);
+    setPredictions({});
+    setCampaignName("");
+  };
   const [protocolDialogOpen, setProtocolDialogOpen] = useState(false);
   const [predictionDialogOpen, setPredictionDialogOpen] = useState(false);
   const [campaignName, setCampaignName] = useState("");
@@ -289,7 +297,7 @@ export default function AssayHarvestingPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={selectedDisease} onValueChange={setSelectedDisease}>
+          <Select value={selectedDisease} onValueChange={handleDiseaseChange}>
             <SelectTrigger className="w-[220px]" data-testid="select-disease">
               <SelectValue placeholder="Select disease" />
             </SelectTrigger>

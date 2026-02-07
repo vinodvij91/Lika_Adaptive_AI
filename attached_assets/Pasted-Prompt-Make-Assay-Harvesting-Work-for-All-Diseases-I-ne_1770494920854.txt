@@ -1,0 +1,157 @@
+Prompt: Make Assay Harvesting Work for All Diseases
+I need the Assay Harvesting workflow generalized to all diseases, not hard‑coded for Alzheimer’s.
+
+1. Disease Templates → Target Panels
+Create a disease template registry (e.g. disease_templates.json) with, at minimum:
+
+Alzheimer’s Disease
+
+Huntington’s Disease
+
+Oncology (solid tumor generic)
+
+Metabolic (e.g. T2D)
+
+Vaccines (infectious disease generic)
+
+Materials (if needed, can be empty for now)
+
+Each entry must include:
+
+json
+{
+  "id": "alzheimers_cns",
+  "label": "Alzheimer's Disease",
+  "area": "CNS",
+  "primary_targets": ["APP", "MAPT", "BACE1", "NLRP3", "TFEB"],
+  "secondary_targets": ["SNCA", "ULK1", "ACHE", "KCNH2"],
+  "safety_targets": ["KCNH2"],
+  "default_assay_tags": ["aggregation", "beta-secretase", "neuroprotection"]
+}
+Do the same for Huntington’s, Oncology, Metabolic, Vaccines, etc.
+If you don’t have curated targets, use a minimal but realistic set and mark them as primary / secondary / safety so the right‑hand panel can always populate.
+
+2. Generic Assay Harvesting Engine
+Implement a single backend endpoint that works for any disease:
+
+text
+POST /api/assay-harvest
+Body: {
+  "disease_id": "huntingtons",
+  "targets": [ /* optional override, otherwise use template targets */ ]
+}
+Backend behavior:
+
+Resolve disease_id → target panel from disease_templates.json.
+
+For each target, query assay sources (or load a mocked JSON if real APIs are not ready):
+
+PubChem BioAssay
+
+ChEMBL
+
+BindingDB
+
+Normalize to a common schema:
+
+json
+{
+  "assay_id": "AID_1508",
+  "name": "Beta-secretase (BACE1) inhibition",
+  "source": "PubChem",
+  "target": "BACE1",
+  "disease_id": "alzheimers_cns",
+  "assay_type": "binding",   // binding, functional, ADME, safety, physicochemical
+  "readout": "IC50",
+  "n_compounds": 1247,
+  "confidence": 0.92,
+  "tags": ["FRET", "screening"],
+  "external_url": "https://pubchem.ncbi.nlm.nih.gov/bioassay/1508"
+}
+Score each assay for relevance to the disease (matching targets, tags, recency, quality), returning:
+
+json
+{
+  "binding": [ ...assays... ],
+  "functional": [ ... ],
+  "adme": [ ... ],
+  "safety": [ ... ],
+  "physicochemical": [ ... ]
+}
+If there are no disease‑specific assays, always fall back to generic ADME & safety assay packs so the UI never shows “nothing”.
+
+3. Frontend Behavior (All Diseases)
+On the Assay Harvesting page:
+
+The disease dropdown in the top‑right should always be backed by disease_templates.json.
+
+When a user selects any disease and clicks “Harvest Fresh”:
+
+Call POST /api/assay-harvest with the selected disease_id.
+
+Show a loading state: “Harvesting assays for [Disease Name]…”.
+
+Populate the “Recommended Assays” panel with tabs and cards exactly like Alzheimer’s:
+
+Tabs: Binding, Functional, ADME, Safety, Physicochemical (counts per tab).
+
+For each assay card, show: name, target, source (PubChem/ChEMBL badge), brief description, confidence %, and a checkbox.
+
+Right‑hand side: target panel for that disease (primary/secondary/safety) populated from the template.
+
+Bottom‑right “Selection Summary” should update counts per category for every disease.
+
+There must not be any Alzheimer’s‑only special cases in the frontend; the rendering logic should treat all diseases identically using the generic JSON returned by /api/assay-harvest.
+
+4. Campaign Integration (Disease‑Agnostic)
+When assays are selected and the user chooses “Add to Campaign” (or equivalent):
+
+If the user came from a specific campaign (e.g., “Huntington’s Disease SMILES Screening”), attach the selected assays to that campaign’s Assay Validation tab, regardless of disease.
+
+If there is no active campaign, prompt to create a new campaign pre‑filled with:
+
+Disease
+
+Target panel
+
+Selected assays (with category labels)
+
+The Assay Validation tab should always show an Assay Validation Queue for any disease:
+
+json
+{
+  "awaiting_assay": <count selected>,
+  "in_testing": <count>,
+  "validated_hits": <count>
+}
+5. Fallback / Mock Data Requirement
+Until real PubChem / ChEMBL calls are live:
+
+Provide a mock assay library per disease in a JSON file (e.g., assays_mock.json) so that every disease in the dropdown shows something meaningful when “Harvest Fresh” is clicked.
+
+Make sure Huntington’s, Oncology, Metabolic, and Vaccines all demonstrate:
+
+At least 1–2 binding assays
+
+1 functional assay
+
+1 safety assay
+
+1 ADME assay
+
+6. Acceptance Criteria
+Selecting any disease in the dropdown and clicking Harvest Fresh:
+
+Always populates the Recommended Assays panel (never empty).
+
+Always shows a target panel on the right for that disease.
+
+Updates the Selection Summary correctly.
+
+Adding assays from Assay Harvesting:
+
+For Alzheimer’s and Huntington’s campaigns, selected assays appear in the Assay Validation tab.
+
+For generic disease areas (Oncology, Metabolic, Vaccines), the flow is identical.
+
+This should give you one generic, disease‑agnostic Assay Harvesting flow that works across all disease templates, not just Alzheimer’s or Huntington’s.
