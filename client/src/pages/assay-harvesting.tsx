@@ -125,17 +125,17 @@ export default function AssayHarvestingPage() {
   ]);
 
   const { data: diseasesData, isLoading: diseasesLoading } = useQuery<{ diseases: string[] }>({
-    queryKey: ["/api/assays/diseases"],
+    queryKey: ["/api/assay-harvesting/diseases"],
   });
 
   const { data: template, isLoading: templateLoading, refetch: refetchTemplate } = useQuery<DiseaseTemplate>({
-    queryKey: ["/api/assays", selectedDisease],
+    queryKey: ["/api/assay-harvesting/template", selectedDisease],
     enabled: !!selectedDisease,
   });
 
   const harvestMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/assays/harvest", {
+      const res = await apiRequest("POST", "/api/assay-harvesting/harvest", {
         disease: selectedDisease,
         targets: template?.targets?.map(t => t.symbol) || [],
       });

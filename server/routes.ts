@@ -10599,10 +10599,11 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
   });
 
   // ============================================================================
-  // ASSAY HARVESTING ENDPOINTS
+  // ASSAY HARVESTING ENDPOINTS (moved to /api/assay-harvesting/ to avoid
+  // route conflicts with /api/assays/:id CRUD routes)
   // ============================================================================
   
-  app.get("/api/assays/diseases", requireAuth, async (req, res) => {
+  app.get("/api/assay-harvesting/diseases", requireAuth, async (req, res) => {
     try {
       const { getAvailableDiseases } = await import("./api/disease-templates");
       const diseases = getAvailableDiseases();
@@ -10613,7 +10614,7 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
-  app.get("/api/assays/:disease", requireAuth, async (req, res) => {
+  app.get("/api/assay-harvesting/template/:disease", requireAuth, async (req, res) => {
     try {
       const disease = decodeURIComponent(req.params.disease);
       const useCache = req.query.refresh !== "true";
@@ -10633,7 +10634,7 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
-  app.get("/api/assays/:disease/targets", requireAuth, async (req, res) => {
+  app.get("/api/assay-harvesting/template/:disease/targets", requireAuth, async (req, res) => {
     try {
       const disease = decodeURIComponent(req.params.disease);
       const { getDiseaseTargets } = await import("./api/disease-templates");
@@ -10645,7 +10646,7 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
-  app.post("/api/assays/harvest", requireAuth, async (req, res) => {
+  app.post("/api/assay-harvesting/harvest", requireAuth, async (req, res) => {
     try {
       const { disease, targets } = req.body;
       
@@ -10667,7 +10668,7 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
-  app.post("/api/assays/classify", requireAuth, async (req, res) => {
+  app.post("/api/assay-harvesting/classify", requireAuth, async (req, res) => {
     try {
       const { description, name } = req.body;
       
@@ -10752,29 +10753,6 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
   // BIONEMO PREDICTION ENDPOINTS
   // ============================================================================
   
-  app.post("/api/predict/:assayId", requireAuth, async (req, res) => {
-    try {
-      const assayId = decodeURIComponent(req.params.assayId);
-      const { smiles, assayName, assayDescription } = req.body;
-      
-      if (!smiles || !Array.isArray(smiles) || smiles.length === 0) {
-        return res.status(400).json({ error: "SMILES array is required" });
-      }
-      
-      if (smiles.length > 1000) {
-        return res.status(400).json({ error: "Maximum 1000 SMILES per request" });
-      }
-      
-      const { predictForAssay } = await import("./api/bionemo-client");
-      const result = await predictForAssay(assayId, smiles, assayName, assayDescription);
-      
-      res.json(result);
-    } catch (error: any) {
-      console.error("Error predicting for assay:", error);
-      res.status(500).json({ error: "Failed to run prediction" });
-    }
-  });
-
   app.post("/api/predict/campaign", requireAuth, async (req, res) => {
     try {
       const { assayIds, smiles, assayMetadata } = req.body;
@@ -10803,6 +10781,29 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     } catch (error: any) {
       console.error("Error predicting campaign:", error);
       res.status(500).json({ error: "Failed to run campaign prediction" });
+    }
+  });
+
+  app.post("/api/predict/:assayId", requireAuth, async (req, res) => {
+    try {
+      const assayId = decodeURIComponent(req.params.assayId);
+      const { smiles, assayName, assayDescription } = req.body;
+      
+      if (!smiles || !Array.isArray(smiles) || smiles.length === 0) {
+        return res.status(400).json({ error: "SMILES array is required" });
+      }
+      
+      if (smiles.length > 1000) {
+        return res.status(400).json({ error: "Maximum 1000 SMILES per request" });
+      }
+      
+      const { predictForAssay } = await import("./api/bionemo-client");
+      const result = await predictForAssay(assayId, smiles, assayName, assayDescription);
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error predicting for assay:", error);
+      res.status(500).json({ error: "Failed to run prediction" });
     }
   });
 
