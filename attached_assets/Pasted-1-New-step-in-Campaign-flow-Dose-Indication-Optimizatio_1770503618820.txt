@@ -1,0 +1,99 @@
+1) New step in Campaign flow: “Dose & Indication Optimization”
+Add a 5th box after “Hit Triage” in the Campaign header:
+
+5 Dose & Indication Optimization – Explore lower‑potency, safer dosing and alternate therapeutic areas for your hits.
+
+Clicking it opens a panel over the SAR / Multi‑Target views.
+
+2) Per‑molecule panel: show your optimizer suggestions
+You already compute optimization_suggestions per MoleculeData (Stage 6).
+​
+
+In the SAR card → Series popup (where you now see eszopiclone):
+
+Add a new section:
+
+Dose & Indication Optimization
+
+Key descriptors: MW, logP, TPSA, rotatable bonds
+
+ADMET flags (from Stage 7)
+
+Optimization suggestions (bullets from MoleculeOptimizer._generate_suggestions), e.g.:
+
+“Reduce lipophilicity: add polar groups…”
+
+“Improve solubility: add H‑bond donors/acceptors…”
+
+“DRUG REPURPOSING: consider 10–20× lower dose for epilepsy indication…”
+
+These suggestions already exist in your script; you just surface them in the UI.
+​
+
+3) Dedicated “Repurposing” section (Fenfluramine‑style logic)
+Extend that same panel with a Repurposing card driven by mol.disease_target and your heuristic:
+
+If original disease_target contains “obesity” and optimizer triggers the Fenfluramine rule:
+
+Show:
+
+“Potential new indication: Epilepsy (Dravet/LGS) at 10–20× lower dose.”
+
+“Mechanism: 5‑HT2C focus, minimize 5‑HT2B to reduce cardiac risk.”
+​
+
+More generally, let the script add repurposing hints to optimization_suggestions; the UI just tags anything starting with “DRUG REPURPOSING:” as a Repurposing highlight.
+
+This keeps the Fintepla story embedded but not hard‑coded in the frontend.
+
+4) “Apply Optimization” → create virtual analogs / dose scenarios
+On that same popup, add a button:
+
+Generate Optimized Analogs
+
+When clicked:
+
+Call a backend endpoint that wraps your Stage 6 + 7:
+
+Applies simple, rule‑based functional‑group swaps consistent with the suggestions (e.g., ester→amide, hydroxyl→methoxy), or for now just records a “lower‑dose scenario” without changing structure.
+​
+
+Re‑runs ADMET prediction for those analogs.
+
+Insert the new analogs back into:
+
+SAR as extra molecules in the same series (flagged as “Optimized”).
+
+Multi‑Target so the radar can show the shift in activity/selectivity.
+
+At minimum, even without structural changes, you can generate dose‑adjusted scenarios and show:
+
+Predicted efficacy vs safety window at different dose levels.
+
+Which dose range aligns with a different therapeutic area (e.g., neurology vs metabolic).
+
+5) Minimal wiring you should ask Replit for
+You don’t need to expose the script itself; just describe the behavior:
+
+Backend
+
+Add an /api/optimization/run endpoint that:
+
+Takes campaign ID and molecule ID(s).
+
+Runs your existing MoleculeOptimizer + ADMETPredictor for those molecules.
+​
+
+Returns optimization_suggestions and any new analogs or dose scenarios.
+
+Frontend
+
+SAR → Series popup:
+
+New “Dose & Indication Optimization” section showing suggestions.
+
+“Generate Optimized Analogs” button calling the endpoint.
+
+SAR / Multi‑Target:
+
+Display optimized analogs and let user compare profiles pre‑ and post‑optimization.

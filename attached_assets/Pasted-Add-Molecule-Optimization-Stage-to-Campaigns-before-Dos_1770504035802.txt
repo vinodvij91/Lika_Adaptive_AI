@@ -1,0 +1,50 @@
+Add Molecule Optimization Stage to Campaigns (before Dose/Indication)
+
+We already have backend logic (MoleculeOptimizer in Stage 6 of the pipeline) that generates per‑molecule optimization suggestions based on calculated descriptors and functional groups (size, logP, TPSA, rotatable bonds, functional groups, disease context). It covers:
+
+Solubility & exposure (TPSA < 40 → add H‑bond donors/acceptors).
+
+Lipophilicity tuning (logP too high/low → add/remove polar/lipophilic groups).
+
+Flexibility (too many rotatable bonds → ring constraints/rigid linkers).
+
+CNS suitability (for neurological targets enforce MW < 450, TPSA < 90).
+
+Cardiotoxicity risk (too many hydroxyl groups → suggest hydroxyl→methoxy swaps).
+
+Metabolic stability (ester present → suggest ester→amide).
+
+Dose & indication repurposing for specific disease contexts.
+
+Please expose this as a Molecule Optimization feature in the Campaign → SAR section:
+
+In each Series popup, show a new “Molecule Optimization” panel that displays:
+
+Core properties (MW, logP, TPSA, rotatable bonds, key functional groups) for the selected molecule.
+
+A list of optimization suggestions coming from the optimizer, grouped into:
+
+Solubility & Exposure
+
+Permeability / CNS
+
+Safety (e.g., cardiotoxicity)
+
+Metabolic Stability
+
+Dose & Indication (repurposing)
+
+Add two actions:
+
+“Optimize Properties” → call a backend endpoint that runs the existing optimizer for the selected molecule(s) and generates one or more optimized analogs (e.g., ester→amide, hydroxyl→methoxy, small logP/TPSA‑consistent modifications). Re‑run ADMET prediction for these analogs and insert them into the same SAR series, tagged as “Optimized”.
+
+“Optimize Dose & Indication” → call a backend endpoint that applies our existing dose‑optimization logic (e.g., Fenfluramine‑style 10–20× lower dose suggestions and new indication hints) and stores dose scenarios / repurposing suggestions for the molecule.
+
+Ensure optimized analogs and dose scenarios are reflected in:
+
+The SAR tab (new molecules with updated properties and predictions).
+
+The Multi‑Target tab (radar view should show how optimization affected target activity and liabilities).
+
+This must use the existing optimization logic we already have in our pipeline (do not redesign heuristics), only expose it through endpoints and UI.
+

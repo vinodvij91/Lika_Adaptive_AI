@@ -879,7 +879,7 @@ export default function CampaignDetailPage() {
             </TabsContent>
 
             <TabsContent value="sar">
-              <SarVisualization campaignId={id || ""} />
+              <SarVisualization campaignId={id || ""} diseaseContext={campaign?.name || campaign?.domainType || ""} />
             </TabsContent>
 
             <TabsContent value="multi-target">

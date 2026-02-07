@@ -5997,6 +5997,87 @@ print(json.dumps(result, default=str))
   });
 
   // ============================================
+  // MOLECULE OPTIMIZATION ENDPOINTS
+  // ============================================
+
+  app.post("/api/campaigns/:campaignId/sar/optimize-properties", requireAuth, async (req, res) => {
+    try {
+      const { optimizeMoleculeProperties } = await import("./services/molecule-optimizer");
+      const { moleculeId, smiles, diseaseContext } = req.body;
+      if (!smiles) {
+        return res.status(400).json({ error: "SMILES is required" });
+      }
+
+      const mol = moleculeId ? await storage.getMolecule(moleculeId) : null;
+      const result = optimizeMoleculeProperties(smiles, diseaseContext || "", {
+        mw: mol?.molecularWeight,
+        logP: mol?.logP,
+        hbd: mol?.numHBondDonors,
+        hba: mol?.numHBondAcceptors,
+      });
+      result.moleculeId = moleculeId || "";
+
+      const insertedAnalogs: Array<{ id: string; smiles: string; name: string; modification: string }> = [];
+      for (const analog of result.analogs) {
+        try {
+          const newMol = await storage.createMolecule({
+            smiles: analog.smiles,
+            name: analog.name,
+            seriesId: mol?.seriesId || null,
+            scaffoldId: mol?.scaffoldId || null,
+            source: "generated",
+            molecularWeight: analog.predictedProperties.molecularWeight,
+            logP: analog.predictedProperties.logP,
+            numHBondDonors: null,
+            numHBondAcceptors: null,
+            isDemo: false,
+          });
+          await storage.createMoleculeScore({
+            moleculeId: newMol.id,
+            campaignId: req.params.campaignId,
+            admetScore: analog.admetPredictions.bioavailability,
+            oracleScore: Math.round((analog.admetPredictions.bioavailability + analog.admetPredictions.metabolicStability) / 2 * 100) / 100,
+            rawScores: { optimizedFrom: smiles, modification: analog.modification, admet: analog.admetPredictions },
+          });
+          insertedAnalogs.push({
+            id: newMol.id,
+            smiles: analog.smiles,
+            name: analog.name,
+            modification: analog.modification,
+          });
+        } catch (err) {
+          console.error("Error inserting optimized analog:", err);
+        }
+      }
+
+      res.json({
+        ...result,
+        insertedAnalogs,
+      });
+    } catch (error) {
+      console.error("Error optimizing molecule properties:", error);
+      res.status(500).json({ error: "Failed to optimize molecule properties" });
+    }
+  });
+
+  app.post("/api/campaigns/:campaignId/sar/optimize-dose", requireAuth, async (req, res) => {
+    try {
+      const { optimizeDoseIndication } = await import("./services/molecule-optimizer");
+      const { moleculeId, smiles, diseaseContext, moleculeName } = req.body;
+      if (!smiles) {
+        return res.status(400).json({ error: "SMILES is required" });
+      }
+
+      const result = optimizeDoseIndication(smiles, diseaseContext || "", moleculeName);
+      result.moleculeId = moleculeId || "";
+      res.json(result);
+    } catch (error) {
+      console.error("Error optimizing dose/indication:", error);
+      res.status(500).json({ error: "Failed to optimize dose and indication" });
+    }
+  });
+
+  // ============================================
   // MULTI-TARGET SAR ENDPOINTS
   // ============================================
 
