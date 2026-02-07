@@ -87,6 +87,41 @@ export default function CampaignDetailPage() {
     },
   });
 
+  const { data: assayPanelData } = useQuery<{
+    assayPanel: {
+      disease: string;
+      therapeuticArea: string;
+      assays: Array<{
+        id: string;
+        name: string;
+        description: string;
+        category: string;
+        source: string;
+        targetName: string;
+        confidence: number;
+        status: string;
+      }>;
+      targets: Array<{ name: string; symbol: string; role: string }>;
+      createdAt: string;
+    } | null;
+    predictions: {
+      assayPredictions: Array<{
+        assayId: string;
+        assayName: string;
+        predictions: Array<{ smiles: string; predictedValue: number; confidence: number; unit: string; modelUsed: string }>;
+        modelUsed: string;
+        readoutType: string;
+      }>;
+      compoundCount: number;
+      assayCount: number;
+      models: string[];
+      createdAt: string;
+    } | null;
+  }>({
+    queryKey: [`/api/campaign/${id}/assay-panel`],
+    enabled: !!id,
+  });
+
   const startMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/campaigns/${id}/start`, {});
@@ -557,42 +592,181 @@ export default function CampaignDetailPage() {
             </TabsContent>
 
             <TabsContent value="assay">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div>
-                      <CardTitle className="text-lg">Assay Validation Queue</CardTitle>
-                      <p className="text-sm text-muted-foreground">Hits pending experimental validation</p>
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <CardTitle className="text-lg">Assay Validation Queue</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {assayPanelData?.assayPanel
+                            ? `${assayPanelData.assayPanel.assays.length} assays attached from Assay Harvesting`
+                            : "Hits pending experimental validation"}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
+                        Bioassay tracking
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
-                      Bioassay tracking
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="p-4 rounded-lg bg-muted/50 border">
-                      <p className="text-sm text-muted-foreground mb-1">Awaiting Assay</p>
-                      <p className="text-2xl font-semibold">0</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-muted/50 border">
-                      <p className="text-sm text-muted-foreground mb-1">In Testing</p>
-                      <p className="text-2xl font-semibold">0</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-muted/50 border">
-                      <p className="text-sm text-muted-foreground mb-1">Validated Hits</p>
-                      <p className="text-2xl font-semibold">0</p>
-                    </div>
-                  </div>
-                  <div className="py-8 text-center border rounded-lg">
-                    <Beaker className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground mb-2">No assay results yet</p>
-                    <p className="text-sm text-muted-foreground">
-                      Submit top hits for dose-response and selectivity assays
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent>
+                    {assayPanelData?.assayPanel ? (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          <div className="p-4 rounded-lg bg-muted/50 border">
+                            <p className="text-sm text-muted-foreground mb-1">Awaiting Assay</p>
+                            <p className="text-2xl font-semibold" data-testid="text-awaiting-count">
+                              {assayPanelData.assayPanel.assays.filter(a => a.status === "awaiting_assay").length}
+                            </p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-muted/50 border">
+                            <p className="text-sm text-muted-foreground mb-1">With Predictions</p>
+                            <p className="text-2xl font-semibold" data-testid="text-predicted-count">
+                              {assayPanelData.predictions?.assayCount || 0}
+                            </p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-muted/50 border">
+                            <p className="text-sm text-muted-foreground mb-1">Total Assays</p>
+                            <p className="text-2xl font-semibold" data-testid="text-total-assay-count">
+                              {assayPanelData.assayPanel.assays.length}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Assay</TableHead>
+                                <TableHead>Category</TableHead>
+                                <TableHead>Source</TableHead>
+                                <TableHead>Target</TableHead>
+                                <TableHead className="text-right">Confidence</TableHead>
+                                <TableHead>Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {assayPanelData.assayPanel.assays.map((assay) => (
+                                <TableRow key={assay.id} data-testid={`row-assay-${assay.id}`}>
+                                  <TableCell>
+                                    <div>
+                                      <p className="font-medium text-sm">{assay.name}</p>
+                                      <p className="text-xs text-muted-foreground truncate max-w-xs">{assay.description}</p>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="text-xs capitalize no-default-hover-elevate no-default-active-elevate">
+                                      {assay.category}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-sm">{assay.source}</TableCell>
+                                  <TableCell className="text-sm">{assay.targetName}</TableCell>
+                                  <TableCell className="text-right font-mono text-sm">{(assay.confidence * 100).toFixed(0)}%</TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant={assayPanelData.predictions?.assayPredictions?.find(p => p.assayId === assay.id) ? "default" : "secondary"}
+                                      className="text-xs no-default-hover-elevate no-default-active-elevate"
+                                    >
+                                      {assayPanelData.predictions?.assayPredictions?.find(p => p.assayId === assay.id) ? "Predicted" : "Awaiting"}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          <div className="p-4 rounded-lg bg-muted/50 border">
+                            <p className="text-sm text-muted-foreground mb-1">Awaiting Assay</p>
+                            <p className="text-2xl font-semibold">0</p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-muted/50 border">
+                            <p className="text-sm text-muted-foreground mb-1">In Testing</p>
+                            <p className="text-2xl font-semibold">0</p>
+                          </div>
+                          <div className="p-4 rounded-lg bg-muted/50 border">
+                            <p className="text-sm text-muted-foreground mb-1">Validated Hits</p>
+                            <p className="text-2xl font-semibold">0</p>
+                          </div>
+                        </div>
+                        <div className="py-8 text-center border rounded-lg">
+                          <Beaker className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                          <p className="text-muted-foreground mb-2">No assay panel attached yet</p>
+                          <p className="text-sm text-muted-foreground">
+                            Use Assay Harvesting to select assays and generate a protocol for this campaign
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {assayPanelData?.predictions && (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div>
+                          <CardTitle className="text-lg">BioNeMo Predictions</CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            {assayPanelData.predictions.compoundCount} compounds across {assayPanelData.predictions.assayCount} assays
+                            {" "}({assayPanelData.predictions.models.join(", ")})
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
+                          AI Predicted
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {assayPanelData.predictions.assayPredictions.map((pred) => (
+                          <div key={pred.assayId} className="border rounded-lg p-4">
+                            <div className="flex items-center justify-between gap-4 flex-wrap mb-3">
+                              <div>
+                                <p className="font-medium text-sm">{pred.assayName}</p>
+                                <p className="text-xs text-muted-foreground">Model: {pred.modelUsed} | Readout: {pred.readoutType}</p>
+                              </div>
+                              <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">
+                                {pred.predictions.length} compounds
+                              </Badge>
+                            </div>
+                            <div className="border rounded-lg overflow-hidden">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>SMILES</TableHead>
+                                    <TableHead className="text-right">Predicted Value</TableHead>
+                                    <TableHead className="text-right">Unit</TableHead>
+                                    <TableHead className="text-right">Confidence</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {pred.predictions.slice(0, 10).map((p, i) => (
+                                    <TableRow key={i}>
+                                      <TableCell>
+                                        <code className="text-xs font-mono max-w-xs truncate block">{p.smiles}</code>
+                                      </TableCell>
+                                      <TableCell className="text-right font-mono text-sm">
+                                        {typeof p.predictedValue === "number" ? p.predictedValue.toFixed(3) : "-"}
+                                      </TableCell>
+                                      <TableCell className="text-right text-sm">{p.unit || "-"}</TableCell>
+                                      <TableCell className="text-right font-mono text-sm">
+                                        {typeof p.confidence === "number" ? (p.confidence * 100).toFixed(0) + "%" : "-"}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="jobs">

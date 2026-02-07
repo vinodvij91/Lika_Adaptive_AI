@@ -10715,7 +10715,7 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
         return res.status(400).json({ error: "Disease and selectedAssays array required" });
       }
       
-      const { buildDiseaseTemplate, getDiseaseTargets } = await import("./api/disease-templates");
+      const { buildDiseaseTemplate } = await import("./api/disease-templates");
       const template = await buildDiseaseTemplate(disease, true);
       
       const selectedAssayDetails = [];
@@ -10762,11 +10762,63 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
           }
         }
       };
+
+      const resolvedName = campaignName || `${disease} Discovery Campaign`;
+      const allCampaigns = await storage.getCampaigns();
+      const matchedCampaign = allCampaigns.find(c => {
+        const campaignDisease = c.name.replace(/\s+SMILES\s+Screening$/i, "").replace(/^\[Demo\]\s*/i, "").replace(/^Demo\s*-\s*/i, "").trim();
+        return c.name.toLowerCase() === resolvedName.toLowerCase() ||
+          campaignDisease.toLowerCase() === disease.toLowerCase() ||
+          c.name.toLowerCase().includes(disease.toLowerCase());
+      });
+
+      if (matchedCampaign) {
+        const existingConfig = (matchedCampaign.pipelineConfig as any) || {};
+        await storage.updateCampaign(matchedCampaign.id, {
+          pipelineConfig: {
+            ...existingConfig,
+            assayPanel: {
+              disease,
+              therapeuticArea: template.therapeuticArea,
+              assays: selectedAssayDetails.map(a => ({
+                id: a.id,
+                name: a.name,
+                description: a.description,
+                category: a.category,
+                source: a.source,
+                targetName: a.targetName,
+                confidence: a.confidence,
+                status: "awaiting_assay",
+              })),
+              targets: template.targets,
+              createdAt: new Date().toISOString(),
+            },
+          },
+        });
+        (protocol as any).campaignId = matchedCampaign.id;
+        (protocol as any).campaignLinked = true;
+      }
       
       res.json({ protocol });
     } catch (error: any) {
       console.error("Error generating protocol:", error);
       res.status(500).json({ error: "Failed to generate protocol" });
+    }
+  });
+
+  app.get("/api/campaign/:id/assay-panel", requireAuth, async (req, res) => {
+    try {
+      const campaign = await storage.getCampaign(req.params.id);
+      if (!campaign) {
+        return res.status(404).json({ error: "Campaign not found" });
+      }
+      const config = (campaign.pipelineConfig as any) || {};
+      const assayPanel = config.assayPanel || null;
+      const predictions = config.bionemoPreductions || null;
+      res.json({ assayPanel, predictions, campaignId: campaign.id, campaignName: campaign.name });
+    } catch (error: any) {
+      console.error("Error fetching campaign assay panel:", error);
+      res.status(500).json({ error: "Failed to fetch assay panel" });
     }
   });
 
@@ -10776,7 +10828,7 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
   
   app.post("/api/predict/campaign", requireAuth, async (req, res) => {
     try {
-      const { assayIds, smiles, assayMetadata } = req.body;
+      const { assayIds, smiles, assayMetadata, disease, campaignName } = req.body;
       
       if (!assayIds || !Array.isArray(assayIds) || assayIds.length === 0) {
         return res.status(400).json({ error: "assayIds array is required" });
@@ -10792,6 +10844,44 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
       
       const { predictCampaign } = await import("./api/bionemo-client");
       const results = await predictCampaign(assayIds, smiles, assayMetadata);
+
+      if (disease || campaignName) {
+        try {
+          const allCampaigns = await storage.getCampaigns();
+          const searchTerm = disease || campaignName || "";
+          const matchedCampaign = allCampaigns.find(c => {
+            const campaignDisease = c.name.replace(/\s+SMILES\s+Screening$/i, "").replace(/^\[Demo\]\s*/i, "").replace(/^Demo\s*-\s*/i, "").trim();
+            return (campaignName && c.name.toLowerCase() === campaignName.toLowerCase()) ||
+              campaignDisease.toLowerCase() === searchTerm.toLowerCase() ||
+              c.name.toLowerCase().includes(searchTerm.toLowerCase());
+          });
+
+          if (matchedCampaign) {
+            const existingConfig = (matchedCampaign.pipelineConfig as any) || {};
+            const predictionEntries = Object.entries(results).map(([assayId, pred]: [string, any]) => ({
+              assayId,
+              assayName: pred.assayName || assayMetadata?.[assayId]?.name || assayId,
+              predictions: pred.predictions || [],
+              modelUsed: pred.modelUsed || "megamolbart",
+              readoutType: pred.readoutType || "pIC50",
+            }));
+            await storage.updateCampaign(matchedCampaign.id, {
+              pipelineConfig: {
+                ...existingConfig,
+                bionemoPreductions: {
+                  assayPredictions: predictionEntries,
+                  compoundCount: smiles.length,
+                  assayCount: assayIds.length,
+                  models: ["MegaMolBART", "ESM2"],
+                  createdAt: new Date().toISOString(),
+                },
+              },
+            });
+          }
+        } catch (persistErr) {
+          console.warn("Could not persist predictions to campaign:", persistErr);
+        }
+      }
       
       res.json({
         success: true,

@@ -207,6 +207,8 @@ export default function AssayHarvestingPage() {
         assayIds,
         smiles: sampleSmiles,
         assayMetadata,
+        disease: selectedDisease,
+        campaignName: campaignName || `${selectedDisease} Discovery Campaign`,
       });
       return res.json();
     },
