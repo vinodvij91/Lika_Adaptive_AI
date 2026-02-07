@@ -776,15 +776,37 @@ export function getCuratedAssays(disease: string): RecommendedAssay[] {
   return CURATED_ASSAYS[disease] || [];
 }
 
+const GENERIC_BINDING_ASSAYS: RecommendedAssay[] = [
+  { id: "GEN-BIND-001", name: "Target binding affinity (SPR)", description: "Surface plasmon resonance measurement of compound-target binding kinetics (ka, kd, KD)", source: "Manual", category: "binding", targetName: "Primary Target", confidence: 0.85 },
+  { id: "GEN-BIND-002", name: "Radioligand displacement assay", description: "Competitive radioligand binding assay to determine Ki values against primary target", source: "Manual", category: "binding", targetName: "Primary Target", confidence: 0.83 },
+];
+
+const GENERIC_FUNCTIONAL_ASSAYS: RecommendedAssay[] = [
+  { id: "GEN-FUNC-001", name: "Cell-based functional assay", description: "Cellular reporter assay measuring compound-induced modulation of target pathway activity", source: "Manual", category: "functional", targetName: "Pathway Activity", confidence: 0.82 },
+  { id: "GEN-FUNC-002", name: "Dose-response curve (IC50/EC50)", description: "8-point dose-response determination in target-expressing cell line", source: "Manual", category: "functional", targetName: "Efficacy", confidence: 0.84 },
+];
+
 function getGenericFallbacks(disease: string): RecommendedAssay[] {
   const existing = CURATED_ASSAYS[disease] || [];
   const existingIds = new Set(existing.map(a => a.id));
   const fallbacks: RecommendedAssay[] = [];
 
+  const hasBinding = existing.some(a => a.category === "binding");
+  const hasFunctional = existing.some(a => a.category === "functional");
   const hasAdme = existing.some(a => a.category === "adme");
   const hasSafety = existing.some(a => a.category === "safety");
   const hasPhyschem = existing.some(a => a.category === "physicochemical");
 
+  if (!hasBinding) {
+    for (const a of GENERIC_BINDING_ASSAYS) {
+      if (!existingIds.has(a.id)) fallbacks.push(a);
+    }
+  }
+  if (!hasFunctional) {
+    for (const a of GENERIC_FUNCTIONAL_ASSAYS) {
+      if (!existingIds.has(a.id)) fallbacks.push(a);
+    }
+  }
   if (!hasAdme) {
     for (const a of GENERIC_ADME_ASSAYS) {
       if (!existingIds.has(a.id)) fallbacks.push(a);

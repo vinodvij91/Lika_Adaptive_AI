@@ -116,6 +116,7 @@ import {
   insertImportTemplateSchema,
   insertImportJobSchema,
   moleculeScores,
+  campaigns,
 } from "@shared/schema";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -10606,8 +10607,33 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
   app.get("/api/assay-harvesting/diseases", requireAuth, async (req, res) => {
     try {
       const { getAvailableDiseases } = await import("./api/disease-templates");
-      const diseases = getAvailableDiseases();
-      res.json({ diseases });
+      const templateDiseases = getAvailableDiseases();
+
+      let campaignDiseases: string[] = [];
+      try {
+        const campaignRows = await db.select({ name: campaigns.name }).from(campaigns);
+        campaignDiseases = campaignRows
+          .map(r => {
+            let disease = r.name
+              .replace(/\s+SMILES\s+Screening$/i, "")
+              .replace(/^\[Demo\]\s*/i, "")
+              .replace(/^Demo\s*-\s*/i, "")
+              .replace(/^Multi-Target:.*$/i, "")
+              .trim();
+            return disease;
+          })
+          .filter(d => d.length > 0 && d.length < 60 && !d.includes(" - 20"));
+      } catch (e) {
+        console.warn("Could not fetch campaign diseases:", e);
+      }
+
+      const templateSet = new Set(templateDiseases.map(d => d.toLowerCase().replace(/['']/g, "").replace(/\s+disease$/i, "")));
+      const uniqueCampaignDiseases = campaignDiseases.filter(d => {
+        const normalized = d.toLowerCase().replace(/['']/g, "").replace(/\s+disease$/i, "");
+        return !templateSet.has(normalized);
+      });
+      const allDiseases = Array.from(new Set([...templateDiseases, ...uniqueCampaignDiseases])).sort();
+      res.json({ diseases: allDiseases });
     } catch (error: any) {
       console.error("Error fetching diseases:", error);
       res.status(500).json({ error: "Failed to fetch diseases" });
@@ -10620,11 +10646,6 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
       const useCache = req.query.refresh !== "true";
       
       const { buildDiseaseTemplate, getDiseaseTargets } = await import("./api/disease-templates");
-      
-      const targets = getDiseaseTargets(disease);
-      if (targets.length === 0) {
-        return res.status(404).json({ error: `Disease template not found: ${disease}` });
-      }
       
       const template = await buildDiseaseTemplate(disease, useCache);
       res.json(template);
