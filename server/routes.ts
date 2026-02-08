@@ -34,6 +34,13 @@ interface PdbUpload {
 
 const pdbUploads: PdbUpload[] = [];
 
+function unwrapPipelineOutput(parsed: any): any {
+  if (parsed && parsed.step && typeof parsed.success === 'boolean' && 'output' in parsed && 'error' in parsed) {
+    return parsed.output;
+  }
+  return parsed;
+}
+
 function extractSequenceFromPdb(pdbContent: string): string {
   const threeToOne: Record<string, string> = {
     ALA: 'A', ARG: 'R', ASN: 'N', ASP: 'D', CYS: 'C',
@@ -3856,7 +3863,7 @@ Provide scientific analysis in JSON format.`
       
       if (result.success && result.output) {
         try {
-          const parsed = JSON.parse(result.output.trim());
+          const parsed = unwrapPipelineOutput(JSON.parse(result.output.trim()));
           res.json({ ...parsed, nodeUsed: node.name });
         } catch (e) {
           res.json({ success: true, output: result.output, nodeUsed: node.name });
@@ -4133,7 +4140,7 @@ print(df.to_string())
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
       const jobId = `complete-vaccine-pipeline-${Date.now()}`;
@@ -4144,7 +4151,6 @@ print(df.to_string())
         pdb_content: pdbContent
       };
 
-      // Write params to remote file via base64 encoding
       const paramsB64 = Buffer.from(JSON.stringify(params)).toString("base64");
       const writeParamsJob = {
         id: `write-params-${Date.now()}`,
@@ -4154,27 +4160,12 @@ print(df.to_string())
       };
       await adapter.runJob(node, writeParamsJob as any);
 
-      // Use remote compute path on GPU instance
-      // Set CUDA_VISIBLE_DEVICES='' to force CPU mode for TensorFlow/MHCflurry
-      // This avoids CuDNN version mismatch issues on some GPU instances
-      const remotePath = "/root/compute";
-      const command = `cd ${remotePath} && CUDA_VISIBLE_DEVICES='' python3 -c "
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = ''
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-import json
-import sys
-sys.path.insert(0, '.')
-from complete_vaccine_pipeline import run_pipeline_from_api
-with open('${remoteParamsFile}', 'r') as f:
-    params = json.load(f)
-result = run_pipeline_from_api(
-    sequence=params['sequence'],
-    vaccine_type=params['vaccine_type'],
-    pdb_content=params.get('pdb_content')
-)
-print(json.dumps(result, default=str))
-" && rm -f ${remoteParamsFile}`;
+      const command = `CUDA_VISIBLE_DEVICES='' TF_CPP_MIN_LOG_LEVEL=2 ` + buildPipelineCommand(
+        "complete_vaccine_pipeline.py",
+        "full_pipeline",
+        params,
+        remoteParamsFile
+      ) + ` && rm -f ${remoteParamsFile}`;
 
       const job = {
         id: jobId,
@@ -4186,28 +4177,28 @@ print(json.dumps(result, default=str))
       const result = await adapter.runJob(node, job as any);
       
       if (result.success && result.output) {
-        // Extract JSON from output (may have progress text before the JSON)
-        // The JSON always starts with {"input" and ends at the end of output
         let parsed: any = null;
         let parseError: Error | null = null;
         
         try {
-          // First try direct parse (if output is clean JSON)
           parsed = JSON.parse(result.output.trim());
         } catch (e1) {
-          // Look for JSON object starting with {"input"
-          const startIdx = result.output.indexOf('{"input"');
-          if (startIdx >= 0) {
-            const jsonStr = result.output.substring(startIdx);
-            try {
-              parsed = JSON.parse(jsonStr);
-            } catch (e2) {
-              parseError = e2 as Error;
+          const markers = ['{"step"', '{"input"'];
+          for (const marker of markers) {
+            const startIdx = result.output.indexOf(marker);
+            if (startIdx >= 0) {
+              try {
+                parsed = JSON.parse(result.output.substring(startIdx));
+                break;
+              } catch (e2) {
+                parseError = e2 as Error;
+              }
             }
-          } else {
-            parseError = e1 as Error;
           }
+          if (!parsed) parseError = parseError || e1 as Error;
         }
+        
+        parsed = unwrapPipelineOutput(parsed);
         
         try {
           // Save to database for reports history
@@ -4431,7 +4422,7 @@ print(json.dumps(result, default=str))
       
       if (result.success && result.output) {
         try {
-          const parsed = JSON.parse(result.output.trim());
+          const parsed = unwrapPipelineOutput(JSON.parse(result.output.trim()));
           res.json({ ...parsed, nodeUsed: node.name });
         } catch (e) {
           res.json({ success: true, output: result.output, nodeUsed: node.name });
@@ -4534,7 +4525,7 @@ print(json.dumps(result, default=str))
       
       if (result.success && result.output) {
         try {
-          const parsed = JSON.parse(result.output.trim());
+          const parsed = unwrapPipelineOutput(JSON.parse(result.output.trim()));
           res.json({ ...parsed, nodeUsed: node.name });
         } catch (e) {
           res.json({ success: true, output: result.output, nodeUsed: node.name });
@@ -4628,7 +4619,7 @@ print(json.dumps(result, default=str))
       
       if (result.success && result.output) {
         try {
-          const parsed = JSON.parse(result.output.trim());
+          const parsed = unwrapPipelineOutput(JSON.parse(result.output.trim()));
           res.json({ ...parsed, nodeUsed: node.name });
         } catch (e) {
           res.json({ success: true, output: result.output, nodeUsed: node.name });
@@ -4753,7 +4744,7 @@ print(json.dumps(result, default=str))
       
       if (result.success && result.output) {
         try {
-          const parsed = JSON.parse(result.output.trim());
+          const parsed = unwrapPipelineOutput(JSON.parse(result.output.trim()));
           res.json({ ...parsed, nodeUsed: node.name });
         } catch (e) {
           res.json({ success: true, output: result.output, nodeUsed: node.name });
@@ -4821,7 +4812,7 @@ print(json.dumps(result, default=str))
       
       if (result.success && result.output) {
         try {
-          const parsed = JSON.parse(result.output.trim());
+          const parsed = unwrapPipelineOutput(JSON.parse(result.output.trim()));
           res.json({ ...parsed, nodeUsed: node.name });
         } catch (e) {
           res.json({ success: true, output: result.output, nodeUsed: node.name });

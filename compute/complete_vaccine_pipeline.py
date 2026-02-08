@@ -1712,5 +1712,199 @@ def main():
         print()
 
 
+def run_step(step_name: str, params: Dict) -> Dict:
+    """Execute a single pipeline step based on command-line arguments"""
+    
+    config = params.get('config', {})
+    pipeline = CompleteVaccinePipeline(config=config)
+    
+    result = {
+        'step': step_name,
+        'success': False,
+        'output': None,
+        'error': None
+    }
+    
+    try:
+        sequence = params.get('sequence', '')
+        vaccine_type = params.get('vaccine_type', 'protein_subunit')
+        pdb_content = params.get('pdb_content', None)
+        
+        if step_name == 'full_pipeline':
+            pathogen_sequences = params.get('pathogen_sequences', {"input_sequence": sequence})
+            pipeline_result = pipeline.run_complete_workflow(
+                pathogen_sequences,
+                vaccine_type=vaccine_type,
+                pdb_content=pdb_content
+            )
+            result['output'] = pipeline_result
+            result['success'] = True
+            
+        elif step_name == 'conservation_analysis':
+            pathogen_sequences = params.get('pathogen_sequences', {"input_sequence": sequence})
+            cons_result = pipeline.conservation.analyze_conservation(pathogen_sequences)
+            result['output'] = cons_result
+            result['success'] = True
+            
+        elif step_name == 'dssp_analysis':
+            if not pdb_content:
+                result['error'] = 'PDB content required for DSSP analysis'
+            else:
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.pdb', delete=False) as f:
+                    f.write(pdb_content)
+                    pdb_path = Path(f.name)
+                dssp_result = pipeline.dssp.analyze_structure(pdb_path)
+                os.unlink(pdb_path)
+                result['output'] = dssp_result
+                result['success'] = True
+                
+        elif step_name == 'bcell_epitope_prediction':
+            if not pdb_content:
+                result['error'] = 'PDB content required for B-cell epitope prediction'
+            else:
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.pdb', delete=False) as f:
+                    f.write(pdb_content)
+                    pdb_path = Path(f.name)
+                bcell_result = pipeline.discotope.predict_epitopes(pdb_path)
+                os.unlink(pdb_path)
+                result['output'] = bcell_result
+                result['success'] = True
+                
+        elif step_name == 'tcell_epitope_prediction':
+            alleles = params.get('alleles', ['HLA-A*02:01', 'HLA-A*01:01', 'HLA-B*07:02'])
+            mhc_result = pipeline.mhcflurry.predict_mhc1_epitopes(sequence, alleles=alleles)
+            if mhc_result.get("method") == "mock":
+                mhc_result = pipeline.netmhcpan.predict_mhc1_epitopes(sequence, alleles=alleles)
+            result['output'] = mhc_result
+            result['success'] = True
+            
+        elif step_name == 'epitope_selection':
+            pathogen_sequences = params.get('pathogen_sequences', {"input_sequence": sequence})
+            cons_result = pipeline.conservation.analyze_conservation(pathogen_sequences)
+            mhc_result = pipeline.mhcflurry.predict_mhc1_epitopes(sequence)
+            if mhc_result.get("method") == "mock":
+                mhc_result = pipeline.netmhcpan.predict_mhc1_epitopes(sequence)
+            selected = pipeline._select_epitopes(mhc_result, cons_result, top_n=params.get('top_n', 10))
+            result['output'] = {'selected_epitopes': selected, 'count': len(selected)}
+            result['success'] = True
+            
+        elif step_name == 'aqaffinity_ranking':
+            epitopes = params.get('epitopes', [])
+            ref_sequence = params.get('reference_sequence', sequence)
+            ranking = pipeline._rank_epitopes_with_aqaffinity(epitopes, ref_sequence)
+            result['output'] = ranking
+            result['success'] = True
+            
+        elif step_name == 'codon_optimization':
+            organism = params.get('organism', 'human')
+            opt_result = pipeline.codon_opt.optimize_codons(sequence, organism=organism)
+            result['output'] = opt_result
+            result['success'] = True
+            
+        elif step_name == 'mrna_design':
+            epitopes = params.get('epitopes', [])
+            if not epitopes:
+                result['error'] = 'Epitopes list required for mRNA design'
+            else:
+                mrna_result = pipeline._design_mrna_vaccine(epitopes)
+                result['output'] = mrna_result
+                result['success'] = True
+                
+        elif step_name == 'multi_epitope_design':
+            epitopes = params.get('epitopes', [])
+            if not epitopes:
+                result['error'] = 'Epitopes list required for multi-epitope design'
+            else:
+                design_result = pipeline._design_multi_epitope(epitopes)
+                result['output'] = design_result
+                result['success'] = True
+                
+        elif step_name == 'rna_structure':
+            rna_seq = params.get('rna_sequence', '')
+            if not rna_seq:
+                result['error'] = 'RNA sequence required for structure prediction'
+            else:
+                struct_result = pipeline.rna_fold.predict_structure(rna_seq)
+                result['output'] = struct_result
+                result['success'] = True
+                
+        elif step_name == 'task_registry':
+            result['output'] = get_task_registry()
+            result['success'] = True
+            
+        else:
+            result['error'] = f'Unknown step: {step_name}. Available: full_pipeline, conservation_analysis, dssp_analysis, bcell_epitope_prediction, tcell_epitope_prediction, epitope_selection, aqaffinity_ranking, codon_optimization, mrna_design, multi_epitope_design, rna_structure, task_registry'
+            
+    except Exception as e:
+        result['error'] = str(e)
+        logger.error(f"Step {step_name} failed: {e}")
+    
+    return result
+
+
+def cli_main():
+    """Command-line interface for complete vaccine pipeline execution"""
+    import argparse
+    import warnings
+    
+    parser = argparse.ArgumentParser(description='Lika Sciences Complete Vaccine Discovery Pipeline')
+    parser.add_argument('--job-type', type=str, required=True,
+                        help='Type of job to run (e.g., full_pipeline, dssp_analysis, tcell_epitope_prediction)')
+    parser.add_argument('--params', type=str, default=None,
+                        help='JSON string containing job parameters')
+    parser.add_argument('--params-file', type=str, default=None,
+                        help='Path to JSON file containing job parameters')
+    parser.add_argument('--output', type=str, default=None,
+                        help='Output file path (optional, defaults to stdout)')
+    
+    args = parser.parse_args()
+    
+    warnings.filterwarnings('ignore')
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    
+    old_stderr = sys.stderr
+    sys.stderr = open(os.devnull, 'w')
+    
+    try:
+        params = {}
+        
+        if args.params_file:
+            try:
+                with open(args.params_file, 'r') as f:
+                    params = json.load(f)
+            except Exception as e:
+                print(json.dumps({'step': args.job_type, 'success': False, 'error': f'Failed to read params file: {e}'}))
+                return 1
+        elif args.params:
+            try:
+                params = json.loads(args.params)
+            except json.JSONDecodeError as e:
+                print(json.dumps({'step': args.job_type, 'success': False, 'error': f'Invalid JSON params: {e}'}))
+                return 1
+        else:
+            print(json.dumps({'step': args.job_type, 'success': False, 'error': 'Either --params or --params-file is required'}))
+            return 1
+        
+        result = run_step(args.job_type, params)
+        
+        output_json = json.dumps(result, indent=2, default=str)
+        
+        if args.output:
+            with open(args.output, 'w') as f:
+                f.write(output_json)
+        else:
+            print(output_json)
+        
+        return 0 if result['success'] else 1
+        
+    finally:
+        sys.stderr.close()
+        sys.stderr = old_stderr
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+    if len(sys.argv) > 1:
+        sys.exit(cli_main())
+    else:
+        main()

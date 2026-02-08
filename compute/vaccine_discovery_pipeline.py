@@ -860,59 +860,67 @@ if __name__ == "__main__":
             pipeline = GPUAgnosticVaccinePipeline()
             
             if args.job_type == 'full_pipeline':
-                result = pipeline.run_pipeline(params)
+                pipeline_result = pipeline.run_pipeline(params)
                 output = {
                     'step': 'full_pipeline',
                     'success': True,
-                    'hardware': pipeline.get_performance_report()['hardware'],
-                    'candidates': result
+                    'output': {
+                        'hardware': pipeline.get_performance_report()['hardware'],
+                        'candidates': pipeline_result
+                    },
+                    'error': None
                 }
             elif args.job_type == 'predict_structure':
                 task = pipeline.task_registry['predict_structure']
                 task.args = (params.get('sequence', ''),)
-                result = pipeline.scheduler.submit_task(task)
+                task_result = pipeline.scheduler.submit_task(task)
                 output = {
                     'step': 'predict_structure',
                     'success': True,
-                    'result': result
+                    'output': task_result,
+                    'error': None
                 }
             elif args.job_type == 'predict_epitopes':
                 task = pipeline.task_registry['predict_mhc']
                 task.args = (params.get('sequence', ''), params.get('mhc_alleles', ['HLA-A*02:01']))
-                result = pipeline.scheduler.submit_task(task)
+                task_result = pipeline.scheduler.submit_task(task)
                 output = {
                     'step': 'predict_epitopes',
                     'success': True,
-                    'result': result
+                    'output': task_result,
+                    'error': None
                 }
             elif args.job_type == 'optimize_codons':
                 task = pipeline.task_registry['optimize_codons']
                 task.args = (params.get('sequence', ''),)
                 task.kwargs = {'organism': params.get('organism', 'human')}
-                result = pipeline.scheduler.submit_task(task)
+                task_result = pipeline.scheduler.submit_task(task)
                 output = {
                     'step': 'optimize_codons',
                     'success': True,
-                    'optimized_sequence': result
+                    'output': {'optimized_sequence': task_result},
+                    'error': None
                 }
             elif args.job_type == 'design_mrna':
-                result = SequenceOptimizationTasks.design_mrna_cpu(
+                mrna_result = SequenceOptimizationTasks.design_mrna_cpu(
                     params.get('sequence', ''),
                     params.get('utr_type', 'optimized')
                 )
                 output = {
                     'step': 'design_mrna',
                     'success': True,
-                    'result': result
+                    'output': mrna_result,
+                    'error': None
                 }
             elif args.job_type == 'run_md':
                 task = pipeline.task_registry['run_md']
                 task.args = (params.get('structure_pdb', ''), params.get('nanoseconds', 10.0))
-                result = pipeline.scheduler.submit_task(task)
+                task_result = pipeline.scheduler.submit_task(task)
                 output = {
                     'step': 'run_md',
                     'success': True,
-                    'result': result
+                    'output': task_result,
+                    'error': None
                 }
             else:
                 output = {
