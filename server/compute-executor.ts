@@ -461,4 +461,32 @@ export async function setupDefaultComputeNodes(): Promise<void> {
     });
     console.log("[ComputeExecutor] Created Vast.ai GPU node");
   }
+
+  const gcpHost = process.env.GCP_SSH_HOST;
+  const gcpUser = process.env.GCP_SSH_USER || "replit";
+  const gcpPort = process.env.GCP_SSH_PORT || "22";
+  if (gcpHost) {
+    await storage.createComputeNode({
+      name: "GCP GPU Node (A100)",
+      provider: "gcp",
+      connectionType: "ssh",
+      gpuType: "A100",
+      tier: "dedicated-A100",
+      purpose: "ml",
+      sshHost: gcpHost,
+      sshPort: gcpPort,
+      sshUsername: gcpUser,
+      isDefault: true,
+      status: "active",
+      specs: {
+        gpuName: "NVIDIA A100",
+        numGpus: 1,
+        gpuMemoryGb: 40,
+        cpuCores: 12,
+        memoryGb: 85,
+        storageGb: 200,
+      },
+    });
+    console.log("[ComputeExecutor] Created GCP GPU node");
+  }
 }

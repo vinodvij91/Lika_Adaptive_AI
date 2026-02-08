@@ -1968,13 +1968,20 @@ export async function registerRoutes(
     try {
 
       const nodes = await storage.getComputeNodes();
-      let node = nodeId ? nodes.find(n => n.id === nodeId) : nodes.find(n => n.status === "active" && n.gpuType);
+      let node = nodeId ? nodes.find(n => n.id === nodeId) : null;
+      if (!node) {
+        node = nodes.find(n => n.status === "active" && n.provider === "gcp" && n.gpuType);
+      }
+      if (!node) {
+        node = nodes.find(n => n.status === "active" && n.gpuType);
+      }
       if (!node) {
         node = nodes.find(n => n.status === "active");
       }
       if (!node) {
         return res.status(503).json({ error: "No compute nodes available" });
       }
+      console.log(`[3D-Gen] Selected node: ${node.name} (${node.provider})`);
 
       const { getComputeAdapter } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);

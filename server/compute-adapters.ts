@@ -756,10 +756,15 @@ export class CloudApiComputeAdapter implements ComputeAdapter {
   }
 
   private async runGcpJob(node: ComputeNode, job: ComputeJob): Promise<ComputeJobResult> {
-    console.log(`[GCP] Would use GCP credentials to run job on ${node.region}`);
+    if (node.sshHost) {
+      console.log(`[GCP] Routing job ${job.id} via SSH to ${node.sshHost}:${node.sshPort || 22}`);
+      const sshAdapter = new SshComputeAdapter("gcp");
+      return sshAdapter.runJob(node, job);
+    }
+    console.log(`[GCP] No SSH host configured for node ${node.name}, cannot execute`);
     return {
-      success: true,
-      output: `[STUB] GCP job ${job.id} would execute on ${node.region}`,
+      success: false,
+      error: `GCP node ${node.name} has no SSH host configured`,
     };
   }
 
@@ -767,6 +772,10 @@ export class CloudApiComputeAdapter implements ComputeAdapter {
     if (this.provider === "vast") {
       const vastAdapter = new VastAiComputeAdapter();
       return vastAdapter.checkHealth(node);
+    }
+    if (this.provider === "gcp" && node.sshHost) {
+      const sshAdapter = new SshComputeAdapter("gcp");
+      return sshAdapter.checkHealth(node);
     }
     console.log(`[CloudApiComputeAdapter] Checking health of ${this.provider} node ${node.name}`);
     return true;
