@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { Link, useLocation } from "wouter";
 import { 
   Hexagon, Plus, Upload, Search, Zap, Atom, Box, Layers, 
   Calculator, Factory, Sparkles, ArrowRight, CheckCircle2,
-  Loader2, Play, Database, Leaf, Shield, Dna
+  Loader2, Play, Database, Leaf, Shield, Dna, GitBranch
 } from "lucide-react";
 import type { MaterialEntity } from "@shared/schema";
 
@@ -36,9 +37,12 @@ const DEMO_MATERIALS: Array<{name: string; type: "polymer" | "crystal" | "compos
 ];
 
 export default function MaterialsLibraryPage() {
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [quickPredictions, setQuickPredictions] = useState<QuickPrediction[]>([]);
+  const [generatingFor, setGeneratingFor] = useState<string | null>(null);
 
   const categoryParam = activeTab !== "all" ? `?category=${activeTab}` : "";
   const { data: materialsResponse, isLoading } = useQuery<{ materials: MaterialEntity[], total: number }>({
@@ -84,6 +88,35 @@ export default function MaterialsLibraryPage() {
       ]);
     }
   };
+
+  const generateVariantsMutation = useMutation({
+    mutationFn: async (material: MaterialEntity) => {
+      const rep = material.representation as any;
+      const res = await apiRequest("POST", "/api/compute/materials/generate", {
+        targetProperties: { thermal_conductivity: 1.0, tensile_strength: 50 },
+        nCandidates: 10,
+        elements: rep?.formula ? [rep.formula] : undefined,
+      });
+      return res.json();
+    },
+    onSuccess: (result, material) => {
+      setGeneratingFor(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/material-variants"] });
+      toast({
+        title: "Variants Generated",
+        description: `Generated ${result.candidates?.length || 0} variant candidates for ${material.name || "material"}.`,
+      });
+      setLocation("/material-variants");
+    },
+    onError: (error: any) => {
+      setGeneratingFor(null);
+      toast({
+        title: "Generation Failed",
+        description: error.message || "No compute nodes available",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Group related material types for filtering
   const polymerTypes = ["polymer", "homopolymer", "copolymer"];
@@ -296,6 +329,24 @@ export default function MaterialsLibraryPage() {
                             {material.isCurated && (
                               <Badge variant="outline" className="text-xs">Curated</Badge>
                             )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              disabled={generatingFor === material.id || generateVariantsMutation.isPending}
+                              onClick={() => {
+                                setGeneratingFor(material.id);
+                                generateVariantsMutation.mutate(material);
+                              }}
+                              data-testid={`button-generate-variants-${material.id}`}
+                            >
+                              {generatingFor === material.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <GitBranch className="h-3 w-3" />
+                              )}
+                              Variants
+                            </Button>
                             <Link href={`/property-prediction?smiles=${encodeURIComponent((material.representation as any)?.smiles || '')}&name=${encodeURIComponent(material.name || '')}&type=${material.type}`}>
                               <Button size="sm" variant="outline" className="gap-1">
                                 <Calculator className="h-3 w-3" />

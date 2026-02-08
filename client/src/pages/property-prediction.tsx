@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -438,6 +439,11 @@ export default function PropertyPredictionPage() {
     queryKey: ["/api/compute-nodes"],
   });
 
+  const { data: materialsResponse } = useQuery<{ materials: any[], total: number }>({
+    queryKey: ["/api/materials"],
+  });
+  const userMaterials = materialsResponse?.materials || [];
+
   const onlineNodes = computeNodes?.filter((n) => n.status === "active") || [];
 
   const predictMutation = useMutation({
@@ -673,6 +679,38 @@ export default function PropertyPredictionPage() {
                           data-testid="input-materials"
                         />
                       </div>
+
+                      {userMaterials.length > 0 && (
+                        <div>
+                          <Label className="text-xs font-medium text-muted-foreground mb-2 block">Quick Load from Library</Label>
+                          <ScrollArea className="h-28 rounded border bg-muted/30">
+                            <div className="p-2 space-y-1">
+                              {userMaterials.slice(0, 20).map((mat: any) => {
+                                const smiles = (mat.representation as any)?.smiles || '';
+                                if (!smiles) return null;
+                                return (
+                                  <div 
+                                    key={mat.id}
+                                    className="flex items-center justify-between p-1.5 rounded cursor-pointer hover-elevate"
+                                    onClick={() => {
+                                      setInputText(prev => prev ? prev + '\n' + smiles : smiles);
+                                      setCurrentMaterialName(mat.name || '');
+                                      setCurrentSmiles(smiles);
+                                    }}
+                                    data-testid={`button-load-material-${mat.id}`}
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <FlaskConical className="h-3 w-3 text-emerald-500 shrink-0" />
+                                      <span className="text-xs truncate">{mat.name || mat.id}</span>
+                                    </div>
+                                    <Badge variant="secondary" className="text-[10px] shrink-0">{mat.type?.replace(/_/g, ' ')}</Badge>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                      )}
 
                       <Button
                         className="w-full gap-2 bg-gradient-to-r from-emerald-500 to-teal-500"

@@ -437,6 +437,7 @@ export interface IStorage {
   deleteMaterialsCampaign(id: string): Promise<void>;
 
   getMaterialsOracleScores(campaignId: string): Promise<MaterialsOracleScore[]>;
+  getAllMaterialsOracleScores(limit?: number): Promise<MaterialsOracleScore[]>;
   createMaterialsOracleScore(score: InsertMaterialsOracleScore): Promise<MaterialsOracleScore>;
 
   getMaterialsLearningGraph(campaignId?: string): Promise<MaterialsLearningGraphEntry[]>;
@@ -1853,6 +1854,10 @@ export class DatabaseStorage implements IStorage {
 
   async getMaterialsOracleScores(campaignId: string): Promise<MaterialsOracleScore[]> {
     return db.select().from(materialsOracleScores).where(eq(materialsOracleScores.campaignId, campaignId)).orderBy(desc(materialsOracleScores.createdAt));
+  }
+
+  async getAllMaterialsOracleScores(limit: number = 100): Promise<MaterialsOracleScore[]> {
+    return db.select().from(materialsOracleScores).orderBy(desc(materialsOracleScores.createdAt)).limit(limit);
   }
 
   async createMaterialsOracleScore(score: InsertMaterialsOracleScore): Promise<MaterialsOracleScore> {

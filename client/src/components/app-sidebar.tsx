@@ -93,6 +93,7 @@ const materialsNavigationItems = [
   { title: "Dashboard", url: "/dashboard/materials", icon: LayoutDashboard },
   { title: "Import", url: "/import", icon: Upload },
   { title: "Materials Library", url: "/materials-library", icon: Hexagon },
+  { title: "Campaigns", url: "/materials-campaigns", icon: Target },
   { title: "Variants", url: "/material-variants", icon: Layers },
   { title: "Multi-Scale Representation", url: "/multi-scale-representations", icon: Layers },
 ];

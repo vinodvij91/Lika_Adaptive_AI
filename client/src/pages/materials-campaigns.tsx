@@ -1,11 +1,15 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   Hexagon,
   Target,
@@ -20,7 +24,11 @@ import {
   Settings,
   BarChart3,
   Factory,
+  Loader2,
+  Trash2,
+  RefreshCw,
 } from "lucide-react";
+import type { MaterialsCampaign, MaterialsCampaignAggregate } from "@shared/schema";
 
 function formatNumber(num: number): string {
   if (num >= 1000000) {
@@ -40,235 +48,141 @@ function formatLargeNumber(num: number): string {
   return num.toLocaleString();
 }
 
-interface CampaignMetrics {
-  id: string;
-  name: string;
-  domain: string;
-  status: "running" | "completed" | "paused" | "queued";
-  variantsEvaluated: number;
-  totalVariants: number;
-  predictionsGenerated: number;
-  activeSimulationJobs: number;
-  topPercentile: number;
-  topCandidatesCount: number;
-  manufacturingReadyCount: number;
-  createdAt: string;
-  estimatedCompletion?: string;
+function formatDate(dateStr: string | Date | null | undefined): string {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function generateMockCampaigns(): CampaignMetrics[] {
-  return [
-    {
-      id: "1",
-      name: "High-Permeability Membranes",
-      domain: "membrane",
-      status: "running",
-      variantsEvaluated: 420000,
-      totalVariants: 520000,
-      predictionsGenerated: 1340000,
-      activeSimulationJobs: 12,
-      topPercentile: 5,
-      topCandidatesCount: 8200,
-      manufacturingReadyCount: 1450,
-      createdAt: "2025-12-15",
-      estimatedCompletion: "4h 32m",
-    },
-    {
-      id: "2",
-      name: "Thermal-Stable Polymer Coatings",
-      domain: "coating",
-      status: "running",
-      variantsEvaluated: 285000,
-      totalVariants: 350000,
-      predictionsGenerated: 892000,
-      activeSimulationJobs: 8,
-      topPercentile: 3,
-      topCandidatesCount: 4250,
-      manufacturingReadyCount: 890,
-      createdAt: "2025-12-18",
-      estimatedCompletion: "2h 15m",
-    },
-    {
-      id: "3",
-      name: "High-Conductivity Electrolytes",
-      domain: "electrolyte",
-      status: "completed",
-      variantsEvaluated: 680000,
-      totalVariants: 680000,
-      predictionsGenerated: 2100000,
-      activeSimulationJobs: 0,
-      topPercentile: 2,
-      topCandidatesCount: 12400,
-      manufacturingReadyCount: 3200,
-      createdAt: "2025-11-20",
-    },
-    {
-      id: "4",
-      name: "Lightweight Structural Composites",
-      domain: "composite",
-      status: "paused",
-      variantsEvaluated: 145000,
-      totalVariants: 400000,
-      predictionsGenerated: 456000,
-      activeSimulationJobs: 0,
-      topPercentile: 5,
-      topCandidatesCount: 2100,
-      manufacturingReadyCount: 450,
-      createdAt: "2025-12-10",
-    },
-    {
-      id: "5",
-      name: "Next-Gen Catalyst Discovery",
-      domain: "catalyst",
-      status: "queued",
-      variantsEvaluated: 0,
-      totalVariants: 750000,
-      predictionsGenerated: 0,
-      activeSimulationJobs: 0,
-      topPercentile: 0,
-      topCandidatesCount: 0,
-      manufacturingReadyCount: 0,
-      createdAt: "2025-12-22",
-    },
-  ];
-}
+type CampaignStatus = "running" | "completed" | "paused" | "queued" | "pending" | "failed";
 
-function CampaignCard({ campaign }: { campaign: CampaignMetrics }) {
-  const progress = campaign.totalVariants > 0 
-    ? (campaign.variantsEvaluated / campaign.totalVariants) * 100 
-    : 0;
+const statusColors: Record<string, string> = {
+  running: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30",
+  completed: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
+  paused: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30",
+  queued: "bg-muted text-muted-foreground border-border",
+  pending: "bg-muted text-muted-foreground border-border",
+  failed: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30",
+};
 
-  const statusColors = {
-    running: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30",
-    completed: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
-    paused: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30",
-    queued: "bg-muted text-muted-foreground border-border",
-  };
+const statusIconMap: Record<string, typeof Play> = {
+  running: Play,
+  completed: CheckCircle,
+  paused: Pause,
+  queued: Clock,
+  pending: Clock,
+  failed: Zap,
+};
 
-  const statusIcons = {
-    running: <Play className="h-3 w-3" />,
-    completed: <CheckCircle className="h-3 w-3" />,
-    paused: <Pause className="h-3 w-3" />,
-    queued: <Clock className="h-3 w-3" />,
-  };
+function CampaignCard({ campaign, aggregate }: { campaign: MaterialsCampaign; aggregate?: MaterialsCampaignAggregate }) {
+  const totalVariants = aggregate?.totalVariants || 0;
+  const totalMaterials = aggregate?.totalMaterials || 0;
+  const avgScore = aggregate?.avgOracleScore || 0;
+  const status = (campaign.status || "pending") as CampaignStatus;
+  const StatusIcon = statusIconMap[status] || Clock;
+  const pipelineConfig = campaign.pipelineConfig as Record<string, any> | null;
 
   return (
-    <Card className="hover-elevate" data-testid={`card-campaign-${campaign.id}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
-              <Hexagon className="h-5 w-5 text-amber-400" />
-            </div>
-            <div>
-              <CardTitle className="text-base">{campaign.name}</CardTitle>
-              <p className="text-xs text-muted-foreground capitalize">{campaign.domain}</p>
-            </div>
-          </div>
-          <Badge variant="outline" className={statusColors[campaign.status]}>
-            {statusIcons[campaign.status]}
-            <span className="ml-1 capitalize">{campaign.status}</span>
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {campaign.status !== "queued" && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Variants Evaluated</span>
-              <span className="font-mono font-medium">
-                {formatNumber(campaign.variantsEvaluated)} / {formatNumber(campaign.totalVariants)}
-              </span>
-            </div>
-            <Progress value={progress} className="h-2" />
-            {campaign.estimatedCompletion && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span>Est. completion: {campaign.estimatedCompletion}</span>
+    <Link href={`/materials-campaigns/${campaign.id}`}>
+      <Card className="hover-elevate cursor-pointer" data-testid={`card-campaign-${campaign.id}`}>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-md bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
+                <Hexagon className="h-5 w-5 text-amber-400" />
               </div>
-            )}
+              <div>
+                <CardTitle className="text-base">{campaign.name}</CardTitle>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {campaign.modality || campaign.domain || "materials"}
+                </p>
+              </div>
+            </div>
+            <Badge variant="outline" className={statusColors[status] || statusColors.pending}>
+              <StatusIcon className="h-3 w-3" />
+              <span className="ml-1 capitalize">{status}</span>
+            </Badge>
           </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-md bg-muted/50 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Activity className="h-3 w-3" />
-              <span>Predictions</span>
-            </div>
-            <div className="text-lg font-bold font-mono">
-              {formatLargeNumber(campaign.predictionsGenerated)}
-            </div>
-          </div>
-          <div className="p-3 rounded-md bg-muted/50 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Zap className="h-3 w-3" />
-              <span>Active Jobs</span>
-            </div>
-            <div className="text-lg font-bold font-mono">
-              {campaign.activeSimulationJobs}
-            </div>
-          </div>
-        </div>
-
-        {campaign.topCandidatesCount > 0 && (
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-md bg-muted/50 space-y-1">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Activity className="h-3 w-3" />
+                <span>Materials</span>
+              </div>
+              <div className="text-lg font-bold font-mono">
+                {formatNumber(totalMaterials)}
+              </div>
+            </div>
+            <div className="p-3 rounded-md bg-muted/50 space-y-1">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Zap className="h-3 w-3" />
+                <span>Variants</span>
+              </div>
+              <div className="text-lg font-bold font-mono">
+                {formatNumber(totalVariants)}
+              </div>
+            </div>
+          </div>
+
+          {avgScore > 0 && (
             <div className="p-3 rounded-md bg-green-500/10 border border-green-500/20 space-y-1">
               <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
                 <Target className="h-3 w-3" />
-                <span>Top {campaign.topPercentile}%</span>
+                <span>Avg Oracle Score</span>
               </div>
               <div className="text-lg font-bold font-mono text-green-700 dark:text-green-300">
-                {formatNumber(campaign.topCandidatesCount)}
+                {avgScore.toFixed(2)}
               </div>
-              <div className="text-xs text-muted-foreground">candidates</div>
             </div>
-            <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/20 space-y-1">
-              <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                <Factory className="h-3 w-3" />
-                <span>Mfg Ready</span>
-              </div>
-              <div className="text-lg font-bold font-mono text-amber-700 dark:text-amber-300">
-                {formatNumber(campaign.manufacturingReadyCount)}
-              </div>
-              <div className="text-xs text-muted-foreground">variants</div>
-            </div>
-          </div>
-        )}
+          )}
 
-        <div className="flex items-center justify-between pt-2 border-t gap-2">
-          <span className="text-xs text-muted-foreground">Created {campaign.createdAt}</span>
-          <div className="flex gap-2">
-            {campaign.status === "completed" && (
-              <Link href={`/materials/campaigns/${campaign.id}/triage`}>
-                <Button variant="default" size="sm" data-testid={`button-triage-${campaign.id}`}>
+          <div className="flex items-center justify-between pt-2 border-t gap-2">
+            <span className="text-xs text-muted-foreground">
+              Created {formatDate(campaign.createdAt)}
+            </span>
+            <div className="flex gap-2">
+              {status === "completed" && (
+                <Button variant="default" size="sm" data-testid={`button-triage-${campaign.id}`} onClick={(e) => e.stopPropagation()}>
                   <Target className="h-3.5 w-3.5 mr-1" />
                   View Triage
                 </Button>
-              </Link>
-            )}
-            <Button variant="ghost" size="sm" data-testid={`button-view-campaign-${campaign.id}`}>
-              View Details
-              <ArrowRight className="h-3.5 w-3.5 ml-1" />
-            </Button>
+              )}
+              <Button variant="ghost" size="sm" data-testid={`button-view-campaign-${campaign.id}`}>
+                View Details
+                <ArrowRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
-function PlatformMetrics({ campaigns }: { campaigns: CampaignMetrics[] }) {
+function PlatformMetrics({ campaigns, aggregates }: { campaigns: MaterialsCampaign[]; aggregates: Record<string, MaterialsCampaignAggregate> }) {
   const totals = useMemo(() => {
-    return campaigns.reduce((acc, c) => ({
-      variantsEvaluated: acc.variantsEvaluated + c.variantsEvaluated,
-      totalVariants: acc.totalVariants + c.totalVariants,
-      predictions: acc.predictions + c.predictionsGenerated,
-      activeJobs: acc.activeJobs + c.activeSimulationJobs,
-      topCandidates: acc.topCandidates + c.topCandidatesCount,
-      manufacturingReady: acc.manufacturingReady + c.manufacturingReadyCount,
-    }), { variantsEvaluated: 0, totalVariants: 0, predictions: 0, activeJobs: 0, topCandidates: 0, manufacturingReady: 0 });
-  }, [campaigns]);
+    let totalMaterials = 0;
+    let totalVariants = 0;
+    let totalWithScores = 0;
+    let sumScores = 0;
+
+    Object.values(aggregates).forEach(agg => {
+      totalMaterials += agg.totalMaterials || 0;
+      totalVariants += agg.totalVariants || 0;
+      if (agg.avgOracleScore && agg.avgOracleScore > 0) {
+        sumScores += agg.avgOracleScore;
+        totalWithScores++;
+      }
+    });
+
+    return {
+      totalMaterials,
+      totalVariants,
+      avgScore: totalWithScores > 0 ? sumScores / totalWithScores : 0,
+    };
+  }, [aggregates]);
 
   const activeCampaigns = campaigns.filter(c => c.status === "running").length;
   const completedCampaigns = campaigns.filter(c => c.status === "completed").length;
@@ -289,26 +203,28 @@ function PlatformMetrics({ campaigns }: { campaigns: CampaignMetrics[] }) {
       </Card>
       <Card>
         <CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold font-mono">{formatNumber(totals.variantsEvaluated)}</div>
-          <div className="text-xs text-muted-foreground">Variants Evaluated</div>
+          <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">{completedCampaigns}</div>
+          <div className="text-xs text-muted-foreground">Completed</div>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold font-mono">{formatLargeNumber(totals.predictions)}</div>
-          <div className="text-xs text-muted-foreground">Predictions</div>
+          <div className="text-2xl font-bold font-mono">{formatNumber(totals.totalMaterials)}</div>
+          <div className="text-xs text-muted-foreground">Total Materials</div>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold font-mono text-green-600 dark:text-green-400">{formatNumber(totals.topCandidates)}</div>
-          <div className="text-xs text-muted-foreground">Top Candidates</div>
+          <div className="text-2xl font-bold font-mono">{formatNumber(totals.totalVariants)}</div>
+          <div className="text-xs text-muted-foreground">Total Variants</div>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400">{formatNumber(totals.manufacturingReady)}</div>
-          <div className="text-xs text-muted-foreground">Mfg Ready</div>
+          <div className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400">
+            {totals.avgScore > 0 ? totals.avgScore.toFixed(2) : "—"}
+          </div>
+          <div className="text-xs text-muted-foreground">Avg Score</div>
         </CardContent>
       </Card>
     </div>
@@ -316,13 +232,47 @@ function PlatformMetrics({ campaigns }: { campaigns: CampaignMetrics[] }) {
 }
 
 export default function MaterialsCampaignsPage() {
+  const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const campaigns = useMemo(() => generateMockCampaigns(), []);
+
+  const { data: campaigns = [], isLoading } = useQuery<MaterialsCampaign[]>({
+    queryKey: ["/api/materials-campaigns"],
+  });
+
+  const { data: aggregatesMap = {} } = useQuery<Record<string, MaterialsCampaignAggregate>>({
+    queryKey: ["/api/materials-campaigns", "all-aggregates"],
+    queryFn: async () => {
+      const map: Record<string, MaterialsCampaignAggregate> = {};
+      await Promise.all(
+        campaigns.map(async (c) => {
+          try {
+            const res = await fetch(`/api/materials-campaigns/${c.id}/aggregates`, { credentials: "include" });
+            if (res.ok) {
+              const data = await res.json();
+              if (data) map[c.id] = data;
+            }
+          } catch {}
+        })
+      );
+      return map;
+    },
+    enabled: campaigns.length > 0,
+  });
 
   const filteredCampaigns = useMemo(() => {
     if (statusFilter === "all") return campaigns;
     return campaigns.filter(c => c.status === statusFilter);
   }, [campaigns, statusFilter]);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/materials-campaigns/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/materials-campaigns"] });
+      toast({ title: "Campaign deleted" });
+    },
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -330,10 +280,6 @@ export default function MaterialsCampaignsPage() {
         breadcrumbs={[{ label: "Materials Campaigns" }]}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" data-testid="button-campaign-settings">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
             <Link href="/materials/campaigns/new">
               <Button data-testid="button-new-campaign">
                 <Plus className="h-4 w-4 mr-2" />
@@ -362,9 +308,22 @@ export default function MaterialsCampaignsPage() {
             </div>
           </div>
 
-          <PlatformMetrics campaigns={campaigns} />
+          {isLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4 text-center">
+                    <Skeleton className="h-8 w-16 mx-auto mb-1" />
+                    <Skeleton className="h-4 w-20 mx-auto" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <PlatformMetrics campaigns={campaigns} aggregates={aggregatesMap} />
+          )}
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
               Campaign Portfolio
@@ -375,26 +334,58 @@ export default function MaterialsCampaignsPage() {
                 <TabsTrigger value="running" data-testid="tab-filter-running">Running</TabsTrigger>
                 <TabsTrigger value="completed" data-testid="tab-filter-completed">Completed</TabsTrigger>
                 <TabsTrigger value="paused" data-testid="tab-filter-paused">Paused</TabsTrigger>
+                <TabsTrigger value="pending" data-testid="tab-filter-pending">Pending</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredCampaigns.map(campaign => (
-              <CampaignCard key={campaign.id} campaign={campaign} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-6 space-y-4">
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-16 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {filteredCampaigns.map(campaign => (
+                <CampaignCard
+                  key={campaign.id}
+                  campaign={campaign}
+                  aggregate={aggregatesMap[campaign.id]}
+                />
+              ))}
+            </div>
+          )}
 
-          {filteredCampaigns.length === 0 && (
+          {!isLoading && filteredCampaigns.length === 0 && (
             <Card className="p-12 text-center">
               <Hexagon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-medium mb-2">No campaigns found</h3>
+              <h3 className="text-lg font-medium mb-2">
+                {campaigns.length === 0 ? "No campaigns yet" : "No campaigns found"}
+              </h3>
               <p className="text-muted-foreground mb-4">
-                No campaigns match the current filter.
+                {campaigns.length === 0
+                  ? "Create your first materials discovery campaign to start evaluating variants."
+                  : "No campaigns match the current filter."}
               </p>
-              <Button onClick={() => setStatusFilter("all")}>
-                View All Campaigns
-              </Button>
+              {campaigns.length === 0 ? (
+                <Link href="/materials/campaigns/new">
+                  <Button data-testid="button-new-campaign-empty">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Campaign
+                  </Button>
+                </Link>
+              ) : (
+                <Button onClick={() => setStatusFilter("all")}>
+                  View All Campaigns
+                </Button>
+              )}
             </Card>
           )}
         </div>

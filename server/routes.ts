@@ -7422,6 +7422,17 @@ print(json.dumps(result, default=str))
     }
   });
 
+  app.get("/api/materials-oracle-scores", requireAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const scores = await storage.getAllMaterialsOracleScores(limit);
+      res.json(scores);
+    } catch (error) {
+      console.error("Error fetching oracle scores:", error);
+      res.status(500).json({ error: "Failed to fetch oracle scores" });
+    }
+  });
+
   // Agent endpoints for materials discovery
   app.get("/api/agent/materials", async (req, res) => {
     try {

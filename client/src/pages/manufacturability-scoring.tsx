@@ -1,13 +1,17 @@
 import { useState, useMemo } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { PageHeader } from "@/components/page-header";
 import { ResultsPanel } from "@/components/results-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   Factory,
   Gauge,
@@ -24,7 +28,9 @@ import {
   RefreshCw,
   Download,
   Zap,
+  Loader2,
 } from "lucide-react";
+import type { MaterialsOracleScore, MaterialEntity } from "@shared/schema";
 
 function formatNumber(num: number): string {
   if (num >= 1000000) {
@@ -35,27 +41,12 @@ function formatNumber(num: number): string {
   return num.toLocaleString();
 }
 
-function seededRandom(seed: number): number {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
-
 type ReadinessTier = "lab-only" | "pilot-ready" | "production-viable";
 
-interface ManufacturabilityScore {
-  id: string;
-  materialName: string;
-  overallScore: number;
-  complexityScore: number;
-  costProxy: number;
-  scaleUpRisk: number;
-  processVariationSensitivity: number;
-  readinessTier: ReadinessTier;
-  processParams: {
-    temperature: string;
-    pressure: string;
-    steps: number;
-  };
+function getTier(score: number): ReadinessTier {
+  if (score >= 0.7) return "production-viable";
+  if (score >= 0.4) return "pilot-ready";
+  return "lab-only";
 }
 
 const TIER_CONFIG: Record<ReadinessTier, { label: string; icon: typeof FlaskConical; color: string }> = {
@@ -63,33 +54,6 @@ const TIER_CONFIG: Record<ReadinessTier, { label: string; icon: typeof FlaskConi
   "pilot-ready": { label: "Pilot-Ready", icon: Rocket, color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30" },
   "production-viable": { label: "Production-Viable", icon: Building2, color: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30" },
 };
-
-function generateMockScores(count: number): ManufacturabilityScore[] {
-  const materialPrefixes = ["Poly", "Nano", "Bio", "Thermo", "Electro", "Hybrid"];
-  const materialSuffixes = ["amide", "ester", "urethane", "carbonate", "oxide", "silicate", "composite"];
-
-  return Array.from({ length: count }, (_, i) => {
-    const seed = i * 137;
-    const overallScore = Math.round(seededRandom(seed) * 100);
-    const readinessTier: ReadinessTier = overallScore >= 70 ? "production-viable" : overallScore >= 40 ? "pilot-ready" : "lab-only";
-
-    return {
-      id: `mat-${i}`,
-      materialName: `${materialPrefixes[i % materialPrefixes.length]}${materialSuffixes[i % materialSuffixes.length]}-${1000 + i}`,
-      overallScore,
-      complexityScore: Math.round(20 + seededRandom(seed + 1) * 80),
-      costProxy: Math.round(10 + seededRandom(seed + 2) * 90),
-      scaleUpRisk: Math.round(seededRandom(seed + 3) * 100),
-      processVariationSensitivity: Math.round(seededRandom(seed + 4) * 100),
-      readinessTier,
-      processParams: {
-        temperature: `${Math.round(50 + seededRandom(seed + 5) * 300)}°C`,
-        pressure: `${(1 + seededRandom(seed + 6) * 9).toFixed(1)} bar`,
-        steps: Math.round(2 + seededRandom(seed + 7) * 8),
-      },
-    };
-  });
-}
 
 interface ScoreGaugeProps {
   label: string;
@@ -99,7 +63,8 @@ interface ScoreGaugeProps {
 }
 
 function ScoreGauge({ label, value, icon: Icon, inverted = false }: ScoreGaugeProps) {
-  const displayValue = inverted ? 100 - value : value;
+  const percent = Math.round(value * 100);
+  const displayValue = inverted ? 100 - percent : percent;
   const color = displayValue >= 70 ? "text-green-600 dark:text-green-400" : displayValue >= 40 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400";
 
   return (
@@ -107,93 +72,142 @@ function ScoreGauge({ label, value, icon: Icon, inverted = false }: ScoreGaugePr
       <div className="w-10 h-10 mx-auto rounded-full bg-muted/50 flex items-center justify-center mb-1">
         <Icon className={`h-5 w-5 ${color}`} />
       </div>
-      <div className={`text-lg font-bold font-mono ${color}`}>{value}</div>
+      <div className={`text-lg font-bold font-mono ${color}`}>{percent}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
 }
 
-interface MaterialScoreCardProps {
-  score: ManufacturabilityScore;
-}
-
-function MaterialScoreCard({ score }: MaterialScoreCardProps) {
-  const tierConfig = TIER_CONFIG[score.readinessTier];
+function OracleScoreCard({ score, materialName }: { score: MaterialsOracleScore; materialName?: string }) {
+  const overall = score.oracleScore || 0;
+  const synthesis = score.synthesisFeasibility || 0;
+  const costFactor = score.manufacturingCostFactor || 0;
+  const tier = getTier(synthesis);
+  const tierConfig = TIER_CONFIG[tier];
   const TierIcon = tierConfig.icon;
-
-  const overallColor = score.overallScore >= 70 ? "text-green-600 dark:text-green-400" : score.overallScore >= 40 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400";
+  const overallPercent = Math.round(overall * 100);
+  const overallColor = overallPercent >= 70 ? "text-green-600 dark:text-green-400" : overallPercent >= 40 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400";
+  const breakdown = (score.propertyBreakdown || {}) as Record<string, number>;
 
   return (
-    <Card className="hover-elevate" data-testid={`card-material-${score.id}`}>
+    <Card className="hover-elevate" data-testid={`card-score-${score.id}`}>
       <CardContent className="p-4 space-y-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="font-medium">{score.materialName}</div>
+            <div className="font-medium truncate max-w-[180px]">{materialName || score.materialId}</div>
             <Badge variant="outline" className={`mt-1 ${tierConfig.color}`}>
               <TierIcon className="h-3 w-3 mr-1" />
               {tierConfig.label}
             </Badge>
           </div>
           <div className="text-right">
-            <div className={`text-3xl font-bold font-mono ${overallColor}`}>{score.overallScore}</div>
+            <div className={`text-3xl font-bold font-mono ${overallColor}`}>{overallPercent}</div>
             <div className="text-xs text-muted-foreground">Score</div>
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
-          <ScoreGauge label="Complexity" value={score.complexityScore} icon={Layers} inverted />
-          <ScoreGauge label="Cost" value={score.costProxy} icon={DollarSign} inverted />
-          <ScoreGauge label="Scale Risk" value={score.scaleUpRisk} icon={AlertTriangle} inverted />
-          <ScoreGauge label="Sensitivity" value={score.processVariationSensitivity} icon={Gauge} inverted />
+        <div className="grid grid-cols-3 gap-2">
+          <ScoreGauge label="Synthesis" value={synthesis} icon={FlaskConical} />
+          <ScoreGauge label="Cost" value={costFactor} icon={DollarSign} inverted />
+          <ScoreGauge label="Oracle" value={overall} icon={Gauge} />
         </div>
 
-        <div className="pt-2 border-t">
-          <div className="text-xs text-muted-foreground mb-2">Process Parameters</div>
-          <div className="flex items-center gap-3 text-xs">
-            <div className="flex items-center gap-1">
-              <Thermometer className="h-3 w-3 text-muted-foreground" />
-              {score.processParams.temperature}
-            </div>
-            <div className="flex items-center gap-1">
-              <Gauge className="h-3 w-3 text-muted-foreground" />
-              {score.processParams.pressure}
-            </div>
-            <div className="flex items-center gap-1">
-              <Layers className="h-3 w-3 text-muted-foreground" />
-              {score.processParams.steps} steps
+        {Object.keys(breakdown).length > 0 && (
+          <div className="pt-2 border-t">
+            <div className="text-xs text-muted-foreground mb-2">Property Breakdown</div>
+            <div className="flex flex-wrap gap-1">
+              {Object.entries(breakdown).slice(0, 4).map(([key, val]) => (
+                <Badge key={key} variant="secondary" className="text-xs">
+                  {key.replace(/_/g, " ")}: {typeof val === "number" ? (val * 100).toFixed(0) : val}
+                </Badge>
+              ))}
             </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
 export default function ManufacturabilitySccoringPage() {
+  const { toast } = useToast();
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [minScore, setMinScore] = useState<number[]>([0]);
   const [showLowRiskOnly, setShowLowRiskOnly] = useState(false);
 
-  const allScores = useMemo(() => generateMockScores(24), []);
+  const { data: oracleScores = [], isLoading } = useQuery<MaterialsOracleScore[]>({
+    queryKey: ["/api/materials-oracle-scores"],
+    queryFn: async () => {
+      const res = await fetch("/api/materials-oracle-scores?limit=200", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch scores");
+      return res.json();
+    },
+  });
 
-  const totalVariants = 420000;
-  const manufacturableCount = 12450;
-  const pilotReadyCount = 45230;
-  const labOnlyCount = totalVariants - manufacturableCount - pilotReadyCount;
+  const { data: materialsResponse } = useQuery<{ materials: MaterialEntity[], total: number }>({
+    queryKey: ["/api/materials"],
+  });
+
+  const materialsMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    (materialsResponse?.materials || []).forEach(m => {
+      map[m.id] = m.name || m.id;
+    });
+    return map;
+  }, [materialsResponse]);
+
+  const stats = useMemo(() => {
+    const total = oracleScores.length;
+    const productionViable = oracleScores.filter(s => getTier(s.synthesisFeasibility || 0) === "production-viable").length;
+    const pilotReady = oracleScores.filter(s => getTier(s.synthesisFeasibility || 0) === "pilot-ready").length;
+    const labOnly = total - productionViable - pilotReady;
+    const yieldRate = total > 0 ? ((productionViable / total) * 100).toFixed(1) : "0.0";
+    return { total, productionViable, pilotReady, labOnly, yieldRate };
+  }, [oracleScores]);
 
   const filteredScores = useMemo(() => {
-    let result = allScores;
+    let result = oracleScores;
     if (tierFilter !== "all") {
-      result = result.filter(s => s.readinessTier === tierFilter);
+      result = result.filter(s => getTier(s.synthesisFeasibility || 0) === tierFilter);
     }
     if (minScore[0] > 0) {
-      result = result.filter(s => s.overallScore >= minScore[0]);
+      result = result.filter(s => (s.oracleScore || 0) * 100 >= minScore[0]);
     }
     if (showLowRiskOnly) {
-      result = result.filter(s => s.scaleUpRisk < 40);
+      result = result.filter(s => (s.manufacturingCostFactor || 0) < 0.4);
     }
     return result;
-  }, [allScores, tierFilter, minScore, showLowRiskOnly]);
+  }, [oracleScores, tierFilter, minScore, showLowRiskOnly]);
+
+  const runScoringMutation = useMutation({
+    mutationFn: async () => {
+      const materialsData = (materialsResponse?.materials || []).slice(0, 10).map(m => {
+        const rep = m.representation as any;
+        return {
+          type: m.type,
+          smiles: rep?.smiles,
+          formula: rep?.formula,
+        };
+      });
+      if (materialsData.length === 0) throw new Error("No materials to score");
+      const res = await apiRequest("POST", "/api/compute/materials/manufacturability", { materials: materialsData });
+      return res.json();
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/materials-oracle-scores"] });
+      toast({
+        title: "Scoring Complete",
+        description: `Scored ${result.results?.length || 0} materials for manufacturability.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Scoring Failed",
+        description: error.message || "Failed to run scoring",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -201,13 +215,18 @@ export default function ManufacturabilitySccoringPage() {
         breadcrumbs={[{ label: "Manufacturability Scoring" }]}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" data-testid="button-recalculate">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Recalculate All
-            </Button>
-            <Button variant="outline" data-testid="button-export">
-              <Download className="h-4 w-4 mr-2" />
-              Export Scores
+            <Button
+              variant="outline"
+              disabled={runScoringMutation.isPending}
+              onClick={() => runScoringMutation.mutate()}
+              data-testid="button-recalculate"
+            >
+              {runScoringMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              {runScoringMutation.isPending ? "Scoring..." : "Run Scoring"}
             </Button>
           </div>
         }
@@ -231,197 +250,183 @@ export default function ManufacturabilitySccoringPage() {
             </div>
           </div>
 
-          <Card className="bg-gradient-to-r from-green-500/5 via-green-500/10 to-green-500/5 border-green-500/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Building2 className="h-8 w-8 text-green-600 dark:text-green-400" />
-                  <div>
-                    <div className="text-sm text-muted-foreground">Production-Viable Variants</div>
-                    <div className="text-2xl font-bold">
-                      <span className="text-green-600 dark:text-green-400 font-mono">{formatNumber(manufacturableCount)}</span>
-                      <span className="text-muted-foreground font-normal text-base ml-2">of {formatNumber(totalVariants)} variants are manufacturable</span>
+          {isLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <Skeleton className="h-8 w-16 mb-1" />
+                    <Skeleton className="h-4 w-24" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : oracleScores.length > 0 ? (
+            <>
+              <Card className="bg-gradient-to-r from-green-500/5 via-green-500/10 to-green-500/5 border-green-500/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+                      <div>
+                        <div className="text-sm text-muted-foreground">Production-Viable Materials</div>
+                        <div className="text-2xl font-bold">
+                          <span className="text-green-600 dark:text-green-400 font-mono">{formatNumber(stats.productionViable)}</span>
+                          <span className="text-muted-foreground font-normal text-base ml-2">of {formatNumber(stats.total)} scored materials</span>
+                        </div>
+                      </div>
                     </div>
+                    <Button
+                      variant="default"
+                      onClick={() => setTierFilter("production-viable")}
+                      data-testid="button-show-manufacturable"
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      Show Only Production-Viable
+                    </Button>
                   </div>
-                </div>
-                <Button variant="default" data-testid="button-show-manufacturable">
-                  <Zap className="h-4 w-4 mr-2" />
-                  Show Only Production-Viable
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-md bg-green-500/10 flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold font-mono text-green-600 dark:text-green-400">{formatNumber(manufacturableCount)}</div>
-                    <div className="text-xs text-muted-foreground">Production-Viable</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-md bg-blue-500/10 flex items-center justify-center">
-                    <Rocket className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">{formatNumber(pilotReadyCount)}</div>
-                    <div className="text-xs text-muted-foreground">Pilot-Ready</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-md bg-amber-500/10 flex items-center justify-center">
-                    <FlaskConical className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400">{formatNumber(labOnlyCount)}</div>
-                    <div className="text-xs text-muted-foreground">Lab-Only</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold font-mono">{((manufacturableCount / totalVariants) * 100).toFixed(1)}%</div>
-                    <div className="text-xs text-muted-foreground">Yield Rate</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Scoring Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Process Temperature Range</Label>
-                  <Select defaultValue="ambient-300">
-                    <SelectTrigger data-testid="select-temperature">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ambient-100">Ambient - 100°C</SelectItem>
-                      <SelectItem value="ambient-300">Ambient - 300°C</SelectItem>
-                      <SelectItem value="high-temp">High Temperature (&gt;300°C)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Pressure Constraints</Label>
-                  <Select defaultValue="standard">
-                    <SelectTrigger data-testid="select-pressure">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="vacuum">Vacuum Required</SelectItem>
-                      <SelectItem value="standard">Standard (1-10 bar)</SelectItem>
-                      <SelectItem value="high">High Pressure (&gt;10 bar)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Solvent Availability</Label>
-                  <Select defaultValue="common">
-                    <SelectTrigger data-testid="select-solvent">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="water">Water-Based Only</SelectItem>
-                      <SelectItem value="common">Common Solvents</SelectItem>
-                      <SelectItem value="specialty">Specialty Solvents</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-md bg-green-500/10 flex items-center justify-center">
+                        <Building2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold font-mono text-green-600 dark:text-green-400">{formatNumber(stats.productionViable)}</div>
+                        <div className="text-xs text-muted-foreground">Production-Viable</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-md bg-blue-500/10 flex items-center justify-center">
+                        <Rocket className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">{formatNumber(stats.pilotReady)}</div>
+                        <div className="text-xs text-muted-foreground">Pilot-Ready</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-md bg-amber-500/10 flex items-center justify-center">
+                        <FlaskConical className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400">{formatNumber(stats.labOnly)}</div>
+                        <div className="text-xs text-muted-foreground">Lab-Only</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold font-mono">{stats.yieldRate}%</div>
+                        <div className="text-xs text-muted-foreground">Yield Rate</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-              <div className="flex items-center justify-between pt-2 border-t">
-                <div className="text-sm text-muted-foreground">
-                  Scoring <strong>{formatNumber(totalVariants)}</strong> variants against process constraints
-                </div>
-                <Button data-testid="button-run-scoring">
+            </>
+          ) : (
+            <Card className="p-12 text-center">
+              <Factory className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <h3 className="text-lg font-medium mb-2">No scores yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Run the scoring engine on your materials to evaluate manufacturability.
+              </p>
+              <Button
+                disabled={runScoringMutation.isPending || !materialsResponse?.materials?.length}
+                onClick={() => runScoringMutation.mutate()}
+                data-testid="button-run-first-scoring"
+              >
+                {runScoringMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
                   <Gauge className="h-4 w-4 mr-2" />
-                  Run Scoring
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                )}
+                Run Scoring
+              </Button>
+            </Card>
+          )}
 
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Material Scores
-              <Badge variant="secondary" className="ml-2">{filteredScores.length} shown</Badge>
-            </h3>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm text-muted-foreground">Tier:</Label>
-                <Select value={tierFilter} onValueChange={setTierFilter}>
-                  <SelectTrigger className="w-40" data-testid="select-tier-filter">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Tiers</SelectItem>
-                    <SelectItem value="production-viable">Production-Viable</SelectItem>
-                    <SelectItem value="pilot-ready">Pilot-Ready</SelectItem>
-                    <SelectItem value="lab-only">Lab-Only</SelectItem>
-                  </SelectContent>
-                </Select>
+          {oracleScores.length > 0 && (
+            <>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Material Scores
+                  <Badge variant="secondary" className="ml-2">{filteredScores.length} shown</Badge>
+                </h3>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground">Tier:</Label>
+                    <Select value={tierFilter} onValueChange={setTierFilter}>
+                      <SelectTrigger className="w-40" data-testid="select-tier-filter">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Tiers</SelectItem>
+                        <SelectItem value="production-viable">Production-Viable</SelectItem>
+                        <SelectItem value="pilot-ready">Pilot-Ready</SelectItem>
+                        <SelectItem value="lab-only">Lab-Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground">Min Score:</Label>
+                    <Slider
+                      value={minScore}
+                      onValueChange={setMinScore}
+                      max={100}
+                      min={0}
+                      step={5}
+                      className="w-24"
+                    />
+                    <span className="text-sm font-mono w-8">{minScore[0]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={showLowRiskOnly}
+                      onCheckedChange={setShowLowRiskOnly}
+                      data-testid="switch-low-risk"
+                    />
+                    <Label className="text-sm">Low cost only</Label>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm text-muted-foreground">Min Score:</Label>
-                <Slider
-                  value={minScore}
-                  onValueChange={setMinScore}
-                  max={100}
-                  min={0}
-                  step={5}
-                  className="w-24"
-                />
-                <span className="text-sm font-mono w-8">{minScore[0]}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={showLowRiskOnly}
-                  onCheckedChange={setShowLowRiskOnly}
-                  data-testid="switch-low-risk"
-                />
-                <Label className="text-sm">Low risk only</Label>
-              </div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredScores.map(score => (
-              <MaterialScoreCard key={score.id} score={score} />
-            ))}
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredScores.map(score => (
+                  <OracleScoreCard
+                    key={score.id}
+                    score={score}
+                    materialName={materialsMap[score.materialId]}
+                  />
+                ))}
+              </div>
 
-          {filteredScores.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              No materials match current filters. Try adjusting the tier or minimum score.
-            </div>
+              {filteredScores.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  No materials match current filters. Try adjusting the tier or minimum score.
+                </div>
+              )}
+            </>
           )}
 
           <ResultsPanel

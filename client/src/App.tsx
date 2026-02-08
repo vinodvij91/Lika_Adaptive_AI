@@ -57,6 +57,7 @@ const HitTriagePage = lazy(() => import("@/pages/hit-triage"));
 const PropertyPipelinesPage = lazy(() => import("@/pages/property-pipelines"));
 const StructurePropertyPage = lazy(() => import("@/pages/structure-property"));
 const MaterialsCampaignsPage = lazy(() => import("@/pages/materials-campaigns"));
+const MaterialsCampaignDetailPage = lazy(() => import("@/pages/materials-campaign-detail"));
 const MaterialsCampaignNewPage = lazy(() => import("@/pages/materials-campaign-new"));
 const MaterialsTriagePage = lazy(() => import("@/pages/materials-triage"));
 const MultiScaleRepresentationsPage = lazy(() => import("@/pages/multi-scale-representations"));
@@ -150,6 +151,7 @@ function AuthenticatedRoutes() {
         <Route path="/property-pipelines" component={PropertyPipelinesPage} />
         <Route path="/structure-property" component={StructurePropertyPage} />
         <Route path="/materials-campaigns" component={MaterialsCampaignsPage} />
+        <Route path="/materials-campaigns/:id" component={MaterialsCampaignDetailPage} />
         <Route path="/materials/campaigns/new" component={MaterialsCampaignNewPage} />
         <Route path="/materials/campaigns/:id/triage" component={MaterialsTriagePage} />
         <Route path="/multi-scale-representations" component={MultiScaleRepresentationsPage} />

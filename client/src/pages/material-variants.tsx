@@ -45,6 +45,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface MaterialVariant {
@@ -297,6 +298,15 @@ export default function MaterialVariantsPage() {
                   )}
                   {syncMutation.isPending ? "Syncing..." : "Sync from DigitalOcean"}
                 </Button>
+                <Link href="/property-prediction">
+                  <Button 
+                    className="gap-2 bg-white/20 backdrop-blur hover:bg-white/30 text-white border-0"
+                    data-testid="button-send-to-pipeline"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Send to Property Pipeline
+                  </Button>
+                </Link>
                 <Button 
                   className="gap-2 bg-white/20 backdrop-blur hover:bg-white/30 text-white border-0"
                   data-testid="button-create-variant"
