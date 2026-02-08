@@ -102,9 +102,6 @@ function formatPrivateKey(key: string | undefined): string | null {
     formattedKey += '\n';
   }
   
-  // Log first 50 chars but show actual newlines
-  const logPreview = formattedKey.substring(0, 80).replace(/\n/g, '\\n');
-  console.log(`[SSH] Final key format: ${logPreview}...`);
   console.log(`[SSH] Key length: ${formattedKey.length} chars, lines: ${formattedKey.split('\n').length}`);
   
   return formattedKey;
