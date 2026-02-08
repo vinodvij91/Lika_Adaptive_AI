@@ -1,0 +1,165 @@
+Materials Science with Variants & Pipelines
+Please complete and wire up the Materials Science domain so that materials, variants, property prediction, and manufacturability form a coherent pipeline, similar to Drug Discovery campaigns.
+
+1) Materials Dashboard
+Make the existing cards live:
+
+Variants Evaluated = total number of material variants with predictions.
+
+Properties Predicted = total number of property predictions run.
+
+Manufacturable = count of variants marked manufacturable (above a threshold).
+
+Active Pipelines = count of materials campaigns/pipelines.
+
+In the “Get Started” row:
+
+Import Materials → Materials Library (import dialog).
+
+Property Pipeline → opens a Materials Pipeline/campaign wizard.
+
+Manufacturability → opens the Manufacturability view filtered to all materials.
+
+2) Sidebar structure (Materials domain)
+Ensure the Materials sidebar has these sections:
+
+Dashboard
+
+Import
+
+Materials Library
+
+Variants
+
+Multi‑Scale Representation (if used)
+
+Property Prediction
+
+Structure–Property
+
+Manufacturability
+
+3D Viewer
+
+FEA Simulations (if used)
+
+Simulation Runs
+
+Reports
+
+3) Materials Library
+Implement a Materials Library table:
+
+Columns: Name, Category (polymer/biomaterial/crystal), key base properties (e.g., Tg, tensile strength, dielectric constant, PFAS‑free flag), tags (PFAS replacement, spider silk, textile, etc.).
+
+Provide seed entries (mock data OK):
+
+Polymers: PTFE, PVDF, PEEK, PPS, Nylon‑6, PMMA, etc.
+
+Biomaterials: Spider silk MaSp1_WT, MaSp2_WT.
+
+Actions on each row:
+
+“View Details”
+
+“Generate Variants” → opens the Variants page pre‑filtered to this base material.
+
+4) Variants page
+For a selected base material, implement:
+
+Controls to set variant strategy:
+
+Polymers: chain length changes, co‑polymer ratio changes, functional group swaps (e.g., CF3→OH, ester→amide).
+
+Biomaterials (spider silk): sequence mutations, repeat block expansions, conservative substitutions.
+
+Inputs: Number of variants, property focus (mechanical/thermal/electrical/environmental).
+
+On “Generate Variants”:
+
+Create a list of variant records (mock generation is fine):
+
+Variant ID
+
+Description of modification
+
+Link back to base material
+
+Table of variants with actions:
+
+“Send to Property Pipeline” (multi‑select).
+
+5) Property Prediction
+Implement the Property Prediction page to consume materials and variants:
+
+Inputs: selected base materials and/or variants.
+
+Properties to predict:
+
+Mechanical: tensile strength, Young’s modulus, elongation at break.
+
+Thermal: Tg, Tm, thermal stability.
+
+Electrical: dielectric constant, resistivity.
+
+Surface/environmental: friction coefficient, contact angle, PFAS‑free, biodegradability.
+
+Output:
+
+Table: variant/base × properties.
+
+Ability to filter by application template (PFAS replacement, spider silk fiber, battery material, textile coating).
+
+Provide a simple visualization similar to Multi‑Target radar (axes = properties) for a selected variant or average of all variants.
+
+6) Structure–Property
+Reuse the radar/matrix concept: show how property profiles differ between variants and base materials.
+
+Allow selection of: “Original material”, “Best variant for mechanical”, “Best variant for environmental”, etc.
+
+7) Manufacturability
+Implement a Manufacturability view where each material/variant gets:
+
+Manufacturability score (0–1 or 0–100) based on mock rules (e.g., processing temperature, solubility, PFAS status, stability).
+
+Key factors:
+
+Process temp window (acceptable vs too high).
+
+Need for exotic solvents.
+
+Regulatory flags (PFAS usage, recyclability).
+
+Table + detail panel:
+
+“Prototype ready”, “Lab only”, or “Not feasible” label.
+
+8) Materials Pipelines / Campaigns
+Add a simple Materials Pipeline concept (parallel to Drug Discovery campaigns):
+
+When a user starts a Property Pipeline from the dashboard or Variants page, create a Materials campaign with steps like:
+
+Select base materials
+
+Generate variants
+
+Predict properties
+
+Assess manufacturability
+
+Show an Overview header for each materials campaign similar to the drug campaigns (stepper + status).
+
+In the campaign view, include:
+
+A “Variants” tab (variants included in the campaign).
+
+A “Properties” tab (predictions).
+
+A “Manufacturability” tab (scores and decisions).
+
+9) Data wiring
+It’s fine to start with static/mock JSON for materials and variants, but every major button should trigger a visible change (new rows, updated metrics).
+
+Use the same design language as the drug campaigns to keep UX consistent.
+
+Goal: Materials Science should support a full path from base materials → variants → property prediction → manufacturability decisions, with Variants clearly integrated into the workflow.
