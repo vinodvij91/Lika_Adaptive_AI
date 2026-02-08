@@ -260,7 +260,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Infrastructure</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {infrastructureItems.map((item) => (
+              {infrastructureItems.filter((item) => !(isVaccineDomain && item.title === "Pipeline Launcher")).map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
