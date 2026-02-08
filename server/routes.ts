@@ -6368,6 +6368,149 @@ print(df.to_string())
     }
   });
 
+  app.post("/api/campaigns/:campaignId/sar/bulk-optimize-properties", requireAuth, async (req, res) => {
+    try {
+      const { optimizeMoleculeProperties } = await import("./services/molecule-optimizer");
+      const { moleculeIds, diseaseContext } = req.body;
+      const campaignId = req.params.campaignId;
+
+      let targetMolecules: Molecule[] = [];
+      if (Array.isArray(moleculeIds) && moleculeIds.length > 0) {
+        targetMolecules = await db.select().from(molecules).where(inArray(molecules.id, moleculeIds));
+      } else {
+        const scores = await db.select({ moleculeId: moleculeScores.moleculeId })
+          .from(moleculeScores)
+          .where(eq(moleculeScores.campaignId, campaignId));
+        const allIds = scores.map(s => s.moleculeId).filter(Boolean) as string[];
+        if (allIds.length > 0) {
+          targetMolecules = await db.select().from(molecules).where(inArray(molecules.id, allIds));
+        }
+      }
+
+      const alreadyOptimized = await db.select({ moleculeId: moleculeScores.moleculeId, rawScores: moleculeScores.rawScores })
+        .from(moleculeScores)
+        .where(eq(moleculeScores.campaignId, campaignId));
+      const alreadyOptimizedFromSmiles = new Set<string>();
+      for (const s of alreadyOptimized) {
+        const raw = s.rawScores as Record<string, unknown> | null;
+        if (raw && typeof raw === "object" && "optimizedFrom" in raw) {
+          alreadyOptimizedFromSmiles.add(raw.optimizedFrom as string);
+        }
+      }
+      const originalMols = targetMolecules.filter(m => !alreadyOptimizedFromSmiles.has(m.smiles));
+
+      const results: Array<{ moleculeId: string; smiles: string; analogsCreated: number; suggestionsCount: number }> = [];
+      let totalAnalogsInserted = 0;
+
+      for (const mol of originalMols) {
+        try {
+          const result = optimizeMoleculeProperties(mol.smiles, diseaseContext || "", {
+            mw: mol.molecularWeight,
+            logP: mol.logP,
+            hbd: mol.numHBondDonors,
+            hba: mol.numHBondAcceptors,
+          });
+
+          let analogsInserted = 0;
+          for (const analog of result.analogs) {
+            try {
+              const newMol = await storage.createMolecule({
+                smiles: analog.smiles,
+                name: analog.name,
+                seriesId: mol.seriesId || null,
+                scaffoldId: mol.scaffoldId || null,
+                source: "generated",
+                molecularWeight: analog.predictedProperties.molecularWeight,
+                logP: analog.predictedProperties.logP,
+                numHBondDonors: null,
+                numHBondAcceptors: null,
+                isDemo: false,
+              });
+              await storage.createMoleculeScore({
+                moleculeId: newMol.id,
+                campaignId,
+                admetScore: analog.admetPredictions.bioavailability,
+                oracleScore: Math.round((analog.admetPredictions.bioavailability + analog.admetPredictions.metabolicStability) / 2 * 100) / 100,
+                rawScores: { optimizedFrom: mol.smiles, modification: analog.modification, admet: analog.admetPredictions },
+              });
+              analogsInserted++;
+            } catch (err) {
+              console.error("Error inserting bulk optimized analog:", err);
+            }
+          }
+
+          totalAnalogsInserted += analogsInserted;
+          results.push({
+            moleculeId: mol.id,
+            smiles: mol.smiles,
+            analogsCreated: analogsInserted,
+            suggestionsCount: result.suggestions.length,
+          });
+        } catch (err) {
+          console.error(`Error optimizing molecule ${mol.id}:`, err);
+        }
+      }
+
+      res.json({
+        totalProcessed: originalMols.length,
+        totalSkipped: targetMolecules.length - originalMols.length,
+        totalAnalogsInserted,
+        results,
+      });
+    } catch (error) {
+      console.error("Error in bulk optimize properties:", error);
+      res.status(500).json({ error: "Failed to bulk optimize properties" });
+    }
+  });
+
+  app.post("/api/campaigns/:campaignId/sar/bulk-optimize-dose", requireAuth, async (req, res) => {
+    try {
+      const { optimizeDoseIndication } = await import("./services/molecule-optimizer");
+      const { moleculeIds, diseaseContext } = req.body;
+      const campaignId = req.params.campaignId;
+
+      let targetMolecules: Molecule[] = [];
+      if (Array.isArray(moleculeIds) && moleculeIds.length > 0) {
+        targetMolecules = await db.select().from(molecules).where(inArray(molecules.id, moleculeIds));
+      } else {
+        const scores = await db.select({ moleculeId: moleculeScores.moleculeId })
+          .from(moleculeScores)
+          .where(eq(moleculeScores.campaignId, campaignId));
+        const allIds = scores.map(s => s.moleculeId).filter(Boolean) as string[];
+        if (allIds.length > 0) {
+          targetMolecules = await db.select().from(molecules).where(inArray(molecules.id, allIds));
+        }
+      }
+
+      const results: Array<{ moleculeId: string; smiles: string; doseScenarios: number; repurposingHints: number }> = [];
+      let totalDoseScenarios = 0;
+
+      for (const mol of targetMolecules) {
+        try {
+          const result = optimizeDoseIndication(mol.smiles, diseaseContext || "", mol.name || undefined);
+          totalDoseScenarios += result.doseScenarios.length;
+          results.push({
+            moleculeId: mol.id,
+            smiles: mol.smiles,
+            doseScenarios: result.doseScenarios.length,
+            repurposingHints: result.repurposingHints.length,
+          });
+        } catch (err) {
+          console.error(`Error optimizing dose for molecule ${mol.id}:`, err);
+        }
+      }
+
+      res.json({
+        totalProcessed: targetMolecules.length,
+        totalDoseScenarios,
+        results,
+      });
+    } catch (error) {
+      console.error("Error in bulk optimize dose:", error);
+      res.status(500).json({ error: "Failed to bulk optimize dose" });
+    }
+  });
+
   app.get("/api/campaigns/:campaignId/sar/optimization-summary", requireAuth, async (req, res) => {
     try {
       const campaignId = req.params.campaignId;

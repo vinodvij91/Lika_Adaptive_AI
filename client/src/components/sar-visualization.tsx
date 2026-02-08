@@ -1,10 +1,12 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -46,6 +48,7 @@ import {
   Zap,
   BarChart3,
   TestTubes,
+  ListChecks,
 } from "lucide-react";
 import { generateMoleculeName } from "@/lib/utils";
 import {
@@ -388,10 +391,14 @@ function SeriesCard({
   series,
   optimizationInfo,
   onClick,
+  selected,
+  onSelectionChange,
 }: {
   series: SarSeries;
   optimizationInfo?: { original: number; optimized: number };
   onClick: () => void;
+  selected?: boolean;
+  onSelectionChange?: (checked: boolean) => void;
 }) {
   const displayName = series.seriesId || series.scaffoldId || "Ungrouped";
   const moleculeCount = series.molecules.length;
@@ -405,6 +412,21 @@ function SeriesCard({
       data-testid={`card-series-${displayName}`}
     >
       <CardContent className="p-4">
+        {onSelectionChange !== undefined && (
+          <div className="flex items-center gap-2 mb-2">
+            <Checkbox
+              checked={selected}
+              onCheckedChange={(checked) => {
+                onSelectionChange(!!checked);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              data-testid={`checkbox-series-${displayName}`}
+            />
+            <span className="text-xs text-muted-foreground">
+              {moleculeCount} molecule{moleculeCount !== 1 ? "s" : ""}
+            </span>
+          </div>
+        )}
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 min-w-0">
             <div className={`p-2 rounded-md shrink-0 ${hasOptimized ? "bg-primary/15" : "bg-primary/10"}`}>
@@ -1122,6 +1144,9 @@ function SeriesDetailDialog({
 export function SarVisualization({ campaignId, diseaseContext = "" }: { campaignId: string; diseaseContext?: string }) {
   const [selectedSeries, setSelectedSeries] = useState<SarSeries | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedSeriesKeys, setSelectedSeriesKeys] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
+  const { toast } = useToast();
 
   const { data: sarSeries, isLoading } = useQuery<SarSeries[]>({
     queryKey: ["/api/campaigns", campaignId, "sar", "series"],
@@ -1141,6 +1166,97 @@ export function SarVisualization({ campaignId, diseaseContext = "" }: { campaign
     },
     enabled: !!sarSeries && sarSeries.length > 0,
   });
+
+  const selectedMoleculeIds = useMemo(() => {
+    if (!sarSeries || selectedSeriesKeys.size === 0) return [];
+    return sarSeries
+      .filter(s => selectedSeriesKeys.has(s.seriesId || s.scaffoldId || "ungrouped"))
+      .flatMap(s => s.molecules.map(m => m.id));
+  }, [sarSeries, selectedSeriesKeys]);
+
+  const allSelected = useMemo(() => {
+    if (!sarSeries || sarSeries.length === 0) return false;
+    return sarSeries.every(s => selectedSeriesKeys.has(s.seriesId || s.scaffoldId || "ungrouped"));
+  }, [sarSeries, selectedSeriesKeys]);
+
+  const toggleSelectAll = useCallback(() => {
+    if (!sarSeries) return;
+    if (allSelected) {
+      setSelectedSeriesKeys(new Set());
+    } else {
+      setSelectedSeriesKeys(new Set(sarSeries.map(s => s.seriesId || s.scaffoldId || "ungrouped")));
+    }
+  }, [sarSeries, allSelected]);
+
+  const toggleSeriesSelection = useCallback((seriesKey: string, checked: boolean) => {
+    setSelectedSeriesKeys(prev => {
+      const next = new Set(prev);
+      if (checked) { next.add(seriesKey); } else { next.delete(seriesKey); }
+      return next;
+    });
+  }, []);
+
+  const invalidateSarQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "sar"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId] });
+  }, [campaignId]);
+
+  const bulkPropertiesMutation = useMutation({
+    mutationFn: async () => {
+      const idsToOptimize = selectedMoleculeIds.length > 0 ? selectedMoleculeIds : undefined;
+      const res = await apiRequest("POST", `/api/campaigns/${campaignId}/sar/bulk-optimize-properties`, {
+        moleculeIds: idsToOptimize,
+        diseaseContext,
+      });
+      return res.json() as Promise<{
+        totalProcessed: number;
+        totalSkipped: number;
+        totalAnalogsInserted: number;
+        results: Array<{ moleculeId: string; analogsCreated: number }>;
+      }>;
+    },
+    onSuccess: (data) => {
+      invalidateSarQueries();
+      setBulkMode(false);
+      setSelectedSeriesKeys(new Set());
+      toast({
+        title: "Bulk Property Optimization Complete",
+        description: `Processed ${data.totalProcessed} molecules, created ${data.totalAnalogsInserted} optimized analogs${data.totalSkipped > 0 ? ` (${data.totalSkipped} already optimized)` : ""}`,
+      });
+    },
+    onError: () => {
+      toast({ title: "Bulk Optimization Failed", description: "Could not complete bulk property optimization", variant: "destructive" });
+    },
+  });
+
+  const bulkDoseMutation = useMutation({
+    mutationFn: async () => {
+      const idsToOptimize = selectedMoleculeIds.length > 0 ? selectedMoleculeIds : undefined;
+      const res = await apiRequest("POST", `/api/campaigns/${campaignId}/sar/bulk-optimize-dose`, {
+        moleculeIds: idsToOptimize,
+        diseaseContext,
+      });
+      return res.json() as Promise<{
+        totalProcessed: number;
+        totalDoseScenarios: number;
+        results: Array<{ moleculeId: string; doseScenarios: number }>;
+      }>;
+    },
+    onSuccess: (data) => {
+      invalidateSarQueries();
+      setBulkMode(false);
+      setSelectedSeriesKeys(new Set());
+      toast({
+        title: "Bulk Dose Optimization Complete",
+        description: `Processed ${data.totalProcessed} molecules, generated ${data.totalDoseScenarios} dose scenarios`,
+      });
+    },
+    onError: () => {
+      toast({ title: "Bulk Optimization Failed", description: "Could not complete bulk dose optimization", variant: "destructive" });
+    },
+  });
+
+  const isBulkRunning = bulkPropertiesMutation.isPending || bulkDoseMutation.isPending;
 
   const handleSeriesClick = (series: SarSeries) => {
     setSelectedSeries(series);
@@ -1193,6 +1309,7 @@ export function SarVisualization({ campaignId, diseaseContext = "" }: { campaign
   const withAssayData = sarSeries.filter(s => s.assaySummary.count > 0).length;
   const seriesOptMap = optimizationSummary?.seriesOptimizationMap || {};
   const optimizedMoleculeIds = optimizationSummary?.optimizedMoleculeIds || [];
+  const selectedCount = selectedMoleculeIds.length;
 
   return (
     <div className="space-y-6">
@@ -1209,7 +1326,82 @@ export function SarVisualization({ campaignId, diseaseContext = "" }: { campaign
             )}
           </p>
         </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={bulkMode ? "default" : "outline"}
+            onClick={() => {
+              setBulkMode(!bulkMode);
+              if (bulkMode) setSelectedSeriesKeys(new Set());
+            }}
+            disabled={isBulkRunning}
+            data-testid="button-toggle-bulk-mode"
+          >
+            <ListChecks className="h-4 w-4 mr-1" />
+            Bulk Optimize
+          </Button>
+        </div>
       </div>
+
+      {bulkMode && (
+        <Card className="border-primary/30 bg-primary/5" data-testid="panel-bulk-optimization">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={() => toggleSelectAll()}
+                  disabled={isBulkRunning}
+                  data-testid="checkbox-select-all"
+                />
+                <span className="text-sm font-medium">
+                  {selectedCount > 0
+                    ? `${selectedCount} of ${totalMolecules} molecules selected (${selectedSeriesKeys.size} series)`
+                    : "Select series below, or click a button to optimize all"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => bulkPropertiesMutation.mutate()}
+                  disabled={isBulkRunning}
+                  data-testid="button-bulk-optimize-properties"
+                >
+                  {bulkPropertiesMutation.isPending ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3 mr-1" />
+                  )}
+                  Optimize Properties{selectedCount > 0 ? ` (${selectedCount})` : " (All)"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => bulkDoseMutation.mutate()}
+                  disabled={isBulkRunning}
+                  data-testid="button-bulk-optimize-dose"
+                >
+                  {bulkDoseMutation.isPending ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <Pill className="h-3 w-3 mr-1" />
+                  )}
+                  Optimize Dose & Indication{selectedCount > 0 ? ` (${selectedCount})` : " (All)"}
+                </Button>
+              </div>
+            </div>
+            {isBulkRunning && (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">
+                  {bulkPropertiesMutation.isPending ? "Running property optimization across molecules..." : "Running dose/indication optimization across molecules..."}
+                </p>
+                <Progress value={undefined} className="h-1.5" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {optimizationSummary && optimizationSummary.totalOptimized > 0 && (
         <OptimizationSummaryPanel
@@ -1228,6 +1420,8 @@ export function SarVisualization({ campaignId, diseaseContext = "" }: { campaign
               series={series}
               optimizationInfo={optInfo}
               onClick={() => handleSeriesClick(series)}
+              selected={bulkMode ? selectedSeriesKeys.has(seriesKey) : undefined}
+              onSelectionChange={bulkMode ? (checked) => toggleSeriesSelection(seriesKey, checked) : undefined}
             />
           );
         })}
