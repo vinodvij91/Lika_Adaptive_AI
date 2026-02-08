@@ -467,10 +467,10 @@ export async function setupDefaultComputeNodes(): Promise<void> {
   const gcpPort = process.env.GCP_SSH_PORT || "22";
   if (gcpHost) {
     await storage.createComputeNode({
-      name: "GCP GPU Node (A100)",
+      name: "GCP GPU Node (Tesla T4)",
       provider: "gcp",
       connectionType: "ssh",
-      gpuType: "A100",
+      gpuType: "T4",
       tier: "dedicated-A100",
       purpose: "ml",
       sshHost: gcpHost,
@@ -479,14 +479,14 @@ export async function setupDefaultComputeNodes(): Promise<void> {
       isDefault: true,
       status: "active",
       specs: {
-        gpuName: "NVIDIA A100",
+        gpuName: "NVIDIA Tesla T4",
         numGpus: 1,
-        gpuMemoryGb: 40,
+        gpuMemoryGb: 16,
         cpuCores: 12,
         memoryGb: 85,
         storageGb: 200,
       },
     });
-    console.log("[ComputeExecutor] Created GCP GPU node");
+    console.log("[ComputeExecutor] Created GCP GPU node (Tesla T4)");
   }
 }
