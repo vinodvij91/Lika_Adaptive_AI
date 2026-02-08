@@ -30,6 +30,7 @@ import {
   XCircle,
   Activity,
   BarChart3,
+  Sparkles,
 } from "lucide-react";
 import { generateMoleculeName } from "@/lib/utils";
 import {
@@ -85,102 +86,201 @@ interface MultiTargetSarData {
   series: MultiTargetSeries[];
 }
 
-function RadarSarView({ 
-  molecules, 
-  targets, 
+type ProfileFilter = "all" | "original" | "optimized";
+
+function computeAvgRadar(
+  mols: MultiTargetMolecule[],
+  targets: MultiTargetTarget[],
+) {
+  return targets.map(target => {
+    const avgValue = mols.reduce((acc, mol) => {
+      const ts = mol.targetScores.find(t => t.targetId === target.id);
+      const val = ts?.experimentalValue ?? ts?.predictedScore ?? null;
+      if (val !== null) {
+        acc.sum += val;
+        acc.count++;
+      }
+      return acc;
+    }, { sum: 0, count: 0 });
+
+    return {
+      target: target.name.slice(0, 12),
+      fullName: target.name,
+      role: target.role,
+      value: avgValue.count > 0 ? Math.max(0, 100 - avgValue.sum / avgValue.count / 10) : 0,
+      rawValue: avgValue.count > 0 ? avgValue.sum / avgValue.count : null,
+    };
+  });
+}
+
+function RadarSarView({
+  molecules,
+  targets,
   selectedMoleculeId,
   onSelectMolecule,
-}: { 
-  molecules: MultiTargetMolecule[]; 
+  profileFilter,
+  onProfileChange,
+  optimizedMoleculeIds,
+}: {
+  molecules: MultiTargetMolecule[];
   targets: MultiTargetTarget[];
   selectedMoleculeId: string | null;
   onSelectMolecule: (id: string | null) => void;
+  profileFilter: ProfileFilter;
+  onProfileChange: (f: ProfileFilter) => void;
+  optimizedMoleculeIds: string[];
 }) {
+  const hasOptimized = optimizedMoleculeIds.length > 0;
   const selectedMolecule = molecules.find(m => m.id === selectedMoleculeId);
-  
+
+  const originalMols = molecules.filter(m => !optimizedMoleculeIds.includes(m.id));
+  const optimizedMols = molecules.filter(m => optimizedMoleculeIds.includes(m.id));
+
+  const showDualTrace = profileFilter === "all" && !selectedMolecule && hasOptimized && optimizedMols.length > 0;
+
+  const filteredMols =
+    profileFilter === "original" ? originalMols :
+    profileFilter === "optimized" ? optimizedMols :
+    molecules;
+
   const radarData = targets.map(target => {
-    const result: Record<string, unknown> = { 
+    const result: Record<string, unknown> = {
       target: target.name.slice(0, 12),
       fullName: target.name,
       role: target.role,
     };
-    
+
     if (selectedMolecule) {
       const targetScore = selectedMolecule.targetScores.find(ts => ts.targetId === target.id);
-      result.value = targetScore?.experimentalValue !== null 
-        ? Math.max(0, 100 - (targetScore?.experimentalValue ?? 0) / 10) 
-        : (targetScore?.predictedScore !== null ? targetScore.predictedScore * 10 : 0);
+      result.value = targetScore?.experimentalValue !== null
+        ? Math.max(0, 100 - (targetScore?.experimentalValue ?? 0) / 10)
+        : (targetScore?.predictedScore !== null ? (targetScore?.predictedScore ?? 0) * 10 : 0);
       result.rawValue = targetScore?.experimentalValue ?? targetScore?.predictedScore ?? null;
-    } else {
-      const avgValue = molecules.reduce((acc, mol) => {
+    } else if (showDualTrace) {
+      const origAvg = originalMols.reduce((acc, mol) => {
         const ts = mol.targetScores.find(t => t.targetId === target.id);
         const val = ts?.experimentalValue ?? ts?.predictedScore ?? null;
-        if (val !== null) {
-          acc.sum += val;
-          acc.count++;
-        }
+        if (val !== null) { acc.sum += val; acc.count++; }
         return acc;
       }, { sum: 0, count: 0 });
-      
+
+      const optAvg = optimizedMols.reduce((acc, mol) => {
+        const ts = mol.targetScores.find(t => t.targetId === target.id);
+        const val = ts?.experimentalValue ?? ts?.predictedScore ?? null;
+        if (val !== null) { acc.sum += val; acc.count++; }
+        return acc;
+      }, { sum: 0, count: 0 });
+
+      result.original = origAvg.count > 0 ? Math.max(0, 100 - origAvg.sum / origAvg.count / 10) : 0;
+      result.optimized = optAvg.count > 0 ? Math.max(0, 100 - optAvg.sum / optAvg.count / 10) : 0;
+      result.rawOriginal = origAvg.count > 0 ? origAvg.sum / origAvg.count : null;
+      result.rawOptimized = optAvg.count > 0 ? optAvg.sum / optAvg.count : null;
+    } else {
+      const avgValue = filteredMols.reduce((acc, mol) => {
+        const ts = mol.targetScores.find(t => t.targetId === target.id);
+        const val = ts?.experimentalValue ?? ts?.predictedScore ?? null;
+        if (val !== null) { acc.sum += val; acc.count++; }
+        return acc;
+      }, { sum: 0, count: 0 });
       result.value = avgValue.count > 0 ? Math.max(0, 100 - avgValue.sum / avgValue.count / 10) : 0;
       result.rawValue = avgValue.count > 0 ? avgValue.sum / avgValue.count : null;
     }
-    
+
     return result;
   });
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h4 className="font-medium">Target Activity Radar</h4>
           <p className="text-sm text-muted-foreground">
-            {selectedMolecule 
-              ? `Viewing: ${selectedMolecule.smiles.slice(0, 30)}...` 
-              : `Average across ${molecules.length} molecules`}
+            {selectedMolecule
+              ? `Viewing: ${selectedMolecule.smiles.slice(0, 30)}...`
+              : showDualTrace
+                ? `Comparing original (${originalMols.length}) vs optimized (${optimizedMols.length})`
+                : `Average across ${filteredMols.length} molecules`}
           </p>
         </div>
-        <Select 
-          value={selectedMoleculeId || "all"} 
-          onValueChange={(v) => onSelectMolecule(v === "all" ? null : v)}
-        >
-          <SelectTrigger className="w-[200px]" data-testid="select-molecule-radar">
-            <SelectValue placeholder="Select molecule" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All (Average)</SelectItem>
-            {molecules.slice(0, 50).map((mol, idx) => (
-              <SelectItem key={mol.id} value={mol.id}>
-                {generateMoleculeName(mol.smiles, mol.id, idx)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          {hasOptimized && (
+            <Select value={profileFilter} onValueChange={(v) => onProfileChange(v as ProfileFilter)}>
+              <SelectTrigger className="w-[140px]" data-testid="select-profile-filter">
+                <SelectValue placeholder="Profile" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Both</SelectItem>
+                <SelectItem value="original">Original</SelectItem>
+                <SelectItem value="optimized">Optimized</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <Select
+            value={selectedMoleculeId || "all"}
+            onValueChange={(v) => onSelectMolecule(v === "all" ? null : v)}
+          >
+            <SelectTrigger className="w-[200px]" data-testid="select-molecule-radar">
+              <SelectValue placeholder="Select molecule" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All (Average)</SelectItem>
+              {filteredMols.slice(0, 50).map((mol, idx) => (
+                <SelectItem key={mol.id} value={mol.id}>
+                  {optimizedMoleculeIds.includes(mol.id) ? "* " : ""}
+                  {generateMoleculeName(mol.smiles, mol.id, idx)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      
+
       <div className="h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart data={radarData}>
             <PolarGrid className="stroke-muted" />
-            <PolarAngleAxis 
-              dataKey="target" 
+            <PolarAngleAxis
+              dataKey="target"
               tick={{ fontSize: 11 }}
               className="text-muted-foreground"
             />
-            <PolarRadiusAxis 
-              angle={30} 
-              domain={[0, 100]} 
+            <PolarRadiusAxis
+              angle={30}
+              domain={[0, 100]}
               tick={{ fontSize: 10 }}
               className="text-muted-foreground"
             />
-            <Radar
-              name="Activity"
-              dataKey="value"
-              stroke="hsl(var(--primary))"
-              fill="hsl(var(--primary))"
-              fillOpacity={0.3}
-              strokeWidth={2}
-            />
+            {showDualTrace ? (
+              <>
+                <Radar
+                  name="Original"
+                  dataKey="original"
+                  stroke="hsl(var(--primary))"
+                  fill="hsl(var(--primary))"
+                  fillOpacity={0.15}
+                  strokeWidth={2}
+                  strokeDasharray="6 3"
+                />
+                <Radar
+                  name="Optimized"
+                  dataKey="optimized"
+                  stroke="hsl(150 80% 40%)"
+                  fill="hsl(150 80% 40%)"
+                  fillOpacity={0.2}
+                  strokeWidth={2}
+                />
+                <Legend />
+              </>
+            ) : (
+              <Radar
+                name="Activity"
+                dataKey="value"
+                stroke="hsl(var(--primary))"
+                fill="hsl(var(--primary))"
+                fillOpacity={0.3}
+                strokeWidth={2}
+              />
+            )}
             <RechartsTooltip
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
@@ -189,7 +289,14 @@ function RadarSarView({
                     <div className="bg-popover border rounded-md p-2 text-sm shadow-lg">
                       <p className="font-medium">{data.fullName}</p>
                       <p className="text-xs text-muted-foreground capitalize">Role: {data.role}</p>
-                      <p className="text-xs">Value: {data.rawValue?.toFixed(2) ?? "N/A"}</p>
+                      {showDualTrace ? (
+                        <>
+                          <p className="text-xs">Original: {data.rawOriginal?.toFixed(2) ?? "N/A"}</p>
+                          <p className="text-xs text-green-600">Optimized: {data.rawOptimized?.toFixed(2) ?? "N/A"}</p>
+                        </>
+                      ) : (
+                        <p className="text-xs">Value: {data.rawValue?.toFixed(2) ?? "N/A"}</p>
+                      )}
                     </div>
                   );
                 }
@@ -199,12 +306,12 @@ function RadarSarView({
           </RadarChart>
         </ResponsiveContainer>
       </div>
-      
-      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+
+      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground flex-wrap">
         {targets.map(target => (
           <div key={target.id} className="flex items-center gap-1">
-            <Badge 
-              variant={target.role === "safety" ? "destructive" : target.role === "secondary" ? "secondary" : "default"} 
+            <Badge
+              variant={target.role === "safety" ? "destructive" : target.role === "secondary" ? "secondary" : "default"}
               className="text-xs"
             >
               {target.name.slice(0, 10)}
@@ -226,14 +333,14 @@ function TradeOffScatter({
 }) {
   const [xTarget, setXTarget] = useState<string>(targets[0]?.id || "");
   const [yTarget, setYTarget] = useState<string>(targets[1]?.id || targets[0]?.id || "");
-  
+
   const xTargetName = targets.find(t => t.id === xTarget)?.name || "Target 1";
   const yTargetName = targets.find(t => t.id === yTarget)?.name || "Target 2";
-  
+
   const scatterData = molecules.map(mol => {
     const xScore = mol.targetScores.find(ts => ts.targetId === xTarget);
     const yScore = mol.targetScores.find(ts => ts.targetId === yTarget);
-    
+
     return {
       id: mol.id,
       smiles: mol.smiles,
@@ -252,7 +359,7 @@ function TradeOffScatter({
     "hsl(280 80% 60%)",
     "hsl(0 80% 50%)",
   ];
-  
+
   const uniqueSeries = Array.from(new Set(scatterData.map(d => d.seriesId || "ungrouped")));
   const seriesColorMap = new Map(uniqueSeries.map((s, i) => [s, seriesColors[i % seriesColors.length]]));
 
@@ -289,22 +396,22 @@ function TradeOffScatter({
           </Select>
         </div>
       </div>
-      
+
       <div className="h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 40 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis 
-              type="number" 
-              dataKey="x" 
+            <XAxis
+              type="number"
+              dataKey="x"
               name={xTargetName}
               tick={{ fontSize: 11 }}
               label={{ value: xTargetName, position: "bottom", offset: 0, fontSize: 12 }}
               className="text-muted-foreground"
             />
-            <YAxis 
-              type="number" 
-              dataKey="y" 
+            <YAxis
+              type="number"
+              dataKey="y"
               name={yTargetName}
               tick={{ fontSize: 11 }}
               label={{ value: yTargetName, angle: -90, position: "insideLeft", fontSize: 12 }}
@@ -331,16 +438,16 @@ function TradeOffScatter({
             <Legend />
             <Scatter name="Molecules" data={scatterData}>
               {scatterData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={seriesColorMap.get(entry.seriesId || "ungrouped")} 
+                <Cell
+                  key={`cell-${index}`}
+                  fill={seriesColorMap.get(entry.seriesId || "ungrouped")}
                 />
               ))}
             </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      
+
       <div className="text-center text-sm text-muted-foreground">
         Lower values indicate better activity. Points in the bottom-left quadrant are balanced actives.
       </div>
@@ -359,12 +466,12 @@ function SeriesAnalysis({
 }) {
   const seriesStats = series.map(s => {
     const seriesMols = molecules.filter(m => m.seriesId === s.seriesId);
-    
+
     const targetStats = targets.map(target => {
       const values = seriesMols
         .map(m => m.targetScores.find(ts => ts.targetId === target.id)?.experimentalValue)
         .filter((v): v is number => v !== null);
-      
+
       return {
         targetId: target.id,
         targetName: target.name,
@@ -374,7 +481,7 @@ function SeriesAnalysis({
         best: values.length > 0 ? Math.min(...values) : null,
       };
     });
-    
+
     return {
       ...s,
       moleculeCount: seriesMols.length,
@@ -390,7 +497,7 @@ function SeriesAnalysis({
           Evaluate chemical series for balanced multi-target activity
         </p>
       </div>
-      
+
       <ScrollArea className="h-[500px]">
         <Table>
           <TableHeader>
@@ -439,7 +546,7 @@ function SeriesAnalysis({
           </TableBody>
         </Table>
       </ScrollArea>
-      
+
       <div className="flex items-center gap-4 text-xs text-muted-foreground justify-center">
         <div className="flex items-center gap-1">
           <CheckCircle className="h-3 w-3 text-green-500" />
@@ -457,9 +564,11 @@ function SeriesAnalysis({
 function MoleculeMatrix({
   molecules,
   targets,
+  optimizedMoleculeIds,
 }: {
   molecules: MultiTargetMolecule[];
   targets: MultiTargetTarget[];
+  optimizedMoleculeIds: string[];
 }) {
   const getActivityColor = (value: number | null, isSafety: boolean) => {
     if (value === null) return "bg-muted";
@@ -477,12 +586,13 @@ function MoleculeMatrix({
           Heatmap of activity values across all targets
         </p>
       </div>
-      
+
       <ScrollArea className="h-[500px]">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="sticky left-0 bg-background z-10">Molecule</TableHead>
+              <TableHead className="text-center">Type</TableHead>
               <TableHead className="text-center">Composite</TableHead>
               {targets.map(t => (
                 <TableHead key={t.id} className="text-center">
@@ -497,34 +607,47 @@ function MoleculeMatrix({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {molecules.slice(0, 100).map(mol => (
-              <TableRow key={mol.id}>
-                <TableCell className="font-mono text-xs sticky left-0 bg-background max-w-[150px] truncate">
-                  {generateMoleculeName(mol.smiles, mol.id)}
-                </TableCell>
-                <TableCell className="text-center tabular-nums text-xs">
-                  {mol.compositeScore?.toFixed(1) ?? "-"}
-                </TableCell>
-                {targets.map(target => {
-                  const ts = mol.targetScores.find(s => s.targetId === target.id);
-                  const value = ts?.experimentalValue ?? ts?.predictedScore ?? null;
-                  const isSafety = target.role === "safety";
-                  
-                  return (
-                    <TableCell key={target.id} className="text-center p-1">
-                      <div className={`rounded px-2 py-1 text-xs tabular-nums ${getActivityColor(value, isSafety)}`}>
-                        {value !== null ? value.toFixed(1) : "-"}
-                      </div>
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
+            {molecules.slice(0, 100).map(mol => {
+              const isOpt = optimizedMoleculeIds.includes(mol.id);
+              return (
+                <TableRow key={mol.id}>
+                  <TableCell className="font-mono text-xs sticky left-0 bg-background max-w-[150px] truncate">
+                    {generateMoleculeName(mol.smiles, mol.id)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {isOpt ? (
+                      <Badge variant="default" className="text-[10px]">
+                        <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                        Opt
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px]">Orig</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center tabular-nums text-xs">
+                    {mol.compositeScore?.toFixed(1) ?? "-"}
+                  </TableCell>
+                  {targets.map(target => {
+                    const ts = mol.targetScores.find(s => s.targetId === target.id);
+                    const value = ts?.experimentalValue ?? ts?.predictedScore ?? null;
+                    const isSafety = target.role === "safety";
+
+                    return (
+                      <TableCell key={target.id} className="text-center p-1">
+                        <div className={`rounded px-2 py-1 text-xs tabular-nums ${getActivityColor(value, isSafety)}`}>
+                          {value !== null ? value.toFixed(1) : "-"}
+                        </div>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </ScrollArea>
-      
-      <div className="flex items-center gap-4 text-xs text-muted-foreground justify-center">
+
+      <div className="flex items-center gap-4 text-xs text-muted-foreground justify-center flex-wrap">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-green-500/80" />
           <span>Potent (&lt;100)</span>
@@ -537,14 +660,27 @@ function MoleculeMatrix({
           <div className="w-3 h-3 rounded bg-destructive/80" />
           <span>Safety concern</span>
         </div>
+        <div className="flex items-center gap-1">
+          <Badge variant="default" className="text-[10px]">
+            <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+            Opt
+          </Badge>
+          <span>Optimized analog</span>
+        </div>
       </div>
     </div>
   );
 }
 
+interface OptimizationSummary {
+  totalOptimized: number;
+  optimizedMoleculeIds: string[];
+}
+
 export function MultiTargetSar({ campaignId }: { campaignId: string }) {
   const [selectedMoleculeId, setSelectedMoleculeId] = useState<string | null>(null);
-  
+  const [profileFilter, setProfileFilter] = useState<ProfileFilter>("all");
+
   const { data, isLoading, error } = useQuery<MultiTargetSarData>({
     queryKey: ["/api/campaigns", campaignId, "sar", "multi-target"],
     queryFn: async () => {
@@ -553,7 +689,17 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
       return res.json();
     },
   });
-  
+
+  const { data: optSummary } = useQuery<OptimizationSummary>({
+    queryKey: ["/api/campaigns", campaignId, "sar", "optimization-summary"],
+    queryFn: async () => {
+      const res = await fetch(`/api/campaigns/${campaignId}/sar/optimization-summary`);
+      if (!res.ok) throw new Error("Failed to fetch optimization summary");
+      return res.json();
+    },
+    enabled: !!data && data.molecules.length > 0,
+  });
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -562,7 +708,7 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
       </div>
     );
   }
-  
+
   if (error || !data) {
     return (
       <Card>
@@ -576,7 +722,7 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
       </Card>
     );
   }
-  
+
   if (data.molecules.length === 0 || data.targets.length === 0) {
     return (
       <Card>
@@ -591,15 +737,18 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
       </Card>
     );
   }
-  
-  const balancedCount = data.molecules.filter(m => 
+
+  const optimizedMoleculeIds = optSummary?.optimizedMoleculeIds || [];
+  const hasOptimized = optimizedMoleculeIds.length > 0;
+
+  const balancedCount = data.molecules.filter(m =>
     m.targetScores.filter(ts => !ts.safetyFlag && ts.experimentalValue !== null && ts.experimentalValue < 1000).length >= 2
   ).length;
-  
+
   const safetyIssues = data.molecules.filter(m =>
     m.targetScores.some(ts => ts.safetyFlag && ts.experimentalValue !== null && ts.experimentalValue < 100)
   ).length;
-  
+
   return (
     <div className="space-y-6">
       <Card className="bg-primary/5 border-primary/20">
@@ -611,8 +760,8 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
             <div className="space-y-1">
               <h4 className="font-medium text-sm">Understanding Multi-Target SAR</h4>
               <p className="text-sm text-muted-foreground">
-                This analysis helps identify molecules with balanced activity across multiple therapeutic targets. 
-                <strong className="text-foreground"> Balanced compounds</strong> (bottom-left quadrant in Trade-Off view) 
+                This analysis helps identify molecules with balanced activity across multiple therapeutic targets.
+                <strong className="text-foreground"> Balanced compounds</strong> (bottom-left quadrant in Trade-Off view)
                 show good activity against both primary and secondary targets while avoiding safety liabilities.
               </p>
               <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground">
@@ -634,9 +783,12 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
           </h3>
           <p className="text-sm text-muted-foreground">
             {data.molecules.length} molecules | {data.targets.length} targets | {data.series.length} series
+            {hasOptimized && (
+              <span className="text-primary"> | {optimizedMoleculeIds.length} optimized</span>
+            )}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="gap-1">
             <TrendingUp className="h-3 w-3" />
@@ -648,9 +800,15 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
               {safetyIssues} safety flags
             </Badge>
           )}
+          {hasOptimized && (
+            <Badge variant="default" className="gap-1">
+              <Sparkles className="h-3 w-3" />
+              {optimizedMoleculeIds.length} optimized
+            </Badge>
+          )}
         </div>
       </div>
-      
+
       <Tabs defaultValue="radar" className="w-full">
         <TabsList className="grid w-full grid-cols-4 max-w-lg">
           <TabsTrigger value="radar" data-testid="tab-radar">
@@ -670,7 +828,7 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
             Matrix
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="radar" className="mt-4">
           <Card>
             <CardContent className="p-6">
@@ -679,11 +837,14 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
                 targets={data.targets}
                 selectedMoleculeId={selectedMoleculeId}
                 onSelectMolecule={setSelectedMoleculeId}
+                profileFilter={profileFilter}
+                onProfileChange={setProfileFilter}
+                optimizedMoleculeIds={optimizedMoleculeIds}
               />
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="tradeoff" className="mt-4">
           <Card>
             <CardContent className="p-6">
@@ -694,7 +855,7 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="series" className="mt-4">
           <Card>
             <CardContent className="p-6">
@@ -706,13 +867,14 @@ export function MultiTargetSar({ campaignId }: { campaignId: string }) {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="matrix" className="mt-4">
           <Card>
             <CardContent className="p-6">
               <MoleculeMatrix
                 molecules={data.molecules}
                 targets={data.targets}
+                optimizedMoleculeIds={optimizedMoleculeIds}
               />
             </CardContent>
           </Card>

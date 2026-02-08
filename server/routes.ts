@@ -71,8 +71,9 @@ function extractSequenceFromPdb(pdbContent: string): string {
   return residues.map(r => threeToOne[r.resName] || 'X').join('');
 }
 import { db } from "./db";
-import { eq, count, sql } from "drizzle-orm";
-import { materialEntities } from "@shared/schema";
+import { eq, count, sql, inArray } from "drizzle-orm";
+import { materialEntities, moleculeScores, molecules } from "@shared/schema";
+import type { Molecule } from "@shared/schema";
 import { z } from "zod";
 import {
   insertProjectSchema,
@@ -115,7 +116,6 @@ import {
   insertMoaEdgeSchema,
   insertImportTemplateSchema,
   insertImportJobSchema,
-  moleculeScores,
   campaigns,
 } from "@shared/schema";
 
@@ -6074,6 +6074,133 @@ print(json.dumps(result, default=str))
     } catch (error) {
       console.error("Error optimizing dose/indication:", error);
       res.status(500).json({ error: "Failed to optimize dose and indication" });
+    }
+  });
+
+  app.get("/api/campaigns/:campaignId/sar/optimization-summary", requireAuth, async (req, res) => {
+    try {
+      const campaignId = req.params.campaignId;
+      const allScores = await db
+        .select({
+          moleculeId: moleculeScores.moleculeId,
+          admetScore: moleculeScores.admetScore,
+          oracleScore: moleculeScores.oracleScore,
+          rawScores: moleculeScores.rawScores,
+        })
+        .from(moleculeScores)
+        .where(eq(moleculeScores.campaignId, campaignId));
+
+      const optimizedScores = allScores.filter(s => {
+        const raw = s.rawScores as Record<string, unknown> | null;
+        return raw && typeof raw === "object" && "optimizedFrom" in raw;
+      });
+      const originalScores = allScores.filter(s => {
+        const raw = s.rawScores as Record<string, unknown> | null;
+        return !raw || typeof raw !== "object" || !("optimizedFrom" in raw);
+      });
+
+      const optimizedMolIds = optimizedScores.map(s => s.moleculeId).filter(Boolean) as string[];
+      const originalMolIds = originalScores.map(s => s.moleculeId).filter(Boolean) as string[];
+
+      let optimizedMols: Molecule[] = [];
+      let originalMols: Molecule[] = [];
+      if (optimizedMolIds.length > 0) {
+        optimizedMols = await db.select().from(molecules).where(inArray(molecules.id, optimizedMolIds));
+      }
+      if (originalMolIds.length > 0) {
+        originalMols = await db.select().from(molecules).where(inArray(molecules.id, originalMolIds));
+      }
+
+      const improvements = { solubilityImproved: 0, toxicityReduced: 0, cnsImproved: 0, metabolicImproved: 0 };
+      const doseScenarios: Array<{
+        moleculeId: string;
+        moleculeName: string;
+        smiles: string;
+        modification: string;
+        originalIndication: string;
+        suggestedIndications: string[];
+        doseReductionFactor: string;
+      }> = [];
+
+      const propertyDeltas: Array<{
+        moleculeId: string;
+        moleculeName: string;
+        smiles: string;
+        parentSmiles: string;
+        modification: string;
+        logPDelta: number | null;
+        tpsaDelta: number | null;
+        mwDelta: number | null;
+        admetScore: number | null;
+        oracleScore: number | null;
+        hergRisk: string | null;
+        bbbPenetration: string | null;
+      }> = [];
+
+      for (const score of optimizedScores) {
+        const raw = score.rawScores as Record<string, unknown>;
+        const admet = raw.admet as Record<string, unknown> | undefined;
+        const parentSmiles = raw.optimizedFrom as string;
+        const modification = raw.modification as string;
+
+        const mol = optimizedMols.find(m => m.id === score.moleculeId);
+        const parentMol = originalMols.find(m => m.smiles === parentSmiles);
+
+        if (admet) {
+          if ((admet.bioavailability as number) > 0.7) improvements.solubilityImproved++;
+          if ((admet.hergInhibition as string) === "Low") improvements.toxicityReduced++;
+          if ((admet.bbbPenetration as string) === "Yes") improvements.cnsImproved++;
+          if ((admet.metabolicStability as number) > 0.7) improvements.metabolicImproved++;
+        }
+
+        if (mol) {
+          const logPDelta = parentMol && mol.logP != null && parentMol.logP != null
+            ? Number(mol.logP) - Number(parentMol.logP) : null;
+          const mwDelta = parentMol && mol.molecularWeight != null && parentMol.molecularWeight != null
+            ? Number(mol.molecularWeight) - Number(parentMol.molecularWeight) : null;
+
+          propertyDeltas.push({
+            moleculeId: mol.id,
+            moleculeName: mol.name || `MOL-${mol.id.slice(0, 8)}`,
+            smiles: mol.smiles,
+            parentSmiles,
+            modification,
+            logPDelta,
+            tpsaDelta: null,
+            mwDelta,
+            admetScore: score.admetScore ? Number(score.admetScore) : null,
+            oracleScore: score.oracleScore ? Number(score.oracleScore) : null,
+            hergRisk: admet ? (admet.hergInhibition as string) : null,
+            bbbPenetration: admet ? (admet.bbbPenetration as string) : null,
+          });
+        }
+      }
+
+      const seriesOptimizationMap: Record<string, { original: number; optimized: number }> = {};
+      for (const mol of originalMols) {
+        const key = mol.seriesId || mol.scaffoldId || "ungrouped";
+        if (!seriesOptimizationMap[key]) seriesOptimizationMap[key] = { original: 0, optimized: 0 };
+        seriesOptimizationMap[key].original++;
+      }
+      for (const mol of optimizedMols) {
+        const key = mol.seriesId || mol.scaffoldId || "ungrouped";
+        if (!seriesOptimizationMap[key]) seriesOptimizationMap[key] = { original: 0, optimized: 0 };
+        seriesOptimizationMap[key].optimized++;
+      }
+
+      res.json({
+        totalOriginal: originalScores.length,
+        totalOptimized: optimizedScores.length,
+        totalDoseScenarios: doseScenarios.length,
+        improvements,
+        propertyDeltas,
+        doseScenarios,
+        seriesOptimizationMap,
+        optimizedMoleculeIds: optimizedMolIds,
+      });
+    } catch (error) {
+      console.error("Error fetching optimization summary:", error);
+      res.status(500).json({ error: "Failed to fetch optimization summary" });
     }
   });
 

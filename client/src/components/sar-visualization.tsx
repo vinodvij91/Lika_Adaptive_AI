@@ -43,6 +43,9 @@ import {
   Loader2,
   CheckCircle,
   FlaskRound,
+  Zap,
+  BarChart3,
+  TestTubes,
 } from "lucide-react";
 import { generateMoleculeName } from "@/lib/utils";
 import {
@@ -153,6 +156,43 @@ interface DoseOptimizationResult {
   repurposingHints: string[];
 }
 
+interface OptimizationSummary {
+  totalOriginal: number;
+  totalOptimized: number;
+  totalDoseScenarios: number;
+  improvements: {
+    solubilityImproved: number;
+    toxicityReduced: number;
+    cnsImproved: number;
+    metabolicImproved: number;
+  };
+  propertyDeltas: Array<{
+    moleculeId: string;
+    moleculeName: string;
+    smiles: string;
+    parentSmiles: string;
+    modification: string;
+    logPDelta: number | null;
+    tpsaDelta: number | null;
+    mwDelta: number | null;
+    admetScore: number | null;
+    oracleScore: number | null;
+    hergRisk: string | null;
+    bbbPenetration: string | null;
+  }>;
+  doseScenarios: Array<{
+    moleculeId: string;
+    moleculeName: string;
+    smiles: string;
+    modification: string;
+    originalIndication: string;
+    suggestedIndications: string[];
+    doseReductionFactor: string;
+  }>;
+  seriesOptimizationMap: Record<string, { original: number; optimized: number }>;
+  optimizedMoleculeIds: string[];
+}
+
 const CATEGORY_META: Record<string, { label: string; icon: typeof Droplets; color: string }> = {
   solubility: { label: "Solubility & Exposure", icon: Droplets, color: "text-blue-500" },
   permeability: { label: "Permeability / CNS", icon: BrainCircuit, color: "text-purple-500" },
@@ -161,13 +201,205 @@ const CATEGORY_META: Record<string, { label: string; icon: typeof Droplets; colo
   dose_indication: { label: "Dose & Indication", icon: Pill, color: "text-green-600" },
 };
 
-function SeriesCard({ series, onClick }: { series: SarSeries; onClick: () => void }) {
+function OptimizationSummaryPanel({
+  summary,
+  onOpenMolecule,
+}: {
+  summary: OptimizationSummary;
+  onOpenMolecule?: (moleculeId: string) => void;
+}) {
+  if (summary.totalOptimized === 0) return null;
+
+  const totalImprovements =
+    summary.improvements.solubilityImproved +
+    summary.improvements.toxicityReduced +
+    summary.improvements.cnsImproved +
+    summary.improvements.metabolicImproved;
+
+  return (
+    <Card className="border-primary/20 bg-primary/5" data-testid="panel-optimization-summary">
+      <CardContent className="p-4 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-primary/10 rounded-md shrink-0">
+            <Sparkles className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-sm">Optimization Summary</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Campaign-level overview of molecule optimization results
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="text-center p-2 bg-background rounded-md">
+            <p className="text-2xl font-bold tabular-nums" data-testid="text-original-count">
+              {summary.totalOriginal}
+            </p>
+            <p className="text-xs text-muted-foreground">Original</p>
+          </div>
+          <div className="text-center p-2 bg-background rounded-md">
+            <p className="text-2xl font-bold tabular-nums text-primary" data-testid="text-optimized-count">
+              {summary.totalOptimized}
+            </p>
+            <p className="text-xs text-muted-foreground">Optimized</p>
+          </div>
+          <div className="text-center p-2 bg-background rounded-md">
+            <p className="text-2xl font-bold tabular-nums" data-testid="text-dose-scenarios-count">
+              {summary.totalDoseScenarios}
+            </p>
+            <p className="text-xs text-muted-foreground">Dose Scenarios</p>
+          </div>
+          <div className="text-center p-2 bg-background rounded-md">
+            <p className="text-2xl font-bold tabular-nums text-green-600" data-testid="text-improvements-count">
+              {totalImprovements}
+            </p>
+            <p className="text-xs text-muted-foreground">Improvements</p>
+          </div>
+        </div>
+
+        {totalImprovements > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {summary.improvements.solubilityImproved > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <Droplets className="h-3 w-3" />
+                Solubility +{summary.improvements.solubilityImproved}
+              </Badge>
+            )}
+            {summary.improvements.toxicityReduced > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <ShieldAlert className="h-3 w-3" />
+                Toxicity reduced {summary.improvements.toxicityReduced}
+              </Badge>
+            )}
+            {summary.improvements.cnsImproved > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <BrainCircuit className="h-3 w-3" />
+                CNS suitability +{summary.improvements.cnsImproved}
+              </Badge>
+            )}
+            {summary.improvements.metabolicImproved > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <FlaskRound className="h-3 w-3" />
+                Metabolic stability +{summary.improvements.metabolicImproved}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {summary.propertyDeltas.length > 0 && (
+          <div>
+            <h5 className="text-xs font-medium text-muted-foreground mb-2">Optimized Analogs &mdash; Property Changes</h5>
+            <ScrollArea className="max-h-[200px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Compound</TableHead>
+                    <TableHead className="text-xs">Modification</TableHead>
+                    <TableHead className="text-xs text-right">logP</TableHead>
+                    <TableHead className="text-xs text-right">ADMET</TableHead>
+                    <TableHead className="text-xs text-center">hERG</TableHead>
+                    <TableHead className="text-xs text-center">BBB</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {summary.propertyDeltas.map((d) => (
+                    <TableRow
+                      key={d.moleculeId}
+                      className={onOpenMolecule ? "cursor-pointer" : ""}
+                      onClick={() => onOpenMolecule?.(d.moleculeId)}
+                      data-testid={`row-optimized-${d.moleculeId}`}
+                    >
+                      <TableCell className="text-xs font-medium max-w-[120px] truncate" title={d.moleculeName}>
+                        {d.moleculeName}
+                      </TableCell>
+                      <TableCell className="text-xs max-w-[150px] truncate" title={d.modification}>
+                        {d.modification}
+                      </TableCell>
+                      <TableCell className="text-xs text-right tabular-nums">
+                        {d.logPDelta != null ? (
+                          <span className={d.logPDelta < 0 ? "text-green-600" : d.logPDelta > 0 ? "text-amber-500" : ""}>
+                            {d.logPDelta > 0 ? "+" : ""}{d.logPDelta.toFixed(2)}
+                          </span>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell className="text-xs text-right tabular-nums">
+                        {d.admetScore != null ? (
+                          <span className={d.admetScore > 0.7 ? "text-green-600" : "text-amber-500"}>
+                            {d.admetScore.toFixed(2)}
+                          </span>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell className="text-xs text-center">
+                        {d.hergRisk ? (
+                          <Badge variant={d.hergRisk === "Low" ? "secondary" : "destructive"} className="text-[10px]">
+                            {d.hergRisk}
+                          </Badge>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell className="text-xs text-center">
+                        {d.bbbPenetration ? (
+                          <Badge variant={d.bbbPenetration === "Yes" ? "default" : "secondary"} className="text-[10px]">
+                            {d.bbbPenetration}
+                          </Badge>
+                        ) : "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
+        )}
+
+        {summary.doseScenarios.length > 0 && (
+          <div>
+            <h5 className="text-xs font-medium text-muted-foreground mb-2">Dose & Repurposing Scenarios</h5>
+            <div className="space-y-2">
+              {summary.doseScenarios.map((ds, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-3 p-2 bg-background rounded-md hover-elevate cursor-pointer"
+                  onClick={() => onOpenMolecule?.(ds.moleculeId)}
+                  data-testid={`row-dose-scenario-${idx}`}
+                >
+                  <Pill className="h-4 w-4 text-green-600 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{ds.moleculeName}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {ds.originalIndication} &rarr; {ds.suggestedIndications.join(", ")}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] shrink-0">
+                    {ds.doseReductionFactor}
+                  </Badge>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SeriesCard({
+  series,
+  optimizationInfo,
+  onClick,
+}: {
+  series: SarSeries;
+  optimizationInfo?: { original: number; optimized: number };
+  onClick: () => void;
+}) {
   const displayName = series.seriesId || series.scaffoldId || "Ungrouped";
   const moleculeCount = series.molecules.length;
   const hasAssayData = series.assaySummary.count > 0;
-  
+  const hasOptimized = optimizationInfo && optimizationInfo.optimized > 0;
+
   return (
-    <Card 
+    <Card
       className="cursor-pointer hover-elevate active-elevate-2 transition-all"
       onClick={onClick}
       data-testid={`card-series-${displayName}`}
@@ -175,23 +407,33 @@ function SeriesCard({ series, onClick }: { series: SarSeries; onClick: () => voi
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="p-2 bg-primary/10 rounded-md shrink-0">
-              <Layers className="h-4 w-4 text-primary" />
+            <div className={`p-2 rounded-md shrink-0 ${hasOptimized ? "bg-primary/15" : "bg-primary/10"}`}>
+              {hasOptimized ? (
+                <Sparkles className="h-4 w-4 text-primary" />
+              ) : (
+                <Layers className="h-4 w-4 text-primary" />
+              )}
             </div>
             <div className="min-w-0">
               <p className="font-medium truncate" title={displayName}>{displayName}</p>
-              <p className="text-xs text-muted-foreground">{moleculeCount} molecules</p>
+              {hasOptimized ? (
+                <p className="text-xs text-muted-foreground">
+                  {optimizationInfo!.original} original / {optimizationInfo!.optimized} optimized
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">{moleculeCount} molecules</p>
+              )}
             </div>
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
         </div>
-        
+
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div>
             <p className="text-muted-foreground">Best Activity</p>
             <p className="font-medium tabular-nums">
-              {hasAssayData && series.assaySummary.bestValue !== null 
-                ? series.assaySummary.bestValue.toFixed(2) 
+              {hasAssayData && series.assaySummary.bestValue !== null
+                ? series.assaySummary.bestValue.toFixed(2)
                 : "N/A"}
             </p>
           </div>
@@ -204,15 +446,21 @@ function SeriesCard({ series, onClick }: { series: SarSeries; onClick: () => voi
             </p>
           </div>
         </div>
-        
-        {hasAssayData && (
-          <div className="mt-3 flex items-center gap-1">
+
+        <div className="mt-3 flex items-center gap-1 flex-wrap">
+          {hasAssayData && (
             <Badge variant="secondary" className="text-xs">
               <Beaker className="h-3 w-3 mr-1" />
               {series.assaySummary.count} results
             </Badge>
-          </div>
-        )}
+          )}
+          {hasOptimized && (
+            <Badge variant="default" className="text-xs">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Optimized
+            </Badge>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -318,40 +566,41 @@ function MoleculeOptimizationPanel({
         <div className="space-y-4">
           <Card>
             <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm">Core Properties</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Core Properties
+              </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="grid grid-cols-3 gap-3 text-sm">
+              <div className="grid grid-cols-3 gap-3 text-xs">
                 <div>
-                  <p className="text-muted-foreground text-xs">Mol. Weight</p>
+                  <p className="text-muted-foreground">MW</p>
                   <p className="font-mono font-medium tabular-nums">{optimizationResult.properties.molecularWeight.toFixed(1)} Da</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">logP</p>
+                  <p className="text-muted-foreground">logP</p>
                   <p className="font-mono font-medium tabular-nums">{optimizationResult.properties.logP.toFixed(2)}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">TPSA</p>
+                  <p className="text-muted-foreground">TPSA</p>
                   <p className="font-mono font-medium tabular-nums">{optimizationResult.properties.tpsa.toFixed(1)} &#x212B;&#xB2;</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Rot. Bonds</p>
+                  <p className="text-muted-foreground">Rot. Bonds</p>
                   <p className="font-mono font-medium tabular-nums">{optimizationResult.properties.rotatableBonds}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">HBD / HBA</p>
+                  <p className="text-muted-foreground">HBD / HBA</p>
                   <p className="font-mono font-medium tabular-nums">{optimizationResult.properties.numHBondDonors} / {optimizationResult.properties.numHBondAcceptors}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Func. Groups</p>
-                  <div className="flex flex-wrap gap-1">
+                  <p className="text-muted-foreground">Groups</p>
+                  <div className="flex flex-wrap gap-1 mt-0.5">
                     {Object.entries(optimizationResult.properties.functionalGroups).slice(0, 4).map(([name, count]) => (
-                      <Badge key={name} variant="secondary" className="text-[10px]">
-                        {name} ({count})
-                      </Badge>
+                      <Badge key={name} variant="outline" className="text-[10px]">{name}: {count}</Badge>
                     ))}
                     {Object.keys(optimizationResult.properties.functionalGroups).length === 0 && (
-                      <span className="text-xs text-muted-foreground">None detected</span>
+                      <span className="text-muted-foreground">None detected</span>
                     )}
                   </div>
                 </div>
@@ -360,52 +609,54 @@ function MoleculeOptimizationPanel({
           </Card>
 
           {Object.keys(groupedSuggestions).length > 0 && (
-            <Card>
-              <CardHeader className="py-3 px-4">
-                <CardTitle className="text-sm">Optimization Suggestions</CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-4 space-y-4">
-                {Object.entries(groupedSuggestions).map(([category, suggestions]) => {
-                  const meta = CATEGORY_META[category] || CATEGORY_META.solubility;
-                  const Icon = meta.icon;
-                  return (
-                    <div key={category}>
+            <div className="space-y-3">
+              <h5 className="text-sm font-medium flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                Optimization Suggestions
+              </h5>
+              {Object.entries(groupedSuggestions).map(([cat, suggestions]) => {
+                const meta = CATEGORY_META[cat] || { label: cat, icon: Activity, color: "text-foreground" };
+                const Icon = meta.icon;
+                return (
+                  <Card key={cat}>
+                    <CardContent className="p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <Icon className={`h-4 w-4 ${meta.color}`} />
-                        <span className="text-sm font-medium">{meta.label}</span>
+                        <span className="text-xs font-medium">{meta.label}</span>
                       </div>
-                      <div className="space-y-2 ml-6">
+                      <div className="space-y-2">
                         {suggestions.map((s, i) => (
-                          <div key={i} className="text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{s.title}</span>
-                              <Badge
-                                variant={s.priority === "high" ? "destructive" : s.priority === "medium" ? "default" : "secondary"}
-                                className="text-[10px]"
-                              >
-                                {s.priority}
-                              </Badge>
+                          <div key={i} className="flex items-start gap-2">
+                            <Badge
+                              variant={s.priority === "high" ? "destructive" : s.priority === "medium" ? "default" : "secondary"}
+                              className="text-[10px] shrink-0 mt-0.5"
+                            >
+                              {s.priority}
+                            </Badge>
+                            <div>
+                              <p className="text-xs font-medium">{s.title}</p>
+                              <p className="text-[11px] text-muted-foreground">{s.description}</p>
+                              {s.modification && (
+                                <code className="text-[10px] bg-muted px-1 py-0.5 rounded mt-1 inline-block">{s.modification}</code>
+                              )}
                             </div>
-                            <p className="text-muted-foreground text-xs mt-0.5">{s.description}</p>
-                            {s.modification && (
-                              <p className="text-xs mt-0.5 font-mono text-primary">{s.modification}</p>
-                            )}
                           </div>
                         ))}
                       </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           )}
 
           {optimizationResult.insertedAnalogs.length > 0 && (
             <Card>
               <CardHeader className="py-3 px-4">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  Optimized Analogs
-                  <Badge variant="default" className="text-[10px]">
+                  <TestTubes className="h-4 w-4" />
+                  Generated Analogs
+                  <Badge variant="secondary" className="ml-auto">
                     {optimizationResult.insertedAnalogs.length} generated
                   </Badge>
                 </CardTitle>
@@ -414,31 +665,23 @@ function MoleculeOptimizationPanel({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>SMILES</TableHead>
-                      <TableHead>Modification</TableHead>
+                      <TableHead className="text-xs">Name</TableHead>
+                      <TableHead className="text-xs">Modification</TableHead>
+                      <TableHead className="text-xs">SMILES</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {optimizationResult.insertedAnalogs.map((a) => (
-                      <TableRow key={a.id} data-testid={`row-analog-${a.id}`}>
-                        <TableCell className="font-medium text-sm">
-                          <div className="flex items-center gap-1">
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                            {a.name}
-                          </div>
-                        </TableCell>
+                      <TableRow key={a.id}>
+                        <TableCell className="text-xs font-medium">{a.name}</TableCell>
+                        <TableCell className="text-xs">{a.modification}</TableCell>
                         <TableCell>
-                          <code className="text-xs font-mono max-w-[180px] truncate block">{a.smiles}</code>
+                          <code className="text-[10px] truncate block max-w-[150px]">{a.smiles}</code>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{a.modification}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Analogs have been added to the SAR series. Refresh the view to see them in the series list and Multi-Target radar.
-                </p>
               </CardContent>
             </Card>
           )}
@@ -446,41 +689,60 @@ function MoleculeOptimizationPanel({
           {optimizationResult.analogs.length > 0 && (
             <Card>
               <CardHeader className="py-3 px-4">
-                <CardTitle className="text-sm">ADMET Predictions for Analogs</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  ADMET Predictions
+                </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Analog</TableHead>
-                      <TableHead className="text-center">Bioavail.</TableHead>
-                      <TableHead className="text-center">BBB</TableHead>
-                      <TableHead className="text-center">Met. Stab.</TableHead>
-                      <TableHead className="text-center">hERG</TableHead>
-                      <TableHead className="text-center">t&#xBD;</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {optimizationResult.analogs.map((a, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="text-xs font-medium">{a.name}</TableCell>
-                        <TableCell className="text-center text-xs tabular-nums">{(a.admetPredictions.bioavailability * 100).toFixed(0)}%</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={a.admetPredictions.bbbPenetration === "Yes" ? "default" : "secondary"} className="text-[10px]">
-                            {a.admetPredictions.bbbPenetration}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center text-xs tabular-nums">{(a.admetPredictions.metabolicStability * 100).toFixed(0)}%</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={a.admetPredictions.hergInhibition === "Risk" ? "destructive" : "secondary"} className="text-[10px]">
-                            {a.admetPredictions.hergInhibition}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center text-xs tabular-nums">{a.admetPredictions.halfLife}h</TableCell>
+                <ScrollArea className="max-h-[250px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Analog</TableHead>
+                        <TableHead className="text-xs text-right">Bioavail.</TableHead>
+                        <TableHead className="text-xs text-center">Permeab.</TableHead>
+                        <TableHead className="text-xs text-center">BBB</TableHead>
+                        <TableHead className="text-xs text-right">Metab. Stab.</TableHead>
+                        <TableHead className="text-xs text-right">t&#xBD;</TableHead>
+                        <TableHead className="text-xs text-center">hERG</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {optimizationResult.analogs.map((a, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="text-xs font-medium">{a.name}</TableCell>
+                          <TableCell className="text-xs text-right tabular-nums">
+                            <span className={a.admetPredictions.bioavailability > 0.7 ? "text-green-600" : "text-amber-500"}>
+                              {a.admetPredictions.bioavailability.toFixed(2)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs text-center">
+                            <Badge variant={a.admetPredictions.caco2Permeability === "High" ? "default" : "secondary"} className="text-[10px]">
+                              {a.admetPredictions.caco2Permeability}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-center">
+                            <Badge variant={a.admetPredictions.bbbPenetration === "Yes" ? "default" : "secondary"} className="text-[10px]">
+                              {a.admetPredictions.bbbPenetration}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-right tabular-nums">
+                            <span className={a.admetPredictions.metabolicStability > 0.7 ? "text-green-600" : "text-amber-500"}>
+                              {a.admetPredictions.metabolicStability.toFixed(2)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs text-right tabular-nums">{a.admetPredictions.halfLife.toFixed(1)}h</TableCell>
+                          <TableCell className="text-xs text-center">
+                            <Badge variant={a.admetPredictions.hergInhibition === "Low" ? "secondary" : "destructive"} className="text-[10px]">
+                              {a.admetPredictions.hergInhibition}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               </CardContent>
             </Card>
           )}
@@ -488,71 +750,64 @@ function MoleculeOptimizationPanel({
       )}
 
       {doseResult && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Pill className="h-4 w-4" />
-                Dose & Indication Scenarios
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-3">
-              {doseResult.doseScenarios.map((ds, i) => (
-                <div key={i} className="border rounded-md p-3">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="font-medium text-sm">{ds.scenario}</span>
-                    <Badge variant="secondary" className="text-[10px] shrink-0">{ds.indication}</Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-                    <div>
-                      <p className="text-muted-foreground">Current Dose</p>
-                      <p className="font-mono">{ds.currentDose}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Suggested Dose</p>
-                      <p className="font-mono text-primary">{ds.suggestedDose}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{ds.rationale}</p>
-                  {ds.targetReceptor && (
-                    <p className="text-xs mt-1"><span className="text-muted-foreground">Target:</span> {ds.targetReceptor}</p>
-                  )}
-                  {ds.safetyNote && (
-                    <div className="flex items-start gap-1 mt-1">
-                      <ShieldAlert className="h-3 w-3 text-destructive shrink-0 mt-0.5" />
-                      <p className="text-xs text-destructive">{ds.safetyNote}</p>
-                    </div>
-                  )}
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Pill className="h-4 w-4 text-green-600" />
+              Dose Scenarios & Repurposing
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 space-y-3">
+            {doseResult.doseScenarios.map((ds, i) => (
+              <div key={i} className="p-3 bg-muted/50 rounded-md space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">{ds.indication}</Badge>
+                  <span className="text-xs font-medium">{ds.scenario}</span>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {doseResult.repurposingHints.length > 0 && (
-            <Card>
-              <CardHeader className="py-3 px-4">
-                <CardTitle className="text-sm">Repurposing Hints</CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Current: </span>
+                    <span className="font-mono">{ds.currentDose}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Suggested: </span>
+                    <span className="font-mono text-green-600">{ds.suggestedDose}</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">{ds.rationale}</p>
+                {ds.safetyNote && (
+                  <p className="text-[11px] text-destructive flex items-center gap-1">
+                    <ShieldAlert className="h-3 w-3" />
+                    {ds.safetyNote}
+                  </p>
+                )}
+              </div>
+            ))}
+            {doseResult.repurposingHints.length > 0 && (
+              <div>
+                <p className="text-xs font-medium mb-1 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  Repurposing Hints
+                </p>
                 <ul className="space-y-1">
                   {doseResult.repurposingHints.map((hint, i) => (
-                    <li key={i} className="text-xs flex items-start gap-2">
-                      <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
-                      <span>{hint}</span>
+                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                      <ArrowRight className="h-3 w-3 mt-0.5 shrink-0" />
+                      {hint}
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {!optimizationResult && !doseResult && (
         <Card>
-          <CardContent className="py-8 text-center">
-            <Sparkles className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            <Sparkles className="h-8 w-8 mx-auto mb-3 opacity-50" />
+            <p>
               Click "Optimize Properties" to analyze this molecule and generate optimization suggestions,
               or "Optimize Dose & Indication" for dose scenarios and repurposing hints.
             </p>
@@ -563,22 +818,24 @@ function MoleculeOptimizationPanel({
   );
 }
 
-function SeriesDetailDialog({ 
-  series, 
-  campaignId, 
+function SeriesDetailDialog({
+  series,
+  campaignId,
   diseaseContext,
-  open, 
-  onOpenChange 
-}: { 
-  series: SarSeries | null; 
-  campaignId: string; 
+  open,
+  onOpenChange,
+  optimizedMoleculeIds,
+}: {
+  series: SarSeries | null;
+  campaignId: string;
   diseaseContext: string;
-  open: boolean; 
+  open: boolean;
   onOpenChange: (open: boolean) => void;
+  optimizedMoleculeIds: string[];
 }) {
   const [selectedMolecule, setSelectedMolecule] = useState<Molecule | null>(null);
   const [activeTab, setActiveTab] = useState("details");
-  
+
   const { data: moleculeDetails, isLoading: detailsLoading } = useQuery<SarMoleculeDetails>({
     queryKey: ["/api/campaigns", campaignId, "sar", "molecule", selectedMolecule?.id],
     queryFn: async () => {
@@ -592,13 +849,16 @@ function SeriesDetailDialog({
   if (!series) return null;
 
   const displayName = series.seriesId || series.scaffoldId || "Ungrouped";
-  
+
   const scatterData = series.molecules.map((mol, idx) => ({
     x: idx + 1,
     y: Math.random() * 100,
     name: mol.name || generateMoleculeName(mol.smiles, String(mol.id), idx),
     smiles: mol.smiles,
   }));
+
+  const originalMols = series.molecules.filter(m => !optimizedMoleculeIds.includes(m.id));
+  const optimizedMols = series.molecules.filter(m => optimizedMoleculeIds.includes(m.id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -607,15 +867,23 @@ function SeriesDetailDialog({
           <DialogTitle className="flex items-center gap-2">
             <Layers className="h-5 w-5" />
             Series: {displayName}
+            {optimizedMols.length > 0 && (
+              <Badge variant="default" className="text-xs ml-2">
+                {optimizedMols.length} optimized
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="flex-1 overflow-hidden flex gap-4">
           <div className="w-1/4 border-r pr-4 flex flex-col">
             <h4 className="font-medium text-sm mb-2">Molecules ({series.molecules.length})</h4>
             <ScrollArea className="flex-1">
               <div className="space-y-1">
-                {series.molecules.map(mol => (
+                {originalMols.length > 0 && optimizedMols.length > 0 && (
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 pt-1">Original</p>
+                )}
+                {originalMols.map(mol => (
                   <Button
                     key={mol.id}
                     variant={selectedMolecule?.id === mol.id ? "secondary" : "ghost"}
@@ -628,20 +896,43 @@ function SeriesDetailDialog({
                     <span className="truncate">{mol.name || generateMoleculeName(mol.smiles, String(mol.id))}</span>
                   </Button>
                 ))}
+                {optimizedMols.length > 0 && (
+                  <>
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 pt-2">Optimized</p>
+                    {optimizedMols.map(mol => (
+                      <Button
+                        key={mol.id}
+                        variant={selectedMolecule?.id === mol.id ? "secondary" : "ghost"}
+                        size="sm"
+                        className="w-full justify-start text-left"
+                        onClick={() => { setSelectedMolecule(mol); setActiveTab("details"); }}
+                        data-testid={`button-select-molecule-${mol.id}`}
+                      >
+                        <Sparkles className="h-3 w-3 mr-2 shrink-0 text-primary" />
+                        <span className="truncate">{mol.name || generateMoleculeName(mol.smiles, String(mol.id))}</span>
+                      </Button>
+                    ))}
+                  </>
+                )}
               </div>
             </ScrollArea>
           </div>
-          
+
           <div className="flex-1 overflow-auto">
             {selectedMolecule ? (
               <div className="space-y-3">
-                <div>
-                  <h4 className="font-medium mb-1">
-                    {selectedMolecule.name || generateMoleculeName(selectedMolecule.smiles, String(selectedMolecule.id))}
-                  </h4>
-                  <code className="text-xs bg-muted px-2 py-1 rounded block truncate">
-                    {selectedMolecule.smiles}
-                  </code>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h4 className="font-medium mb-1">
+                      {selectedMolecule.name || generateMoleculeName(selectedMolecule.smiles, String(selectedMolecule.id))}
+                    </h4>
+                    <code className="text-xs bg-muted px-2 py-1 rounded block truncate">
+                      {selectedMolecule.smiles}
+                    </code>
+                  </div>
+                  {optimizedMoleculeIds.includes(selectedMolecule.id) && (
+                    <Badge variant="default" className="shrink-0">Optimized</Badge>
+                  )}
                 </div>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -687,7 +978,7 @@ function SeriesDetailDialog({
                               </div>
                             </CardContent>
                           </Card>
-                          
+
                           <Card>
                             <CardHeader className="py-3 px-4">
                               <CardTitle className="text-sm">Analogs</CardTitle>
@@ -698,7 +989,7 @@ function SeriesDetailDialog({
                             </CardContent>
                           </Card>
                         </div>
-                        
+
                         {moleculeDetails.assayValues.length > 0 && (
                           <Card>
                             <CardHeader className="py-3 px-4">
@@ -730,7 +1021,7 @@ function SeriesDetailDialog({
                             </CardContent>
                           </Card>
                         )}
-                        
+
                         {moleculeDetails.analogs.length > 0 && (
                           <Card>
                             <CardHeader className="py-3 px-4">
@@ -780,21 +1071,21 @@ function SeriesDetailDialog({
                   <ResponsiveContainer width="100%" height="100%">
                     <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis 
-                        type="number" 
-                        dataKey="x" 
-                        name="Index" 
+                      <XAxis
+                        type="number"
+                        dataKey="x"
+                        name="Index"
                         tick={{ fontSize: 12 }}
                         className="text-muted-foreground"
                       />
-                      <YAxis 
-                        type="number" 
-                        dataKey="y" 
-                        name="Activity" 
+                      <YAxis
+                        type="number"
+                        dataKey="y"
+                        name="Activity"
                         tick={{ fontSize: 12 }}
                         className="text-muted-foreground"
                       />
-                      <RechartsTooltip 
+                      <RechartsTooltip
                         content={({ active, payload }) => {
                           if (active && payload && payload.length) {
                             const data = payload[0].payload;
@@ -808,10 +1099,10 @@ function SeriesDetailDialog({
                           return null;
                         }}
                       />
-                      <Scatter 
-                        name="Molecules" 
-                        data={scatterData} 
-                        fill="hsl(var(--primary))" 
+                      <Scatter
+                        name="Molecules"
+                        data={scatterData}
+                        fill="hsl(var(--primary))"
                       />
                     </ScatterChart>
                   </ResponsiveContainer>
@@ -831,7 +1122,7 @@ function SeriesDetailDialog({
 export function SarVisualization({ campaignId, diseaseContext = "" }: { campaignId: string; diseaseContext?: string }) {
   const [selectedSeries, setSelectedSeries] = useState<SarSeries | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  
+
   const { data: sarSeries, isLoading } = useQuery<SarSeries[]>({
     queryKey: ["/api/campaigns", campaignId, "sar", "series"],
     queryFn: async () => {
@@ -840,12 +1131,34 @@ export function SarVisualization({ campaignId, diseaseContext = "" }: { campaign
       return res.json();
     },
   });
-  
+
+  const { data: optimizationSummary } = useQuery<OptimizationSummary>({
+    queryKey: ["/api/campaigns", campaignId, "sar", "optimization-summary"],
+    queryFn: async () => {
+      const res = await fetch(`/api/campaigns/${campaignId}/sar/optimization-summary`);
+      if (!res.ok) throw new Error("Failed to fetch optimization summary");
+      return res.json();
+    },
+    enabled: !!sarSeries && sarSeries.length > 0,
+  });
+
   const handleSeriesClick = (series: SarSeries) => {
     setSelectedSeries(series);
     setDialogOpen(true);
   };
-  
+
+  const handleOpenMolecule = (moleculeId: string) => {
+    if (!sarSeries) return;
+    for (const series of sarSeries) {
+      const mol = series.molecules.find(m => m.id === moleculeId);
+      if (mol) {
+        setSelectedSeries(series);
+        setDialogOpen(true);
+        return;
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -860,7 +1173,7 @@ export function SarVisualization({ campaignId, diseaseContext = "" }: { campaign
       </div>
     );
   }
-  
+
   if (!sarSeries || sarSeries.length === 0) {
     return (
       <Card>
@@ -875,10 +1188,12 @@ export function SarVisualization({ campaignId, diseaseContext = "" }: { campaign
       </Card>
     );
   }
-  
+
   const totalMolecules = sarSeries.reduce((acc, s) => acc + s.molecules.length, 0);
   const withAssayData = sarSeries.filter(s => s.assaySummary.count > 0).length;
-  
+  const seriesOptMap = optimizationSummary?.seriesOptimizationMap || {};
+  const optimizedMoleculeIds = optimizationSummary?.optimizedMoleculeIds || [];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -889,26 +1204,42 @@ export function SarVisualization({ campaignId, diseaseContext = "" }: { campaign
           </h3>
           <p className="text-sm text-muted-foreground">
             {sarSeries.length} series/scaffolds | {totalMolecules} molecules | {withAssayData} with assay data
+            {optimizationSummary && optimizationSummary.totalOptimized > 0 && (
+              <span className="text-primary"> | {optimizationSummary.totalOptimized} optimized</span>
+            )}
           </p>
         </div>
       </div>
-      
+
+      {optimizationSummary && optimizationSummary.totalOptimized > 0 && (
+        <OptimizationSummaryPanel
+          summary={optimizationSummary}
+          onOpenMolecule={handleOpenMolecule}
+        />
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sarSeries.map((series, idx) => (
-          <SeriesCard 
-            key={series.seriesId || series.scaffoldId || idx} 
-            series={series} 
-            onClick={() => handleSeriesClick(series)}
-          />
-        ))}
+        {sarSeries.map((series, idx) => {
+          const seriesKey = series.seriesId || series.scaffoldId || "ungrouped";
+          const optInfo = seriesOptMap[seriesKey];
+          return (
+            <SeriesCard
+              key={series.seriesId || series.scaffoldId || idx}
+              series={series}
+              optimizationInfo={optInfo}
+              onClick={() => handleSeriesClick(series)}
+            />
+          );
+        })}
       </div>
-      
-      <SeriesDetailDialog 
+
+      <SeriesDetailDialog
         series={selectedSeries}
         campaignId={campaignId}
         diseaseContext={diseaseContext}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        optimizedMoleculeIds={optimizedMoleculeIds}
       />
     </div>
   );
