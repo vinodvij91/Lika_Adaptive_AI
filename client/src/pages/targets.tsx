@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,9 @@ import {
   Loader2,
   Eye,
   RotateCw,
+  Syringe,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 declare global {
   interface Window {
@@ -87,10 +89,21 @@ interface StructurePrediction {
   fromCache?: boolean;
 }
 
+const VACCINE_TEMPLATES = [
+  { id: "nipah-f", name: "Nipah F Protein", organism: "Nipah virus", uniprotId: "Q9IH63", geneName: "F", sequence: "MLARFDALNLFEQPIKGVFSLIALSTSFILYSIAFSIAGAVIQQTAGNLITQ" },
+  { id: "sars-spike", name: "SARS-CoV-2 Spike", organism: "SARS-CoV-2", uniprotId: "P0DTC2", geneName: "S", sequence: "MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLHST" },
+  { id: "influenza-ha", name: "Influenza HA", organism: "Influenza A", uniprotId: "P03437", geneName: "HA" },
+  { id: "rsv-f", name: "RSV F Protein", organism: "RSV", uniprotId: "P03420", geneName: "F" },
+  { id: "hiv-env", name: "HIV Env (gp160)", organism: "HIV-1", uniprotId: "P04578", geneName: "env" },
+  { id: "ebola-gp", name: "Ebola GP", organism: "Ebola virus", uniprotId: "Q05320", geneName: "GP" },
+];
+
 export default function TargetsPage() {
   const [search, setSearch] = useState("");
   const [diseaseFilter, setDiseaseFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [predictionDialogOpen, setPredictionDialogOpen] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<TargetWithDiseases | null>(null);
   const [ligandSmiles, setLigandSmiles] = useState("");
@@ -101,6 +114,7 @@ export default function TargetsPage() {
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const viewerInstanceRef = useRef<any>(null);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const [viewer3DReady, setViewer3DReady] = useState(false);
 
@@ -217,6 +231,50 @@ export default function TargetsPage() {
     },
   });
 
+  const templateImportMutation = useMutation({
+    mutationFn: async (templateIds: string[]) => {
+      const templates = VACCINE_TEMPLATES.filter((t) => templateIds.includes(t.id));
+      const results = [];
+      for (const template of templates) {
+        const res = await apiRequest("POST", "/api/targets", {
+          name: template.name,
+          uniprotId: template.uniprotId,
+          organism: template.organism,
+          geneName: template.geneName,
+          sequence: template.sequence,
+        });
+        results.push(await res.json());
+      }
+      return results;
+    },
+    onSuccess: (results) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/targets-with-diseases"] });
+      setTemplateDialogOpen(false);
+      setSelectedTemplates([]);
+      toast({ title: "Templates imported", description: `${results.length} vaccine antigen target(s) added.` });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to import templates", variant: "destructive" });
+    },
+  });
+
+  const handleSendToPipeline = async (target: TargetWithDiseases) => {
+    try {
+      const campaignRes = await apiRequest("POST", "/api/vaccine-campaigns", {
+        name: `Campaign - ${target.name}`,
+        pathogen: target.organism,
+      });
+      const campaign = await campaignRes.json();
+      await apiRequest("POST", `/api/vaccine-campaigns/${campaign.id}/targets`, {
+        targetIds: [target.id],
+      });
+      toast({ title: "Sent to Pipeline", description: `Created vaccine campaign for ${target.name}` });
+      setLocation(`/vaccine-campaigns/${campaign.id}`);
+    } catch {
+      toast({ title: "Error", description: "Failed to send target to pipeline", variant: "destructive" });
+    }
+  };
+
   const structurePredictionMutation = useMutation({
     mutationFn: async (data: {
       proteinSequence: string;
@@ -307,77 +365,83 @@ export default function TargetsPage() {
       <PageHeader
         breadcrumbs={[{ label: "Targets" }]}
         actions={
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2" data-testid="button-new-target">
-                <Plus className="h-4 w-4" />
-                Add Target
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <form onSubmit={handleCreate}>
-                <DialogHeader>
-                  <DialogTitle>Add New Target</DialogTitle>
-                  <DialogDescription>
-                    Add a protein target for docking and screening campaigns.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Target Name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      placeholder="e.g., BACE1, EGFR"
-                      required
-                      data-testid="input-target-name"
-                    />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => { setSelectedTemplates([]); setTemplateDialogOpen(true); }} data-testid="button-add-from-templates">
+              <Boxes className="h-4 w-4" />
+              Add from Templates
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2" data-testid="button-new-target">
+                  <Plus className="h-4 w-4" />
+                  Add Target
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <form onSubmit={handleCreate}>
+                  <DialogHeader>
+                    <DialogTitle>Add New Target</DialogTitle>
+                    <DialogDescription>
+                      Add a protein target for docking and screening campaigns.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Target Name</Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        placeholder="e.g., BACE1, EGFR"
+                        required
+                        data-testid="input-target-name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="uniprotId">UniProt ID</Label>
+                      <Input
+                        id="uniprotId"
+                        name="uniprotId"
+                        placeholder="e.g., P56817"
+                        data-testid="input-uniprot-id"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sequence">Sequence (optional)</Label>
+                      <Textarea
+                        id="sequence"
+                        name="sequence"
+                        placeholder="Paste protein sequence..."
+                        rows={4}
+                        className="font-mono text-xs"
+                        data-testid="input-sequence"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="structureSource">Structure Source</Label>
+                      <Select name="structureSource" defaultValue="uploaded">
+                        <SelectTrigger data-testid="select-structure-source">
+                          <SelectValue placeholder="Select source" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="uploaded">Uploaded</SelectItem>
+                          <SelectItem value="bionemo_predicted">BioNeMo Predicted</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="uniprotId">UniProt ID</Label>
-                    <Input
-                      id="uniprotId"
-                      name="uniprotId"
-                      placeholder="e.g., P56817"
-                      data-testid="input-uniprot-id"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sequence">Sequence (optional)</Label>
-                    <Textarea
-                      id="sequence"
-                      name="sequence"
-                      placeholder="Paste protein sequence..."
-                      rows={4}
-                      className="font-mono text-xs"
-                      data-testid="input-sequence"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="structureSource">Structure Source</Label>
-                    <Select name="structureSource" defaultValue="uploaded">
-                      <SelectTrigger data-testid="select-structure-source">
-                        <SelectValue placeholder="Select source" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="uploaded">Uploaded</SelectItem>
-                        <SelectItem value="bionemo_predicted">BioNeMo Predicted</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending} data-testid="button-create-target">
-                    {createMutation.isPending ? "Adding..." : "Add Target"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createMutation.isPending} data-testid="button-create-target">
+                      {createMutation.isPending ? "Adding..." : "Add Target"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 
@@ -566,6 +630,13 @@ export default function TargetsPage() {
                                   <Boxes className="h-4 w-4 mr-2" />
                                   Predict 3D Complex
                                 </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleSendToPipeline(target)}
+                                  data-testid={`button-send-to-pipeline-${target.id}`}
+                                >
+                                  <Syringe className="h-4 w-4 mr-2" />
+                                  Send to Pipeline
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -601,6 +672,76 @@ export default function TargetsPage() {
           )}
         </div>
       </main>
+
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add from Vaccine Antigen Templates</DialogTitle>
+            <DialogDescription>
+              Select vaccine antigen targets to import. These are common pathogen surface proteins used in vaccine development.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
+            {VACCINE_TEMPLATES.map((template) => (
+              <Card
+                key={template.id}
+                className={`cursor-pointer transition-colors ${selectedTemplates.includes(template.id) ? "border-primary" : ""}`}
+                onClick={() => {
+                  setSelectedTemplates((prev) =>
+                    prev.includes(template.id)
+                      ? prev.filter((id) => id !== template.id)
+                      : [...prev, template.id]
+                  );
+                }}
+                data-testid={`card-template-${template.id}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={selectedTemplates.includes(template.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedTemplates((prev) =>
+                          checked
+                            ? [...prev, template.id]
+                            : prev.filter((id) => id !== template.id)
+                        );
+                      }}
+                      data-testid={`checkbox-template-${template.id}`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{template.name}</p>
+                      <p className="text-xs text-muted-foreground">{template.organism}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <Badge variant="outline" className="text-xs no-default-hover-elevate no-default-active-elevate">{template.uniprotId}</Badge>
+                        <Badge variant="secondary" className="text-xs no-default-hover-elevate no-default-active-elevate">{template.geneName}</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={selectedTemplates.length === 0 || templateImportMutation.isPending}
+              onClick={() => templateImportMutation.mutate(selectedTemplates)}
+              data-testid="button-import-selected"
+            >
+              {templateImportMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                `Import Selected (${selectedTemplates.length})`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={predictionDialogOpen} onOpenChange={setPredictionDialogOpen}>
         <DialogContent className="max-w-2xl">

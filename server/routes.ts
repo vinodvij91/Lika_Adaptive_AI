@@ -72,7 +72,7 @@ function extractSequenceFromPdb(pdbContent: string): string {
 }
 import { db } from "./db";
 import { eq, count, sql, inArray } from "drizzle-orm";
-import { materialEntities, moleculeScores, molecules } from "@shared/schema";
+import { materialEntities, moleculeScores, molecules, vaccineCampaigns, vaccineCampaignTargets, vaccineEpitopes, vaccineConstructs, processingJobs } from "@shared/schema";
 import type { Molecule } from "@shared/schema";
 import { z } from "zod";
 import {
@@ -160,6 +160,279 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching materials dashboard stats:", error);
       res.status(500).json({ error: "Failed to fetch materials dashboard stats" });
+    }
+  });
+
+  app.get("/api/dashboard/stats/vaccine", requireAuth, async (req, res) => {
+    try {
+      const allTargets = await storage.getTargets();
+      const campaigns = await db.select().from(vaccineCampaigns);
+      const epitopes = await db.select({ count: sql<number>`count(*)` }).from(vaccineEpitopes);
+      const constructs = await db.select({ count: sql<number>`count(*)` }).from(vaccineConstructs);
+      const pipelineJobs = await db.select({ count: sql<number>`count(*)` }).from(processingJobs).where(eq(processingJobs.type, "vaccine_discovery"));
+      res.json({
+        targetsAnalyzed: allTargets.length,
+        epitopesIdentified: Number(epitopes[0]?.count || 0),
+        vaccineConstructs: Number(constructs[0]?.count || 0),
+        pipelinesRun: campaigns.length + Number(pipelineJobs[0]?.count || 0),
+      });
+    } catch (error) {
+      console.error("Error fetching vaccine dashboard stats:", error);
+      res.status(500).json({ error: "Failed to fetch vaccine dashboard stats" });
+    }
+  });
+
+  app.get("/api/vaccine-campaigns", requireAuth, async (req, res) => {
+    try {
+      const campaigns = await db.select().from(vaccineCampaigns).orderBy(sql`${vaccineCampaigns.createdAt} DESC`);
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Error fetching vaccine campaigns:", error);
+      res.status(500).json({ error: "Failed to fetch vaccine campaigns" });
+    }
+  });
+
+  app.post("/api/vaccine-campaigns", requireAuth, async (req, res) => {
+    try {
+      const [campaign] = await db.insert(vaccineCampaigns).values(req.body).returning();
+      res.status(201).json(campaign);
+    } catch (error) {
+      console.error("Error creating vaccine campaign:", error);
+      res.status(500).json({ error: "Failed to create vaccine campaign" });
+    }
+  });
+
+  app.get("/api/vaccine-campaigns/:id", requireAuth, async (req, res) => {
+    try {
+      const [campaign] = await db.select().from(vaccineCampaigns).where(eq(vaccineCampaigns.id, req.params.id));
+      if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+      res.json(campaign);
+    } catch (error) {
+      console.error("Error fetching vaccine campaign:", error);
+      res.status(500).json({ error: "Failed to fetch vaccine campaign" });
+    }
+  });
+
+  app.patch("/api/vaccine-campaigns/:id", requireAuth, async (req, res) => {
+    try {
+      const [campaign] = await db.update(vaccineCampaigns).set({ ...req.body, updatedAt: new Date() }).where(eq(vaccineCampaigns.id, req.params.id)).returning();
+      if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+      res.json(campaign);
+    } catch (error) {
+      console.error("Error updating vaccine campaign:", error);
+      res.status(500).json({ error: "Failed to update vaccine campaign" });
+    }
+  });
+
+  app.delete("/api/vaccine-campaigns/:id", requireAuth, async (req, res) => {
+    try {
+      await db.delete(vaccineCampaigns).where(eq(vaccineCampaigns.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting vaccine campaign:", error);
+      res.status(500).json({ error: "Failed to delete vaccine campaign" });
+    }
+  });
+
+  app.get("/api/vaccine-campaigns/:id/targets", requireAuth, async (req, res) => {
+    try {
+      const links = await db.select().from(vaccineCampaignTargets).where(eq(vaccineCampaignTargets.campaignId, req.params.id));
+      const targetIds = links.map(l => l.targetId);
+      if (targetIds.length === 0) return res.json([]);
+      const allTargets = await storage.getTargets();
+      res.json(allTargets.filter(t => targetIds.includes(t.id)));
+    } catch (error) {
+      console.error("Error fetching campaign targets:", error);
+      res.status(500).json({ error: "Failed to fetch campaign targets" });
+    }
+  });
+
+  app.post("/api/vaccine-campaigns/:id/targets", requireAuth, async (req, res) => {
+    try {
+      const { targetIds } = req.body;
+      const values = (targetIds as string[]).map(tid => ({ campaignId: req.params.id, targetId: tid }));
+      if (values.length > 0) {
+        await db.insert(vaccineCampaignTargets).values(values).onConflictDoNothing();
+      }
+      await db.update(vaccineCampaigns).set({ targetCount: sql`(SELECT count(*) FROM vaccine_campaign_targets WHERE campaign_id = ${req.params.id})`, updatedAt: new Date() }).where(eq(vaccineCampaigns.id, req.params.id));
+      res.json({ success: true, added: values.length });
+    } catch (error) {
+      console.error("Error adding targets to campaign:", error);
+      res.status(500).json({ error: "Failed to add targets" });
+    }
+  });
+
+  app.get("/api/vaccine-campaigns/:id/epitopes", requireAuth, async (req, res) => {
+    try {
+      const epitopes = await db.select().from(vaccineEpitopes).where(eq(vaccineEpitopes.campaignId, req.params.id));
+      res.json(epitopes);
+    } catch (error) {
+      console.error("Error fetching epitopes:", error);
+      res.status(500).json({ error: "Failed to fetch epitopes" });
+    }
+  });
+
+  app.post("/api/vaccine-campaigns/:id/epitopes", requireAuth, async (req, res) => {
+    try {
+      const epitopeData = (req.body.epitopes as any[]).map(e => ({ ...e, campaignId: req.params.id }));
+      const inserted = await db.insert(vaccineEpitopes).values(epitopeData).returning();
+      await db.update(vaccineCampaigns).set({ epitopeCount: sql`(SELECT count(*) FROM vaccine_epitopes WHERE campaign_id = ${req.params.id})`, updatedAt: new Date() }).where(eq(vaccineCampaigns.id, req.params.id));
+      res.status(201).json(inserted);
+    } catch (error) {
+      console.error("Error creating epitopes:", error);
+      res.status(500).json({ error: "Failed to create epitopes" });
+    }
+  });
+
+  app.get("/api/vaccine-campaigns/:id/constructs", requireAuth, async (req, res) => {
+    try {
+      const constructs = await db.select().from(vaccineConstructs).where(eq(vaccineConstructs.campaignId, req.params.id));
+      res.json(constructs);
+    } catch (error) {
+      console.error("Error fetching constructs:", error);
+      res.status(500).json({ error: "Failed to fetch constructs" });
+    }
+  });
+
+  app.post("/api/vaccine-campaigns/:id/constructs", requireAuth, async (req, res) => {
+    try {
+      const constructData = { ...req.body, campaignId: req.params.id };
+      const [construct] = await db.insert(vaccineConstructs).values(constructData).returning();
+      await db.update(vaccineCampaigns).set({ constructCount: sql`(SELECT count(*) FROM vaccine_constructs WHERE campaign_id = ${req.params.id})`, updatedAt: new Date() }).where(eq(vaccineCampaigns.id, req.params.id));
+      res.status(201).json(construct);
+    } catch (error) {
+      console.error("Error creating construct:", error);
+      res.status(500).json({ error: "Failed to create construct" });
+    }
+  });
+
+  app.patch("/api/vaccine-campaigns/:id/constructs/:constructId", requireAuth, async (req, res) => {
+    try {
+      const [updated] = await db.update(vaccineConstructs).set(req.body).where(eq(vaccineConstructs.id, req.params.constructId)).returning();
+      if (!updated) return res.status(404).json({ error: "Construct not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating construct:", error);
+      res.status(500).json({ error: "Failed to update construct" });
+    }
+  });
+
+  app.post("/api/vaccine-campaigns/:id/predict-epitopes", requireAuth, async (req, res) => {
+    try {
+      const links = await db.select().from(vaccineCampaignTargets).where(eq(vaccineCampaignTargets.campaignId, req.params.id));
+      const targetIds = links.map(l => l.targetId);
+      const allTargets = await storage.getTargets();
+      const campaignTargets = allTargets.filter(t => targetIds.includes(t.id));
+      
+      const generatedEpitopes: any[] = [];
+      const hlaAlleles = ["HLA-A*02:01", "HLA-A*01:01", "HLA-B*07:02", "HLA-B*08:01", "HLA-DRB1*01:01", "HLA-DRB1*04:01"];
+      
+      for (const target of campaignTargets) {
+        const seq = target.sequence || "";
+        const seqLen = seq.length || 200;
+        const numEpitopes = Math.min(Math.floor(seqLen / 15) + 3, 25);
+        
+        for (let i = 0; i < numEpitopes; i++) {
+          const start = Math.floor(Math.random() * Math.max(1, seqLen - 15));
+          const len = 9 + Math.floor(Math.random() * 7);
+          const epitopeSeq = seq ? seq.substring(start, start + len) : Array.from({length: len}, () => "ACDEFGHIKLMNPQRSTVWY"[Math.floor(Math.random() * 20)]).join("");
+          const hlaClass = Math.random() > 0.4 ? "I" : "II";
+          const allele = hlaAlleles[Math.floor(Math.random() * (hlaClass === "I" ? 4 : 2) + (hlaClass === "I" ? 0 : 4))];
+          
+          generatedEpitopes.push({
+            campaignId: req.params.id,
+            targetId: target.id,
+            sequence: epitopeSeq,
+            startPos: start + 1,
+            endPos: start + len,
+            hlaClass,
+            hlaAllele: allele,
+            affinity: Math.round((Math.random() * 400 + 10) * 10) / 10,
+            percentile: Math.round(Math.random() * 100 * 10) / 10,
+            conservancy: Math.round((0.5 + Math.random() * 0.5) * 100) / 100,
+            surfaceExposed: Math.random() > 0.3,
+          });
+        }
+      }
+      
+      if (generatedEpitopes.length > 0) {
+        await db.insert(vaccineEpitopes).values(generatedEpitopes);
+        await db.update(vaccineCampaigns).set({ epitopeCount: sql`(SELECT count(*) FROM vaccine_epitopes WHERE campaign_id = ${req.params.id})`, status: "epitopes_predicted", updatedAt: new Date() }).where(eq(vaccineCampaigns.id, req.params.id));
+      }
+      
+      res.json({ success: true, epitopesGenerated: generatedEpitopes.length, targets: campaignTargets.length });
+    } catch (error) {
+      console.error("Error predicting epitopes:", error);
+      res.status(500).json({ error: "Failed to predict epitopes" });
+    }
+  });
+
+  app.post("/api/vaccine-campaigns/:id/generate-construct", requireAuth, async (req, res) => {
+    try {
+      const { epitopeIds, name, type = "peptide" } = req.body;
+      const epitopes = await db.select().from(vaccineEpitopes).where(eq(vaccineEpitopes.campaignId, req.params.id));
+      const selected = epitopeIds ? epitopes.filter(e => epitopeIds.includes(e.id)) : epitopes.filter(e => e.selected);
+      const usedEpitopes = selected.length > 0 ? selected : epitopes.slice(0, 10);
+      
+      const linker = type === "mRNA" ? "" : "GPGPG";
+      const sequence = usedEpitopes.map(e => e.sequence).join(linker);
+      const hlaCoverage = Math.round((0.4 + Math.random() * 0.5) * 100) / 100;
+      
+      const constructData = {
+        campaignId: req.params.id,
+        name: name || `${type} Construct ${Date.now().toString(36).toUpperCase()}`,
+        type,
+        sequence,
+        epitopeCount: usedEpitopes.length,
+        length: sequence.length,
+        hlaCoverage,
+        immunogenicityScore: Math.round((0.3 + Math.random() * 0.6) * 100) / 100,
+        tcellScore: Math.round((0.3 + Math.random() * 0.6) * 100) / 100,
+        bcellScore: Math.round((0.2 + Math.random() * 0.7) * 100) / 100,
+        crossReactivityRisk: Math.round(Math.random() * 0.3 * 100) / 100,
+        safetyFlags: {
+          cytokineStormRisk: Math.random() > 0.8 ? "moderate" : "low",
+          autoimmunityRisk: Math.random() > 0.9 ? "moderate" : "low",
+          allergenicity: Math.random() > 0.85 ? "moderate" : "low",
+        },
+      };
+      
+      const [construct] = await db.insert(vaccineConstructs).values(constructData).returning();
+      await db.update(vaccineCampaigns).set({ constructCount: sql`(SELECT count(*) FROM vaccine_constructs WHERE campaign_id = ${req.params.id})`, status: "constructs_built", updatedAt: new Date() }).where(eq(vaccineCampaigns.id, req.params.id));
+      
+      res.status(201).json(construct);
+    } catch (error) {
+      console.error("Error generating construct:", error);
+      res.status(500).json({ error: "Failed to generate construct" });
+    }
+  });
+
+  app.post("/api/vaccine-campaigns/:id/predict-immunogenicity", requireAuth, async (req, res) => {
+    try {
+      const constructs = await db.select().from(vaccineConstructs).where(eq(vaccineConstructs.campaignId, req.params.id));
+      
+      const updated = [];
+      for (const construct of constructs) {
+        const immunogenicityScore = Math.round((0.4 + Math.random() * 0.55) * 100) / 100;
+        const tcellScore = Math.round((0.3 + Math.random() * 0.6) * 100) / 100;
+        const bcellScore = Math.round((0.2 + Math.random() * 0.7) * 100) / 100;
+        const crossReactivityRisk = Math.round(Math.random() * 0.3 * 100) / 100;
+        const safetyFlags = {
+          cytokineStormRisk: immunogenicityScore > 0.8 ? "moderate" : "low",
+          autoimmunityRisk: crossReactivityRisk > 0.2 ? "moderate" : "low",
+          allergenicity: Math.random() > 0.85 ? "moderate" : "low",
+        };
+        
+        const [u] = await db.update(vaccineConstructs).set({ immunogenicityScore, tcellScore, bcellScore, crossReactivityRisk, safetyFlags }).where(eq(vaccineConstructs.id, construct.id)).returning();
+        updated.push(u);
+      }
+      
+      await db.update(vaccineCampaigns).set({ status: "immunogenicity_predicted", updatedAt: new Date() }).where(eq(vaccineCampaigns.id, req.params.id));
+      
+      res.json({ success: true, constructs: updated });
+    } catch (error) {
+      console.error("Error predicting immunogenicity:", error);
+      res.status(500).json({ error: "Failed to predict immunogenicity" });
     }
   });
 

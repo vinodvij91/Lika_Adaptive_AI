@@ -1835,3 +1835,74 @@ export const insertStructurePredictionSchema = createInsertSchema(structurePredi
 
 export type StructurePrediction = typeof structurePredictions.$inferSelect;
 export type InsertStructurePrediction = z.infer<typeof insertStructurePredictionSchema>;
+
+export const vaccineCampaigns = pgTable("vaccine_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").default("draft"),
+  pathogen: text("pathogen"),
+  vaccineType: text("vaccine_type").default("protein_subunit"),
+  targetCount: integer("target_count").default(0),
+  epitopeCount: integer("epitope_count").default(0),
+  constructCount: integer("construct_count").default(0),
+  candidateCount: integer("candidate_count").default(0),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertVaccineCampaignSchema = createInsertSchema(vaccineCampaigns).omit({ id: true, createdAt: true, updatedAt: true });
+export type VaccineCampaign = typeof vaccineCampaigns.$inferSelect;
+export type InsertVaccineCampaign = z.infer<typeof insertVaccineCampaignSchema>;
+
+export const vaccineCampaignTargets = pgTable("vaccine_campaign_targets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => vaccineCampaigns.id, { onDelete: "cascade" }),
+  targetId: varchar("target_id").notNull().references(() => targets.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const vaccineEpitopes = pgTable("vaccine_epitopes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => vaccineCampaigns.id, { onDelete: "cascade" }),
+  targetId: varchar("target_id").references(() => targets.id, { onDelete: "set null" }),
+  sequence: text("sequence").notNull(),
+  startPos: integer("start_pos"),
+  endPos: integer("end_pos"),
+  hlaClass: text("hla_class"),
+  hlaAllele: text("hla_allele"),
+  affinity: real("affinity"),
+  percentile: real("percentile"),
+  conservancy: real("conservancy"),
+  surfaceExposed: boolean("surface_exposed").default(false),
+  selected: boolean("selected").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertVaccineEpitopeSchema = createInsertSchema(vaccineEpitopes).omit({ id: true, createdAt: true });
+export type VaccineEpitope = typeof vaccineEpitopes.$inferSelect;
+export type InsertVaccineEpitope = z.infer<typeof insertVaccineEpitopeSchema>;
+
+export const vaccineConstructs = pgTable("vaccine_constructs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => vaccineCampaigns.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type").default("peptide"),
+  sequence: text("sequence"),
+  epitopeCount: integer("epitope_count").default(0),
+  length: integer("length").default(0),
+  hlaCoverage: real("hla_coverage"),
+  immunogenicityScore: real("immunogenicity_score"),
+  tcellScore: real("tcell_score"),
+  bcellScore: real("bcell_score"),
+  crossReactivityRisk: real("cross_reactivity_risk"),
+  safetyFlags: jsonb("safety_flags"),
+  isPreclinicalCandidate: boolean("is_preclinical_candidate").default(false),
+  structureModelId: text("structure_model_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertVaccineConstructSchema = createInsertSchema(vaccineConstructs).omit({ id: true, createdAt: true });
+export type VaccineConstruct = typeof vaccineConstructs.$inferSelect;
+export type InsertVaccineConstruct = z.infer<typeof insertVaccineConstructSchema>;

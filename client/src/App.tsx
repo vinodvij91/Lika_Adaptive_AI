@@ -82,6 +82,8 @@ const MolecularViewerPage = lazy(() => import("@/pages/molecular-viewer"));
 const UseCasesPage = lazy(() => import("@/pages/use-cases"));
 const BioNemoPage = lazy(() => import("@/pages/bionemo"));
 const ExternalDataPage = lazy(() => import("@/pages/external-data"));
+const VaccineCampaignsPage = lazy(() => import("@/pages/vaccine-campaigns"));
+const VaccineCampaignDetailPage = lazy(() => import("@/pages/vaccine-campaign-detail"));
 const VaccineDiscoveryPage = lazy(() => import("@/pages/vaccine-discovery"));
 const DiseaseDiscoveryPage = lazy(() => import("@/pages/disease-discovery"));
 const AssayHarvestingPage = lazy(() => import("@/pages/assay-harvesting"));
@@ -174,6 +176,8 @@ function AuthenticatedRoutes() {
         <Route path="/use-cases" component={UseCasesPage} />
         <Route path="/bionemo" component={BioNemoPage} />
         <Route path="/external-data" component={ExternalDataPage} />
+        <Route path="/vaccine-campaigns" component={VaccineCampaignsPage} />
+        <Route path="/vaccine-campaigns/:id" component={VaccineCampaignDetailPage} />
         <Route path="/vaccine-discovery" component={VaccineDiscoveryPage} />
         <Route path="/disease-discovery" component={DiseaseDiscoveryPage} />
         <Route path="/activity-log" component={ActivityLogPage} />

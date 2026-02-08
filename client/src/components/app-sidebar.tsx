@@ -39,6 +39,7 @@ import {
   Syringe,
   GitBranch,
   ClipboardList,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -76,6 +77,7 @@ const vaccineNavigationItems = [
   { title: "Dashboard", url: "/dashboard/vaccine", icon: LayoutDashboard },
   { title: "Import", url: "/import", icon: Upload },
   { title: "Targets", url: "/targets", icon: Target },
+  { title: "Campaigns", url: "/vaccine-campaigns", icon: Shield },
   { title: "Vaccine Pipeline", url: "/vaccine-discovery", icon: Syringe },
   { title: "Trajectory Analysis", url: "/trajectory-analysis", icon: GitBranch },
 ];
