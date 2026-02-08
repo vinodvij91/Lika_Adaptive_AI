@@ -111,6 +111,11 @@ function formatPrivateKey(key: string | undefined): string | null {
 }
 
 async function getSshPrivateKey(node: ComputeNode): Promise<string | null> {
+  if (node.provider === "gcp" && process.env.GCP_SSH_PRIVATE_KEY) {
+    console.log(`[SSH] Using GCP-specific SSH key for node ${node.name}`);
+    return formatPrivateKey(process.env.GCP_SSH_PRIVATE_KEY);
+  }
+  
   if (!node.sshConfigId) {
     return formatPrivateKey(process.env.SSH_PRIVATE_KEY);
   }
