@@ -2852,11 +2852,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ materials, target_properties: targetProperties });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type batch_screening --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "batch_screening", { materials, target_properties: targetProperties });
 
       const job = {
         id: `mat-screen-${Date.now()}`,
@@ -2898,11 +2897,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type structure_validation --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "structure_validation", { materials });
 
       const job = {
         id: `mat-val-${Date.now()}`,
@@ -2945,11 +2943,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type magpie_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "magpie_descriptors", { materials });
 
       const job = {
         id: `mat-magpie-${Date.now()}`,
@@ -2992,11 +2989,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type soap_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "soap_descriptors", { materials });
 
       const job = {
         id: `mat-soap-${Date.now()}`,
@@ -3039,11 +3035,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type gnn_prediction --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "gnn_prediction", { materials });
 
       const job = {
         id: `mat-gnn-${Date.now()}`,
@@ -3086,11 +3081,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type synthesis_planning --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "synthesis_planning", { materials });
 
       const job = {
         id: `mat-synth-${Date.now()}`,
@@ -3129,15 +3123,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        target_properties: targetProperties, 
-        n_candidates: nCandidates,
-        elements 
-      });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type materials_generation --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "materials_generation", { target_properties: targetProperties, n_candidates: nCandidates, elements });
 
       const job = {
         id: `mat-gen-${Date.now()}`,
@@ -3180,14 +3169,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        base_composition: baseComposition, 
-        n_variants: nVariants 
-      });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type element_substitution --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "element_substitution", { base_composition: baseComposition, n_variants: nVariants });
 
       const job = {
         id: `mat-subst-${Date.now()}`,
@@ -3230,11 +3215,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ materials, simulation_type: simulationType });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type atomistic_simulation --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "atomistic_simulation", { materials, simulation_type: simulationType });
 
       const job = {
         id: `mat-sim-${Date.now()}`,
@@ -3273,15 +3257,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        target_properties: targetProperties, 
-        n_candidates: nCandidates,
-        screen_top_n: screenTopN 
-      });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "full_pipeline", { target_properties: targetProperties, n_candidates: nCandidates, screen_top_n: screenTopN });
 
       const job = {
         id: `mat-discover-${Date.now()}`,
@@ -3332,18 +3311,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        property_name: propertyName, 
-        n_materials: nMaterials,
-        elements,
-        exclude_elements: excludeElements,
-        additional_criteria: additionalCriteria,
-        include_structures: includeStructures
-      });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_load_training_data --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "mp_load_training_data", { property_name: propertyName, n_materials: nMaterials, elements, exclude_elements: excludeElements, additional_criteria: additionalCriteria, include_structures: includeStructures });
 
       const job = {
         id: `mp-training-${Date.now()}`,
@@ -3389,17 +3360,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        n_materials: nMaterials, 
-        working_ion: workingIon,
-        min_capacity: minCapacity,
-        max_voltage: maxVoltage,
-        electrode_type: electrodeType
-      });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_load_battery_data --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "mp_load_battery_data", { n_materials: nMaterials, working_ion: workingIon, min_capacity: minCapacity, max_voltage: maxVoltage, electrode_type: electrodeType });
 
       const job = {
         id: `mp-battery-${Date.now()}`,
@@ -3443,15 +3407,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        n_materials: nMaterials, 
-        band_gap_range: bandGapRange,
-        stable_only: stableOnly
-      });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_load_solar_materials --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "mp_load_solar_materials", { n_materials: nMaterials, band_gap_range: bandGapRange, stable_only: stableOnly });
 
       const job = {
         id: `mp-solar-${Date.now()}`,
@@ -3495,15 +3454,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        n_materials: nMaterials, 
-        band_gap_range: bandGapRange,
-        heavy_elements: heavyElements
-      });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_load_thermoelectric_materials --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "mp_load_thermoelectric_materials", { n_materials: nMaterials, band_gap_range: bandGapRange, heavy_elements: heavyElements });
 
       const job = {
         id: `mp-thermoelectric-${Date.now()}`,
@@ -3547,15 +3501,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        n_materials: nMaterials, 
-        include_cuprates: includeCuprates,
-        include_iron_based: includeIronBased
-      });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_load_superconductor_candidates --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "mp_load_superconductor_candidates", { n_materials: nMaterials, include_cuprates: includeCuprates, include_iron_based: includeIronBased });
 
       const job = {
         id: `mp-superconductor-${Date.now()}`,
@@ -3598,14 +3547,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        elements, 
-        include_unstable: includeUnstable
-      });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_get_phase_diagram --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "mp_get_phase_diagram", { elements, include_unstable: includeUnstable });
 
       const job = {
         id: `mp-phase-${Date.now()}`,
@@ -3648,14 +3593,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        material_ids: materialIds, 
-        properties
-      });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_bulk_query --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "mp_bulk_query", { material_ids: materialIds, properties });
 
       const job = {
         id: `mp-bulk-${Date.now()}`,
@@ -3698,11 +3639,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ formula, anonymous });
-      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_search_formula --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("universal_hardware_agnostic_pipeline.py", "mp_search_formula", { formula, anonymous });
 
       const job = {
         id: `mp-search-${Date.now()}`,
@@ -3835,22 +3775,10 @@ Provide scientific analysis in JSON format.`
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        pathogen_name: pathogenName,
-        proteins: sequences.map((seq: string, i: number) => ({
-          name: `Protein_${i+1}`,
-          sequence: seq,
-          type: 'surface'
-        })),
-        mhc_alleles: mhcAlleles,
-        run_md: runMD,
-        organism: organism,
-        has_pdb_structure: !!pdbStructure
-      });
-      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("complete_vaccine_pipeline_production.py", "full_pipeline", { pathogen_name: pathogenName, proteins: sequences.map((seq: string, i: number) => ({ name: `Protein_${i+1}`, sequence: seq, type: 'surface' })), mhc_alleles: mhcAlleles, run_md: runMD, organism: organism, has_pdb_structure: !!pdbStructure });
 
       const job = {
         id: `vaccine-pipeline-${Date.now()}`,
@@ -4407,11 +4335,10 @@ print(df.to_string())
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ sequence, method });
-      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type predict_structure --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("complete_vaccine_pipeline_production.py", "predict_structure", { sequence, method });
 
       const job = {
         id: `vaccine-structure-${Date.now()}`,
@@ -4506,15 +4433,10 @@ print(df.to_string())
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        sequence, 
-        mhc_alleles: mhcAlleles, 
-        peptide_length: peptideLength 
-      });
-      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type predict_epitopes --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("complete_vaccine_pipeline_production.py", "predict_epitopes", { sequence, mhc_alleles: mhcAlleles, peptide_length: peptideLength });
 
       const job = {
         id: `vaccine-epitopes-${Date.now()}`,
@@ -4604,11 +4526,10 @@ print(df.to_string())
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ sequence, organism });
-      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type optimize_codons --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("complete_vaccine_pipeline_production.py", "optimize_codons", { sequence, organism });
 
       const job = {
         id: `vaccine-codon-${Date.now()}`,
@@ -4724,16 +4645,10 @@ print(df.to_string())
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        sequence, 
-        utr_type: utrType,
-        cap_type: capType,
-        poly_a_length: polyALength
-      });
-      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type design_mrna --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("complete_vaccine_pipeline_production.py", "design_mrna", { sequence, utr_type: utrType, cap_type: capType, poly_a_length: polyALength });
 
       const job = {
         id: `vaccine-mrna-${Date.now()}`,
@@ -4793,15 +4708,10 @@ print(df.to_string())
         return res.status(503).json({ error: "No compute nodes available" });
       }
 
-      const { getComputeAdapter } = await import("./compute-adapters");
+      const { getComputeAdapter, buildPipelineCommand } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
 
-      const params = JSON.stringify({ 
-        structure_pdb: pdbContent, 
-        nanoseconds,
-        temperature
-      });
-      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type run_md --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = buildPipelineCommand("complete_vaccine_pipeline_production.py", "run_md", { structure_pdb: pdbContent, nanoseconds, temperature });
 
       const job = {
         id: `vaccine-md-${Date.now()}`,
