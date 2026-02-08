@@ -58,11 +58,6 @@ import {
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
-declare global {
-  interface Window {
-    $3Dmol: any;
-  }
-}
 import type { Target as TargetType } from "@shared/schema";
 
 type TargetWithDiseases = TargetType & { diseases: string[] };
@@ -116,90 +111,30 @@ export default function TargetsPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const [viewer3DReady, setViewer3DReady] = useState(false);
-
-  // Load 3Dmol.js script
-  useEffect(() => {
-    if (window.$3Dmol) {
-      setViewer3DReady(true);
-      return;
-    }
-    
-    const script = document.createElement("script");
-    script.src = "https://3dmol.org/build/3Dmol-min.js";
-    script.async = true;
-    script.onload = () => {
-      setViewer3DReady(true);
-    };
-    document.body.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    if (!show3DViewer || !predictionResult?.pdbData || !viewerContainerRef.current || !viewer3DReady) {
-      return;
-    }
-
-    let cancelled = false;
-    let retryCount = 0;
-
-    function tryInit() {
-      if (cancelled) return;
-      const container = viewerContainerRef.current;
-      if (!container || !window.$3Dmol) return;
-
-      const rect = container.getBoundingClientRect();
-      if ((rect.width === 0 || rect.height === 0) && retryCount < 10) {
-        retryCount++;
-        setTimeout(tryInit, 200);
-        return;
-      }
-
-      try {
-        if (viewerInstanceRef.current) {
-          try { viewerInstanceRef.current.clear(); } catch (e) {}
-          viewerInstanceRef.current = null;
-        }
-        container.innerHTML = '';
-
-        const w = Math.max(rect.width, 400);
-        const h = Math.max(rect.height, 400);
-
-        const viewer = window.$3Dmol.createViewer(container, {
-          backgroundColor: '0x1a1a2e',
-          antialias: true,
-          width: w,
-          height: h,
-        });
-
-        if (!viewer) return;
-
-        viewer.addModel(predictionResult!.pdbData, "pdb");
-        viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
-        viewer.zoomTo();
-        viewer.spin(true);
-        viewer.render();
-
-        setTimeout(() => {
-          if (!cancelled && viewer) {
-            viewer.resize();
-            viewer.zoomTo();
-            viewer.render();
-          }
-        }, 100);
-
-        viewerInstanceRef.current = viewer;
-      } catch (error) {
-        console.error("Error initializing 3D viewer:", error);
-      }
-    }
-
-    const initTimer = setTimeout(tryInit, 400);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(initTimer);
-    };
-  }, [show3DViewer, predictionResult?.pdbData, viewer3DReady]);
+  const iframeSrcDoc = predictionResult?.pdbData ? `<!DOCTYPE html>
+<html><head>
+<script src="https://3dmol.org/build/3Dmol-min.js"></script>
+<style>body{margin:0;overflow:hidden;background:#1a1a2e}#viewer{width:100vw;height:100vh}</style>
+</head><body>
+<div id="viewer"></div>
+<script>
+var pdbData = ${JSON.stringify(predictionResult.pdbData)};
+function init(){
+  var v = $3Dmol.createViewer("viewer",{backgroundColor:"0x1a1a2e",antialias:true});
+  v.addModel(pdbData,"pdb");
+  v.setStyle({},{cartoon:{color:"spectrum"}});
+  v.zoomTo();
+  v.spin(true);
+  v.render();
+  window._viewer = v;
+  window.addEventListener("message",function(e){
+    if(e.data==="spin" && window._viewer) window._viewer.spin(true);
+  });
+}
+if(window.$3Dmol) init();
+else document.querySelector("script").onload = init;
+</script>
+</body></html>` : null;
 
   const { data: diseases } = useQuery<{ disease: string; count: number }[]>({
     queryKey: ["/api/diseases"],
@@ -923,11 +858,19 @@ export default function TargetsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div 
-              ref={viewerContainerRef}
-              className="w-full h-[500px] bg-black rounded-lg relative"
-              data-testid="3d-viewer-container"
-            />
+            {iframeSrcDoc ? (
+              <iframe
+                ref={viewerContainerRef as any}
+                srcDoc={iframeSrcDoc}
+                className="w-full h-[500px] rounded-lg border-0"
+                sandbox="allow-scripts allow-same-origin"
+                data-testid="3d-viewer-container"
+              />
+            ) : (
+              <div className="w-full h-[500px] bg-muted rounded-lg flex items-center justify-center">
+                <p className="text-muted-foreground text-sm">No structure data available</p>
+              </div>
+            )}
             {predictionResult && (
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-4 text-sm">
@@ -939,8 +882,9 @@ export default function TargetsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    if (viewerInstanceRef.current) {
-                      viewerInstanceRef.current.spin(true);
+                    const iframe = viewerContainerRef.current as HTMLIFrameElement | null;
+                    if (iframe?.contentWindow) {
+                      iframe.contentWindow.postMessage("spin", "*");
                     }
                   }}
                 >
