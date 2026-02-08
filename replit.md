@@ -34,6 +34,7 @@ Production pipeline scripts live in `pipelines/` directory (organized by domain)
 - **ESMFold Integration**: Primary structure prediction service using Meta's free API for drug discovery, vaccine discovery, and materials science.
 - **OpenFold3 NIM Integration**: AlphaFold3-compatible structure prediction for protein-ligand complexes via NVIDIA NIM API. Serves as a fallback for sequences >400 residues or complex multi-chain predictions. Includes result caching.
 - **SandboxAQ AQAffinity Integration**: Open-source AI model for fast, structure-free prediction of protein-ligand binding affinities, currently in simulation mode.
+- **Fc Effector Pipeline** (`pipelines/fc_effector/fc_effector_pipeline.py`): Disease/vaccine-agnostic Fc effector modeling. CPU layers: FcgammaR/FcRn atlas, ADCC/CDC scoring, species-translation similarity. GPU hook: BioNeMo Fc-receptor affinity prediction. LLM hook: OpenAI structured UI guidance. Job types: build_atlas, build_variants, build_species_similarity, bionemo_fc_affinity, openai_guidance, build_fc_bundle, plot_atlas, plot_effector, plot_species, full_pipeline. Graceful no-op when BioNeMo/OpenAI credentials are absent.
 - **Remote Execution**: Scripts are staged to `/opt/lika-compute/` on remote compute nodes via SSH. `compute-executor.ts` handles pipeline + config file staging. `buildPipelineCommand()` in `compute-adapters.ts` generates execution commands. Deploy route uploads all scripts from `pipelines/` to remote nodes.
 
 ### scRNA + PGD Trajectory Analysis Module

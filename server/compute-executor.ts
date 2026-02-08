@@ -71,6 +71,7 @@ async function stageFilesToNode(
       "complete_vaccine_pipeline_production.py": "pipelines/vaccine_discovery",
       "universal_hardware_agnostic_pipeline.py": "pipelines/materials_science",
       "alzheimers_12target_platform.py": "pipelines/alzheimers",
+      "fc_effector_pipeline.py": "pipelines/fc_effector",
     };
     const localDir = pipelineDirMap[pipelineScript] || "compute";
     const localPipelinePath = `./${localDir}/${pipelineScript}`;
