@@ -1,0 +1,147 @@
+Vaccine Discovery UI & Pipeline
+Please complete and wire up the Vaccine Discovery domain so it mirrors the quality and depth of the Drug Discovery and Materials Science domains.
+
+1) Vaccine Dashboard
+On the Vaccine Discovery dashboard, keep the existing hero card but make the KPI tiles live:
+
+Targets Analyzed = count of protein targets in the Vaccine domain.
+
+Epitopes Identified = total predicted epitopes across all targets.
+
+Vaccine Constructs = count of constructs generated (peptide/mRNA/protein).
+
+Pipelines Run = number of vaccine campaigns executed.
+
+In the “Get Started” row, wire the cards as entry points:
+
+Add Targets → opens the Targets page.
+
+Run Pipeline → opens Vaccine Pipeline with a new campaign wizard.
+
+Trajectory Analysis → opens Trajectory Analysis in Vaccine domain (for scRNA/immune data).
+
+2) Sidebar structure (Vaccine domain)
+Ensure the Vaccine sidebar has the following items, each wired:
+
+Dashboard
+
+Import (for protein FASTA, CSV, or project import)
+
+Targets
+
+Vaccine Pipeline
+
+Trajectory Analysis
+
+3D Viewer
+
+BioNeMo AI
+
+Reports
+
+3) Targets page
+Implement a Targets page listing vaccine antigens:
+
+Columns: Name, Pathogen/disease, UniProt ID, PDB ID(s), length, status (Imported / From template).
+
+Actions:
+
+“Import Targets” (FASTA upload or manual entry).
+
+“Add from templates” (e.g., Nipah F, SARS‑CoV‑2 Spike, Influenza HA, RSV F, HIV Env, Ebola GP).
+
+“Send to Pipeline” → creates/updates a Vaccine Pipeline campaign with these targets selected.
+
+4) Vaccine Pipeline – campaign view
+For each vaccine campaign, create a tabbed layout similar to Drug Discovery campaigns:
+
+Tabs:
+
+Targets
+
+Epitope Design
+
+Constructs
+
+Trajectory & Readouts
+
+Immunogenicity & Safety
+
+Overview
+
+4.1 Targets tab
+Show selected targets with metadata (UniProt, PDB, domains, glycosylation sites if available).
+
+Actions:
+
+“Run Epitope Prediction” → moves to Epitope Design tab and triggers prediction.
+
+4.2 Epitope Design tab
+Table of predicted epitopes per target.
+
+Columns: Epitope sequence, Start/End, HLA class (I/II), predicted affinity/percentile, conservancy, surface exposure flag.
+
+Filters: by target, class, percentile threshold, length.
+
+Actions:
+
+“Add to Construct” (multi‑select epitopes).
+
+4.3 Constructs tab
+List of vaccine constructs (peptide, mRNA, protein).
+
+Fields: Construct name, type, length, number of epitopes, predicted HLA coverage, link to 3D model if available.
+
+Actions:
+
+“Generate Construct” from selected epitopes (simple concatenation with linkers for now).
+
+“Send to BioNeMo” → queue constructs for immunogenicity/safety prediction.
+
+4.4 Trajectory & Readouts tab
+If a campaign has associated scRNA/immune datasets, show:
+
+Trajectory map(s) (link/embedded from existing Trajectory Analysis component).
+
+Gene–readout correlation cards: e.g., IGHG1/IGHG3 vs neutralizing titers, ELISpot, etc.
+
+Provide an action “Harvest Immune Assays” (similar to Assay Harvesting) for vaccine‑relevant functional assays if mock data is available.
+
+4.5 Immunogenicity & Safety tab
+For each construct, display BioNeMo (or mock) predictions:
+
+Immunogenicity score (0–1)
+
+Predicted T‑cell / B‑cell balance
+
+Cross‑reactivity risk (e.g., host similarity score)
+
+Safety flags (e.g., cytokine storm risk proxy)
+
+Show a matrix/table: constructs vs key metrics, with sortable columns.
+
+Add per‑construct actions: “Mark as Preclinical Candidate”, “Export”.
+
+4.6 Overview tab
+A simple stepper like the Drug campaign header:
+
+Select Targets
+
+Design Epitopes
+
+Build Constructs
+
+Predict Immunogenicity
+
+Plan Assays / Experiments
+
+Include a small summary:
+
+X targets, Y epitopes, Z constructs, N candidates selected.
+
+5) Wiring and data
+Use mock data where real APIs are not wired yet, but make sure every button and tab actually shows something (no empty states after actions).
+
+Reuse existing components where possible (Trajectory Analysis, 3D Viewer, campaign header).
+
+Goal: Vaccine Discovery should feel like a complete, navigable pipeline from targets → epitopes → constructs → predictions, with a similar UX depth to Drug Discovery.
