@@ -70,6 +70,7 @@ const drugWorkflowItems = [
   { title: "Assay Harvesting", url: "/assay-harvesting", icon: Database },
   { title: "Trajectory Analysis", url: "/trajectory-analysis", icon: GitBranch },
   { title: "SAR Analysis", url: "/learning-graph", icon: BarChart3 },
+  { title: "Fc Effector", url: "/fc-effector", icon: Shield },
   { title: "Reports", url: "/reports", icon: BarChart3 },
 ];
 
@@ -86,6 +87,7 @@ const vaccineWorkflowItems = [
   { title: "Lika Agent", url: "/lika-agent", icon: Brain },
   { title: "Epitope Prediction", url: "/vaccine-discovery", icon: Crosshair },
   { title: "mRNA Design", url: "/vaccine-discovery", icon: Dna },
+  { title: "Fc Effector", url: "/fc-effector", icon: Shield },
   { title: "3D Viewer", url: "/molecular-viewer", icon: Atom },
   { title: "BioNeMo AI", url: "/bionemo", icon: Brain },
   { title: "Reports", url: "/reports", icon: BarChart3 },

@@ -11559,5 +11559,88 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
+  // FC Effector Pipeline Routes
+  const runFcPipeline = async (jobType: string, params: Record<string, unknown>) => {
+    const { execSync } = await import("child_process");
+    const paramsJson = JSON.stringify(params);
+    const result = execSync(
+      `python3 pipelines/fc_effector/fc_effector_pipeline.py --job-type ${jobType} --params '${paramsJson.replace(/'/g, "'\\''")}'`,
+      { timeout: 120000, encoding: "utf-8", cwd: process.cwd() }
+    );
+    return JSON.parse(result.trim());
+  };
+
+  app.post("/api/fc-effector/bundle", requireAuth, async (req, res) => {
+    try {
+      const { disease_or_indication, vaccine_or_therapeutic, fc_sequence, include_openai, include_bionemo } = req.body;
+      const parsed = await runFcPipeline("build_fc_bundle", {
+        disease_or_indication: disease_or_indication || "general",
+        vaccine_or_therapeutic: vaccine_or_therapeutic || "therapeutic_antibody",
+        fc_sequence: fc_sequence || null,
+        include_openai: include_openai !== false,
+        include_bionemo: include_bionemo !== false,
+      });
+      parsed.success ? res.json(parsed.output) : res.status(500).json({ error: parsed.error });
+    } catch (error: any) {
+      console.error("Fc effector bundle error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/fc-effector/atlas", requireAuth, async (_req, res) => {
+    try {
+      const parsed = await runFcPipeline("build_atlas", {});
+      parsed.success ? res.json(parsed.output) : res.status(500).json({ error: parsed.error });
+    } catch (error: any) {
+      console.error("Fc effector atlas error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/fc-effector/variants", requireAuth, async (_req, res) => {
+    try {
+      const parsed = await runFcPipeline("build_variants", {});
+      parsed.success ? res.json(parsed.output) : res.status(500).json({ error: parsed.error });
+    } catch (error: any) {
+      console.error("Fc effector variants error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/fc-effector/species-similarity", requireAuth, async (_req, res) => {
+    try {
+      const parsed = await runFcPipeline("build_species_similarity", {});
+      parsed.success ? res.json(parsed.output) : res.status(500).json({ error: parsed.error });
+    } catch (error: any) {
+      console.error("Fc effector species-similarity error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/fc-effector/bionemo-affinity", requireAuth, async (req, res) => {
+    try {
+      const { fc_sequence, receptors, prefer_gpu } = req.body;
+      const parsed = await runFcPipeline("bionemo_fc_affinity", {
+        fc_sequence: fc_sequence || null,
+        receptors: receptors || [],
+        prefer_gpu: prefer_gpu !== false,
+      });
+      parsed.success ? res.json(parsed.output) : res.status(500).json({ error: parsed.error });
+    } catch (error: any) {
+      console.error("Fc effector bionemo-affinity error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/fc-effector/openai-guidance", requireAuth, async (req, res) => {
+    try {
+      const parsed = await runFcPipeline("openai_guidance", req.body);
+      parsed.success ? res.json(parsed.output) : res.status(500).json({ error: parsed.error });
+    } catch (error: any) {
+      console.error("Fc effector openai-guidance error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
