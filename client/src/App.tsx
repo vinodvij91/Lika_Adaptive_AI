@@ -90,6 +90,7 @@ const AssayHarvestingPage = lazy(() => import("@/pages/assay-harvesting"));
 const TrajectoryAnalysisPage = lazy(() => import("@/pages/trajectory-analysis"));
 const ActivityLogPage = lazy(() => import("@/pages/activity-log"));
 const FcEffectorPage = lazy(() => import("@/pages/fc-effector"));
+const OmicsIntegrationPage = lazy(() => import("@/pages/omics-integration"));
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -182,6 +183,7 @@ function AuthenticatedRoutes() {
         <Route path="/vaccine-discovery" component={VaccineDiscoveryPage} />
         <Route path="/disease-discovery" component={DiseaseDiscoveryPage} />
         <Route path="/fc-effector" component={FcEffectorPage} />
+        <Route path="/omics-integration" component={OmicsIntegrationPage} />
         <Route path="/activity-log" component={ActivityLogPage} />
         <Route component={NotFound} />
       </Switch>

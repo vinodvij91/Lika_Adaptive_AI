@@ -1,0 +1,84 @@
+For both modules, plug them in where the user already runs end‑to‑end pipelines, not on the high‑level dashboards.
+
+Drug Discovery screen (Fc + Omics)
+From the Fc Effector Modeling screenshot (second image):
+
+You already added “Fc Effector” under Workflows in the left sidebar and a dedicated Fc page.
+
+The omics engine should mirror this.
+
+Where to add omics:
+
+Left sidebar → Workflows (Drug Discovery)
+
+Add a new item directly under “Fc Effector”:
+
+“Omics Integration”
+
+Clicking it opens a page similar in layout to the Fc page:
+
+Top: multi‑omics target table + filters (integrated score, genomics, Tx, proteomics, metabolomics).
+
+Bottom: per‑target detail (stacked bars showing contributions of each omics layer).
+
+Within each Disease / Project detail
+
+On a specific Disease or Project page, add a tab near where you’d open Fc Effector:
+
+Tabs: “Overview | Assays | SAR | Fc Effector | Omics Evidence”.
+
+That tab just consumes the omics_bundle JSON and shows:
+
+Rank‑ordered target list by integrated omics score.
+
+Tooltips from OpenAI for each omics column.
+
+This keeps Fc and Omics as parallel, cross‑cutting analysis tools for any disease.
+
+Vaccine Discovery screen
+From the Vaccine Pipeline screenshot (first image):
+
+You have top tabs: Complete | Pipeline | Structure | Epitopes | Codon | mRNA | Matrix | Hardware.
+
+Where to add Fc and Omics info:
+
+New tab in the top bar
+
+Add a tab after “Matrix”:
+
+“Fc & Omics” or split as
+
+“Fc Effector”
+
+“Host Omics” (if you want two tabs).
+
+Content of that tab:
+
+Left panel:
+
+For the selected antigen/protein (from Structure/Epitopes), show Fc Effector summary if you have an antibody/Fc context (or disable it if not relevant).
+
+Right panel:
+
+Show host omics evidence for pathways / cell types relevant to that vaccine (from omics_bundle), with OpenAI‑generated explanation of what host signatures the vaccine is designed to modulate.
+
+This way, in Vaccine Discovery the user’s flow remains:
+
+Define antigen →
+
+Run pipeline →
+
+See structure/epitopes →
+
+Open “Fc & Omics” to understand effector mechanisms + multi‑omics disease context.
+
+Summary placement
+Drug Discovery:
+
+Sidebar Workflows: “Fc Effector” (already there) + “Omics Integration” right below it.
+
+Disease/Project detail tabs: add “Omics Evidence” next to “Fc Effector”.
+
+Vaccine Discovery:
+
+Vaccine Pipeline top tabs: add “Fc & Omics” (single combined tab) near “Matrix

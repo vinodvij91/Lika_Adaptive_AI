@@ -11785,5 +11785,70 @@ For materials science: Explain polymers, crystals, composites, tensile strength,
     }
   });
 
+  // Omics Integration Pipeline Routes
+  const runOmicsPipeline = async (jobType: string, params: Record<string, unknown>) => {
+    const { execSync } = await import("child_process");
+    const paramsJson = JSON.stringify(params);
+    const result = execSync(
+      `python3 pipelines/omics_integration/omics_integration_pipeline.py --job-type ${jobType} --params '${paramsJson.replace(/'/g, "'\\''")}'`,
+      { timeout: 120000, encoding: "utf-8", cwd: process.cwd() }
+    );
+    return JSON.parse(result.trim());
+  };
+
+  app.post("/api/omics/bundle", requireAuth, async (req, res) => {
+    try {
+      const { disease_or_indication, target_ids, vaccine_or_therapeutic, target_sequences } = req.body;
+      const parsed = await runOmicsPipeline("build_bundle", {
+        disease_or_indication: disease_or_indication || "general",
+        target_ids: target_ids || [],
+        vaccine_or_therapeutic: vaccine_or_therapeutic || "therapeutic_antibody",
+        target_sequences: target_sequences || null,
+      });
+      parsed.success ? res.json(parsed.output) : res.status(500).json({ error: parsed.error });
+    } catch (error: any) {
+      console.error("Omics bundle error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/omics/table", requireAuth, async (req, res) => {
+    try {
+      const { disease_or_indication, target_ids } = req.body;
+      const parsed = await runOmicsPipeline("build_table", {
+        disease_or_indication: disease_or_indication || "general",
+        target_ids: target_ids || [],
+      });
+      parsed.success ? res.json(parsed.output) : res.status(500).json({ error: parsed.error });
+    } catch (error: any) {
+      console.error("Omics table error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/omics/bionemo-enrich", requireAuth, async (req, res) => {
+    try {
+      const { target_sequences, prefer_gpu } = req.body;
+      const parsed = await runOmicsPipeline("bionemo_enrich", {
+        target_sequences: target_sequences || {},
+        prefer_gpu: prefer_gpu !== false,
+      });
+      parsed.success ? res.json(parsed.output) : res.status(500).json({ error: parsed.error });
+    } catch (error: any) {
+      console.error("Omics bionemo-enrich error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/omics/openai-guidance", requireAuth, async (req, res) => {
+    try {
+      const parsed = await runOmicsPipeline("openai_guidance", req.body);
+      parsed.success ? res.json(parsed.output) : res.status(500).json({ error: parsed.error });
+    } catch (error: any) {
+      console.error("Omics openai-guidance error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }

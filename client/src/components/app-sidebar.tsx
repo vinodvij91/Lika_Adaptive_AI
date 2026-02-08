@@ -70,6 +70,7 @@ const drugWorkflowItems = [
   { title: "Trajectory Analysis", url: "/trajectory-analysis", icon: GitBranch },
   { title: "SAR Analysis", url: "/learning-graph", icon: BarChart3 },
   { title: "Fc Effector", url: "/fc-effector", icon: Shield },
+  { title: "Omics Integration", url: "/omics-integration", icon: Dna },
   { title: "Reports", url: "/reports", icon: BarChart3 },
 ];
 

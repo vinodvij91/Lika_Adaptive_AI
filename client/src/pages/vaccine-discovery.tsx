@@ -34,8 +34,18 @@ import {
   ChevronRight,
   Upload,
   FileText,
-  X
+  X,
+  Shield,
+  Sparkles,
+  BarChart3,
+  Info,
+  Microscope,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { queryClient } from "@/lib/queryClient";
 
@@ -143,6 +153,10 @@ export default function VaccineDiscoveryPage() {
   const [structurePdbFileId, setStructurePdbFileId] = useState<string | null>(null);
   const [pdbDescription, setPdbDescription] = useState("");
   const [uploadingPdb, setUploadingPdb] = useState(false);
+
+  const [fcOmicsDisease, setFcOmicsDisease] = useState("Vaccine host response");
+  const [fcOmicsTargets, setFcOmicsTargets] = useState("TNF,IL6,IFNG,FCGR2A,FCGR3A,TLR4,STAT1,IRF7");
+  const [fcOmicsSelectedTarget, setFcOmicsSelectedTarget] = useState<string | null>(null);
 
   const { data: hardwareReport, isLoading: hardwareLoading } = useQuery<HardwareReport>({
     queryKey: ["/api/compute/vaccine/hardware"],
@@ -327,6 +341,43 @@ export default function VaccineDiscoveryPage() {
     },
   });
 
+  const fcBundleMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/fc-effector/bundle", {
+        disease_or_indication: fcOmicsDisease,
+        vaccine_or_therapeutic: "vaccine",
+      });
+      return res.json();
+    },
+    onError: (error: any) => {
+      toast({ title: "Fc Effector Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const omicsBundleMutation = useMutation({
+    mutationFn: async () => {
+      const targets = fcOmicsTargets.split(",").map(t => t.trim()).filter(Boolean);
+      const res = await apiRequest("POST", "/api/omics/bundle", {
+        disease_or_indication: fcOmicsDisease,
+        target_ids: targets,
+        vaccine_or_therapeutic: "vaccine",
+      });
+      return res.json();
+    },
+    onError: (error: any) => {
+      toast({ title: "Omics Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const runFcAndOmics = () => {
+    fcBundleMutation.mutate();
+    omicsBundleMutation.mutate();
+  };
+
+  const fcBundle = fcBundleMutation.data;
+  const omicsBundle = omicsBundleMutation.data;
+  const fcOmicsLoading = fcBundleMutation.isPending || omicsBundleMutation.isPending;
+
   return (
     <div className="flex flex-col h-full overflow-auto">
       <div className="border-b bg-card">
@@ -366,7 +417,7 @@ export default function VaccineDiscoveryPage() {
 
       <div className="container mx-auto px-6 py-6 flex-1">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="complete" data-testid="tab-complete">
               <Syringe className="h-4 w-4 mr-2" />
               Complete
@@ -394,6 +445,10 @@ export default function VaccineDiscoveryPage() {
             <TabsTrigger value="task-matrix" data-testid="tab-task-matrix">
               <Grid3X3 className="h-4 w-4 mr-2" />
               Matrix
+            </TabsTrigger>
+            <TabsTrigger value="fc-omics" data-testid="tab-fc-omics">
+              <Shield className="h-4 w-4 mr-2" />
+              Fc & Omics
             </TabsTrigger>
             <TabsTrigger value="hardware" data-testid="tab-hardware">
               <Server className="h-4 w-4 mr-2" />
@@ -1429,6 +1484,243 @@ export default function VaccineDiscoveryPage() {
                 No task matrix data available
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="fc-omics" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-purple-500" />
+                  Fc Effector & Host Omics Analysis
+                </CardTitle>
+                <CardDescription>
+                  Understand Fc effector mechanisms and multi-omics host response context for your vaccine pipeline
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Disease / Host Context</Label>
+                    <Input
+                      value={fcOmicsDisease}
+                      onChange={(e) => setFcOmicsDisease(e.target.value)}
+                      placeholder="e.g., Vaccine host response"
+                      data-testid="input-fc-omics-disease"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Target Genes (comma-separated)</Label>
+                    <Input
+                      value={fcOmicsTargets}
+                      onChange={(e) => setFcOmicsTargets(e.target.value)}
+                      placeholder="TNF,IL6,IFNG..."
+                      data-testid="input-fc-omics-targets"
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={runFcAndOmics}
+                  disabled={fcOmicsLoading}
+                  data-testid="button-run-fc-omics"
+                >
+                  {fcOmicsLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Activity className="h-4 w-4 mr-2" />
+                  )}
+                  Run Fc & Omics Analysis
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-cyan-500" />
+                      Fc Effector Summary
+                    </CardTitle>
+                    <CardDescription>
+                      Fc receptor binding and effector function modeling
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {fcBundle ? (
+                      <div className="space-y-4">
+                        {fcBundle.ui_text?.narrative && (
+                          <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg" data-testid="text-fc-narrative">
+                            {fcBundle.ui_text.narrative}
+                          </div>
+                        )}
+                        {fcBundle.variants && fcBundle.variants.length > 0 && (
+                          <div className="space-y-3">
+                            <span className="text-sm font-medium">Fc Variant Scores</span>
+                            {fcBundle.variants.slice(0, 5).map((v: any) => (
+                              <div key={v.variant_id} className="space-y-1">
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="text-xs font-medium">{v.variant_id}</span>
+                                  <div className="flex gap-2">
+                                    <Badge variant="secondary" className="font-mono text-[10px]">
+                                      ADCC {(v.ADCC_score * 100).toFixed(0)}%
+                                    </Badge>
+                                    <Badge variant="outline" className="font-mono text-[10px]">
+                                      CDC {(v.CDC_score * 100).toFixed(0)}%
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="h-full bg-cyan-500 dark:bg-cyan-400 rounded-full"
+                                    style={{ width: `${v.ADCC_score * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {fcBundle.species_similarity && fcBundle.species_similarity.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="text-sm font-medium">Species Translation</span>
+                            {fcBundle.species_similarity.slice(0, 4).map((s: any) => (
+                              <div key={s.model_id} className="flex items-center justify-between gap-2">
+                                <span className="text-xs">{s.label}</span>
+                                <Badge variant={s.similarity_to_human_NK_FcR >= 0.95 ? "default" : "secondary"} className="font-mono text-[10px]">
+                                  {(s.similarity_to_human_NK_FcR * 100).toFixed(0)}%
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-sm text-muted-foreground">
+                        <Shield className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                        Run the analysis to see Fc effector data
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Microscope className="h-5 w-5 text-emerald-500" />
+                      Host Omics Evidence
+                      {omicsBundle?.ui_text?.tooltips?.table && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-xs">{omicsBundle.ui_text.tooltips.table}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </CardTitle>
+                    <CardDescription>
+                      Multi-omics host signatures the vaccine targets
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {omicsBundle?.omics_table && omicsBundle.omics_table.length > 0 ? (
+                      <div className="space-y-4">
+                        {omicsBundle.ui_text?.narrative && (
+                          <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg" data-testid="text-omics-narrative">
+                            <Sparkles className="h-4 w-4 inline mr-1 text-amber-500" />
+                            {omicsBundle.ui_text.narrative}
+                          </div>
+                        )}
+                        <div className="space-y-3">
+                          {omicsBundle.omics_table.map((t: any, idx: number) => {
+                            const isSelected = fcOmicsSelectedTarget === t.target_id;
+                            return (
+                              <div
+                                key={t.target_id}
+                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                  isSelected ? "border-emerald-500 bg-emerald-500/5" : "hover-elevate"
+                                }`}
+                                onClick={() => setFcOmicsSelectedTarget(isSelected ? null : t.target_id)}
+                                data-testid={`fc-omics-target-${t.target_id}`}
+                              >
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">{idx + 1}</span>
+                                    <span className="text-sm font-mono font-medium">{t.target_id}</span>
+                                  </div>
+                                  <Badge variant={t.integrated_score >= 0.7 ? "default" : t.integrated_score >= 0.5 ? "secondary" : "outline"} className="font-mono text-[10px]">
+                                    {(t.integrated_score * 100).toFixed(0)}%
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2">
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] text-muted-foreground">Gen</span>
+                                    <div className="bg-muted rounded-full h-1.5 overflow-hidden">
+                                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${t.gwas_score * 100}%` }} />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] text-muted-foreground">Tx</span>
+                                    <div className="bg-muted rounded-full h-1.5 overflow-hidden">
+                                      <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min(100, (Math.abs(t.tx_log2_fc) / 4) * 100)}%` }} />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] text-muted-foreground">Prot</span>
+                                    <div className="bg-muted rounded-full h-1.5 overflow-hidden">
+                                      <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min(100, (t.protein_fc / 3) * 100)}%` }} />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] text-muted-foreground">Met</span>
+                                    <div className="bg-muted rounded-full h-1.5 overflow-hidden">
+                                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${t.metab_pathway_score * 100}%` }} />
+                                    </div>
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <div className="mt-3 pt-3 border-t space-y-2 text-xs">
+                                    <div className="flex justify-between gap-2">
+                                      <span className="text-muted-foreground">GWAS Score</span>
+                                      <span className="font-mono">{t.gwas_score.toFixed(3)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-2">
+                                      <span className="text-muted-foreground">Log2 Fold Change</span>
+                                      <span className={`font-mono ${t.tx_log2_fc > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                                        {t.tx_log2_fc > 0 ? "+" : ""}{t.tx_log2_fc.toFixed(3)}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between gap-2">
+                                      <span className="text-muted-foreground">Protein FC</span>
+                                      <span className="font-mono">{t.protein_fc.toFixed(3)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-2">
+                                      <span className="text-muted-foreground">Detection</span>
+                                      <Badge variant="outline" className="text-[10px]">{t.detection_evidence}</Badge>
+                                    </div>
+                                    <div className="flex justify-between gap-2">
+                                      <span className="text-muted-foreground">Pathway Score</span>
+                                      <span className="font-mono">{t.metab_pathway_score.toFixed(3)}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-sm text-muted-foreground">
+                        <Microscope className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                        Run the analysis to see host omics evidence
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="hardware" className="space-y-6">
