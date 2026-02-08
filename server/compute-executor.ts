@@ -36,7 +36,7 @@ export interface PipelineExecutionResult {
 }
 
 const DEFAULT_CONFIG: PipelineExecutionConfig = {
-  pipelineScript: "drug_discovery_pipeline.py",
+  pipelineScript: "lika_drug_discovery_pipeline.py",
   workingDir: "/opt/lika-compute",
   environment: {
     PYTHONUNBUFFERED: "1",
@@ -66,13 +66,33 @@ async function stageFilesToNode(
     const path = await import("path");
     const os = await import("os");
     
-    const localPipelinePath = `./compute/${pipelineScript}`;
+    const pipelineDirMap: Record<string, string> = {
+      "lika_drug_discovery_pipeline.py": "pipelines/drug_discovery",
+      "complete_vaccine_pipeline_production.py": "pipelines/vaccine_discovery",
+      "universal_hardware_agnostic_pipeline.py": "pipelines/materials_science",
+      "alzheimers_12target_platform.py": "pipelines/alzheimers",
+    };
+    const localDir = pipelineDirMap[pipelineScript] || "compute";
+    const localPipelinePath = `./${localDir}/${pipelineScript}`;
     const remotePipelinePath = `/opt/lika-compute/${pipelineScript}`;
     
     if (fs.existsSync(localPipelinePath)) {
       console.log(`[ComputeExecutor] Staging pipeline to ${node.name}: ${remotePipelinePath}`);
       await adapter.uploadFile(node, localPipelinePath, remotePipelinePath);
       console.log(`[ComputeExecutor] Successfully staged pipeline to ${node.name}`);
+    }
+
+    const configFiles: Record<string, string[]> = {
+      "lika_drug_discovery_pipeline.py": ["disease_discovery_config.yaml"],
+    };
+    const companions = configFiles[pipelineScript] || [];
+    for (const cfgFile of companions) {
+      const localCfgPath = `./${localDir}/${cfgFile}`;
+      const remoteCfgPath = `/opt/lika-compute/${cfgFile}`;
+      if (fs.existsSync(localCfgPath)) {
+        console.log(`[ComputeExecutor] Staging config ${cfgFile} to ${node.name}`);
+        await adapter.uploadFile(node, localCfgPath, remoteCfgPath);
+      }
     }
     
     if (inputData) {

@@ -2856,7 +2856,7 @@ Provide scientific analysis in JSON format.`
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials, target_properties: targetProperties });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type batch_screening --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type batch_screening --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-screen-${Date.now()}`,
@@ -2902,7 +2902,7 @@ Provide scientific analysis in JSON format.`
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type structure_validation --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type structure_validation --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-val-${Date.now()}`,
@@ -2949,7 +2949,7 @@ Provide scientific analysis in JSON format.`
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type magpie_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type magpie_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-magpie-${Date.now()}`,
@@ -2996,7 +2996,7 @@ Provide scientific analysis in JSON format.`
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type soap_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type soap_descriptors --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-soap-${Date.now()}`,
@@ -3043,7 +3043,7 @@ Provide scientific analysis in JSON format.`
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type gnn_prediction --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type gnn_prediction --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-gnn-${Date.now()}`,
@@ -3090,7 +3090,7 @@ Provide scientific analysis in JSON format.`
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type synthesis_planning --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type synthesis_planning --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-synth-${Date.now()}`,
@@ -3137,7 +3137,7 @@ Provide scientific analysis in JSON format.`
         n_candidates: nCandidates,
         elements 
       });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type materials_generation --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type materials_generation --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-gen-${Date.now()}`,
@@ -3187,7 +3187,7 @@ Provide scientific analysis in JSON format.`
         base_composition: baseComposition, 
         n_variants: nVariants 
       });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type element_substitution --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type element_substitution --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-subst-${Date.now()}`,
@@ -3234,7 +3234,7 @@ Provide scientific analysis in JSON format.`
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ materials, simulation_type: simulationType });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type atomistic_simulation --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type atomistic_simulation --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-sim-${Date.now()}`,
@@ -3281,7 +3281,7 @@ Provide scientific analysis in JSON format.`
         n_candidates: nCandidates,
         screen_top_n: screenTopN 
       });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mat-discover-${Date.now()}`,
@@ -3343,7 +3343,7 @@ Provide scientific analysis in JSON format.`
         additional_criteria: additionalCriteria,
         include_structures: includeStructures
       });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_load_training_data --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_load_training_data --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-training-${Date.now()}`,
@@ -3399,7 +3399,7 @@ Provide scientific analysis in JSON format.`
         max_voltage: maxVoltage,
         electrode_type: electrodeType
       });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_load_battery_data --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_load_battery_data --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-battery-${Date.now()}`,
@@ -3451,7 +3451,7 @@ Provide scientific analysis in JSON format.`
         band_gap_range: bandGapRange,
         stable_only: stableOnly
       });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_load_solar_materials --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_load_solar_materials --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-solar-${Date.now()}`,
@@ -3503,7 +3503,7 @@ Provide scientific analysis in JSON format.`
         band_gap_range: bandGapRange,
         heavy_elements: heavyElements
       });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_load_thermoelectric_materials --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_load_thermoelectric_materials --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-thermoelectric-${Date.now()}`,
@@ -3555,7 +3555,7 @@ Provide scientific analysis in JSON format.`
         include_cuprates: includeCuprates,
         include_iron_based: includeIronBased
       });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_load_superconductor_candidates --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_load_superconductor_candidates --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-superconductor-${Date.now()}`,
@@ -3605,7 +3605,7 @@ Provide scientific analysis in JSON format.`
         elements, 
         include_unstable: includeUnstable
       });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_get_phase_diagram --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_get_phase_diagram --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-phase-${Date.now()}`,
@@ -3655,7 +3655,7 @@ Provide scientific analysis in JSON format.`
         material_ids: materialIds, 
         properties
       });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_bulk_query --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_bulk_query --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-bulk-${Date.now()}`,
@@ -3702,7 +3702,7 @@ Provide scientific analysis in JSON format.`
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ formula, anonymous });
-      const command = `cd /home/runner/workspace/compute && python3 materials_science_pipeline.py --job-type mp_search_formula --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/materials_science && python3 universal_hardware_agnostic_pipeline.py --job-type mp_search_formula --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `mp-search-${Date.now()}`,
@@ -3850,7 +3850,7 @@ Provide scientific analysis in JSON format.`
         organism: organism,
         has_pdb_structure: !!pdbStructure
       });
-      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type full_pipeline --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `vaccine-pipeline-${Date.now()}`,
@@ -3892,16 +3892,17 @@ Provide scientific analysis in JSON format.`
       const { getComputeAdapter } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
       
-      // List of compute scripts to deploy
+      // List of compute scripts to deploy (new pipeline structure)
       const scriptsToUpload = [
-        "complete_vaccine_pipeline.py",
-        "vaccine_discovery_pipeline.py",
-        "drug_discovery_pipeline.py",
-        "materials_science_pipeline.py",
-        "task_classification_matrix.py",
+        { local: "pipelines/vaccine_discovery/complete_vaccine_pipeline_production.py", remote: "complete_vaccine_pipeline_production.py" },
+        { local: "pipelines/drug_discovery/lika_drug_discovery_pipeline.py", remote: "lika_drug_discovery_pipeline.py" },
+        { local: "pipelines/drug_discovery/disease_discovery_config.yaml", remote: "disease_discovery_config.yaml" },
+        { local: "pipelines/materials_science/universal_hardware_agnostic_pipeline.py", remote: "universal_hardware_agnostic_pipeline.py" },
+        { local: "pipelines/alzheimers/alzheimers_12target_platform.py", remote: "alzheimers_12target_platform.py" },
+        { local: "compute/task_classification_matrix.py", remote: "task_classification_matrix.py" },
       ];
       
-      const remotePath = "/root/compute";
+      const remotePath = "/opt/lika-compute";
       const uploadResults: { file: string; success: boolean }[] = [];
       
       // Create remote directory first
@@ -3914,8 +3915,9 @@ Provide scientific analysis in JSON format.`
       await adapter.runJob(node, mkdirJob as any);
       
       // Upload each script
-      for (const script of scriptsToUpload) {
-        const localPath = path.join(process.cwd(), "compute", script);
+      for (const scriptDef of scriptsToUpload) {
+        const script = scriptDef.remote;
+        const localPath = path.join(process.cwd(), scriptDef.local);
         if (fs.existsSync(localPath)) {
           if (adapter.uploadFile) {
             const success = await adapter.uploadFile(node, localPath, `${remotePath}/${script}`);
@@ -4066,7 +4068,7 @@ Provide scientific analysis in JSON format.`
       const { getComputeAdapter } = await import("./compute-adapters");
       const adapter = getComputeAdapter(node);
       
-      const testCommand = `cd /root/compute && CUDA_VISIBLE_DEVICES='' python3 -c "
+      const testCommand = `cd /opt/lika-compute && CUDA_VISIBLE_DEVICES='' python3 -c "
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -4161,7 +4163,7 @@ print(df.to_string())
       await adapter.runJob(node, writeParamsJob as any);
 
       const command = `CUDA_VISIBLE_DEVICES='' TF_CPP_MIN_LOG_LEVEL=2 ` + buildPipelineCommand(
-        "complete_vaccine_pipeline.py",
+        "complete_vaccine_pipeline_production.py",
         "full_pipeline",
         params,
         remoteParamsFile
@@ -4409,7 +4411,7 @@ print(df.to_string())
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ sequence, method });
-      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type predict_structure --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type predict_structure --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `vaccine-structure-${Date.now()}`,
@@ -4512,7 +4514,7 @@ print(df.to_string())
         mhc_alleles: mhcAlleles, 
         peptide_length: peptideLength 
       });
-      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type predict_epitopes --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type predict_epitopes --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `vaccine-epitopes-${Date.now()}`,
@@ -4606,7 +4608,7 @@ print(df.to_string())
       const adapter = getComputeAdapter(node);
 
       const params = JSON.stringify({ sequence, organism });
-      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type optimize_codons --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type optimize_codons --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `vaccine-codon-${Date.now()}`,
@@ -4731,7 +4733,7 @@ print(df.to_string())
         cap_type: capType,
         poly_a_length: polyALength
       });
-      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type design_mrna --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type design_mrna --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `vaccine-mrna-${Date.now()}`,
@@ -4799,7 +4801,7 @@ print(df.to_string())
         nanoseconds,
         temperature
       });
-      const command = `cd /home/runner/workspace/compute && python3 vaccine_discovery_pipeline.py --job-type run_md --params '${params.replace(/'/g, "'\\''")}'`;
+      const command = `cd /home/runner/workspace/pipelines/vaccine_discovery && python3 complete_vaccine_pipeline_production.py --job-type run_md --params '${params.replace(/'/g, "'\\''")}'`;
 
       const job = {
         id: `vaccine-md-${Date.now()}`,
