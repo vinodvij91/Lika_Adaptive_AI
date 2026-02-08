@@ -25,7 +25,9 @@ interface QuickPrediction {
   }>;
 }
 
-const DEMO_MATERIALS: Array<{name: string; type: "polymer" | "crystal" | "composite"; smiles?: string; formula?: string}> = [
+type QuickPredictMaterial = {name: string; type: "polymer" | "crystal" | "composite"; smiles?: string; formula?: string};
+
+const SAMPLE_MATERIALS: QuickPredictMaterial[] = [
   { name: "Polyethylene (PE)", type: "polymer", smiles: "CC" },
   { name: "Polystyrene (PS)", type: "polymer", smiles: "c1ccccc1CC" },
   { name: "PMMA", type: "polymer", smiles: "CC(C)(C(=O)OC)C" },
@@ -67,7 +69,7 @@ export default function MaterialsLibraryPage() {
   const onlineNodes = computeNodes?.filter((n) => n.status === "active") || [];
 
   const quickPredictMutation = useMutation({
-    mutationFn: async (material: typeof DEMO_MATERIALS[0]) => {
+    mutationFn: async (material: QuickPredictMaterial) => {
       const matData = material.type === "polymer" 
         ? { type: material.type, smiles: material.smiles }
         : { type: material.type, formula: material.formula };
@@ -79,7 +81,7 @@ export default function MaterialsLibraryPage() {
     },
   });
 
-  const handleQuickPredict = async (material: typeof DEMO_MATERIALS[0]) => {
+  const handleQuickPredict = async (material: QuickPredictMaterial) => {
     const result = await quickPredictMutation.mutateAsync(material);
     if (result.results?.[0]) {
       setQuickPredictions(prev => [
@@ -387,15 +389,23 @@ export default function MaterialsLibraryPage() {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-amber-500" />
-                Quick Demo: Try Property Prediction
+                Quick Predict: Try Property Prediction
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Click any demo material below to instantly predict its properties using our ML pipeline:
+                Click any material below to instantly predict its properties using our ML pipeline:
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {DEMO_MATERIALS.map((mat, idx) => {
+                {(materials.length > 0
+                  ? materials.slice(0, 8).map((m: any): QuickPredictMaterial => ({
+                      name: m.name || m.type || "Material",
+                      type: m.type as "polymer" | "crystal" | "composite",
+                      smiles: m.smiles || (m.representation as any)?.smiles,
+                      formula: m.composition || (m.representation as any)?.formula,
+                    }))
+                  : SAMPLE_MATERIALS
+                ).map((mat, idx) => {
                   const prediction = quickPredictions.find(p => 
                     p.properties.some(pr => pr.property_name === "thermal_conductivity")
                   );

@@ -102,23 +102,26 @@ export default function MaterialsCampaignDetailPage() {
     enabled: !!campaignId,
   });
 
-  const { data: variants = [] } = useQuery<any[]>({
-    queryKey: ["/api/material-variants", campaignId],
+  const materials = materialsResponse?.materials || [];
+  const materialIds = materials.map((m: any) => m.id);
+
+  const { data: allVariants = [] } = useQuery<any[]>({
+    queryKey: ["/api/material-variants", campaignId, materialIds],
     queryFn: async () => {
       const res = await fetch(`/api/material-variants`, { credentials: "include" });
       if (!res.ok) return [];
       const data = await res.json();
-      return data.variants || data || [];
+      const list = data.variants || data || [];
+      return list.filter((v: any) => materialIds.includes(v.materialId));
     },
-    enabled: !!campaignId,
+    enabled: !!campaignId && materialIds.length > 0,
   });
+  const variants = allVariants;
 
   const { data: oracleScores = [] } = useQuery<any[]>({
     queryKey: ["/api/materials-oracle-scores", campaignId],
     enabled: !!campaignId,
   });
-
-  const materials = materialsResponse?.materials || [];
 
   if (campaignLoading) {
     return (

@@ -59,7 +59,7 @@ interface ManufacturabilityResult {
   recommendations: string[];
 }
 
-const DEMO_POLYMERS = [
+const SAMPLE_POLYMERS = [
   { name: "Polyethylene (PE)", type: "polymer", smiles: "CC" },
   { name: "Polystyrene (PS)", type: "polymer", smiles: "c1ccccc1CC" },
   { name: "PMMA", type: "polymer", smiles: "CC(C)(C(=O)OC)C" },
@@ -68,7 +68,7 @@ const DEMO_POLYMERS = [
   { name: "Polyimide", type: "polymer", smiles: "c1cc2c(cc1)C(=O)NC2=O" },
 ];
 
-const DEMO_CRYSTALS = [
+const SAMPLE_CRYSTALS = [
   { name: "Iron Oxide", type: "crystal", formula: "Fe2O3" },
   { name: "Silicon Dioxide", type: "crystal", formula: "SiO2" },
   { name: "Titanium Dioxide", type: "crystal", formula: "TiO2" },
@@ -498,9 +498,14 @@ export default function PropertyPredictionPage() {
         }
       });
     } else {
-      materials = materialType === "polymer" 
-        ? DEMO_POLYMERS.slice(0, 4).map(p => ({ type: p.type, smiles: p.smiles }))
-        : DEMO_CRYSTALS.slice(0, 4).map(c => ({ type: c.type, formula: c.formula }));
+      const sampleMats = materialType === "polymer" ? SAMPLE_POLYMERS : SAMPLE_CRYSTALS;
+      const apiMats = (userMaterials || [])
+        .filter((m: any) => m.type === materialType)
+        .slice(0, 4)
+        .map((m: any) => materialType === "polymer"
+          ? { type: m.type, smiles: m.smiles || (m.representation as any)?.smiles }
+          : { type: m.type, formula: m.composition || (m.representation as any)?.formula });
+      materials = apiMats.length > 0 ? apiMats : sampleMats.slice(0, 4).map(p => materialType === "polymer" ? { type: p.type, smiles: (p as any).smiles } : { type: p.type, formula: (p as any).formula });
     }
     
     setResults([]);
@@ -527,9 +532,13 @@ export default function PropertyPredictionPage() {
         }
       });
     } else {
-      materials = materialType === "polymer" 
-        ? DEMO_POLYMERS.map(p => ({ type: p.type, smiles: p.smiles }))
-        : DEMO_CRYSTALS.map(c => ({ type: c.type, formula: c.formula }));
+      const sampleMats = materialType === "polymer" ? SAMPLE_POLYMERS : SAMPLE_CRYSTALS;
+      const apiMats = (userMaterials || [])
+        .filter((m: any) => m.type === materialType)
+        .map((m: any) => materialType === "polymer"
+          ? { type: m.type, smiles: m.smiles || (m.representation as any)?.smiles }
+          : { type: m.type, formula: m.composition || (m.representation as any)?.formula });
+      materials = apiMats.length > 0 ? apiMats : sampleMats.map(p => materialType === "polymer" ? { type: p.type, smiles: (p as any).smiles } : { type: p.type, formula: (p as any).formula });
     }
     
     try {
@@ -836,9 +845,9 @@ export default function PropertyPredictionPage() {
                   </Tabs>
 
                   <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-2">Demo Materials:</p>
+                    <p className="text-xs text-muted-foreground mb-2">Sample Materials:</p>
                     <div className="flex flex-wrap gap-1">
-                      {(materialType === "polymer" ? DEMO_POLYMERS : DEMO_CRYSTALS).slice(0, 4).map((mat) => (
+                      {(materialType === "polymer" ? SAMPLE_POLYMERS : SAMPLE_CRYSTALS).slice(0, 4).map((mat) => (
                         <Button
                           key={mat.name}
                           size="sm"
