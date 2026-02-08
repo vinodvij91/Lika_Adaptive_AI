@@ -40,6 +40,7 @@ import {
   GitBranch,
   ClipboardList,
   Shield,
+  Microscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -88,6 +89,7 @@ const vaccineWorkflowItems = [
   { title: "Epitope Prediction", url: "/vaccine-discovery", icon: Crosshair },
   { title: "mRNA Design", url: "/vaccine-discovery", icon: Dna },
   { title: "Fc Effector", url: "/fc-effector", icon: Shield },
+  { title: "Omics Integration", url: "/omics-integration", icon: Microscope },
   { title: "3D Viewer", url: "/molecular-viewer", icon: Atom },
   { title: "BioNeMo AI", url: "/bionemo", icon: Brain },
   { title: "Reports", url: "/reports", icon: BarChart3 },
