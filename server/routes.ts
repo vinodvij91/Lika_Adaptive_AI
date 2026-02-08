@@ -8886,29 +8886,41 @@ print(json.dumps(result, default=str))
         // Fall back to simulated mode if ESMFold fails (e.g., sequence too long)
         console.warn("ESMFold failed, falling back to simulation:", esmError.message);
         
-        // Generate simulated PDB structure for fallback
         const cleanSeq = proteinSequence.replace(/[^ACDEFGHIKLMNPQRSTVWY]/gi, '').toUpperCase();
         const atoms: string[] = [];
         let atomNum = 1;
+        const threeLetterCode: Record<string, string> = {
+          A: 'ALA', R: 'ARG', N: 'ASN', D: 'ASP', C: 'CYS',
+          E: 'GLU', Q: 'GLN', G: 'GLY', H: 'HIS', I: 'ILE',
+          L: 'LEU', K: 'LYS', M: 'MET', F: 'PHE', P: 'PRO',
+          S: 'SER', T: 'THR', W: 'TRP', Y: 'TYR', V: 'VAL'
+        };
+        
+        const helixRadius = 2.3;
+        const helixRise = 1.5;
+        const helixTurn = (100 / 180) * Math.PI;
         
         for (let i = 0; i < cleanSeq.length; i++) {
           const aa = cleanSeq[i];
-          const threeLetterCode: Record<string, string> = {
-            A: 'ALA', R: 'ARG', N: 'ASN', D: 'ASP', C: 'CYS',
-            E: 'GLU', Q: 'GLN', G: 'GLY', H: 'HIS', I: 'ILE',
-            L: 'LEU', K: 'LYS', M: 'MET', F: 'PHE', P: 'PRO',
-            S: 'SER', T: 'THR', W: 'TRP', Y: 'TYR', V: 'VAL'
-          };
           const res3 = threeLetterCode[aa] || 'ALA';
-          const x = (i * 3.8 * Math.cos(i * 0.5)).toFixed(3);
-          const y = (i * 3.8 * Math.sin(i * 0.5)).toFixed(3);
-          const z = (i * 1.5).toFixed(3);
+          const angle = i * helixTurn;
+          const x = helixRadius * Math.cos(angle);
+          const y = helixRadius * Math.sin(angle);
+          const z = i * helixRise;
           const bFactor = (70 + Math.random() * 25).toFixed(2);
           
-          for (const atomName of ['N', 'CA', 'C', 'O']) {
-            const xOff = parseFloat(x) + (atomName === 'CA' ? 1.45 : atomName === 'C' ? 2.4 : atomName === 'O' ? 2.4 : 0);
-            const yOff = parseFloat(y) + (atomName === 'O' ? 1.2 : 0);
-            atoms.push(`ATOM  ${atomNum.toString().padStart(5)} ${atomName.padEnd(4)} ${res3} A${(i + 1).toString().padStart(4)}    ${xOff.toFixed(3).padStart(8)}${yOff.toFixed(3).padStart(8)}${z.padStart(8)}  1.00${bFactor.padStart(6)}           ${atomName[0]}`);
+          const backboneAtoms = [
+            { name: 'N',  dx: 0,    dy: 0,   dz: 0 },
+            { name: 'CA', dx: 1.45, dy: 0,   dz: 0 },
+            { name: 'C',  dx: 2.4,  dy: 0,   dz: 0 },
+            { name: 'O',  dx: 2.4,  dy: 1.2,  dz: 0 },
+          ];
+          
+          for (const atom of backboneAtoms) {
+            const ax = (x + atom.dx).toFixed(3);
+            const ay = (y + atom.dy).toFixed(3);
+            const az = (z + atom.dz).toFixed(3);
+            atoms.push(`ATOM  ${atomNum.toString().padStart(5)} ${atom.name.padEnd(4)} ${res3} A${(i + 1).toString().padStart(4)}    ${ax.padStart(8)}${ay.padStart(8)}${az.padStart(8)}  1.00${bFactor.padStart(6)}           ${atom.name[0]}`);
             atomNum++;
           }
         }

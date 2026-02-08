@@ -134,65 +134,71 @@ export default function TargetsPage() {
     document.body.appendChild(script);
   }, []);
 
-  // Initialize 3D viewer when dialog opens
   useEffect(() => {
     if (!show3DViewer || !predictionResult?.pdbData || !viewerContainerRef.current || !viewer3DReady) {
       return;
     }
 
-    // Longer delay to ensure the dialog is fully rendered and has dimensions
-    const initTimer = setTimeout(() => {
-      try {
-        const container = viewerContainerRef.current;
-        if (!container || !window.$3Dmol) return;
+    let cancelled = false;
+    let retryCount = 0;
 
-        // Clear previous viewer
+    function tryInit() {
+      if (cancelled) return;
+      const container = viewerContainerRef.current;
+      if (!container || !window.$3Dmol) return;
+
+      const rect = container.getBoundingClientRect();
+      if ((rect.width === 0 || rect.height === 0) && retryCount < 10) {
+        retryCount++;
+        setTimeout(tryInit, 200);
+        return;
+      }
+
+      try {
         if (viewerInstanceRef.current) {
-          try {
-            viewerInstanceRef.current.clear();
-          } catch (e) {}
+          try { viewerInstanceRef.current.clear(); } catch (e) {}
           viewerInstanceRef.current = null;
         }
         container.innerHTML = '';
-        
-        // Ensure container has explicit dimensions for 3Dmol
-        const rect = container.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) {
-          console.warn("Container has no dimensions, retrying...");
-          return;
-        }
-        
-        // Create new viewer with explicit dimensions
+
+        const w = Math.max(rect.width, 400);
+        const h = Math.max(rect.height, 400);
+
         const viewer = window.$3Dmol.createViewer(container, {
-          backgroundColor: '0x000000',
+          backgroundColor: '0x1a1a2e',
           antialias: true,
-          width: rect.width,
-          height: rect.height
+          width: w,
+          height: h,
         });
-        
-        if (!viewer) {
-          console.error("Failed to create 3Dmol viewer");
-          return;
-        }
-        
-        // Add the PDB structure
-        viewer.addModel(predictionResult.pdbData, "pdb");
+
+        if (!viewer) return;
+
+        viewer.addModel(predictionResult!.pdbData, "pdb");
         viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
         viewer.zoomTo();
         viewer.spin(true);
         viewer.render();
-        
-        // Resize to fit container
-        viewer.resize();
-        viewer.render();
-        
+
+        setTimeout(() => {
+          if (!cancelled && viewer) {
+            viewer.resize();
+            viewer.zoomTo();
+            viewer.render();
+          }
+        }, 100);
+
         viewerInstanceRef.current = viewer;
       } catch (error) {
         console.error("Error initializing 3D viewer:", error);
       }
-    }, 300);
+    }
 
-    return () => clearTimeout(initTimer);
+    const initTimer = setTimeout(tryInit, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(initTimer);
+    };
   }, [show3DViewer, predictionResult?.pdbData, viewer3DReady]);
 
   const { data: diseases } = useQuery<{ disease: string; count: number }[]>({
