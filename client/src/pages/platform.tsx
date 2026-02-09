@@ -92,7 +92,7 @@ const domainCards = [
     bgGlow: "bg-cyan-500/20",
     borderColor: "border-cyan-500/30",
     stats: [
-      { value: "750+", label: "Disease Targets" },
+      { value: "3,700+", label: "Disease Targets" },
       { value: "1.7M+", label: "SMILES Library" },
       { value: "8-Stage", label: "Pipeline" },
     ],
@@ -215,7 +215,7 @@ const testimonials = [
 const metrics = [
   { value: "1.7M+", label: "SMILES Library", sublabel: "Curated drug-like molecules" },
   { value: "500K+", label: "Materials Database", sublabel: "Properties & formulations" },
-  { value: "750+", label: "Disease Targets", sublabel: "Validated therapeutic areas" },
+  { value: "3,700+", label: "Disease Targets", sublabel: "Validated therapeutic areas" },
   { value: "10x", label: "Faster Discovery", sublabel: "vs. traditional pipelines" },
 ];
 

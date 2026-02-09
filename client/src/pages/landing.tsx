@@ -108,7 +108,7 @@ export default function LandingPage() {
                     <div className="text-xs text-slate-400">Materials Database</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-white">750+</div>
+                    <div className="text-2xl font-bold text-white">3,700+</div>
                     <div className="text-xs text-slate-400">Disease Targets</div>
                   </div>
                   <div className="text-center md:border-l border-white/10">

@@ -63,7 +63,7 @@ export function MetricsStrip() {
           />
           <AnimatedMetric
             icon={Cpu}
-            value={750}
+            value={3700}
             suffix="+"
             label="Disease Targets"
             duration={1500}

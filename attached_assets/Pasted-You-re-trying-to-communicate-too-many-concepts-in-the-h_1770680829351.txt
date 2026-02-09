@@ -1,0 +1,71 @@
+You’re trying to communicate too many concepts in the hero at once. Make the landing page do one job: explain what Lika is and give one click per persona. Everything else can move down the page.
+
+1. Simplify the hero message
+Current hero line is long and dense. Replace with a tight structure:
+
+Title (one line):
+
+Adaptive AI platform for molecular R&D
+
+Sub‑title (two lines max):
+
+Design and rank drugs, vaccines, and advanced materials using simulation‑in‑the‑loop AI, BioNeMo, and multi‑omics integration.
+
+This already implies breadth without listing every technique (quantum, Fc, etc.).
+
+2. Compress the domain list
+Instead of “Drug Discovery + Vaccine Discovery + Materials Science” twice:
+
+Keep it once, as a secondary line under the subtitle:
+
+Modules for drug discovery, vaccine design, and materials science.
+
+Use three buttons exactly as you have, but visually lighter:
+
+Drug Discovery
+
+Vaccine Discovery
+
+Materials Science
+
+No extra text on the buttons; details belong lower.
+
+3. Move technical stack to a “How it works” band
+The phrase:
+
+“Generative design, simulation‑in‑the‑loop, BioNeMo + Molecular ML + Quantum pipelines … Powered by Fc Effector modeling and multi‑omics integration.”
+
+is great content, just not for the hero. Move it into a section below:
+
+Section header: “How Lika works”
+Bullets or small cards:
+
+Generative design & virtual screening
+
+BioNeMo‑powered structure and sequence models
+
+Fc effector and multi‑omics engines
+
+Quantum & materials optimization
+
+This keeps the hero clean while still showing depth for people who scroll.
+
+4. Tidy the metrics row
+You already have:
+
+1.7M+ SMILES
+
+500K+ materials
+
+750+ disease targets
+
+94.7% model accuracy
+
+Make this a single compact strip with short labels:
+
+| 1.7M+ molecules | 500K+ materials | 750+ disease targets | 94.7% model AUC* |
+
+Use a small footnote (“*example benchmark”) if needed, and drop extra wording.
+
+5. Optional: add one persona‑driven line
+Right under the buttons, a single sentence for buyers:

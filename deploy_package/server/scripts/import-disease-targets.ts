@@ -40,7 +40,7 @@ function parseCSVLine(line: string): string[] {
 }
 
 async function importDiseaseTargets() {
-  const csvPath = path.join(process.cwd(), "attached_assets", "disease_targets_1769368229379.csv");
+  const csvPath = path.join(process.cwd(), "attached_assets", "disease_targets_1770680408815.csv");
   
   if (!fs.existsSync(csvPath)) {
     console.error("CSV file not found:", csvPath);
