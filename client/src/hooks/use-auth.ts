@@ -1,31 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 
-const AUTH_QUERY_KEY = ["/api/ext-auth/me"];
+const AUTH_QUERY_KEY = ["/api/auth/me"];
 
 async function fetchUser(): Promise<User | null> {
-  // DEV MODE: Return mock user for exploration
-  return {
-    id: "dev-user",
-    email: "dev@lika.sciences",
-    firstName: "Developer",
-    lastName: "User",
-    profileImageUrl: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
+  try {
+    const response = await fetch("/api/auth/me", {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json();
+  } catch {
+    return null;
+  }
 }
 
 async function performLogout(): Promise<void> {
   localStorage.removeItem("lika-sciences-domain");
-  const response = await fetch("/api/ext-auth/logout", {
-    method: "POST",
-    credentials: "include",
-  });
-  
-  if (!response.ok) {
-    throw new Error("Logout failed");
-  }
+  window.location.href = "/api/auth/logout";
 }
 
 export function useAuth() {
@@ -34,7 +30,7 @@ export function useAuth() {
     queryKey: AUTH_QUERY_KEY,
     queryFn: fetchUser,
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   const logoutMutation = useMutation({
@@ -42,7 +38,6 @@ export function useAuth() {
     onSuccess: () => {
       queryClient.setQueryData(AUTH_QUERY_KEY, null);
       queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
-      window.location.href = "/";
     },
   });
 

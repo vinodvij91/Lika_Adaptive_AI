@@ -20,6 +20,9 @@ The platform uses a full-stack TypeScript architecture. The frontend is built wi
 - **Collaboration & Templates**: Supports multi-organization collaboration with role-based access and provides disease-specific pipeline templates.
 - **Enterprise-Scale Processing Infrastructure**: Features a robust processing jobs system for orchestration, status tracking, and fault tolerance, including artifact storage and ingestion. Precomputed aggregations provide dashboard data and per-variant metrics.
 
+### Authentication
+Auth0 integration via `express-openid-connect`. Routes: `/api/auth/login` (redirect to Auth0), `/api/auth/logout`, `/api/auth/callback`, `/api/auth/me` (returns current user). Frontend `useAuth()` hook checks `/api/auth/me` and redirects to Auth0 login when unauthenticated. Legacy custom JWT auth at `/api/ext-auth/*` (auth-routes.ts) remains as fallback. Auth0 secrets: `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`.
+
 ### API Design
 The platform uses RESTful API endpoints under `/api/`, with specific `/api/agent/` endpoints for AI interaction.
 

@@ -6,6 +6,7 @@ import { createServer } from "http";
 import authRoutes from "./auth-routes";
 import { storage } from "./storage";
 import { seedDemoData } from "./demo-data-seeder";
+import { auth, requiresAuth } from "express-openid-connect";
 
 const app = express();
 const httpServer = createServer(app);
@@ -27,7 +28,85 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-// External auth routes (for DigitalOcean database)
+const isProduction = process.env.NODE_ENV === "production";
+const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
+const replitDeploymentUrl = process.env.REPLIT_DEPLOYMENT_URL;
+
+let baseURL: string;
+if (isProduction && replitDeploymentUrl) {
+  baseURL = `https://${replitDeploymentUrl}`;
+} else if (replitDevDomain) {
+  baseURL = `https://${replitDevDomain}`;
+} else {
+  baseURL = "http://localhost:5000";
+}
+
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret && isProduction) {
+  throw new Error("SESSION_SECRET environment variable is required in production");
+}
+
+const auth0Enabled = !!(process.env.AUTH0_DOMAIN && process.env.AUTH0_CLIENT_ID && process.env.AUTH0_CLIENT_SECRET);
+
+if (auth0Enabled) {
+  const auth0Config = {
+    authRequired: false,
+    auth0Logout: true,
+    secret: sessionSecret || require("crypto").randomBytes(32).toString("hex"),
+    baseURL,
+    clientID: process.env.AUTH0_CLIENT_ID!,
+    clientSecret: process.env.AUTH0_CLIENT_SECRET!,
+    issuerBaseURL: `https://${process.env.AUTH0_DOMAIN}`,
+    routes: {
+      login: "/api/auth/login",
+      logout: "/api/auth/logout",
+      callback: "/api/auth/callback",
+      postLogoutRedirect: "/",
+    },
+  };
+
+  app.use(auth(auth0Config));
+}
+
+app.get("/api/auth/me", (req: Request, res: Response) => {
+  if ((req as any).oidc?.isAuthenticated()) {
+    const user = (req as any).oidc.user;
+    return res.json({
+      id: user.sub,
+      email: user.email,
+      firstName: user.given_name || user.nickname || user.name?.split(" ")[0] || "",
+      lastName: user.family_name || user.name?.split(" ").slice(1).join(" ") || "",
+      profileImageUrl: user.picture || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+  return res.status(401).json({ error: "Not authenticated" });
+});
+
+const PUBLIC_API_PATHS = [
+  "/api/auth/",
+  "/api/ext-auth/",
+];
+
+app.use("/api", (req: Request, res: Response, next: NextFunction) => {
+  const fullPath = req.baseUrl + req.path;
+  if (PUBLIC_API_PATHS.some(p => fullPath.startsWith(p))) {
+    return next();
+  }
+
+  if (!auth0Enabled) {
+    return next();
+  }
+
+  if ((req as any).oidc?.isAuthenticated()) {
+    return next();
+  }
+
+  return res.status(401).json({ error: "Not authenticated" });
+});
+
+// External auth routes (for DigitalOcean database - legacy fallback)
 app.use("/api/ext-auth", authRoutes);
 
 export function log(message: string, source = "express") {
