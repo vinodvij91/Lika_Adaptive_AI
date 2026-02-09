@@ -6638,6 +6638,18 @@ print(df.to_string())
     }
   });
 
+  app.post("/api/campaigns/:campaignId/sar/auto-optimize", requireAuth, async (req, res) => {
+    try {
+      const { runAutoSarOptimization } = await import("./services/auto-sar-optimizer");
+      const { diseaseContext } = req.body;
+      const result = await runAutoSarOptimization(req.params.campaignId, diseaseContext || "");
+      res.json(result);
+    } catch (error) {
+      console.error("Error running auto SAR optimization:", error);
+      res.status(500).json({ error: "Failed to run auto SAR optimization" });
+    }
+  });
+
   // ============================================
   // MULTI-TARGET SAR ENDPOINTS
   // ============================================

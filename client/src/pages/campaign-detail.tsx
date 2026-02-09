@@ -57,7 +57,7 @@ const jobTypeLabels: Record<string, string> = {
   quantum_optimization: "Quantum Optimization",
   quantum_scoring: "Quantum Scoring",
   assay_validation: "Assay Validation",
-  sar_feedback: "SAR Feedback",
+  sar_feedback: "SAR & Optimization",
   vs_aqaffinity: "AQAffinity (GPU)",
   vs_autodock: "AutoDock Vina (CPU)",
   vs_consensus: "Consensus Analysis",
@@ -70,6 +70,7 @@ const jobTypeIcons: Record<string, typeof Sparkles> = {
   scoring: FlaskConical,
   quantum_optimization: Atom,
   quantum_scoring: Atom,
+  sar_feedback: Activity,
   vs_aqaffinity: Zap,
   vs_autodock: Cpu,
   vs_consensus: GitCompare,
@@ -265,7 +266,7 @@ export default function CampaignDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between gap-4 overflow-x-auto pb-2">
-                {["generation", "filtering", "docking", "scoring"].map((type, index) => {
+                {["generation", "filtering", "docking", "scoring", "sar_feedback"].map((type, index) => {
                   const job = campaign.jobs?.find((j) => j.type === type);
                   const Icon = jobTypeIcons[type] || Workflow;
                   
@@ -305,7 +306,7 @@ export default function CampaignDetailPage() {
                           </Badge>
                         )}
                       </div>
-                      {index < 3 && (
+                      {index < 4 && (
                         <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                       )}
                     </div>
@@ -457,7 +458,7 @@ export default function CampaignDetailPage() {
               </CardHeader>
               <CardContent className="pt-0">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Your screening campaign has completed. Here's the recommended workflow to advance your hit compounds:
+                  Your screening campaign has completed. SAR analysis and molecule optimization ran automatically. Here's how to proceed:
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="p-3 bg-background rounded-md border">
@@ -470,9 +471,9 @@ export default function CampaignDetailPage() {
                   <div className="p-3 bg-background rounded-md border">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded">2</span>
-                      <span className="text-sm font-medium">Analyze SAR Patterns</span>
+                      <span className="text-sm font-medium">Review SAR & Optimized Analogs</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">Use SAR and Multi-Target tabs to identify structure-activity relationships</p>
+                    <p className="text-xs text-muted-foreground">Open the SAR tab to see pre-computed optimized analogs, dose scenarios, and property improvements</p>
                   </div>
                   <div className="p-3 bg-background rounded-md border">
                     <div className="flex items-center gap-2 mb-1">
@@ -879,7 +880,7 @@ export default function CampaignDetailPage() {
             </TabsContent>
 
             <TabsContent value="sar">
-              <SarVisualization campaignId={id || ""} diseaseContext={campaign?.name || campaign?.domainType || ""} />
+              <SarVisualization campaignId={id || ""} diseaseContext={campaign?.name || campaign?.domainType || ""} campaignStatus={campaign?.status || ""} />
             </TabsContent>
 
             <TabsContent value="multi-target">

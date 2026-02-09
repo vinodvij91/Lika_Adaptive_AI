@@ -1,6 +1,7 @@
 import { storage } from "./storage";
 import { bionemoClient, molecularMLClient, dockingClient, quantumClient } from "./clients";
 import type { Campaign, PipelineConfig, JobType, InsertMoleculeScore, InsertLearningGraphEntry } from "@shared/schema";
+import { runAutoSarOptimization } from "./services/auto-sar-optimizer";
 
 export class JobOrchestrator {
   private runningCampaigns: Set<string> = new Set();
@@ -217,6 +218,23 @@ export class JobOrchestrator {
           console.error(`[Orchestrator] Quantum step failed:`, quantumError);
           await storage.updateJob(quantumJob.id, { status: "failed", finishedAt: new Date() });
         }
+      }
+
+      const sarJob = await storage.createJob({
+        campaignId,
+        type: "sar_feedback" as JobType,
+        status: "running",
+      });
+      await storage.updateJob(sarJob.id, { startedAt: new Date() });
+
+      try {
+        const diseaseContext = campaign.domainType || "";
+        const sarResult = await runAutoSarOptimization(campaignId, diseaseContext);
+        console.log(`[Orchestrator] Auto SAR optimization: ${sarResult.totalProcessed} molecules, ${sarResult.totalAnalogsInserted} analogs, ${sarResult.totalDoseScenarios} dose scenarios`);
+        await storage.updateJob(sarJob.id, { status: "completed", finishedAt: new Date() });
+      } catch (sarError) {
+        console.error(`[Orchestrator] Auto SAR optimization failed:`, sarError);
+        await storage.updateJob(sarJob.id, { status: "failed", finishedAt: new Date() });
       }
 
       await storage.updateCampaign(campaignId, { status: "completed" });
