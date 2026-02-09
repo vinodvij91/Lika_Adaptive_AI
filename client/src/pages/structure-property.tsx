@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +47,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Info,
+  ChevronLeft,
+  ArrowRight,
+  Table,
 } from "lucide-react";
 import {
   Sheet,
@@ -54,6 +58,13 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import {
+  MaterialDetailSheet,
+  generateMaterialDetail,
+  generateMaterialsForFamily,
+  seededRandom,
+  type MaterialDetail,
+} from "@/components/material-detail-panel";
 
 function formatNumber(num: number): string {
   if (num >= 1000000) {
@@ -89,404 +100,6 @@ const PROPERTY_OFFSETS: Record<string, number> = {
   conductivity: 0.2,
   flexibility: 0.15,
 };
-
-// Individual material types for drill-down
-interface IndividualMaterial {
-  id: string;
-  smiles: string;
-  name: string;
-  family: string;
-  properties: {
-    thermalStability: number;
-    tensileStrength: number;
-    conductivity: number;
-    flexibility: number;
-    molecularWeight: number;
-    glassTransition: number;
-    meltingPoint: number;
-  };
-  confidenceScores: {
-    thermalStability: number;
-    tensileStrength: number;
-    conductivity: number;
-    flexibility: number;
-  };
-  synthesis: {
-    feasibility: number;
-    complexity: string;
-    estimatedCost: string;
-    recommendedRoute: string;
-    precursors: string[];
-  };
-  similarMaterials: {
-    id: string;
-    name: string;
-    similarity: number;
-    smiles: string;
-  }[];
-  overallScore: number;
-}
-
-// SMILES templates for different polymer families
-const SMILES_TEMPLATES: Record<string, string[]> = {
-  "Polyamide": [
-    "CC(=O)NCCCCCCNC(=O)CCCCC",
-    "CC(=O)NC1CCC(NC(=O)C2CCC2)CC1",
-    "O=C(NCCCCCCNC(=O)CCCCCC)CCCCCC"
-  ],
-  "Polyester": [
-    "CC(=O)OCCCO[C@@H](C)C(=O)O",
-    "O=C(OCCCO)c1ccc(C(=O)OCCCO)cc1",
-    "CC(C)(C)OC(=O)c1ccc(C(=O)OC(C)(C)C)cc1"
-  ],
-  "Polyethylene": [
-    "CCCCCCCCCCCCCCCCCCCC",
-    "CC(C)CCCCCCCCCCCCCCCC",
-    "CCCCC(CC)CCCCCCCCCCCC"
-  ],
-  "Polypropylene": [
-    "CC(C)CC(C)CC(C)CC(C)C",
-    "C[C@@H](CC(C)C)CC(C)CC(C)C",
-    "CC(C)C[C@H](C)CC(C)CC(C)C"
-  ],
-  "PEEK": [
-    "Oc1ccc(Oc2ccc(C(=O)c3ccc(O)cc3)cc2)cc1",
-    "c1cc(Oc2ccc(C(=O)c3ccc(Oc4ccccc4)cc3)cc2)ccc1O",
-    "O=C(c1ccc(Oc2ccccc2)cc1)c1ccc(Oc2ccccc2)cc1"
-  ],
-  "PPS": [
-    "c1ccc(Sc2ccccc2)cc1",
-    "c1cc(Sc2ccc(Sc3ccccc3)cc2)ccc1S",
-    "Sc1ccc(Sc2ccc(Sc3ccccc3)cc2)cc1"
-  ],
-  "PTFE": [
-    "FC(F)(F)C(F)(F)C(F)(F)C(F)(F)F",
-    "FC(F)(C(F)(F)C(F)(F)F)C(F)(F)C(F)(F)F",
-    "FC(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F"
-  ],
-};
-
-function generateIndividualMaterial(family: string, index: number, seed: number): IndividualMaterial {
-  const rand = seededRandom(seed + index * 1337);
-  const templates = SMILES_TEMPLATES[family] || SMILES_TEMPLATES["Polyethylene"];
-  const smiles = templates[index % templates.length];
-  
-  const baseScore = 0.5 + rand() * 0.4;
-  
-  return {
-    id: `MAT-${family.substring(0, 3).toUpperCase()}-${String(index + 1).padStart(5, "0")}`,
-    smiles,
-    name: `${family} Variant ${index + 1}`,
-    family,
-    properties: {
-      thermalStability: 150 + rand() * 300,
-      tensileStrength: 20 + rand() * 180,
-      conductivity: rand() * 10,
-      flexibility: 0.1 + rand() * 0.8,
-      molecularWeight: 5000 + rand() * 95000,
-      glassTransition: 50 + rand() * 200,
-      meltingPoint: 100 + rand() * 300,
-    },
-    confidenceScores: {
-      thermalStability: 0.7 + rand() * 0.25,
-      tensileStrength: 0.65 + rand() * 0.3,
-      conductivity: 0.6 + rand() * 0.35,
-      flexibility: 0.75 + rand() * 0.2,
-    },
-    synthesis: {
-      feasibility: 0.4 + rand() * 0.55,
-      complexity: rand() > 0.6 ? "High" : rand() > 0.3 ? "Medium" : "Low",
-      estimatedCost: rand() > 0.5 ? "$$$" : rand() > 0.25 ? "$$" : "$",
-      recommendedRoute: rand() > 0.5 ? "Condensation polymerization" : "Ring-opening polymerization",
-      precursors: [
-        rand() > 0.5 ? "Adipic acid" : "Terephthalic acid",
-        rand() > 0.5 ? "Hexamethylenediamine" : "Ethylene glycol",
-        rand() > 0.7 ? "Catalyst (Ti-based)" : "Catalyst (Sb-based)",
-      ],
-    },
-    similarMaterials: Array.from({ length: 3 }, (_, i) => ({
-      id: `MAT-${family.substring(0, 3).toUpperCase()}-${String(i + 100 + index).padStart(5, "0")}`,
-      name: `${family} Variant ${i + 100 + index}`,
-      similarity: 0.75 + rand() * 0.2,
-      smiles: templates[(i + index + 1) % templates.length],
-    })),
-    overallScore: baseScore,
-  };
-}
-
-function generateMaterialsFromGroup(family: string, count: number, seed: number): IndividualMaterial[] {
-  return Array.from({ length: count }, (_, i) => generateIndividualMaterial(family, i, seed));
-}
-
-// Material Detail Panel Component
-interface MaterialDetailPanelProps {
-  material: IndividualMaterial | null;
-  onClose: () => void;
-  onSelectMaterial: (material: IndividualMaterial) => void;
-}
-
-function MaterialDetailPanel({ material, onClose, onSelectMaterial }: MaterialDetailPanelProps) {
-  const { toast } = useToast();
-  
-  if (!material) return null;
-  
-  const copySmiles = () => {
-    navigator.clipboard.writeText(material.smiles);
-    toast({
-      title: "SMILES Copied",
-      description: "Structure copied to clipboard",
-    });
-  };
-  
-  const getFeasibilityColor = (score: number) => {
-    if (score >= 0.7) return "text-green-600 dark:text-green-400";
-    if (score >= 0.4) return "text-yellow-600 dark:text-yellow-400";
-    return "text-red-600 dark:text-red-400";
-  };
-  
-  const getConfidenceBadge = (score: number) => {
-    if (score >= 0.85) return { label: "High", variant: "default" as const };
-    if (score >= 0.7) return { label: "Medium", variant: "secondary" as const };
-    return { label: "Low", variant: "outline" as const };
-  };
-  
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div>
-          <h2 className="text-lg font-semibold">{material.name}</h2>
-          <p className="text-sm text-muted-foreground font-mono">{material.id}</p>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-material-panel">
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-6">
-          {/* Overall Score */}
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-sm text-muted-foreground mb-1">Overall Score</p>
-            <p className="text-4xl font-bold">{(material.overallScore * 100).toFixed(1)}%</p>
-            <Badge variant="secondary" className="mt-2">{material.family}</Badge>
-          </div>
-          
-          {/* SMILES Structure */}
-          <div>
-            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-              <Beaker className="h-4 w-4" />
-              Chemical Structure (SMILES)
-            </h3>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs bg-muted p-3 rounded-md font-mono break-all" data-testid="text-smiles">
-                {material.smiles}
-              </code>
-              <Button variant="outline" size="icon" onClick={copySmiles} data-testid="button-copy-smiles">
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            {/* Structure Schematic */}
-            <div className="mt-3 p-3 bg-muted/30 rounded-md border">
-              <p className="text-xs text-muted-foreground mb-2">Repeat Unit Schematic</p>
-              <div className="font-mono text-xs leading-relaxed text-center" data-testid="structure-preview">
-                {material.family === "Polyamide" && (
-                  <pre className="inline-block text-left">{`
-     O       O
-     ||      ||
- ~N-C-(CH2)6-C-N-(CH2)6~
-  H             H
-                  `}</pre>
-                )}
-                {material.family === "Polyester" && (
-                  <pre className="inline-block text-left">{`
-     O           O
-     ||          ||
- ~O-C-[Ar]-C-O-(CH2)2~
-                  `}</pre>
-                )}
-                {material.family === "Polyethylene" && (
-                  <pre className="inline-block text-left">{`
- ~(CH2-CH2)n~
-                  `}</pre>
-                )}
-                {material.family === "PEEK" && (
-                  <pre className="inline-block text-left">{`
-       O
-       ||
- ~[Ar]-O-[Ar]-C-[Ar]-O~
-                  `}</pre>
-                )}
-                {!["Polyamide", "Polyester", "Polyethylene", "PEEK"].includes(material.family) && (
-                  <pre className="inline-block text-left">{`
- ~[Repeat Unit]n~
-                  `}</pre>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <Separator />
-          
-          {/* Properties with Confidence */}
-          <div>
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              Predicted Properties
-            </h3>
-            <div className="space-y-3">
-              <PropertyRow 
-                label="Thermal Stability" 
-                value={`${material.properties.thermalStability.toFixed(1)}°C`}
-                confidence={material.confidenceScores.thermalStability}
-              />
-              <PropertyRow 
-                label="Tensile Strength" 
-                value={`${material.properties.tensileStrength.toFixed(1)} MPa`}
-                confidence={material.confidenceScores.tensileStrength}
-              />
-              <PropertyRow 
-                label="Conductivity" 
-                value={`${material.properties.conductivity.toFixed(2)} S/m`}
-                confidence={material.confidenceScores.conductivity}
-              />
-              <PropertyRow 
-                label="Flexibility Index" 
-                value={material.properties.flexibility.toFixed(3)}
-                confidence={material.confidenceScores.flexibility}
-              />
-              <div className="pt-2 border-t">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Molecular Weight</span>
-                  <span className="font-mono">{formatNumber(material.properties.molecularWeight)} Da</span>
-                </div>
-                <div className="flex justify-between text-sm mt-1">
-                  <span className="text-muted-foreground">Glass Transition (Tg)</span>
-                  <span className="font-mono">{material.properties.glassTransition.toFixed(1)}°C</span>
-                </div>
-                <div className="flex justify-between text-sm mt-1">
-                  <span className="text-muted-foreground">Melting Point (Tm)</span>
-                  <span className="font-mono">{material.properties.meltingPoint.toFixed(1)}°C</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <Separator />
-          
-          {/* Synthesis Feasibility */}
-          <div>
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <FlaskConical className="h-4 w-4" />
-              Synthesis Feasibility
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Feasibility Score</span>
-                <div className="flex items-center gap-2">
-                  <Progress value={material.synthesis.feasibility * 100} className="w-24 h-2" />
-                  <span className={`text-sm font-semibold ${getFeasibilityColor(material.synthesis.feasibility)}`}>
-                    {(material.synthesis.feasibility * 100).toFixed(0)}%
-                  </span>
-                </div>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Complexity</span>
-                <Badge variant={material.synthesis.complexity === "Low" ? "secondary" : material.synthesis.complexity === "Medium" ? "outline" : "destructive"}>
-                  {material.synthesis.complexity}
-                </Badge>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Estimated Cost</span>
-                <span className="font-mono">{material.synthesis.estimatedCost}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-muted-foreground">Recommended Route:</span>
-                <p className="mt-1 font-medium">{material.synthesis.recommendedRoute}</p>
-              </div>
-              <div className="text-sm">
-                <span className="text-muted-foreground">Key Precursors:</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {material.synthesis.precursors.map((p, i) => (
-                    <Badge key={i} variant="outline" className="text-xs">{p}</Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <Separator />
-          
-          {/* Similar Materials */}
-          <div>
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              Similar Materials
-            </h3>
-            <div className="space-y-2">
-              {material.similarMaterials.map((sim) => (
-                <div 
-                  key={sim.id}
-                  className="p-3 border rounded-lg cursor-pointer hover-elevate"
-                  onClick={() => onSelectMaterial(generateIndividualMaterial(material.family, parseInt(sim.id.split("-")[2]), 42))}
-                  data-testid={`similar-material-${sim.id}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{sim.name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{sim.id}</p>
-                    </div>
-                    <Badge variant="secondary">{(sim.similarity * 100).toFixed(0)}% similar</Badge>
-                  </div>
-                  <code className="text-xs text-muted-foreground mt-1 block truncate">{sim.smiles}</code>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </ScrollArea>
-      
-      <div className="p-4 border-t flex gap-2">
-        <Button className="flex-1" variant="outline" onClick={copySmiles} data-testid="button-export-structure">
-          <Download className="h-4 w-4 mr-2" />
-          Export Structure
-        </Button>
-        <Button className="flex-1" data-testid="button-add-to-pipeline">
-          <ExternalLink className="h-4 w-4 mr-2" />
-          Add to Pipeline
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// Property Row Component with Confidence
-function PropertyRow({ label, value, confidence }: { label: string; value: string; confidence: number }) {
-  const confidenceBadge = confidence >= 0.85 
-    ? { label: "High", className: "bg-green-500/10 text-green-700 dark:text-green-400" }
-    : confidence >= 0.7 
-    ? { label: "Med", className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400" }
-    : { label: "Low", className: "bg-red-500/10 text-red-700 dark:text-red-400" };
-    
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-2">
-        <span className="font-mono text-sm">{value}</span>
-        <Badge variant="outline" className={`text-xs ${confidenceBadge.className}`}>
-          {confidenceBadge.label} ({(confidence * 100).toFixed(0)}%)
-        </Badge>
-      </div>
-    </div>
-  );
-};
-
-function seededRandom(seed: number): () => number {
-  let state = seed;
-  return () => {
-    state = (state * 1103515245 + 12345) & 0x7fffffff;
-    return state / 0x7fffffff;
-  };
-}
 
 function generateMockPercentileData(totalVariants: number, groupBy: string, seed: number) {
   const rand = seededRandom(seed);
@@ -615,94 +228,174 @@ function DensityHeatmap({
   yLabel?: string;
 }) {
   const maxCount = Math.max(...data.map(d => d.count));
-  const gridSize = 8; // 8x8 grid for better visibility
+  const gridSize = 8;
   const xLabels = ["Low", "", "", "Med", "", "", "", "High"];
   const yLabels = ["High", "", "", "Med", "", "", "", "Low"];
   
   return (
     <div className="space-y-3">
       <div className="flex items-stretch gap-2">
-        {/* Y-axis label */}
         <div className="flex items-center justify-center w-6">
           <span className="text-xs text-muted-foreground font-medium -rotate-90 whitespace-nowrap">
             {yLabel}
           </span>
         </div>
         
-        {/* Y-axis ticks */}
         <div className="flex flex-col justify-between text-xs text-muted-foreground py-1" style={{ width: '32px' }}>
           {yLabels.map((label, i) => (
-            <span key={i} className="text-right pr-1 h-6 flex items-center justify-end">{label}</span>
+            <span key={i} className="text-right">{label}</span>
           ))}
         </div>
         
-        {/* Heatmap grid */}
-        <div className="flex-1 max-w-md">
-          <div className="grid grid-cols-8 gap-1">
-            {data.slice(0, gridSize * gridSize).map((cell, i) => {
-              const intensity = cell.count / maxCount;
-              const hue = 220 - intensity * 160;
+        <div className="flex-1">
+          <div 
+            className="grid gap-[2px]"
+            style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)`, gridTemplateRows: `repeat(${gridSize}, 1fr)` }}
+          >
+            {Array.from({ length: gridSize * gridSize }).map((_, idx) => {
+              const dataIdx = idx % data.length;
+              const item = data[dataIdx] || { count: 0, avgScore: 0 };
+              const intensity = Math.min(item.count / maxCount, 1);
+              const hue = 142;
+              const alpha = Math.max(0.05, intensity * 0.8);
+              
               return (
                 <div
-                  key={i}
-                  className="aspect-square rounded cursor-pointer hover-elevate"
-                  style={{
-                    backgroundColor: `hsl(${hue}, 70%, ${40 + intensity * 30}%)`,
-                    opacity: 0.3 + intensity * 0.7,
-                    minHeight: '24px',
+                  key={idx}
+                  className="aspect-square rounded-sm cursor-pointer transition-transform"
+                  style={{ 
+                    backgroundColor: `hsla(${hue}, 76%, 36%, ${alpha})`,
+                    minHeight: '20px',
                   }}
-                  title={`Count: ${formatNumber(cell.count)}\nAvg Score: ${cell.avgScore.toFixed(2)}\nClick to view materials`}
-                  onClick={() => onCellClick?.(i)}
-                  data-testid={`heatmap-cell-${i}`}
+                  onClick={() => onCellClick?.(idx)}
+                  title={`Count: ${formatNumber(item.count)} | Avg Score: ${item.avgScore?.toFixed(3) || 'N/A'}`}
+                  data-testid={`heatmap-cell-${idx}`}
                 />
               );
             })}
           </div>
           
-          {/* X-axis ticks */}
-          <div className="flex justify-between text-xs text-muted-foreground mt-1 px-0.5">
+          <div className="flex justify-between text-xs text-muted-foreground mt-1 px-1">
             {xLabels.map((label, i) => (
-              <span key={i} className="w-6 text-center">{label}</span>
+              <span key={i}>{label}</span>
             ))}
           </div>
-          
-          {/* X-axis label */}
-          <div className="text-center mt-1">
-            <span className="text-xs text-muted-foreground font-medium">{xLabel}</span>
-          </div>
-        </div>
-        
-        {/* Color legend */}
-        <div className="flex flex-col items-center justify-center gap-1 ml-4">
-          <span className="text-xs text-muted-foreground">High</span>
-          <div className="flex flex-col gap-0.5">
-            {[1, 0.8, 0.6, 0.4, 0.2].map((v, i) => (
-              <div
-                key={i}
-                className="w-4 h-4 rounded-sm"
-                style={{
-                  backgroundColor: `hsl(${220 - v * 160}, 70%, ${40 + v * 30}%)`,
-                }}
-              />
-            ))}
-          </div>
-          <span className="text-xs text-muted-foreground">Low</span>
-          <span className="text-xs text-muted-foreground mt-1">Density</span>
+          <div className="text-center text-xs text-muted-foreground mt-1 font-medium">{xLabel}</div>
         </div>
       </div>
+      
+      <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
+        <span>Low density</span>
+        <div className="flex gap-px">
+          {[0.1, 0.3, 0.5, 0.7, 0.9].map((alpha, i) => (
+            <div
+              key={i}
+              className="w-5 h-3 rounded-sm"
+              style={{ backgroundColor: `hsla(142, 76%, 36%, ${alpha})` }}
+            />
+          ))}
+        </div>
+        <span>High density</span>
+      </div>
+    </div>
+  );
+}
+
+interface GroupDrillDownProps {
+  groupLabel: string;
+  groupBy: string;
+  seed: number;
+  onClose: () => void;
+  onSelectVariant: (material: MaterialDetail) => void;
+}
+
+function GroupDrillDown({ groupLabel, groupBy, seed, onClose, onSelectVariant }: GroupDrillDownProps) {
+  const familyName = groupBy === "family" ? groupLabel : "Polyethylene";
+  const variants = useMemo(() => generateMaterialsForFamily(familyName, 20, seed), [familyName, seed]);
+
+  const getTierBadge = (feasibility: number) => {
+    if (feasibility >= 0.7) return <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30 text-xs">Production-Viable</Badge>;
+    if (feasibility >= 0.4) return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 text-xs">Pilot-Ready</Badge>;
+    return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-xs">Lab-Only</Badge>;
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-drilldown">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h2 className="text-lg font-semibold">{groupLabel} Variants</h2>
+            <p className="text-sm text-muted-foreground">{variants.length} variants in this {GROUP_CONFIGS[groupBy]?.paramLabel?.toLowerCase() || "group"}</p>
+          </div>
+        </div>
+        <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-drilldown-x">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-2 font-medium">Variant</th>
+                <th className="text-right py-2 font-medium">Score</th>
+                <th className="text-right py-2 font-medium">Thermal</th>
+                <th className="text-right py-2 font-medium">Tensile</th>
+                <th className="text-right py-2 font-medium">Tier</th>
+              </tr>
+            </thead>
+            <tbody>
+              {variants.map((v) => (
+                <tr
+                  key={v.id}
+                  className="border-b border-muted hover-elevate cursor-pointer"
+                  onClick={() => onSelectVariant(v)}
+                  data-testid={`variant-row-${v.id}`}
+                >
+                  <td className="py-2">
+                    <div className="font-medium">{v.name}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{v.id}</div>
+                  </td>
+                  <td className="text-right py-2 font-mono font-medium">{(v.overallScore * 100).toFixed(1)}%</td>
+                  <td className="text-right py-2 font-mono">{v.properties.thermalStability.toFixed(0)}&deg;C</td>
+                  <td className="text-right py-2 font-mono">{v.properties.tensileStrength.toFixed(0)} MPa</td>
+                  <td className="text-right py-2">{getTierBadge(v.synthesis.feasibility)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </ScrollArea>
     </div>
   );
 }
 
 export default function StructurePropertyPage() {
   const { toast } = useToast();
+  const [location] = useLocation();
   const [groupBy, setGroupBy] = useState<string>("family");
   const [propertyX, setPropertyX] = useState<string>("thermal_stability");
   const [propertyY, setPropertyY] = useState<string>("tensile_strength");
   const [isRunningAnalysis, setIsRunningAnalysis] = useState(false);
   const [analysisSeed, setAnalysisSeed] = useState(0);
-  const [selectedMaterial, setSelectedMaterial] = useState<IndividualMaterial | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<MaterialDetail | null>(null);
   const [materialPanelOpen, setMaterialPanelOpen] = useState(false);
+  const [drillDownGroup, setDrillDownGroup] = useState<string | null>(null);
+  const [drillDownOpen, setDrillDownOpen] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const family = params.get("family");
+    if (family) {
+      setGroupBy("family");
+      setDrillDownGroup(family);
+      setDrillDownOpen(true);
+    }
+  }, []);
 
   const handleRunAnalysis = () => {
     setIsRunningAnalysis(true);
@@ -710,7 +403,6 @@ export default function StructurePropertyPage() {
       title: "Running Analysis",
       description: "Processing 127K+ material variants...",
     });
-    // Simulate analysis with new random seed
     setTimeout(() => {
       setAnalysisSeed(prev => prev + 1);
       setIsRunningAnalysis(false);
@@ -721,13 +413,18 @@ export default function StructurePropertyPage() {
     }, 1500);
   };
 
-  const handleMaterialClick = (family: string, index: number) => {
-    const material = generateIndividualMaterial(family, index, seed);
+  const handleGroupClick = (groupLabel: string) => {
+    setDrillDownGroup(groupLabel);
+    setDrillDownOpen(true);
+  };
+
+  const handleVariantClick = (material: MaterialDetail) => {
     setSelectedMaterial(material);
     setMaterialPanelOpen(true);
   };
 
-  const handleSelectMaterial = (material: IndividualMaterial) => {
+  const handleMaterialClick = (family: string, index: number) => {
+    const material = generateMaterialDetail(family, index, seed);
     setSelectedMaterial(material);
     setMaterialPanelOpen(true);
   };
@@ -1010,7 +707,7 @@ export default function StructurePropertyPage() {
                 <CardHeader>
                   <CardTitle className="text-base">Binned Property Scatter</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    {propertyX.replace(/_/g, ' ')} vs {propertyY.replace(/_/g, ' ')} - color intensity shows variant density
+                    {propertyX.replace(/_/g, ' ')} vs {propertyY.replace(/_/g, ' ')} - click any cell to drill down to underlying variants
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -1021,7 +718,7 @@ export default function StructurePropertyPage() {
                     onCellClick={(cellIndex) => {
                       const families = GROUP_CONFIGS.family.labels;
                       const family = families[cellIndex % families.length];
-                      handleMaterialClick(family, cellIndex);
+                      handleGroupClick(family);
                     }}
                   />
                   <div className="mt-6 grid grid-cols-2 gap-4">
@@ -1047,7 +744,7 @@ export default function StructurePropertyPage() {
                 <CardHeader>
                   <CardTitle className="text-base">Performance by {groupConfig.paramLabel}</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Aggregated metrics across {groupData.length} {groupConfig.paramLabel.toLowerCase()}s
+                    Click any row to see underlying variants for that {groupConfig.paramLabel.toLowerCase()}
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -1083,6 +780,7 @@ export default function StructurePropertyPage() {
                           <th className="text-right py-2 font-medium">Top Performers</th>
                           <th className="text-right py-2 font-medium">Avg Score</th>
                           <th className="text-right py-2 font-medium">P95 Score</th>
+                          <th className="text-right py-2 font-medium"></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1090,7 +788,7 @@ export default function StructurePropertyPage() {
                           <tr 
                             key={row.group} 
                             className="border-b border-muted hover-elevate cursor-pointer"
-                            onClick={() => handleMaterialClick(row.group, idx)}
+                            onClick={() => handleGroupClick(row.group)}
                             data-testid={`family-row-${row.group.toLowerCase().replace(/\s+/g, '-')}`}
                           >
                             <td className="py-2 font-medium">{row.group}</td>
@@ -1100,6 +798,12 @@ export default function StructurePropertyPage() {
                             </td>
                             <td className="text-right py-2 font-mono">{row.avgScore.toFixed(3)}</td>
                             <td className="text-right py-2 font-mono font-medium">{row.p95Score.toFixed(3)}</td>
+                            <td className="text-right py-2">
+                              <Badge variant="outline" className="text-xs">
+                                <Table className="h-3 w-3 mr-1" />
+                                View
+                              </Badge>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1112,16 +816,29 @@ export default function StructurePropertyPage() {
         </div>
       </main>
 
-      {/* Material Detail Sheet Panel */}
-      <Sheet open={materialPanelOpen} onOpenChange={setMaterialPanelOpen}>
-        <SheetContent className="w-full sm:max-w-lg p-0" side="right">
-          <MaterialDetailPanel
-            material={selectedMaterial}
-            onClose={() => setMaterialPanelOpen(false)}
-            onSelectMaterial={handleSelectMaterial}
-          />
+      <Sheet open={drillDownOpen} onOpenChange={setDrillDownOpen}>
+        <SheetContent className="w-full sm:max-w-2xl p-0" side="right">
+          {drillDownGroup && (
+            <GroupDrillDown
+              groupLabel={drillDownGroup}
+              groupBy={groupBy}
+              seed={seed}
+              onClose={() => setDrillDownOpen(false)}
+              onSelectVariant={(material) => {
+                setDrillDownOpen(false);
+                handleVariantClick(material);
+              }}
+            />
+          )}
         </SheetContent>
       </Sheet>
+
+      <MaterialDetailSheet
+        material={selectedMaterial}
+        open={materialPanelOpen}
+        onOpenChange={setMaterialPanelOpen}
+        onSelectMaterial={(m) => setSelectedMaterial(m)}
+      />
     </div>
   );
 }

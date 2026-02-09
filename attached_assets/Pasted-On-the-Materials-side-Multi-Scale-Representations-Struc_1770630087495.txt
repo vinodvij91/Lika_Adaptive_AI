@@ -1,0 +1,38 @@
+On the Materials side, Multi‑Scale Representations, Structure–Property, and Manufacturability are currently disconnected from the individual materials. I see grouped metrics (Polymer / Crystal / Composite) and manufacturability scores, but I can’t click through to see which material or variant each block corresponds to.
+
+Please make the views fully drill‑downable:
+
+Manufacturability page
+
+Each “Material Scores” card should be clickable and open a detail panel showing:
+
+Material/variant name + ID and material family (polymer, crystal, composite, etc.).
+
+Key predicted properties used in the score (e.g., Young’s modulus, tensile strength, thermal stability, process temperature, cost proxy).
+
+Tier label (Production‑Viable / Pilot‑Ready / Lab‑Only).
+
+Buttons: “View in Structure–Property” and “Open in Materials Library / Variants”.
+
+Clicking “Show Only Production‑Viable” should filter the same set of materials, and all cards remain clickable.
+
+Structure–Property Analytics
+
+When I group by Material Family / Scaffold / Chain Length Bins / Dopant Type and look at the distributions, I should be able to:
+
+Click on a family/bin to see a table of underlying variants.
+
+From that table, click a variant to open the same detail view as above.
+
+Multi‑Scale Representation Engine
+
+For each material family (Polymer, Crystal, Composite, Membrane, Catalyst), clearly indicate that the computed descriptors are feeding into the property prediction models used by Structure–Property and Manufacturability.
+
+Add a small info text at the top:
+
+“Multi‑Scale Representation Engine computes molecular, chain/lattice, and bulk descriptors for each material family. These representations are used by property prediction and manufacturability scoring.”
+
+In the “Representation Artifacts” section, make the “Property Predictions” and “Score Distribution” artifacts link back to the corresponding Structure–Property and Manufacturability views for the same dataset.
+
+Goal: A user starting from Manufacturability should be able to go from a high‑level score → material detail → structure‑property context → underlying multi‑scale representations, all for the same material or variant.
+

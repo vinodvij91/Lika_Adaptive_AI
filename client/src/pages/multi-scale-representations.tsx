@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import { PageHeader } from "@/components/page-header";
 import { ResultsPanel } from "@/components/results-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,9 @@ import {
   BarChart3,
   RefreshCw,
   Database,
+  Info,
+  Factory,
+  ExternalLink,
 } from "lucide-react";
 
 function formatNumber(num: number): string {
@@ -49,6 +53,25 @@ interface ScaleRepresentation {
   descriptors: string[];
   enabled: boolean;
 }
+
+const FAMILY_DESCRIPTORS: Record<string, { families: string[]; note: string }> = {
+  molecular: {
+    families: ["Polymer", "Crystal", "Composite", "Membrane", "Catalyst"],
+    note: "Morgan fingerprints, MACCS keys, atom pair descriptors, and functional group counts for each material family.",
+  },
+  chain: {
+    families: ["Polymer", "Composite", "Membrane"],
+    note: "Chain length distributions, sequence patterns, persistence length, branching degree, and cross-link density.",
+  },
+  lattice: {
+    families: ["Crystal", "Catalyst"],
+    note: "Unit cell parameters, space group encoding, coordination numbers, bond angle distributions, and defect site markers.",
+  },
+  bulk: {
+    families: ["Polymer", "Crystal", "Composite", "Membrane", "Catalyst"],
+    note: "Density estimates, thermal conductivity proxy, mechanical modulus indicators, dielectric response features.",
+  },
+};
 
 function generateMockRepresentations(): ScaleRepresentation[] {
   return [
@@ -141,6 +164,7 @@ interface ScaleCardProps {
 
 function ScaleCard({ representation, onToggle, selectedForPrediction, onSelectForPrediction }: ScaleCardProps) {
   const Icon = representation.icon;
+  const familyInfo = FAMILY_DESCRIPTORS[representation.scale];
   
   const statusColors = {
     computed: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30",
@@ -226,6 +250,23 @@ function ScaleCard({ representation, onToggle, selectedForPrediction, onSelectFo
             )}
           </div>
         </div>
+
+        {familyInfo && (
+          <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <div>
+                <div className="text-xs font-medium mb-1">Feeds into prediction models for:</div>
+                <div className="flex flex-wrap gap-1">
+                  {familyInfo.families.map((f) => (
+                    <Badge key={f} variant="outline" className="text-xs">{f}</Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{familyInfo.note}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="pt-2 border-t flex items-center justify-between">
           <div className="text-xs text-muted-foreground flex items-center gap-1">
@@ -342,6 +383,7 @@ function PipelineConfig({ selectedScales }: { selectedScales: ScaleLevel[] }) {
 }
 
 export default function MultiScaleRepresentationsPage() {
+  const [, navigate] = useLocation();
   const [representations, setRepresentations] = useState<ScaleRepresentation[]>(() => generateMockRepresentations());
   const [selectedScales, setSelectedScales] = useState<ScaleLevel[]>(["molecular", "chain"]);
   const [materialType, setMaterialType] = useState<string>("polymer");
@@ -401,13 +443,48 @@ export default function MultiScaleRepresentationsPage() {
               <div className="flex-1">
                 <h2 className="text-xl font-semibold mb-1">Multi-Scale Representation Engine</h2>
                 <p className="text-muted-foreground">
-                  Lika explicitly computes representations at <strong className="text-foreground">molecular</strong>, 
-                  <strong className="text-foreground"> chain/lattice</strong>, and <strong className="text-foreground">bulk</strong> levels.
-                  Select which scales feed into property prediction pipelines for maximum accuracy.
+                  Multi-Scale Representation Engine computes <strong className="text-foreground">molecular</strong>, 
+                  <strong className="text-foreground"> chain/lattice</strong>, and <strong className="text-foreground">bulk</strong> descriptors 
+                  for each material family. These representations are used by property prediction and manufacturability scoring.
                 </p>
               </div>
             </div>
           </div>
+
+          <Card className="border-blue-500/20 bg-blue-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm">
+                    Computed descriptors from this engine feed directly into the <strong>Structure-Property Analytics</strong> models 
+                    and the <strong>Manufacturability Scoring Engine</strong>. Changes to scale selection or recomputation 
+                    will update predictions and scores across both modules.
+                  </p>
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/structure-property?family=${encodeURIComponent(materialType)}`)}
+                      data-testid="button-goto-structure-property"
+                    >
+                      <BarChart3 className="h-3.5 w-3.5 mr-1" />
+                      View Structure-Property Analytics
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate("/manufacturability-scoring")}
+                      data-testid="button-goto-manufacturability"
+                    >
+                      <Factory className="h-3.5 w-3.5 mr-1" />
+                      View Manufacturability Scores
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
@@ -539,12 +616,64 @@ export default function MultiScaleRepresentationsPage() {
             </CardContent>
           </Card>
 
-          <ResultsPanel
-            materialsCampaignId="demo-campaign"
-            title="Representation Artifacts"
-            collapsible={true}
-            defaultExpanded={false}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <ExternalLink className="h-5 w-5" />
+                Representation Artifacts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div
+                  className="p-4 rounded-md border hover-elevate cursor-pointer"
+                  onClick={() => navigate(`/structure-property?family=${encodeURIComponent(materialType)}`)}
+                  data-testid="artifact-property-predictions"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-sm">Property Predictions</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">View predicted properties and structure-property correlations for the current dataset.</p>
+                  <div className="mt-2 flex items-center gap-1 text-xs text-primary">
+                    <ArrowRight className="h-3 w-3" />
+                    Open Structure-Property
+                  </div>
+                </div>
+                <div
+                  className="p-4 rounded-md border hover-elevate cursor-pointer"
+                  onClick={() => navigate("/manufacturability-scoring")}
+                  data-testid="artifact-score-distribution"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Factory className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-sm">Score Distribution</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">View manufacturability scores and production readiness tiers for scored materials.</p>
+                  <div className="mt-2 flex items-center gap-1 text-xs text-primary">
+                    <ArrowRight className="h-3 w-3" />
+                    Open Manufacturability
+                  </div>
+                </div>
+                <div className="p-4 rounded-md border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Database className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium text-sm">Descriptor Matrices</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Raw descriptor vectors for all computed scales, available for export.</p>
+                  <Badge variant="secondary" className="mt-2 text-xs">Available</Badge>
+                </div>
+                <div className="p-4 rounded-md border opacity-60">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium text-sm">Model Weights</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Trained model weights from the prediction pipeline.</p>
+                  <Badge variant="outline" className="mt-2 text-xs">Pending</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>

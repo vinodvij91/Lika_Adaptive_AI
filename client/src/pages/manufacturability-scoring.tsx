@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { PageHeader } from "@/components/page-header";
 import { ResultsPanel } from "@/components/results-panel";
@@ -12,6 +12,11 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {
+  MaterialDetailSheet,
+  generateMaterialDetail,
+  type MaterialDetail,
+} from "@/components/material-detail-panel";
 import {
   Factory,
   Gauge,
@@ -78,7 +83,7 @@ function ScoreGauge({ label, value, icon: Icon, inverted = false }: ScoreGaugePr
   );
 }
 
-function OracleScoreCard({ score, materialName }: { score: MaterialsOracleScore; materialName?: string }) {
+function OracleScoreCard({ score, materialName, onClick }: { score: MaterialsOracleScore; materialName?: string; onClick: () => void }) {
   const overall = score.oracleScore || 0;
   const synthesis = score.synthesisFeasibility || 0;
   const costFactor = score.manufacturingCostFactor || 0;
@@ -90,7 +95,11 @@ function OracleScoreCard({ score, materialName }: { score: MaterialsOracleScore;
   const breakdown = (score.propertyBreakdown || {}) as Record<string, number>;
 
   return (
-    <Card className="hover-elevate" data-testid={`card-score-${score.id}`}>
+    <Card
+      className="hover-elevate cursor-pointer"
+      data-testid={`card-score-${score.id}`}
+      onClick={onClick}
+    >
       <CardContent className="p-4 space-y-4">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -134,6 +143,16 @@ export default function ManufacturabilitySccoringPage() {
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [minScore, setMinScore] = useState<number[]>([0]);
   const [showLowRiskOnly, setShowLowRiskOnly] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState<MaterialDetail | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const family = params.get("family");
+    if (family) {
+      toast({ title: `Filtered to ${family}`, description: "Showing manufacturability scores for this material family." });
+    }
+  }, []);
 
   const { data: oracleScores = [], isLoading } = useQuery<MaterialsOracleScore[]>({
     queryKey: ["/api/materials-oracle-scores"],
@@ -149,9 +168,9 @@ export default function ManufacturabilitySccoringPage() {
   });
 
   const materialsMap = useMemo(() => {
-    const map: Record<string, string> = {};
+    const map: Record<string, { name: string; type: string }> = {};
     (materialsResponse?.materials || []).forEach(m => {
-      map[m.id] = m.name || m.id;
+      map[m.id] = { name: m.name || m.id, type: m.type || "polymer" };
     });
     return map;
   }, [materialsResponse]);
@@ -178,6 +197,35 @@ export default function ManufacturabilitySccoringPage() {
     }
     return result;
   }, [oracleScores, tierFilter, minScore, showLowRiskOnly]);
+
+  const handleScoreCardClick = (score: MaterialsOracleScore, index: number) => {
+    const materialInfo = materialsMap[score.materialId];
+    const family = materialInfo?.type
+      ? materialInfo.type.charAt(0).toUpperCase() + materialInfo.type.slice(1)
+      : "Polymer";
+    const synthesis = score.synthesisFeasibility || 0;
+    const tier = getTier(synthesis);
+    const breakdown = (score.propertyBreakdown || {}) as Record<string, number>;
+
+    const detail = generateMaterialDetail(family, index, 42);
+    detail.id = score.materialId;
+    detail.name = materialInfo?.name || score.materialId;
+    detail.family = family;
+    detail.overallScore = score.oracleScore || 0;
+    detail.manufacturabilityScore = score.oracleScore || 0;
+    detail.tier = tier;
+    detail.synthesis.feasibility = synthesis;
+
+    if (breakdown.thermal_stability !== undefined) {
+      detail.properties.thermalStability = breakdown.thermal_stability * 450;
+    }
+    if (breakdown.tensile_strength !== undefined) {
+      detail.properties.tensileStrength = breakdown.tensile_strength * 200;
+    }
+
+    setSelectedMaterial(detail);
+    setDetailOpen(true);
+  };
 
   const runScoringMutation = useMutation({
     mutationFn: async () => {
@@ -245,6 +293,7 @@ export default function ManufacturabilitySccoringPage() {
                   Evaluate production feasibility at scale. Calculate <strong className="text-foreground">complexity</strong>,
                   <strong className="text-foreground"> cost proxy</strong>, <strong className="text-foreground">scale-up risk</strong>, 
                   and <strong className="text-foreground">process sensitivity</strong> for every variant.
+                  Click any score card to see full material details.
                 </p>
               </div>
             </div>
@@ -412,11 +461,12 @@ export default function ManufacturabilitySccoringPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredScores.map(score => (
+                {filteredScores.map((score, idx) => (
                   <OracleScoreCard
                     key={score.id}
                     score={score}
-                    materialName={materialsMap[score.materialId]}
+                    materialName={materialsMap[score.materialId]?.name}
+                    onClick={() => handleScoreCardClick(score, idx)}
                   />
                 ))}
               </div>
@@ -437,6 +487,13 @@ export default function ManufacturabilitySccoringPage() {
           />
         </div>
       </main>
+
+      <MaterialDetailSheet
+        material={selectedMaterial}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onSelectMaterial={(m) => setSelectedMaterial(m)}
+      />
     </div>
   );
 }
