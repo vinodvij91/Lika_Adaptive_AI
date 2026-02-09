@@ -49,71 +49,70 @@ export default function LandingPage() {
       <Navbar />
 
       <main>
-        <section className="relative pt-32 pb-28 overflow-hidden min-h-[90vh] flex items-center">
+        <section className="relative pt-32 pb-24 overflow-hidden min-h-[85vh] flex items-center">
           <DualDomainBackground />
           <AnimatedGrid />
           <FloatingParticles />
           
           <div className="relative max-w-7xl mx-auto px-6 w-full">
-            <div className="max-w-4xl mx-auto text-center">
+            <div className="max-w-3xl mx-auto text-center">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 text-cyan-400 text-sm font-medium mb-6 border border-cyan-500/20 backdrop-blur-sm">
                 <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                Adaptive AI Discovery Platform
+                Lika Sciences
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight mb-6 text-white">
-                <span className="tracking-[0.15em] uppercase">Lika Sciences</span>
-                <span className="block bg-gradient-to-r from-cyan-400 via-emerald-400 via-teal-400 to-amber-400 bg-clip-text text-transparent mt-2 font-semibold tracking-normal normal-case">
-                  Drug Discovery + Vaccine Discovery + Materials Science
-                </span>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-6 text-white leading-tight">
+                Adaptive AI platform for molecular R&D
               </h1>
-              <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed">
-                Generative design, simulation-in-the-loop, BioNeMo + Molecular ML + Quantum pipelines
-                across pharmaceuticals, vaccines, biologics, polymers, catalysts, energy materials,
-                and next-generation engineered materials. Powered by Fc Effector modeling and multi-omics integration.
+              <p className="text-lg md:text-xl text-slate-300 mb-4 max-w-2xl mx-auto leading-relaxed">
+                Design and rank drugs, vaccines, and advanced materials using simulation-in-the-loop AI, BioNeMo, and multi-omics integration.
+              </p>
+              <p className="text-sm text-slate-400 mb-10">
+                Modules for drug discovery, vaccine design, and materials science.
               </p>
               
-              <div className="flex flex-wrap items-center justify-center gap-4 mb-12">
+              <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
                 <a href="/login">
-                  <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-explore-drug">
+                  <Button size="lg" variant="outline" className="gap-2 border-cyan-500/40 text-cyan-300 backdrop-blur-sm" data-testid="button-explore-drug">
                     <FlaskConical className="h-4 w-4" />
                     Drug Discovery
-                    <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
                 <a href="/login">
-                  <Button size="lg" className="gap-2 bg-gradient-to-r from-emerald-600 to-green-600 border-0 shadow-lg shadow-emerald-500/25" data-testid="button-explore-vaccine">
+                  <Button size="lg" variant="outline" className="gap-2 border-emerald-500/40 text-emerald-300 backdrop-blur-sm" data-testid="button-explore-vaccine">
                     <Syringe className="h-4 w-4" />
                     Vaccine Discovery
-                    <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
                 <a href="/login">
-                  <Button size="lg" variant="outline" className="gap-2 border-amber-500/50 text-amber-400 backdrop-blur-sm" data-testid="button-explore-materials">
+                  <Button size="lg" variant="outline" className="gap-2 border-amber-500/40 text-amber-300 backdrop-blur-sm" data-testid="button-explore-materials">
                     <Hexagon className="h-4 w-4" />
                     Materials Science
-                    <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
               </div>
 
+              <p className="text-sm text-slate-400/80 max-w-2xl mx-auto mb-10">
+                Built for biotech, pharma, and materials innovators who need in-silico evidence to de-risk drugs, vaccines, and advanced materials before committing lab spend.
+              </p>
+
               <div className="relative max-w-3xl mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-emerald-500/10 to-amber-500/20 rounded-xl blur-xl" />
-                <div className="relative grid grid-cols-2 md:grid-cols-4 gap-4 p-6 rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-white">1.7M+</div>
-                    <div className="text-xs text-slate-400">SMILES Library</div>
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-emerald-500/5 to-amber-500/10 rounded-lg blur-xl" />
+                <div className="relative flex flex-wrap items-center justify-center gap-6 md:gap-0 md:divide-x divide-white/10 py-4 px-6 rounded-lg bg-slate-900/50 backdrop-blur-md border border-white/10">
+                  <div className="text-center md:px-6">
+                    <div className="text-xl font-bold text-white">1.7M+</div>
+                    <div className="text-xs text-slate-400">molecules</div>
                   </div>
-                  <div className="text-center md:border-x border-white/10">
-                    <div className="text-2xl font-bold text-white">500K+</div>
-                    <div className="text-xs text-slate-400">Materials Database</div>
+                  <div className="text-center md:px-6">
+                    <div className="text-xl font-bold text-white">500K+</div>
+                    <div className="text-xs text-slate-400">materials</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-white">3,700+</div>
-                    <div className="text-xs text-slate-400">Disease Targets</div>
+                  <div className="text-center md:px-6">
+                    <div className="text-xl font-bold text-white">3,700+</div>
+                    <div className="text-xs text-slate-400">disease targets</div>
                   </div>
-                  <div className="text-center md:border-l border-white/10">
-                    <div className="text-2xl font-bold text-white">360+</div>
-                    <div className="text-xs text-slate-400">Vaccine Pipelines</div>
+                  <div className="text-center md:px-6">
+                    <div className="text-xl font-bold text-white">94.7%</div>
+                    <div className="text-xs text-slate-400">model AUC</div>
                   </div>
                 </div>
               </div>
@@ -123,6 +122,45 @@ export default function LandingPage() {
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
             <div className="w-6 h-10 rounded-full border-2 border-white/30 flex items-start justify-center pt-2">
               <div className="w-1.5 h-3 rounded-full bg-white/50" />
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16 border-t bg-gradient-to-b from-muted/20 to-background">
+          <div className="max-w-5xl mx-auto px-6">
+            <div className="text-center mb-10">
+              <p className="text-sm font-medium text-cyan-500 uppercase tracking-wider mb-2">Under the hood</p>
+              <h2 className="text-2xl md:text-3xl font-bold">How Lika works</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="p-5 rounded-lg border bg-card">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-teal-500/10 flex items-center justify-center border border-cyan-500/30 mb-3">
+                  <Sparkles className="h-5 w-5 text-cyan-400" />
+                </div>
+                <h3 className="font-semibold mb-1.5">Generative design & virtual screening</h3>
+                <p className="text-sm text-muted-foreground">AI-guided hit discovery, scoring cascades, and candidate prioritization across modalities.</p>
+              </div>
+              <div className="p-5 rounded-lg border bg-card">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-green-500/10 flex items-center justify-center border border-emerald-500/30 mb-3">
+                  <Brain className="h-5 w-5 text-emerald-400" />
+                </div>
+                <h3 className="font-semibold mb-1.5">BioNeMo-powered structure & sequence models</h3>
+                <p className="text-sm text-muted-foreground">ESMFold, DiffDock, and OpenFold3 for protein structure prediction and molecular docking.</p>
+              </div>
+              <div className="p-5 rounded-lg border bg-card">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center border border-violet-500/30 mb-3">
+                  <Microscope className="h-5 w-5 text-violet-400" />
+                </div>
+                <h3 className="font-semibold mb-1.5">Fc effector & multi-omics engines</h3>
+                <p className="text-sm text-muted-foreground">ADCC/CDC scoring, species translation, and genomics-to-metabolomics evidence integration.</p>
+              </div>
+              <div className="p-5 rounded-lg border bg-card">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center border border-amber-500/30 mb-3">
+                  <Atom className="h-5 w-5 text-amber-400" />
+                </div>
+                <h3 className="font-semibold mb-1.5">Quantum & materials optimization</h3>
+                <p className="text-sm text-muted-foreground">IonQ/IBM Quantum integration, simulation-in-the-loop property prediction, and scale-up scoring.</p>
+              </div>
             </div>
           </div>
         </section>

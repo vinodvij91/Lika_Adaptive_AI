@@ -52,13 +52,13 @@ export function MetricsStrip() {
             icon={Database}
             value={1700000}
             suffix="+"
-            label="SMILES Library"
+            label="Molecules"
           />
           <AnimatedMetric
             icon={Activity}
             value={500}
             suffix="K+"
-            label="Materials Database"
+            label="Materials"
             duration={1800}
           />
           <AnimatedMetric
@@ -72,7 +72,7 @@ export function MetricsStrip() {
             icon={Zap}
             value={94}
             suffix=".7%"
-            label="Model Accuracy"
+            label="Model AUC"
             duration={2200}
           />
         </div>
