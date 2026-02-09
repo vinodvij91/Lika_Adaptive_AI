@@ -92,6 +92,67 @@ const GROUP_CONFIGS: Record<string, { labels: string[]; paramLabel: string }> = 
     labels: ["None", "Carbon", "Silicon", "Nitrogen", "Fluorine", "Metal Oxide"],
     paramLabel: "Dopant Type"
   },
+  material_type: {
+    labels: ["Polymer", "Crystal", "Metal", "Ceramic", "Composite", "Semiconductor", "Perovskite", "2D Material"],
+    paramLabel: "Material Type"
+  },
+  crystal_system: {
+    labels: ["Cubic", "Tetragonal", "Orthorhombic", "Hexagonal", "Monoclinic", "Triclinic", "Trigonal"],
+    paramLabel: "Crystal System"
+  },
+  bonding_type: {
+    labels: ["Covalent", "Ionic", "Metallic", "Van der Waals", "Hydrogen Bond", "Mixed"],
+    paramLabel: "Bonding Type"
+  },
+  synthesis_method: {
+    labels: ["Solution", "Melt", "Vapor Deposition", "Sol-Gel", "Electrochemical", "Sintering", "Extrusion", "Spin Coating"],
+    paramLabel: "Synthesis Method"
+  },
+  application_domain: {
+    labels: ["Structural", "Electronic", "Optical", "Energy Storage", "Catalysis", "Biomedical", "Thermal Management", "Sensing"],
+    paramLabel: "Application Domain"
+  },
+  molecular_weight_bin: {
+    labels: ["<1K", "1K-5K", "5K-10K", "10K-50K", "50K-100K", "100K-500K", "500K+"],
+    paramLabel: "Molecular Weight Range"
+  },
+  bandgap_range: {
+    labels: ["0-0.5 eV", "0.5-1.0 eV", "1.0-1.5 eV", "1.5-2.0 eV", "2.0-3.0 eV", "3.0-5.0 eV", "5.0+ eV"],
+    paramLabel: "Bandgap Range"
+  },
+  density_bin: {
+    labels: ["<1.0", "1.0-2.0", "2.0-4.0", "4.0-6.0", "6.0-8.0", "8.0-12.0", "12.0+"],
+    paramLabel: "Density Range (g/cm3)"
+  },
+  processing_temp: {
+    labels: ["<100C", "100-300C", "300-600C", "600-1000C", "1000-1500C", "1500-2000C", "2000C+"],
+    paramLabel: "Processing Temperature"
+  },
+};
+
+const ALL_PROPERTIES: Record<string, string> = {
+  thermal_stability: "Thermal Stability",
+  tensile_strength: "Tensile Strength",
+  conductivity: "Conductivity",
+  flexibility: "Flexibility",
+  youngs_modulus: "Young's Modulus",
+  hardness: "Hardness",
+  density: "Density",
+  bandgap: "Bandgap",
+  thermal_conductivity: "Thermal Conductivity",
+  glass_transition: "Glass Transition (Tg)",
+  melting_point: "Melting Point",
+  dielectric_constant: "Dielectric Constant",
+  refractive_index: "Refractive Index",
+  corrosion_resistance: "Corrosion Resistance",
+  fatigue_life: "Fatigue Life",
+  fracture_toughness: "Fracture Toughness",
+  ionic_conductivity: "Ionic Conductivity",
+  magnetization: "Magnetization",
+  poisson_ratio: "Poisson's Ratio",
+  specific_heat: "Specific Heat",
+  surface_energy: "Surface Energy",
+  oxidation_resistance: "Oxidation Resistance",
 };
 
 const PROPERTY_OFFSETS: Record<string, number> = {
@@ -99,6 +160,24 @@ const PROPERTY_OFFSETS: Record<string, number> = {
   tensile_strength: 0.1,
   conductivity: 0.2,
   flexibility: 0.15,
+  youngs_modulus: 0.05,
+  hardness: 0.12,
+  density: 0.08,
+  bandgap: 0.18,
+  thermal_conductivity: 0.03,
+  glass_transition: 0.07,
+  melting_point: 0.13,
+  dielectric_constant: 0.16,
+  refractive_index: 0.09,
+  corrosion_resistance: 0.11,
+  fatigue_life: 0.14,
+  fracture_toughness: 0.06,
+  ionic_conductivity: 0.19,
+  magnetization: 0.04,
+  poisson_ratio: 0.17,
+  specific_heat: 0.02,
+  surface_energy: 0.1,
+  oxidation_resistance: 0.08,
 };
 
 function generateMockPercentileData(totalVariants: number, groupBy: string, seed: number) {
@@ -508,11 +587,23 @@ export default function StructurePropertyPage() {
                     <SelectTrigger data-testid="select-group-by">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-72">
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Structural</div>
                       <SelectItem value="family">Material Family</SelectItem>
                       <SelectItem value="scaffold">Scaffold / Lattice</SelectItem>
+                      <SelectItem value="material_type">Material Type</SelectItem>
+                      <SelectItem value="crystal_system">Crystal System</SelectItem>
+                      <SelectItem value="bonding_type">Bonding Type</SelectItem>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Quantitative Bins</div>
                       <SelectItem value="chain_length">Chain Length Bins</SelectItem>
+                      <SelectItem value="molecular_weight_bin">Molecular Weight Range</SelectItem>
+                      <SelectItem value="bandgap_range">Bandgap Range</SelectItem>
+                      <SelectItem value="density_bin">Density Range</SelectItem>
+                      <SelectItem value="processing_temp">Processing Temperature</SelectItem>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Functional</div>
                       <SelectItem value="dopant">Dopant Type</SelectItem>
+                      <SelectItem value="synthesis_method">Synthesis Method</SelectItem>
+                      <SelectItem value="application_domain">Application Domain</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -522,11 +613,10 @@ export default function StructurePropertyPage() {
                     <SelectTrigger data-testid="select-property-x">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="thermal_stability">Thermal Stability</SelectItem>
-                      <SelectItem value="tensile_strength">Tensile Strength</SelectItem>
-                      <SelectItem value="conductivity">Conductivity</SelectItem>
-                      <SelectItem value="flexibility">Flexibility</SelectItem>
+                    <SelectContent className="max-h-72">
+                      {Object.entries(ALL_PROPERTIES).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -536,11 +626,10 @@ export default function StructurePropertyPage() {
                     <SelectTrigger data-testid="select-property-y">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="thermal_stability">Thermal Stability</SelectItem>
-                      <SelectItem value="tensile_strength">Tensile Strength</SelectItem>
-                      <SelectItem value="conductivity">Conductivity</SelectItem>
-                      <SelectItem value="flexibility">Flexibility</SelectItem>
+                    <SelectContent className="max-h-72">
+                      {Object.entries(ALL_PROPERTIES).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

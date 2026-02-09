@@ -28,6 +28,16 @@ import {
   Sparkles,
   FlaskConical,
   Eye,
+  Cpu,
+  Droplets,
+  Flame,
+  Shield,
+  CircuitBoard,
+  Beaker,
+  Gem,
+  Battery,
+  Sun,
+  Wind,
 } from "lucide-react";
 
 interface PropertyResult {
@@ -59,22 +69,391 @@ interface ManufacturabilityResult {
   recommendations: string[];
 }
 
-const SAMPLE_POLYMERS = [
-  { name: "Polyethylene (PE)", type: "polymer", smiles: "CC" },
-  { name: "Polystyrene (PS)", type: "polymer", smiles: "c1ccccc1CC" },
-  { name: "PMMA", type: "polymer", smiles: "CC(C)(C(=O)OC)C" },
-  { name: "Nylon-6", type: "polymer", smiles: "NCCCCCC(=O)O" },
-  { name: "PET", type: "polymer", smiles: "c1ccc(C(=O)OCCO)cc1" },
-  { name: "Polyimide", type: "polymer", smiles: "c1cc2c(cc1)C(=O)NC2=O" },
-];
+type MaterialTypeKey = string;
 
-const SAMPLE_CRYSTALS = [
-  { name: "Iron Oxide", type: "crystal", formula: "Fe2O3" },
-  { name: "Silicon Dioxide", type: "crystal", formula: "SiO2" },
-  { name: "Titanium Dioxide", type: "crystal", formula: "TiO2" },
-  { name: "Aluminum Oxide", type: "crystal", formula: "Al2O3" },
-  { name: "Zinc Oxide", type: "crystal", formula: "ZnO" },
-  { name: "Copper Oxide", type: "crystal", formula: "CuO" },
+interface MaterialTypeConfig {
+  label: string;
+  icon: any;
+  inputMode: "smiles" | "formula" | "identifier";
+  inputLabel: string;
+  placeholder: string;
+  samples: { name: string; value: string }[];
+}
+
+const MATERIAL_TYPES: Record<MaterialTypeKey, MaterialTypeConfig> = {
+  polymer: {
+    label: "Polymer",
+    icon: Layers,
+    inputMode: "smiles",
+    inputLabel: "SMILES (one per line)",
+    placeholder: "CC\nc1ccccc1CC\nCC(C)(C(=O)OC)C",
+    samples: [
+      { name: "Polyethylene (PE)", value: "CC" },
+      { name: "Polystyrene (PS)", value: "c1ccccc1CC" },
+      { name: "PMMA", value: "CC(C)(C(=O)OC)C" },
+      { name: "Nylon-6", value: "NCCCCCC(=O)O" },
+      { name: "PET", value: "c1ccc(C(=O)OCCO)cc1" },
+      { name: "Polyimide", value: "c1cc2c(cc1)C(=O)NC2=O" },
+    ],
+  },
+  homopolymer: {
+    label: "Homopolymer",
+    icon: Layers,
+    inputMode: "smiles",
+    inputLabel: "Repeat unit SMILES (one per line)",
+    placeholder: "CC\nC=C\nCC(C)C",
+    samples: [
+      { name: "Polyethylene", value: "CC" },
+      { name: "Polypropylene", value: "CC(C)C" },
+      { name: "PVC", value: "CC(Cl)" },
+    ],
+  },
+  copolymer: {
+    label: "Copolymer",
+    icon: Layers,
+    inputMode: "smiles",
+    inputLabel: "Monomer SMILES (one per line)",
+    placeholder: "CC.C=C\nCC(C)C.c1ccccc1CC",
+    samples: [
+      { name: "SBR Rubber", value: "C=CC=C.c1ccccc1C=C" },
+      { name: "ABS", value: "C=CC#N.C=CC=C.c1ccccc1C=C" },
+    ],
+  },
+  crystal: {
+    label: "Crystal",
+    icon: Atom,
+    inputMode: "formula",
+    inputLabel: "Formulas (one per line)",
+    placeholder: "Fe2O3\nSiO2\nTiO2",
+    samples: [
+      { name: "Iron Oxide", value: "Fe2O3" },
+      { name: "Silicon Dioxide", value: "SiO2" },
+      { name: "Titanium Dioxide", value: "TiO2" },
+      { name: "Aluminum Oxide", value: "Al2O3" },
+      { name: "Zinc Oxide", value: "ZnO" },
+      { name: "Copper Oxide", value: "CuO" },
+    ],
+  },
+  composite: {
+    label: "Composite",
+    icon: Shield,
+    inputMode: "smiles",
+    inputLabel: "Matrix SMILES + filler (one per line)",
+    placeholder: "CC.O=[Si]=O\nc1ccccc1CC.[C]",
+    samples: [
+      { name: "Carbon Fiber / Epoxy", value: "c1cc(O)ccc1CC(O)c1ccccc1.[C]" },
+      { name: "Glass / Polyester", value: "c1ccc(C(=O)OCCO)cc1.O=[Si]=O" },
+      { name: "Kevlar / Epoxy", value: "c1ccc(NC(=O)c2ccc(N)cc2)cc1" },
+    ],
+  },
+  metal: {
+    label: "Metal / Alloy",
+    icon: Gem,
+    inputMode: "formula",
+    inputLabel: "Composition (one per line)",
+    placeholder: "Fe\nAl6061\nTi6Al4V",
+    samples: [
+      { name: "Steel 304", value: "Fe72Cr18Ni8Mn2" },
+      { name: "Ti-6Al-4V", value: "Ti90Al6V4" },
+      { name: "Inconel 718", value: "Ni53Cr19Fe18Nb5Mo3" },
+      { name: "Aluminum 6061", value: "Al97Mg1Si0.6Cu0.3" },
+    ],
+  },
+  binary_alloy: {
+    label: "Binary Alloy",
+    icon: Gem,
+    inputMode: "formula",
+    inputLabel: "Alloy compositions (one per line)",
+    placeholder: "Cu50Zn50\nNi50Ti50\nFe50Co50",
+    samples: [
+      { name: "NiTi (Nitinol)", value: "Ni50Ti50" },
+      { name: "CuZn (Brass)", value: "Cu70Zn30" },
+      { name: "FeCo", value: "Fe50Co50" },
+    ],
+  },
+  ternary_alloy: {
+    label: "Ternary Alloy",
+    icon: Gem,
+    inputMode: "formula",
+    inputLabel: "Alloy compositions (one per line)",
+    placeholder: "Ni50Ti25Cu25\nFe60Cr20Ni20",
+    samples: [
+      { name: "NiTiCu", value: "Ni50Ti25Cu25" },
+      { name: "FeCrNi", value: "Fe60Cr20Ni20" },
+    ],
+  },
+  high_entropy_alloy: {
+    label: "High Entropy Alloy",
+    icon: Gem,
+    inputMode: "formula",
+    inputLabel: "HEA compositions (one per line)",
+    placeholder: "CoCrFeMnNi\nAlCoCrFeNi\nHfNbTaTiZr",
+    samples: [
+      { name: "Cantor Alloy", value: "Co20Cr20Fe20Mn20Ni20" },
+      { name: "AlCoCrFeNi", value: "Al20Co20Cr20Fe20Ni20" },
+      { name: "Refractory HEA", value: "Hf20Nb20Ta20Ti20Zr20" },
+    ],
+  },
+  ceramic: {
+    label: "Ceramic",
+    icon: Flame,
+    inputMode: "formula",
+    inputLabel: "Ceramic formulas (one per line)",
+    placeholder: "Al2O3\nSi3N4\nZrO2",
+    samples: [
+      { name: "Alumina", value: "Al2O3" },
+      { name: "Silicon Nitride", value: "Si3N4" },
+      { name: "Zirconia", value: "ZrO2" },
+      { name: "Silicon Carbide", value: "SiC" },
+    ],
+  },
+  perovskite: {
+    label: "Perovskite",
+    icon: Sun,
+    inputMode: "formula",
+    inputLabel: "Perovskite formulas ABX3 (one per line)",
+    placeholder: "CaTiO3\nBaTiO3\nCH3NH3PbI3",
+    samples: [
+      { name: "BaTiO3", value: "BaTiO3" },
+      { name: "MAPbI3", value: "CH3NH3PbI3" },
+      { name: "SrTiO3", value: "SrTiO3" },
+      { name: "CsPbBr3", value: "CsPbBr3" },
+    ],
+  },
+  double_perovskite: {
+    label: "Double Perovskite",
+    icon: Sun,
+    inputMode: "formula",
+    inputLabel: "Double perovskite formulas A2BB'X6 (one per line)",
+    placeholder: "Cs2AgBiBr6\nSr2FeMoO6",
+    samples: [
+      { name: "Cs2AgBiBr6", value: "Cs2AgBiBr6" },
+      { name: "Sr2FeMoO6", value: "Sr2FeMoO6" },
+    ],
+  },
+  catalyst: {
+    label: "Catalyst",
+    icon: Beaker,
+    inputMode: "smiles",
+    inputLabel: "Catalyst SMILES or formula (one per line)",
+    placeholder: "O=[Pt]=O\n[Pd]\nO=[V](=O)O[V](=O)=O",
+    samples: [
+      { name: "Pt/C", value: "[Pt].[C]" },
+      { name: "Pd Nanoparticle", value: "[Pd]" },
+      { name: "V2O5", value: "O=[V](=O)O[V](=O)=O" },
+      { name: "TiO2 Photocatalyst", value: "O=[Ti]=O" },
+    ],
+  },
+  membrane: {
+    label: "Membrane",
+    icon: Droplets,
+    inputMode: "smiles",
+    inputLabel: "Membrane polymer SMILES (one per line)",
+    placeholder: "C(F)(F)C(F)(F)\nOc1ccc(Oc2ccc(O)cc2)cc1",
+    samples: [
+      { name: "PVDF", value: "C(F)(F)C(F)(F)" },
+      { name: "Nafion", value: "C(F)(F)C(F)(OC(F)(F)C(F)(F)S(=O)(=O)O)" },
+      { name: "Polysulfone", value: "Oc1ccc(S(=O)(=O)c2ccc(O)cc2)cc1" },
+    ],
+  },
+  surface: {
+    label: "Surface / Coating",
+    icon: Shield,
+    inputMode: "formula",
+    inputLabel: "Surface composition (one per line)",
+    placeholder: "TiN\nAlCrN\nDLC",
+    samples: [
+      { name: "TiN", value: "TiN" },
+      { name: "AlCrN", value: "AlCrN" },
+      { name: "Diamond-like Carbon", value: "C" },
+      { name: "CrN", value: "CrN" },
+    ],
+  },
+  coating: {
+    label: "Thin Film / Coating",
+    icon: Shield,
+    inputMode: "formula",
+    inputLabel: "Coating formulas (one per line)",
+    placeholder: "ITO\nZnO:Al\nTiO2",
+    samples: [
+      { name: "ITO", value: "In2O3:Sn" },
+      { name: "AZO", value: "ZnO:Al" },
+      { name: "TiO2 coating", value: "TiO2" },
+    ],
+  },
+  thin_film: {
+    label: "Thin Film",
+    icon: Layers,
+    inputMode: "formula",
+    inputLabel: "Thin film formulas (one per line)",
+    placeholder: "GaAs\nInP\nCdTe",
+    samples: [
+      { name: "GaAs", value: "GaAs" },
+      { name: "InP", value: "InP" },
+      { name: "CdTe", value: "CdTe" },
+      { name: "CIGS", value: "CuInGaSe2" },
+    ],
+  },
+  doped_semiconductor: {
+    label: "Doped Semiconductor",
+    icon: CircuitBoard,
+    inputMode: "formula",
+    inputLabel: "Semiconductor + dopant (one per line)",
+    placeholder: "Si:B\nGaAs:Si\nGaN:Mg",
+    samples: [
+      { name: "p-type Si", value: "Si:B" },
+      { name: "n-type GaAs", value: "GaAs:Si" },
+      { name: "p-type GaN", value: "GaN:Mg" },
+    ],
+  },
+  binary_oxide: {
+    label: "Binary Oxide",
+    icon: Atom,
+    inputMode: "formula",
+    inputLabel: "Oxide formulas (one per line)",
+    placeholder: "TiO2\nZnO\nSnO2",
+    samples: [
+      { name: "TiO2", value: "TiO2" },
+      { name: "ZnO", value: "ZnO" },
+      { name: "SnO2", value: "SnO2" },
+      { name: "CeO2", value: "CeO2" },
+    ],
+  },
+  binary_chalcogenide: {
+    label: "Binary Chalcogenide",
+    icon: Atom,
+    inputMode: "formula",
+    inputLabel: "Chalcogenide formulas (one per line)",
+    placeholder: "MoS2\nWS2\nCdSe",
+    samples: [
+      { name: "MoS2", value: "MoS2" },
+      { name: "WS2", value: "WS2" },
+      { name: "CdSe", value: "CdSe" },
+    ],
+  },
+  binary_pnictide: {
+    label: "Binary Pnictide",
+    icon: Atom,
+    inputMode: "formula",
+    inputLabel: "Pnictide formulas (one per line)",
+    placeholder: "GaN\nInP\nBN",
+    samples: [
+      { name: "GaN", value: "GaN" },
+      { name: "InP", value: "InP" },
+      { name: "BN", value: "BN" },
+    ],
+  },
+  battery_cathode: {
+    label: "Battery Cathode",
+    icon: Battery,
+    inputMode: "formula",
+    inputLabel: "Cathode formulas (one per line)",
+    placeholder: "LiCoO2\nLiFePO4\nLiNi0.8Mn0.1Co0.1O2",
+    samples: [
+      { name: "LCO", value: "LiCoO2" },
+      { name: "LFP", value: "LiFePO4" },
+      { name: "NMC 811", value: "LiNi0.8Mn0.1Co0.1O2" },
+      { name: "NCA", value: "LiNi0.8Co0.15Al0.05O2" },
+    ],
+  },
+  battery_anode: {
+    label: "Battery Anode",
+    icon: Battery,
+    inputMode: "formula",
+    inputLabel: "Anode formulas (one per line)",
+    placeholder: "C6\nLi4Ti5O12\nSi",
+    samples: [
+      { name: "Graphite", value: "C6" },
+      { name: "LTO", value: "Li4Ti5O12" },
+      { name: "Silicon", value: "Si" },
+    ],
+  },
+  solid_electrolyte: {
+    label: "Solid Electrolyte",
+    icon: Zap,
+    inputMode: "formula",
+    inputLabel: "Electrolyte formulas (one per line)",
+    placeholder: "Li7La3Zr2O12\nLi6PS5Cl\nLi3InCl6",
+    samples: [
+      { name: "LLZO", value: "Li7La3Zr2O12" },
+      { name: "Argyrodite", value: "Li6PS5Cl" },
+      { name: "Li3InCl6", value: "Li3InCl6" },
+    ],
+  },
+  spinel: {
+    label: "Spinel",
+    icon: Atom,
+    inputMode: "formula",
+    inputLabel: "Spinel formulas AB2O4 (one per line)",
+    placeholder: "MgAl2O4\nFe3O4\nCoFe2O4",
+    samples: [
+      { name: "MgAl2O4", value: "MgAl2O4" },
+      { name: "Magnetite", value: "Fe3O4" },
+      { name: "CoFe2O4", value: "CoFe2O4" },
+    ],
+  },
+  mxene_2d: {
+    label: "MXene (2D)",
+    icon: Layers,
+    inputMode: "formula",
+    inputLabel: "MXene formulas (one per line)",
+    placeholder: "Ti3C2\nTi2C\nV2C",
+    samples: [
+      { name: "Ti3C2Tx", value: "Ti3C2" },
+      { name: "Ti2CTx", value: "Ti2C" },
+      { name: "V2CTx", value: "V2C" },
+    ],
+  },
+  tmd_2d: {
+    label: "TMD (2D)",
+    icon: Layers,
+    inputMode: "formula",
+    inputLabel: "TMD formulas (one per line)",
+    placeholder: "MoS2\nWSe2\nMoTe2",
+    samples: [
+      { name: "MoS2", value: "MoS2" },
+      { name: "WSe2", value: "WSe2" },
+      { name: "MoTe2", value: "MoTe2" },
+    ],
+  },
+  "2d_material": {
+    label: "2D Material",
+    icon: Layers,
+    inputMode: "formula",
+    inputLabel: "2D material formulas (one per line)",
+    placeholder: "C\nBN\nMoS2",
+    samples: [
+      { name: "Graphene", value: "C" },
+      { name: "h-BN", value: "BN" },
+      { name: "MoS2", value: "MoS2" },
+      { name: "Phosphorene", value: "P" },
+    ],
+  },
+  biomaterial: {
+    label: "Biomaterial",
+    icon: Beaker,
+    inputMode: "smiles",
+    inputLabel: "Biomaterial SMILES (one per line)",
+    placeholder: "OC(=O)C(O)CO\nOCC1OC(O)C(O)C(O)C1O",
+    samples: [
+      { name: "PLA", value: "CC(O)C(=O)O" },
+      { name: "PGA", value: "OCC(=O)O" },
+      { name: "Chitosan", value: "OCC1OC(O)C(N)C(O)C1O" },
+      { name: "Hydroxyapatite", value: "Ca5(PO4)3(OH)" },
+    ],
+  },
+};
+
+const MATERIAL_TYPE_GROUPS = [
+  { label: "Polymers", types: ["polymer", "homopolymer", "copolymer"] },
+  { label: "Crystals & Ceramics", types: ["crystal", "ceramic", "spinel"] },
+  { label: "Metals & Alloys", types: ["metal", "binary_alloy", "ternary_alloy", "high_entropy_alloy"] },
+  { label: "Semiconductors & Films", types: ["doped_semiconductor", "thin_film", "binary_oxide", "binary_chalcogenide", "binary_pnictide"] },
+  { label: "Perovskites", types: ["perovskite", "double_perovskite"] },
+  { label: "Energy Materials", types: ["battery_cathode", "battery_anode", "solid_electrolyte"] },
+  { label: "2D Materials", types: ["2d_material", "mxene_2d", "tmd_2d"] },
+  { label: "Functional Materials", types: ["catalyst", "membrane", "surface", "coating", "composite"] },
+  { label: "Biomaterials", types: ["biomaterial"] },
 ];
 
 const PROPERTY_ICONS: Record<string, any> = {
@@ -392,7 +771,7 @@ function ManufacturabilityCard({ result }: { result: ManufacturabilityResult }) 
 
 export default function PropertyPredictionPage() {
   const [location] = useLocation();
-  const [materialType, setMaterialType] = useState<"polymer" | "crystal">("polymer");
+  const [materialType, setMaterialType] = useState<string>("polymer");
   const [inputText, setInputText] = useState("");
   const [activeTab, setActiveTab] = useState("predict");
   const [results, setResults] = useState<MaterialPredictionResult[]>([]);
@@ -428,8 +807,8 @@ export default function PropertyPredictionPage() {
     if (name) {
       setCurrentMaterialName(name);
     }
-    if (type === "crystal") {
-      setMaterialType("crystal");
+    if (type && MATERIAL_TYPES[type]) {
+      setMaterialType(type);
     } else if (type) {
       setMaterialType("polymer");
     }
@@ -485,27 +864,32 @@ export default function PropertyPredictionPage() {
     },
   });
 
+  const typeConfig = MATERIAL_TYPES[materialType] || MATERIAL_TYPES.polymer;
+  const useSmiles = typeConfig.inputMode === "smiles";
+
   const handlePredict = async () => {
     let materials: any[] = [];
     
     if (inputText.trim()) {
       const lines = inputText.split("\n").filter(l => l.trim());
       materials = lines.map(line => {
-        if (materialType === "polymer") {
-          return { type: "polymer", smiles: line.trim() };
+        if (useSmiles) {
+          return { type: materialType, smiles: line.trim() };
         } else {
-          return { type: "crystal", formula: line.trim() };
+          return { type: materialType, formula: line.trim() };
         }
       });
     } else {
-      const sampleMats = materialType === "polymer" ? SAMPLE_POLYMERS : SAMPLE_CRYSTALS;
       const apiMats = (userMaterials || [])
         .filter((m: any) => m.type === materialType)
         .slice(0, 4)
-        .map((m: any) => materialType === "polymer"
+        .map((m: any) => useSmiles
           ? { type: m.type, smiles: m.smiles || (m.representation as any)?.smiles }
           : { type: m.type, formula: m.composition || (m.representation as any)?.formula });
-      materials = apiMats.length > 0 ? apiMats : sampleMats.slice(0, 4).map(p => materialType === "polymer" ? { type: p.type, smiles: (p as any).smiles } : { type: p.type, formula: (p as any).formula });
+      const sampleMats = typeConfig.samples.slice(0, 4).map(s =>
+        useSmiles ? { type: materialType, smiles: s.value } : { type: materialType, formula: s.value }
+      );
+      materials = apiMats.length > 0 ? apiMats : sampleMats;
     }
     
     setResults([]);
@@ -525,20 +909,22 @@ export default function PropertyPredictionPage() {
     if (screeningInput.trim()) {
       const lines = screeningInput.split("\n").filter(l => l.trim());
       materials = lines.map(line => {
-        if (materialType === "polymer") {
-          return { type: "polymer", smiles: line.trim() };
+        if (useSmiles) {
+          return { type: materialType, smiles: line.trim() };
         } else {
-          return { type: "crystal", formula: line.trim() };
+          return { type: materialType, formula: line.trim() };
         }
       });
     } else {
-      const sampleMats = materialType === "polymer" ? SAMPLE_POLYMERS : SAMPLE_CRYSTALS;
       const apiMats = (userMaterials || [])
         .filter((m: any) => m.type === materialType)
-        .map((m: any) => materialType === "polymer"
+        .map((m: any) => useSmiles
           ? { type: m.type, smiles: m.smiles || (m.representation as any)?.smiles }
           : { type: m.type, formula: m.composition || (m.representation as any)?.formula });
-      materials = apiMats.length > 0 ? apiMats : sampleMats.map(p => materialType === "polymer" ? { type: p.type, smiles: (p as any).smiles } : { type: p.type, formula: (p as any).formula });
+      const sampleMats = typeConfig.samples.map(s =>
+        useSmiles ? { type: materialType, smiles: s.value } : { type: materialType, formula: s.value }
+      );
+      materials = apiMats.length > 0 ? apiMats : sampleMats;
     }
     
     try {
@@ -653,36 +1039,53 @@ export default function PropertyPredictionPage() {
                     <TabsContent value="predict" className="space-y-4 mt-4">
                       <div>
                         <Label className="text-sm font-medium mb-2 block">Material Type</Label>
-                        <Select value={materialType} onValueChange={(v) => setMaterialType(v as any)}>
+                        <Select value={materialType} onValueChange={(v) => { setMaterialType(v); setInputText(""); }}>
                           <SelectTrigger data-testid="select-material-type">
-                            <SelectValue />
+                            <SelectValue placeholder="Select material type">
+                              {typeConfig && (
+                                <div className="flex items-center gap-2">
+                                  <typeConfig.icon className="h-4 w-4" />
+                                  {typeConfig.label}
+                                </div>
+                              )}
+                            </SelectValue>
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="polymer">
-                              <div className="flex items-center gap-2">
-                                <Layers className="h-4 w-4" />
-                                Polymer (SMILES)
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="crystal">
-                              <div className="flex items-center gap-2">
-                                <Atom className="h-4 w-4" />
-                                Crystal (Formula)
-                              </div>
-                            </SelectItem>
+                          <SelectContent className="max-h-80">
+                            <ScrollArea className="max-h-72">
+                              {MATERIAL_TYPE_GROUPS.map((group) => (
+                                <div key={group.label}>
+                                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                    {group.label}
+                                  </div>
+                                  {group.types.filter(t => MATERIAL_TYPES[t]).map((typeKey) => {
+                                    const cfg = MATERIAL_TYPES[typeKey];
+                                    const Icon = cfg.icon;
+                                    return (
+                                      <SelectItem key={typeKey} value={typeKey}>
+                                        <div className="flex items-center gap-2">
+                                          <Icon className="h-4 w-4" />
+                                          {cfg.label}
+                                          <span className="text-xs text-muted-foreground ml-1">
+                                            ({cfg.inputMode === "smiles" ? "SMILES" : "Formula"})
+                                          </span>
+                                        </div>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </div>
+                              ))}
+                            </ScrollArea>
                           </SelectContent>
                         </Select>
                       </div>
                       
                       <div>
                         <Label className="text-sm font-medium mb-2 block">
-                          {materialType === "polymer" ? "SMILES (one per line)" : "Formulas (one per line)"}
+                          {typeConfig.inputLabel}
                         </Label>
                         <Textarea
                           className="h-28 font-mono text-sm"
-                          placeholder={materialType === "polymer" 
-                            ? "CC\nc1ccccc1CC\nCC(C)(C(=O)OC)C" 
-                            : "Fe2O3\nSiO2\nTiO2"}
+                          placeholder={typeConfig.placeholder}
                           value={inputText}
                           onChange={(e) => setInputText(e.target.value)}
                           data-testid="input-materials"
@@ -778,9 +1181,7 @@ export default function PropertyPredictionPage() {
                         <Label className="text-xs font-medium text-muted-foreground">Materials to Screen (one per line)</Label>
                         <Textarea
                           className="h-20 font-mono text-sm"
-                          placeholder={materialType === "polymer" 
-                            ? "CC\nc1ccccc1CC\nCC(C)(C(=O)OC)C\nNCCCCCC(=O)O" 
-                            : "Fe2O3\nSiO2\nTiO2\nAl2O3"}
+                          placeholder={typeConfig.placeholder}
                           value={screeningInput}
                           onChange={(e) => setScreeningInput(e.target.value)}
                           data-testid="input-screening-materials"
@@ -847,17 +1248,13 @@ export default function PropertyPredictionPage() {
                   <div className="pt-2 border-t">
                     <p className="text-xs text-muted-foreground mb-2">Sample Materials:</p>
                     <div className="flex flex-wrap gap-1">
-                      {(materialType === "polymer" ? SAMPLE_POLYMERS : SAMPLE_CRYSTALS).slice(0, 4).map((mat) => (
+                      {typeConfig.samples.slice(0, 4).map((mat) => (
                         <Button
                           key={mat.name}
                           size="sm"
                           variant="outline"
                           className="text-xs"
-                          onClick={() => setInputText(
-                            materialType === "polymer" 
-                              ? (mat as any).smiles 
-                              : (mat as any).formula
-                          )}
+                          onClick={() => setInputText(mat.value)}
                           data-testid={`button-demo-${mat.name.toLowerCase().replace(/\s/g, "-")}`}
                         >
                           {mat.name}
@@ -868,7 +1265,7 @@ export default function PropertyPredictionPage() {
                 </CardContent>
               </Card>
 
-              {(currentSmiles || inputText) && materialType === "polymer" && (
+              {(currentSmiles || inputText) && useSmiles && (
                 <Card className="shadow-lg">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -945,7 +1342,7 @@ export default function PropertyPredictionPage() {
                     />
                   )}
                   
-                  {materialType === "polymer" && selectedMaterial.smiles && (
+                  {useSmiles && selectedMaterial.smiles && (
                     <Card className="shadow-lg">
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
