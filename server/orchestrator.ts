@@ -250,6 +250,33 @@ export class JobOrchestrator {
     }
   }
 
+  async startVaccineCampaign(campaignId: string): Promise<void> {
+    if (this.runningCampaigns.has(campaignId)) {
+      throw new Error("Vaccine campaign is already running");
+    }
+
+    this.runningCampaigns.add(campaignId);
+
+    this.executeVaccinePipeline(campaignId).catch((error) => {
+      console.error(`Vaccine campaign ${campaignId} failed:`, error);
+      this.runningCampaigns.delete(campaignId);
+    });
+  }
+
+  private async executeVaccinePipeline(campaignId: string): Promise<void> {
+    try {
+      console.log(`[Orchestrator] Starting vaccine pipeline for campaign ${campaignId}`);
+      const { runAutoVaccineOptimization } = await import("./services/auto-vaccine-optimizer");
+      const result = await runAutoVaccineOptimization(campaignId);
+      console.log(`[Orchestrator] Vaccine pipeline complete: ${result.epitopesGenerated} epitopes, ${result.constructsGenerated} constructs from ${result.targetsProcessed} targets`);
+      this.runningCampaigns.delete(campaignId);
+    } catch (error) {
+      console.error(`[Orchestrator] Vaccine pipeline failed for ${campaignId}:`, error);
+      this.runningCampaigns.delete(campaignId);
+      throw error;
+    }
+  }
+
   isRunning(campaignId: string): boolean {
     return this.runningCampaigns.has(campaignId);
   }

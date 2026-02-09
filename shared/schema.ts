@@ -1900,6 +1900,7 @@ export const vaccineConstructs = pgTable("vaccine_constructs", {
   safetyFlags: jsonb("safety_flags"),
   isPreclinicalCandidate: boolean("is_preclinical_candidate").default(false),
   structureModelId: text("structure_model_id"),
+  optimizationMetadata: jsonb("optimization_metadata"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
 import { PageHeader } from "@/components/page-header";
@@ -52,7 +52,10 @@ import {
   Star,
   Beaker,
   Brain,
+  RefreshCw,
+  ChevronDown,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { VaccineCampaign, VaccineEpitope, VaccineConstruct } from "@shared/schema";
 
 interface CampaignTarget {
@@ -215,6 +218,50 @@ export default function VaccineCampaignDetailPage() {
     },
   });
 
+  const autoOptimizeMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/vaccine-campaigns/${id}/auto-optimize`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vaccine-campaigns", id, "epitopes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vaccine-campaigns", id, "constructs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vaccine-campaigns", id] });
+      toast({ title: "Pipeline auto-completed" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Auto-optimize failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const runFullPipelineMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/vaccine-campaigns/${id}/run-pipeline`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vaccine-campaigns", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vaccine-campaigns", id, "targets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vaccine-campaigns", id, "epitopes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/vaccine-campaigns", id, "constructs"] });
+      toast({ title: "Full pipeline started" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Pipeline failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const hasAutoTriggered = useRef(false);
+
+  useEffect(() => {
+    if (
+      campaign &&
+      campaignTargets.length > 0 &&
+      (epitopes.length === 0 || constructs.length === 0) &&
+      campaign.status !== "running" &&
+      !hasAutoTriggered.current &&
+      !epitopesLoading &&
+      !constructsLoading
+    ) {
+      hasAutoTriggered.current = true;
+      autoOptimizeMutation.mutate();
+    }
+  }, [campaign, campaignTargets, epitopes, constructs, epitopesLoading, constructsLoading]);
+
   const markCandidateMutation = useMutation({
     mutationFn: async (constructId: string) => {
       await apiRequest("PATCH", `/api/vaccine-campaigns/${id}/constructs/${constructId}`, {
@@ -358,9 +405,17 @@ export default function VaccineCampaignDetailPage() {
                   )}
                 </div>
               </div>
-              <Badge variant="outline" className={statusCfg.className} data-testid="badge-status">
-                {statusCfg.label}
-              </Badge>
+              <div className="flex items-center gap-2 flex-wrap">
+                {autoOptimizeMutation.isPending && (
+                  <div className="flex items-center gap-1.5 text-sm text-violet-400">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Running pipeline...
+                  </div>
+                )}
+                <Badge variant="outline" className={statusCfg.className} data-testid="badge-status">
+                  {statusCfg.label}
+                </Badge>
+              </div>
             </div>
           </div>
 
@@ -467,6 +522,19 @@ export default function VaccineCampaignDetailPage() {
                 </CardContent>
               </Card>
 
+              <Button
+                onClick={() => runFullPipelineMutation.mutate()}
+                disabled={runFullPipelineMutation.isPending}
+                data-testid="button-run-full-pipeline"
+              >
+                {runFullPipelineMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Run Full Pipeline
+              </Button>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader className="pb-3">
@@ -550,7 +618,7 @@ export default function VaccineCampaignDetailPage() {
                     ) : (
                       <Dna className="h-4 w-4 mr-2" />
                     )}
-                    Run Epitope Prediction
+                    Re-run Epitope Prediction
                   </Button>
                   <Button onClick={() => setAddTargetsOpen(true)} data-testid="button-add-targets">
                     <Plus className="h-4 w-4 mr-2" />
@@ -747,7 +815,7 @@ export default function VaccineCampaignDetailPage() {
                     ) : (
                       <Shield className="h-4 w-4 mr-2" />
                     )}
-                    Predict Immunogenicity
+                    Re-run Immunogenicity
                   </Button>
                   <Link href="/bionemo">
                     <Button variant="outline" data-testid="button-send-bionemo">
@@ -757,7 +825,7 @@ export default function VaccineCampaignDetailPage() {
                   </Link>
                   <Button onClick={() => setGenerateDialogOpen(true)} data-testid="button-generate-construct">
                     <Plus className="h-4 w-4 mr-2" />
-                    Generate Construct
+                    Re-generate Construct
                   </Button>
                 </div>
               </div>
@@ -811,6 +879,77 @@ export default function VaccineCampaignDetailPage() {
                             {c.immunogenicityScore?.toFixed(2) ?? "—"}
                           </span>
                         </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">T-Cell Score</span>
+                          <span className={`font-mono font-medium ${scoreColor(c.tcellScore)}`}>
+                            {c.tcellScore?.toFixed(2) ?? "—"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">B-Cell Score</span>
+                          <span className={`font-mono font-medium ${scoreColor(c.bcellScore)}`}>
+                            {c.bcellScore?.toFixed(2) ?? "—"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Cross-Reactivity Risk</span>
+                          <span className={`font-mono font-medium ${riskColor(c.crossReactivityRisk)}`}>
+                            {c.crossReactivityRisk?.toFixed(2) ?? "—"}
+                          </span>
+                        </div>
+                        {(c as any).optimizationMetadata && (() => {
+                          const meta = (c as any).optimizationMetadata;
+                          return (
+                            <Collapsible>
+                              <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground w-full mt-1">
+                                <ChevronDown className="h-3 w-3" />
+                                Optimization Details
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="space-y-1.5 pt-2 text-xs">
+                                {meta.codonAdaptationIndex != null && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">CAI</span>
+                                    <span className="font-mono">{meta.codonAdaptationIndex.toFixed(3)}</span>
+                                  </div>
+                                )}
+                                {meta.gcContent != null && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">GC Content</span>
+                                    <span className="font-mono">{(meta.gcContent * 100).toFixed(1)}%</span>
+                                  </div>
+                                )}
+                                {meta.stabilityScore != null && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Stability</span>
+                                    <span className="font-mono">{meta.stabilityScore.toFixed(2)}</span>
+                                  </div>
+                                )}
+                                {meta.linkerDesign?.linkerType && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Linker</span>
+                                    <span className="font-mono">{meta.linkerDesign.linkerType}</span>
+                                  </div>
+                                )}
+                                {meta.mrnaProperties && (
+                                  <>
+                                    {meta.mrnaProperties.modifiedNucleotides && (
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Modified Nucleotides</span>
+                                        <span className="font-mono">{meta.mrnaProperties.modifiedNucleotides}</span>
+                                      </div>
+                                    )}
+                                    {meta.mrnaProperties.halfLifeHours != null && (
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Half-Life</span>
+                                        <span className="font-mono">{meta.mrnaProperties.halfLifeHours}h</span>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </CollapsibleContent>
+                            </Collapsible>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                   ))}

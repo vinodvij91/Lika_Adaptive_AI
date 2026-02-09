@@ -443,6 +443,33 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/vaccine-campaigns/:id/run-pipeline", requireAuth, async (req, res) => {
+    try {
+      const { runAutoVaccineOptimization } = await import("./services/auto-vaccine-optimizer");
+      const result = await runAutoVaccineOptimization(req.params.id);
+      res.json(result);
+    } catch (error) {
+      console.error("Error running vaccine pipeline:", error);
+      res.status(500).json({ error: "Failed to run vaccine pipeline" });
+    }
+  });
+
+  app.post("/api/vaccine-campaigns/:id/auto-optimize", requireAuth, async (req, res) => {
+    try {
+      const links = await db.select().from(vaccineCampaignTargets).where(eq(vaccineCampaignTargets.campaignId, req.params.id));
+      if (links.length === 0) {
+        return res.json({ alreadyOptimized: false, noTargets: true, pipelineComplete: false });
+      }
+
+      const { runAutoVaccineOptimization } = await import("./services/auto-vaccine-optimizer");
+      const result = await runAutoVaccineOptimization(req.params.id);
+      res.json(result);
+    } catch (error) {
+      console.error("Error auto-optimizing vaccine campaign:", error);
+      res.status(500).json({ error: "Failed to auto-optimize vaccine campaign" });
+    }
+  });
+
   // Material type counts for library display
   app.get("/api/materials/type-counts", requireAuth, async (req, res) => {
     try {
