@@ -7,6 +7,7 @@ import authRoutes from "./auth-routes";
 import { storage } from "./storage";
 import { seedDemoData } from "./demo-data-seeder";
 import { auth, requiresAuth } from "express-openid-connect";
+import { syncAuth0UserAndResolveTenant, lookupTenantForUser } from "./tenant-sync";
 
 const app = express();
 const httpServer = createServer(app);
@@ -63,25 +64,65 @@ if (auth0Enabled) {
       callback: "/api/auth/callback",
       postLogoutRedirect: "/",
     },
+    afterCallback: async (_req: Request, _res: Response, session: any) => {
+      try {
+        let sub = "";
+        let email = "";
+        let name = "";
+
+        if (session.id_token) {
+          const payload = session.id_token.split(".")[1];
+          const decoded = Buffer.from(payload, "base64url").toString("utf-8");
+          const claims = JSON.parse(decoded);
+          sub = claims.sub || "";
+          email = claims.email || "";
+          name = claims.name || claims.nickname || "";
+        }
+
+        if (sub && email) {
+          const tenant = await syncAuth0UserAndResolveTenant(sub, email, name);
+          session.tenantId = tenant.tenantId;
+          session.tenantRole = tenant.role;
+        }
+      } catch (err) {
+        console.error("afterCallback tenant sync error:", err);
+      }
+      return session;
+    },
   };
 
   app.use(auth(auth0Config));
 }
 
-app.get("/api/auth/me", (req: Request, res: Response) => {
+app.get("/api/auth/me", async (req: Request, res: Response) => {
   if ((req as any).oidc?.isAuthenticated()) {
     const user = (req as any).oidc.user;
+    const userId = user.sub;
+
+    let tenantId = (req as any).appSession?.tenantId;
+    let role = (req as any).appSession?.tenantRole;
+
+    if (!tenantId) {
+      const tenant = await lookupTenantForUser(userId);
+      tenantId = tenant.tenantId;
+      role = tenant.role;
+    }
+
     return res.json({
-      id: user.sub,
+      authenticated: true,
+      id: userId,
+      userId: userId,
       email: user.email,
       firstName: user.given_name || user.nickname || user.name?.split(" ")[0] || "",
       lastName: user.family_name || user.name?.split(" ").slice(1).join(" ") || "",
       profileImageUrl: user.picture || null,
+      tenantId: tenantId || "jnj",
+      role: role || "scientist",
       createdAt: new Date(),
       updatedAt: new Date(),
     });
   }
-  return res.status(401).json({ error: "Not authenticated" });
+  return res.status(401).json({ authenticated: false });
 });
 
 const PUBLIC_API_PATHS = [
@@ -89,7 +130,7 @@ const PUBLIC_API_PATHS = [
   "/api/ext-auth/",
 ];
 
-app.use("/api", (req: Request, res: Response, next: NextFunction) => {
+app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
   const fullPath = req.baseUrl + req.path;
   if (PUBLIC_API_PATHS.some(p => fullPath.startsWith(p))) {
     return next();
@@ -99,11 +140,30 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
     return next();
   }
 
-  if ((req as any).oidc?.isAuthenticated()) {
-    return next();
+  if (!(req as any).oidc?.isAuthenticated()) {
+    return res.status(401).json({ error: "Not authenticated" });
   }
 
-  return res.status(401).json({ error: "Not authenticated" });
+  const userId = (req as any).oidc.user?.sub;
+  const email = (req as any).oidc.user?.email;
+
+  let tenantId = (req as any).appSession?.tenantId;
+  let role = (req as any).appSession?.tenantRole;
+
+  if (!tenantId && userId) {
+    const tenant = await lookupTenantForUser(userId);
+    tenantId = tenant.tenantId;
+    role = tenant.role;
+  }
+
+  (req as any).user = {
+    id: userId,
+    email: email,
+    tenantId: tenantId || "jnj",
+    role: role || "scientist",
+  };
+
+  next();
 });
 
 // External auth routes (for DigitalOcean database - legacy fallback)

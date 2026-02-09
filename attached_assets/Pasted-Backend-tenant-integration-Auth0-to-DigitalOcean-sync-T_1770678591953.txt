@@ -1,0 +1,171 @@
+Backend tenant integration - Auth0 to DigitalOcean sync
+
+The tenant infrastructure is now ready:
+
+In DigitalOcean PostgreSQL (defaultdb):
+
+✅ tenants table created (seeded with: jnj, ucb, sg, bayer, dowchem)
+
+✅ auth0_users table created (id, email, name, created_at)
+
+✅ tenant_users table created (tenant_id, user_id, role, created_at)
+
+In Auth0:
+
+✅ Application configured (client ID, secret, callbacks already set)
+
+✅ Test user created: vinodvij91@gmail.com
+
+Please implement the following:
+
+1. Sync Auth0 users to database on login
+In /api/auth/callback (or wherever the Auth0 session is established after login):
+
+javascript
+// After Auth0 authentication succeeds:
+const { sub, email, name } = req.oidc.user; // Auth0 user profile
+
+// Extract domain from email
+const domain = email.split('@')[1]; // e.g., "gmail.com", "jnj.com"
+
+// Look up tenant by domain
+const tenant = await db.query(
+  'SELECT id FROM tenants WHERE primary_domain = $1',
+  [domain]
+);
+
+let tenantId;
+if (tenant.rows.length > 0) {
+  tenantId = tenant.rows[0].id;
+} else {
+  // Default to 'jnj' if domain not found
+  tenantId = 'jnj';
+  console.warn(`No tenant found for domain ${domain}, defaulting to jnj`);
+}
+
+// Insert or update auth0_users
+await db.query(
+  `INSERT INTO auth0_users (id, email, name)
+   VALUES ($1, $2, $3)
+   ON CONFLICT (id) DO UPDATE SET email = $2, name = $3`,
+  [sub, email, name]
+);
+
+// Ensure tenant_users mapping exists
+await db.query(
+  `INSERT INTO tenant_users (tenant_id, user_id, role)
+   VALUES ($1, $2, 'scientist')
+   ON CONFLICT (tenant_id, user_id) DO NOTHING`,
+  [tenantId, sub]
+);
+
+// Store tenantId in session for future requests
+req.session.tenantId = tenantId;
+2. Attach tenant to all API requests
+In your Express auth middleware (where you protect /api/* routes):
+
+javascript
+app.use('/api', async (req, res, next) => {
+  if (!req.oidc || !req.oidc.isAuthenticated()) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const userId = req.oidc.user.sub;
+  
+  // Get tenant from session or DB
+  let tenantId = req.session.tenantId;
+  
+  if (!tenantId) {
+    // Fallback: look up from database
+    const result = await db.query(
+      'SELECT tenant_id, role FROM tenant_users WHERE user_id = $1 LIMIT 1',
+      [userId]
+    );
+    
+    if (result.rows.length > 0) {
+      tenantId = result.rows[0].tenant_id;
+      req.session.tenantId = tenantId;
+    } else {
+      tenantId = 'jnj'; // Fallback default
+    }
+  }
+
+  // Attach user info with tenant to request
+  req.user = {
+    id: userId,
+    email: req.oidc.user.email,
+    tenantId: tenantId,
+    role: 'scientist' // Or fetch from tenant_users
+  };
+
+  next();
+});
+3. Update /api/auth/me endpoint
+javascript
+app.get('/api/auth/me', (req, res) => {
+  if (!req.oidc || !req.oidc.isAuthenticated()) {
+    return res.status(401).json({ authenticated: false });
+  }
+
+  res.json({
+    authenticated: true,
+    userId: req.user.id,
+    email: req.user.email,
+    tenantId: req.user.tenantId,
+    role: req.user.role
+  });
+});
+4. Enforce tenant isolation in queries
+For any endpoint that queries campaigns, jobs, or results, always filter by tenant:
+
+javascript
+// Example: GET /api/campaigns
+app.get('/api/campaigns', async (req, res) => {
+  const { tenantId } = req.user;
+  
+  const campaigns = await db.query(
+    'SELECT * FROM campaigns WHERE tenant_id = $1',
+    [tenantId]
+  );
+  
+  res.json(campaigns.rows);
+});
+
+// Example: POST /api/campaigns (create new)
+app.post('/api/campaigns', async (req, res) => {
+  const { tenantId } = req.user;
+  const { name, description } = req.body;
+  
+  const result = await db.query(
+    'INSERT INTO campaigns (name, description, tenant_id) VALUES ($1, $2, $3) RETURNING *',
+    [name, description, tenantId]
+  );
+  
+  res.json(result.rows[0]);
+});
+5. Add tenant_id to campaigns/jobs tables
+If campaigns and jobs tables don't already have tenant_id, add it:
+
+sql
+ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS tenant_id TEXT REFERENCES tenants(id);
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS tenant_id TEXT REFERENCES tenants(id);
+
+-- Set existing records to default tenant
+UPDATE campaigns SET tenant_id = 'jnj' WHERE tenant_id IS NULL;
+UPDATE jobs SET tenant_id = 'jnj' WHERE tenant_id IS NULL;
+6. Testing
+After implementation:
+
+Go to https://www.lika.ai and click Login
+
+Enter: vinodvij91@gmail.com / Kunjimaniboys123!
+
+After successful login, check that:
+
+/api/auth/me returns the user with tenantId: "jnj"
+
+A new row exists in auth0_users table with this user
+
+A new row exists in tenant_users linking the user to tenant jnj
+
+Please confirm when this is implemented so I can test the login flow!
