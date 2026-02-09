@@ -33,6 +33,14 @@ import {
   Boxes,
   Thermometer,
   TrendingUp,
+  Syringe,
+  Dna,
+  Microscope,
+  HeartPulse,
+  MousePointer2,
+  Database,
+  PieChart,
+  Workflow,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -54,47 +62,58 @@ export default function LandingPage() {
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight mb-6 text-white">
                 <span className="tracking-[0.15em] uppercase">Lika Sciences</span>
-                <span className="block bg-gradient-to-r from-cyan-400 via-teal-400 to-amber-400 bg-clip-text text-transparent mt-2 font-semibold tracking-normal normal-case">
-                  Drug Discovery + Materials Science
+                <span className="block bg-gradient-to-r from-cyan-400 via-emerald-400 via-teal-400 to-amber-400 bg-clip-text text-transparent mt-2 font-semibold tracking-normal normal-case">
+                  Drug Discovery + Vaccine Discovery + Materials Science
                 </span>
               </h1>
               <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed">
                 Generative design, simulation-in-the-loop, BioNeMo + Molecular ML + Quantum pipelines
-                across pharmaceuticals, polymers, catalysts, energy materials, coatings, membranes,
-                and next-generation engineered materials.
+                across pharmaceuticals, vaccines, biologics, polymers, catalysts, energy materials,
+                and next-generation engineered materials. Powered by Fc Effector modeling and multi-omics integration.
               </p>
               
               <div className="flex flex-wrap items-center justify-center gap-4 mb-12">
                 <a href="/login">
-                  <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-explore-drug">
+                  <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-explore-drug">
                     <FlaskConical className="h-4 w-4" />
-                    Explore Drug Discovery
+                    Drug Discovery
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
                 <a href="/login">
-                  <Button size="lg" variant="outline" className="gap-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/10 backdrop-blur-sm" data-testid="button-explore-materials">
+                  <Button size="lg" className="gap-2 bg-gradient-to-r from-emerald-600 to-green-600 border-0 shadow-lg shadow-emerald-500/25" data-testid="button-explore-vaccine">
+                    <Syringe className="h-4 w-4" />
+                    Vaccine Discovery
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </a>
+                <a href="/login">
+                  <Button size="lg" variant="outline" className="gap-2 border-amber-500/50 text-amber-400 backdrop-blur-sm" data-testid="button-explore-materials">
                     <Hexagon className="h-4 w-4" />
-                    Explore Materials Science
+                    Materials Science
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
               </div>
 
-              <div className="relative max-w-2xl mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-transparent to-amber-500/20 rounded-xl blur-xl" />
-                <div className="relative grid grid-cols-3 gap-4 p-6 rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10">
+              <div className="relative max-w-3xl mx-auto">
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-emerald-500/10 to-amber-500/20 rounded-xl blur-xl" />
+                <div className="relative grid grid-cols-2 md:grid-cols-4 gap-4 p-6 rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-white">1.7M+</div>
                     <div className="text-xs text-slate-400">SMILES Library</div>
                   </div>
-                  <div className="text-center border-x border-white/10">
+                  <div className="text-center md:border-x border-white/10">
                     <div className="text-2xl font-bold text-white">500K+</div>
                     <div className="text-xs text-slate-400">Materials Database</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-white">750+</div>
                     <div className="text-xs text-slate-400">Disease Targets</div>
+                  </div>
+                  <div className="text-center md:border-l border-white/10">
+                    <div className="text-2xl font-bold text-white">360+</div>
+                    <div className="text-xs text-slate-400">Vaccine Pipelines</div>
                   </div>
                 </div>
               </div>
@@ -113,7 +132,7 @@ export default function LandingPage() {
         <section className="py-20 border-t relative overflow-hidden">
           <GlowingOrbs />
           <div className="relative max-w-7xl mx-auto px-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <Card className="overflow-hidden border-cyan-500/20 bg-gradient-to-br from-cyan-950/40 to-slate-950/40 backdrop-blur-sm group">
                 <CardContent className="p-8 relative">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-colors" />
@@ -123,11 +142,11 @@ export default function LandingPage() {
                         <FlaskConical className="h-6 w-6 text-cyan-400" />
                       </div>
                       <div>
-                        <h3 className="text-2xl font-bold">Drug Discovery</h3>
+                        <h3 className="text-xl font-bold">Drug Discovery</h3>
                         <p className="text-xs text-cyan-400">Small Molecules, PROTACs, Peptides</p>
                       </div>
                     </div>
-                    <p className="text-muted-foreground mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       From virtual hit discovery to assay-validated candidates with ADMET, docking, 
                       variant-aware scoring, and SAR-driven iteration.
                     </p>
@@ -155,6 +174,47 @@ export default function LandingPage() {
                 </CardContent>
               </Card>
 
+              <Card className="overflow-hidden border-emerald-500/20 bg-gradient-to-br from-emerald-950/40 to-slate-950/40 backdrop-blur-sm group">
+                <CardContent className="p-8 relative">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-colors" />
+                  <div className="relative">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500/20 to-green-500/10 flex items-center justify-center border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
+                        <Syringe className="h-6 w-6 text-emerald-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold">Vaccine Discovery</h3>
+                        <p className="text-xs text-emerald-400">Epitopes, Constructs, Immunogenicity</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      End-to-end vaccine design from antigen selection through epitope prediction,
+                      multi-epitope construct assembly, and immunogenicity optimization.
+                    </p>
+                    <ul className="space-y-3 text-sm">
+                      <li className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                          <Dna className="h-3.5 w-3.5 text-emerald-400" />
+                        </div>
+                        <span className="text-muted-foreground">T-cell & B-cell Epitope Prediction</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                          <Shield className="h-3.5 w-3.5 text-emerald-400" />
+                        </div>
+                        <span className="text-muted-foreground">Construct Assembly & Codon Optimization</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                          <HeartPulse className="h-3.5 w-3.5 text-emerald-400" />
+                        </div>
+                        <span className="text-muted-foreground">mRNA Design & Stability Prediction</span>
+                      </li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card className="overflow-hidden border-amber-500/20 bg-gradient-to-br from-amber-950/40 to-slate-950/40 backdrop-blur-sm group">
                 <CardContent className="p-8 relative">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-colors" />
@@ -164,12 +224,13 @@ export default function LandingPage() {
                         <Hexagon className="h-6 w-6 text-amber-400" />
                       </div>
                       <div>
-                        <h3 className="text-2xl font-bold">Materials Science</h3>
+                        <h3 className="text-xl font-bold">Materials Science</h3>
                         <p className="text-xs text-amber-400">Polymers, Crystals, Composites</p>
                       </div>
                     </div>
-                    <p className="text-muted-foreground mb-4">
-                      Evaluate <strong className="text-amber-400">millions of material variants</strong>, run <strong className="text-amber-400">hundreds of thousands</strong> of property predictions per day, and manage <strong className="text-amber-400">dozens of concurrent campaigns</strong>.
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Evaluate millions of material variants, run hundreds of thousands of property 
+                      predictions per day, and manage dozens of concurrent campaigns.
                     </p>
                     <ul className="space-y-3 text-sm">
                       <li className="flex items-center gap-3">
@@ -204,14 +265,29 @@ export default function LandingPage() {
               <p className="text-sm font-medium text-cyan-500 uppercase tracking-wider mb-2">Capabilities</p>
               <h2 className="text-3xl font-bold mb-4">Platform Features</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Unified infrastructure for both drug discovery and materials science workflows
+                Unified infrastructure for drug discovery, vaccine discovery, and materials science workflows
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <FeatureCard
                 icon={Beaker}
                 title="Data & Entity Management"
-                description="Organize molecules, polymers, crystals, and compounds with comprehensive metadata tracking"
+                description="Organize molecules, polymers, crystals, antigens, and compounds with comprehensive metadata tracking"
+              />
+              <FeatureCard
+                icon={Syringe}
+                title="Vaccine Design Pipeline"
+                description="Epitope prediction, construct assembly, codon optimization, and mRNA stability analysis"
+              />
+              <FeatureCard
+                icon={Microscope}
+                title="Fc Effector Modeling"
+                description="Humanized mouse models with ADCC/CDC scoring, FcR affinity prediction, and species translation"
+              />
+              <FeatureCard
+                icon={Database}
+                title="Multi-Omics Integration"
+                description="Genomics, transcriptomics, proteomics, and metabolomics evidence aggregation with weighted scoring"
               />
               <FeatureCard
                 icon={Target}
@@ -226,12 +302,12 @@ export default function LandingPage() {
               <FeatureCard
                 icon={BarChart3}
                 title="ML-Powered Predictions"
-                description="ADMET, QSAR, tensile strength, thermal stability, ionic conductivity, and more"
+                description="ADMET, QSAR, tensile strength, thermal stability, ionic conductivity, and immunogenicity"
               />
               <FeatureCard
                 icon={GitBranch}
                 title="Workflow Automation"
-                description="Execute campaigns with automated job orchestration across both domains"
+                description="Execute campaigns with automated job orchestration across all three domains"
               />
               <FeatureCard
                 icon={Cpu}
@@ -354,6 +430,116 @@ export default function LandingPage() {
                 title="Self-Improving Platform"
                 description="Internal learning graph captures outcomes and continuously improves prediction accuracy."
                 accentColor="cyan"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 bg-gradient-to-br from-emerald-950/20 via-background to-background border-t relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-0 w-64 h-64 bg-green-500/5 rounded-full blur-3xl" />
+          <div className="relative max-w-7xl mx-auto px-6">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-medium mb-4 border border-emerald-500/20">
+                <Syringe className="h-3 w-3" />
+                Vaccine Discovery
+              </div>
+              <h2 className="text-3xl font-bold mb-4">Vaccine Discovery Advantages</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                End-to-end computational vaccine design with automated optimization pipelines
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <USPCard
+                icon={Dna}
+                title="Epitope Prediction Engine"
+                description="T-cell and B-cell epitope prediction with HLA allele coverage, conservation analysis, and immunogenicity scoring across pathogen variants."
+                accentColor="emerald"
+              />
+              <USPCard
+                icon={Shield}
+                title="Multi-Epitope Construct Assembly"
+                description="Automated assembly of multi-epitope vaccine constructs with optimized linker design, codon adaptation (CAI), and GC content balancing."
+                accentColor="emerald"
+              />
+              <USPCard
+                icon={HeartPulse}
+                title="mRNA Vaccine Design"
+                description="mRNA sequence optimization with stability prediction, secondary structure analysis, and delivery formulation guidance."
+                accentColor="emerald"
+              />
+              <USPCard
+                icon={Activity}
+                title="Immunogenicity Prediction"
+                description="Population-level immunogenicity assessment with HLA coverage analysis and immune response modeling."
+                accentColor="emerald"
+              />
+              <USPCard
+                icon={Workflow}
+                title="Automated Optimization Pipeline"
+                description="Auto-running pipeline from target assignment through epitope prediction, construct assembly, and immunogenicity analysis."
+                accentColor="emerald"
+              />
+              <USPCard
+                icon={Brain}
+                title="Cross-Pathogen Intelligence"
+                description="Reusable epitope libraries and conservation data across 360+ disease and 10+ vaccine pipeline configurations."
+                accentColor="emerald"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 bg-gradient-to-br from-violet-950/20 via-background to-background border-t relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-violet-500/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-500/5 rounded-full blur-3xl" />
+          <div className="relative max-w-7xl mx-auto px-6">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 text-violet-400 text-xs font-medium mb-4 border border-violet-500/20">
+                <Microscope className="h-3 w-3" />
+                Fc Effector & Omics
+              </div>
+              <h2 className="text-3xl font-bold mb-4">Fc Effector Modeling & Multi-Omics Integration</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Humanized mouse models for antibody engineering and disease-agnostic multi-omics evidence aggregation
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <USPCard
+                icon={Microscope}
+                title="Humanized Mouse Models"
+                description="Fc-gamma receptor and FcRn atlas with ADCC/CDC effector scoring for antibody and vaccine Fc engineering."
+                accentColor="violet"
+              />
+              <USPCard
+                icon={PieChart}
+                title="Species Translation"
+                description="Cross-species similarity modeling between human, mouse, rat, and NHP Fc receptor systems for translational confidence."
+                accentColor="violet"
+              />
+              <USPCard
+                icon={Database}
+                title="Multi-Omics Evidence Layers"
+                description="Aggregate genomics, transcriptomics, proteomics, and metabolomics evidence per target with weighted integrated scoring."
+                accentColor="violet"
+              />
+              <USPCard
+                icon={Dna}
+                title="BioNeMo Sequence Enrichment"
+                description="GPU-accelerated sequence property enrichment including stability, disorder, and aggregation prediction with CPU fallback."
+                accentColor="violet"
+              />
+              <USPCard
+                icon={Target}
+                title="Disease-Agnostic Architecture"
+                description="Fc Effector and Omics modules work across all 360+ disease pipelines and 10+ vaccine pipelines without configuration."
+                accentColor="violet"
+              />
+              <USPCard
+                icon={Sparkles}
+                title="AI-Structured Guidance"
+                description="OpenAI-powered structured UI text generation with panel titles, tooltips, and narrative summaries for every analysis."
+                accentColor="violet"
               />
             </div>
           </div>
@@ -528,6 +714,124 @@ export default function LandingPage() {
                   <Button variant="outline" className="gap-2 border-cyan-500/50 text-cyan-400" data-testid="button-view-sar-tools">
                     <Activity className="h-4 w-4" />
                     View SAR Tools
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Vaccine Discovery Section: From Antigen to Optimized Construct */}
+        <section className="py-24 border-t relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-green-500/5" />
+          <div className="relative max-w-7xl mx-auto px-6">
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 text-emerald-400 text-sm font-medium mb-6 border border-emerald-500/20">
+                <Syringe className="h-4 w-4" />
+                Vaccine Discovery
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                From Antigen to Optimized Vaccine Construct
+              </h2>
+              <p className="text-muted-foreground max-w-3xl mx-auto text-lg leading-relaxed">
+                Lika automates the entire vaccine design workflow from target identification through 
+                epitope prediction, construct assembly, and immunogenicity optimization.
+              </p>
+            </div>
+
+            <div className="mb-12 max-w-4xl mx-auto">
+              <p className="text-center text-muted-foreground leading-relaxed">
+                The vaccine pipeline predicts T-cell and B-cell epitopes with HLA allele coverage, 
+                filters and ranks candidates by conservation and immunogenicity, assembles multi-epitope 
+                constructs with optimized linkers, and performs codon optimization and mRNA stability analysis 
+                for manufacturability.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              <Card className="border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500/20 to-green-500/10 flex items-center justify-center mb-4 border border-emerald-500/30">
+                    <Dna className="h-6 w-6 text-emerald-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">Epitope Prediction</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Predict T-cell and B-cell epitopes using HLA allele binding analysis, 
+                    conservation scoring across pathogen variants, and immunogenicity ranking.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs text-emerald-400/80">T-cell epitopes</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-emerald-400/80">B-cell epitopes</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-emerald-400/80">HLA coverage</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500/20 to-green-500/10 flex items-center justify-center mb-4 border border-emerald-500/30">
+                    <Shield className="h-6 w-6 text-emerald-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">Construct Assembly</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Assemble multi-epitope vaccine constructs with optimized linker sequences, 
+                    codon adaptation index (CAI) optimization, and GC content balancing.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs text-emerald-400/80">linker design</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-emerald-400/80">codon optimization</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-emerald-400/80">CAI scoring</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 to-slate-950/20">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500/20 to-green-500/10 flex items-center justify-center mb-4 border border-emerald-500/30">
+                    <HeartPulse className="h-6 w-6 text-emerald-400" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">mRNA & Immunogenicity</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Optimize mRNA sequences for stability and manufacturability. Predict 
+                    population-level immunogenicity with HLA coverage analysis and immune 
+                    response modeling.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="text-xs text-emerald-400/80">mRNA design</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-emerald-400/80">stability</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-emerald-400/80">immunogenicity</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="text-center">
+              <p className="text-muted-foreground mb-6">
+                See how Lika accelerates vaccine development from antigen to optimized construct.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <a href="/login">
+                  <Button variant="outline" className="gap-2 border-emerald-500/50 text-emerald-400" data-testid="button-explore-epitope-design">
+                    <Dna className="h-4 w-4" />
+                    Explore Epitope Design
+                  </Button>
+                </a>
+                <a href="/login">
+                  <Button variant="outline" className="gap-2 border-emerald-500/50 text-emerald-400" data-testid="button-view-construct-tools">
+                    <Shield className="h-4 w-4" />
+                    View Construct Tools
+                  </Button>
+                </a>
+                <a href="/login">
+                  <Button variant="outline" className="gap-2 border-emerald-500/50 text-emerald-400" data-testid="button-mrna-optimization">
+                    <HeartPulse className="h-4 w-4" />
+                    mRNA Optimization
                   </Button>
                 </a>
               </div>
@@ -737,15 +1041,15 @@ export default function LandingPage() {
         </section>
 
         <section className="py-24 border-t relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-amber-500/5" />
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-emerald-500/5 to-amber-500/5" />
           <div className="relative max-w-7xl mx-auto px-6 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Discovery?</h2>
             <p className="text-muted-foreground mb-10 max-w-xl mx-auto text-lg">
-              Get started with Lika Sciences today and accelerate your drug discovery and materials science programs.
+              Get started with Lika Sciences today and accelerate your drug discovery, vaccine development, and materials science programs.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <a href="/login">
-                <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-explore-platform">
+                <Button size="lg" className="gap-2 bg-gradient-to-r from-cyan-600 to-teal-600 border-0 shadow-lg shadow-cyan-500/25" data-testid="button-explore-platform">
                   Explore Platform
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -764,7 +1068,7 @@ export default function LandingPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <LikaLogo size="sm" />
             <p className="text-sm text-muted-foreground">
-              Adaptive AI Discovery Platform for Drug Discovery and Materials Science
+              Adaptive AI Discovery Platform for Drug Discovery, Vaccine Discovery, and Materials Science
             </p>
           </div>
         </div>
@@ -805,7 +1109,7 @@ function USPCard({
   icon: typeof Zap;
   title: string;
   description: string;
-  accentColor?: "cyan" | "amber";
+  accentColor?: "cyan" | "amber" | "emerald" | "violet";
 }) {
   const colorClasses = {
     cyan: {
@@ -819,6 +1123,18 @@ function USPCard({
       border: "border-amber-500/30",
       icon: "text-amber-400",
       glow: "bg-amber-500/10",
+    },
+    emerald: {
+      bg: "from-emerald-500/20 to-green-500/5",
+      border: "border-emerald-500/30",
+      icon: "text-emerald-400",
+      glow: "bg-emerald-500/10",
+    },
+    violet: {
+      bg: "from-violet-500/20 to-purple-500/5",
+      border: "border-violet-500/30",
+      icon: "text-violet-400",
+      glow: "bg-violet-500/10",
     },
   };
 
