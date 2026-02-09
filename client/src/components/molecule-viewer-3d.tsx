@@ -1,7 +1,40 @@
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, Component, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
+
+function checkWebGLSupport(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(canvas.getContext("webgl") || canvas.getContext("webgl2") || canvas.getContext("experimental-webgl"));
+  } catch {
+    return false;
+  }
+}
+
+class WebGLErrorBoundary extends Component<{ children: ReactNode; height: string }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; height: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ width: "100%", height: this.props.height }} className="rounded-md overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
+          <div className="text-center p-6 max-w-md">
+            <div className="text-4xl mb-3">{"{"}</div>
+            <p className="text-slate-300 font-medium mb-2">3D Viewer Unavailable</p>
+            <p className="text-slate-400 text-sm">WebGL is required for 3D rendering. Try opening this page in a browser tab with GPU acceleration enabled.</p>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface Atom {
   id: number;
@@ -410,26 +443,42 @@ export default function MoleculeViewer3D({
     return generateBenzeneMolecule();
   }, [smiles, molecule]);
 
+  if (!checkWebGLSupport()) {
+    return (
+      <div style={{ width: "100%", height }} className="rounded-md overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
+        <div className="text-center p-6 max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-slate-700/50 flex items-center justify-center text-slate-400 text-2xl font-mono">3D</div>
+          <p className="text-slate-300 font-medium mb-2">3D Viewer Unavailable</p>
+          <p className="text-slate-400 text-sm">WebGL is required for 3D molecular rendering. Open this page in a new browser tab with hardware acceleration enabled.</p>
+          {moleculeData.name && <p className="text-slate-500 text-xs mt-3 font-mono">{moleculeData.name}</p>}
+          <p className="text-slate-500 text-xs mt-1">{moleculeData.atoms.length} atoms, {moleculeData.bonds.length} bonds</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ width: "100%", height }} className="rounded-md overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800">
-      <Canvas camera={{ position: [0, 0, 8], fov: 50 }}>
-        <ambientLight intensity={0.4} />
-        <pointLight position={[10, 10, 10]} intensity={1} />
-        <pointLight position={[-10, -10, -10]} intensity={0.5} />
-        <MoleculeScene
-          molecule={moleculeData}
-          showLabels={showLabels}
-          autoRotate={autoRotate}
-        />
-        <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          minDistance={3}
-          maxDistance={20}
-        />
-      </Canvas>
-    </div>
+    <WebGLErrorBoundary height={height}>
+      <div style={{ width: "100%", height }} className="rounded-md overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800">
+        <Canvas camera={{ position: [0, 0, 8], fov: 50 }}>
+          <ambientLight intensity={0.4} />
+          <pointLight position={[10, 10, 10]} intensity={1} />
+          <pointLight position={[-10, -10, -10]} intensity={0.5} />
+          <MoleculeScene
+            molecule={moleculeData}
+            showLabels={showLabels}
+            autoRotate={autoRotate}
+          />
+          <OrbitControls
+            enablePan={true}
+            enableZoom={true}
+            enableRotate={true}
+            minDistance={3}
+            maxDistance={20}
+          />
+        </Canvas>
+      </div>
+    </WebGLErrorBoundary>
   );
 }
 

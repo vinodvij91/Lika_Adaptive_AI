@@ -1,7 +1,40 @@
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, Component, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text, Grid } from "@react-three/drei";
 import * as THREE from "three";
+
+function checkWebGLSupport(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(canvas.getContext("webgl") || canvas.getContext("webgl2") || canvas.getContext("experimental-webgl"));
+  } catch {
+    return false;
+  }
+}
+
+class WebGLErrorBoundary extends Component<{ children: ReactNode; height: string }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; height: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ width: "100%", height: this.props.height }} className="rounded-md overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
+          <div className="text-center p-6 max-w-md">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-slate-700/50 flex items-center justify-center text-slate-400 text-2xl font-mono">3D</div>
+            <p className="text-slate-300 font-medium mb-2">3D Crystal Viewer Unavailable</p>
+            <p className="text-slate-400 text-sm">WebGL is required for 3D rendering. Open this page in a new browser tab with hardware acceleration enabled.</p>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface CrystalAtom {
   id: number;
@@ -367,7 +400,22 @@ export default function CrystalViewer3D({
     return crystal || generateNaClCrystal();
   }, [crystal]);
 
+  if (!checkWebGLSupport()) {
+    return (
+      <div style={{ width: "100%", height }} className="rounded-md overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center">
+        <div className="text-center p-6 max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-slate-700/50 flex items-center justify-center text-slate-400 text-2xl font-mono">3D</div>
+          <p className="text-slate-300 font-medium mb-2">3D Crystal Viewer Unavailable</p>
+          <p className="text-slate-400 text-sm">WebGL is required for 3D crystal rendering. Open this page in a new browser tab with hardware acceleration enabled.</p>
+          {crystalData.name && <p className="text-slate-500 text-xs mt-3 font-mono">{crystalData.name}</p>}
+          <p className="text-slate-500 text-xs mt-1">{crystalData.atoms.length} atoms{crystalData.spaceGroup ? `, Space Group: ${crystalData.spaceGroup}` : ""}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
+    <WebGLErrorBoundary height={height}>
     <div style={{ width: "100%", height }} className="rounded-md overflow-hidden bg-gradient-to-b from-slate-900 to-slate-800">
       <Canvas camera={{ position: [12, 8, 12], fov: 50 }}>
         <ambientLight intensity={0.4} />
@@ -401,6 +449,7 @@ export default function CrystalViewer3D({
         />
       </Canvas>
     </div>
+    </WebGLErrorBoundary>
   );
 }
 
