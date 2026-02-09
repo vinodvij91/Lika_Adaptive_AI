@@ -118,24 +118,58 @@ function IntegratedScoreBadge({ score }: { score: number }) {
   );
 }
 
-const EXAMPLE_DISEASES = [
+const DRUG_DISCOVERY_DISEASES = [
   { label: "Inflammatory Disease", value: "Inflammatory disease" },
-  { label: "COVID-19", value: "COVID-19" },
   { label: "Breast Cancer", value: "Breast cancer" },
   { label: "Alzheimer's Disease", value: "Alzheimer disease" },
   { label: "Type 2 Diabetes", value: "Type 2 diabetes" },
   { label: "Rheumatoid Arthritis", value: "Rheumatoid arthritis" },
-  { label: "Influenza A", value: "Influenza A" },
+  { label: "Parkinson's Disease", value: "Parkinson disease" },
+  { label: "Non-Small Cell Lung Cancer", value: "Non-small cell lung cancer" },
+  { label: "Multiple Sclerosis", value: "Multiple sclerosis" },
+  { label: "Crohn's Disease", value: "Crohn's disease" },
+  { label: "Psoriasis", value: "Psoriasis" },
+];
+
+const VACCINE_PIPELINE_DISEASES = [
+  { label: "COVID-19 / SARS-CoV-2", value: "COVID-19" },
+  { label: "Influenza A/B", value: "Influenza" },
   { label: "HIV-1", value: "HIV-1" },
+  { label: "Malaria (P. falciparum)", value: "Malaria" },
+  { label: "Yellow Fever", value: "Yellow fever" },
+  { label: "HPV", value: "HPV" },
+  { label: "TB / BCG", value: "Tuberculosis" },
+  { label: "Cancer Neoantigen", value: "Cancer neoantigen" },
+  { label: "Nipah Virus", value: "Nipah" },
+  { label: "RSV", value: "RSV" },
+  { label: "Ebola Virus", value: "Ebola" },
+  { label: "Dengue Virus", value: "Dengue" },
+  { label: "Zika Virus", value: "Zika" },
+  { label: "Hepatitis B", value: "Hepatitis B" },
+  { label: "Rabies", value: "Rabies" },
 ];
 
 const DEFAULT_TARGETS = ["TNF", "IL6", "FCGR2A", "JAK2", "STAT3", "EGFR", "BRAF", "TP53", "VEGFA", "KRAS"];
+const VACCINE_DEFAULT_TARGETS = ["S protein", "RBD", "NP", "M protein", "HA", "NA", "Env", "Gag", "CSP", "TRAP"];
+
+const VACCINE_VALUES = new Set(VACCINE_PIPELINE_DISEASES.map(d => d.value));
 
 export default function OmicsIntegrationPage() {
   const { toast } = useToast();
   const [disease, setDisease] = useState("Inflammatory disease");
   const [targetInput, setTargetInput] = useState(DEFAULT_TARGETS.join(", "));
   const [pipelineType, setPipelineType] = useState("therapeutic_antibody");
+
+  const handleDiseaseChange = (val: string) => {
+    setDisease(val);
+    if (VACCINE_VALUES.has(val)) {
+      setPipelineType("vaccine");
+      setTargetInput(VACCINE_DEFAULT_TARGETS.join(", "));
+    } else if (pipelineType === "vaccine") {
+      setPipelineType("therapeutic_antibody");
+      setTargetInput(DEFAULT_TARGETS.join(", "));
+    }
+  };
   const [sortField, setSortField] = useState<SortField>("integrated_score");
   const [sortAsc, setSortAsc] = useState(false);
   const [filterSearch, setFilterSearch] = useState("");
@@ -252,12 +286,17 @@ export default function OmicsIntegrationPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Disease / Indication</Label>
-                    <Select value={disease} onValueChange={setDisease}>
+                    <Select value={disease} onValueChange={handleDiseaseChange}>
                       <SelectTrigger data-testid="select-disease">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {EXAMPLE_DISEASES.map(d => (
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Drug Discovery</div>
+                        {DRUG_DISCOVERY_DISEASES.map(d => (
+                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                        ))}
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-1.5">Vaccine Pipelines</div>
+                        {VACCINE_PIPELINE_DISEASES.map(d => (
                           <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                         ))}
                       </SelectContent>

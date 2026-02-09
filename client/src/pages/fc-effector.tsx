@@ -184,10 +184,56 @@ function SpeciesSimilarityChart({ species }: { species: SpeciesData[] }) {
   );
 }
 
+const FC_DISEASE_INDICATIONS = [
+  { group: "Oncology", items: [
+    { label: "Breast Cancer (HER2+)", value: "Breast cancer HER2+" },
+    { label: "Non-Small Cell Lung Cancer", value: "Non-small cell lung cancer" },
+    { label: "Colorectal Cancer", value: "Colorectal cancer" },
+    { label: "B-Cell Lymphoma", value: "B-cell lymphoma" },
+    { label: "Multiple Myeloma", value: "Multiple myeloma" },
+    { label: "Melanoma", value: "Melanoma" },
+  ]},
+  { group: "Autoimmune & Inflammatory", items: [
+    { label: "Rheumatoid Arthritis", value: "Rheumatoid arthritis" },
+    { label: "Systemic Lupus Erythematosus", value: "Systemic lupus erythematosus" },
+    { label: "Crohn's Disease", value: "Crohn's disease" },
+    { label: "Multiple Sclerosis", value: "Multiple sclerosis" },
+    { label: "Psoriasis", value: "Psoriasis" },
+  ]},
+  { group: "Infectious Disease (Vaccines)", items: [
+    { label: "COVID-19 / SARS-CoV-2", value: "COVID-19" },
+    { label: "Influenza A/B", value: "Influenza" },
+    { label: "RSV", value: "RSV" },
+    { label: "HIV-1", value: "HIV-1" },
+    { label: "Malaria (P. falciparum)", value: "Malaria" },
+    { label: "Ebola Virus", value: "Ebola" },
+    { label: "Nipah Virus", value: "Nipah" },
+    { label: "Yellow Fever", value: "Yellow fever" },
+    { label: "HPV", value: "HPV" },
+    { label: "TB / BCG", value: "Tuberculosis" },
+  ]},
+  { group: "Hematology", items: [
+    { label: "Hemophilia A", value: "Hemophilia A" },
+    { label: "Paroxysmal Nocturnal Hemoglobinuria", value: "PNH" },
+    { label: "Immune Thrombocytopenia", value: "Immune thrombocytopenia" },
+  ]},
+  { group: "Neurology", items: [
+    { label: "Alzheimer's Disease", value: "Alzheimer disease" },
+    { label: "Myasthenia Gravis", value: "Myasthenia gravis" },
+    { label: "Migraine (CGRP)", value: "Migraine" },
+  ]},
+  { group: "Other", items: [
+    { label: "Asthma (Severe Eosinophilic)", value: "Severe eosinophilic asthma" },
+    { label: "Atopic Dermatitis", value: "Atopic dermatitis" },
+    { label: "Osteoporosis", value: "Osteoporosis" },
+    { label: "General / Custom", value: "general" },
+  ]},
+];
+
 export default function FcEffectorPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
-  const [disease, setDisease] = useState("general");
+  const [disease, setDisease] = useState("COVID-19");
   const [therapeuticType, setTherapeuticType] = useState("therapeutic_antibody");
   const [fcSequence, setFcSequence] = useState("");
   const [includeOpenAI, setIncludeOpenAI] = useState(true);
@@ -564,13 +610,21 @@ export default function FcEffectorPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="disease">Disease or Indication</Label>
-                    <Input
-                      id="disease"
-                      data-testid="input-disease"
-                      placeholder="e.g., oncology, autoimmune, infectious disease"
-                      value={disease}
-                      onChange={(e) => setDisease(e.target.value)}
-                    />
+                    <Select value={disease} onValueChange={setDisease}>
+                      <SelectTrigger data-testid="select-disease">
+                        <SelectValue placeholder="Select disease or indication" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FC_DISEASE_INDICATIONS.map((group) => (
+                          <div key={group.group}>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group.group}</div>
+                            {group.items.map((item) => (
+                              <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                            ))}
+                          </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
