@@ -1,5 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { PageHeader } from "@/components/page-header";
 import { ResultsPanel } from "@/components/results-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
 import {
   Atom,
   Layers,
@@ -472,9 +475,50 @@ export default function MultiScaleRepresentationsPage() {
     }
   };
 
+  const { toast } = useToast();
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [pipelineProgress, setPipelineProgress] = useState(0);
   const [pipelineResult, setPipelineResult] = useState<{ variantCount: number; r2Score: number; maeScore: number; target: string } | null>(null);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const predictionMutation = useMutation({
+    mutationFn: async (params: { target: string; model: string }) => {
+      const res = await apiRequest("POST", "/api/compute/materials/multi-scale-predict", {
+        predictionTarget: params.target,
+        modelArchitecture: params.model,
+        materialType,
+        selectedScales,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      setPipelineProgress(100);
+      setTimeout(() => {
+        setPipelineRunning(false);
+        setPipelineResult({
+          variantCount: data.variantCount,
+          r2Score: data.r2Score,
+          maeScore: data.maeScore,
+          target: data.target,
+        });
+        toast({
+          title: "Pipeline Complete",
+          description: `Predicted ${data.target.replace(/_/g, ' ')} for ${data.variantCount} variants.${data.fallback ? " (CPU fallback mode)" : ""}`,
+        });
+      }, 300);
+    },
+    onError: (error: any) => {
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      setPipelineRunning(false);
+      setPipelineProgress(0);
+      toast({
+        title: "Pipeline Failed",
+        description: error.message || "Prediction pipeline encountered an error.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSelectForPrediction = (scale: ScaleLevel) => {
     setSelectedScales(prev => 
@@ -489,23 +533,13 @@ export default function MultiScaleRepresentationsPage() {
     setPipelineProgress(0);
     setPipelineResult(null);
 
-    const totalSteps = 20;
     let step = 0;
-    const interval = setInterval(() => {
+    progressIntervalRef.current = setInterval(() => {
       step++;
-      setPipelineProgress(Math.min(Math.round((step / totalSteps) * 100), 100));
-      if (step >= totalSteps) {
-        clearInterval(interval);
-        setPipelineRunning(false);
-        const variantCount = Math.max(...representations.map(r => r.variantsDerived));
-        setPipelineResult({
-          variantCount,
-          r2Score: 0.85 + Math.random() * 0.1,
-          maeScore: 5 + Math.random() * 10,
-          target,
-        });
-      }
-    }, 200);
+      setPipelineProgress(prev => Math.min(prev + 3 + Math.random() * 2, 90));
+    }, 500);
+
+    predictionMutation.mutate({ target, model });
   };
 
   return (
