@@ -4,3 +4,26 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+.env
+# secrets
+.env
+.env.*
+!.env.example
+
+# node / builds
+node_modules/
+dist/
+
+# python
+__pycache__/
+*.pyc
+
+# logs
+*.log
+
+# replit / local tooling
+.local/
+
+# deploy artifacts
+deploy_package/
+*.tar.gz
