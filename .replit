@@ -48,6 +48,6 @@ integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:2.0.
 HETZNER_SSH_HOST = "157.180.69.32"
 HETZNER_SSH_USER = "root"
 HETZNER_SSH_PORT = "22"
-GCP_SSH_HOST = "34.14.22.228"
+GCP_SSH_HOST = "104.155.47.24"
 GCP_SSH_PORT = "22"
 GCP_SSH_USER = "replit"
